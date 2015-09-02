@@ -136,6 +136,7 @@ public:
 	 */
 	void GetLinearIntegrated(double* dest) const
 	{
+		size_t addIndex = 0;
 		for(size_t sqIndex = 0; sqIndex!=_imagingTable.SquaredGroupCount(); ++sqIndex)
 		{
 			ImagingTable subTable = _imagingTable.GetSquaredGroup(sqIndex);
@@ -143,10 +144,11 @@ public:
 			{
 				const ImagingTableEntry& entry = subTable[eIndex];
 				size_t imageIndex = _tableIndexToImageIndex.find(entry.index)->second;
-				if(eIndex == 0)
+				if(addIndex == 0)
 					assign(dest, _images[imageIndex]);
 				else
 					add(dest, _images[imageIndex]);
+				++addIndex;
 			}
 		}
 		if(_imagingTable.SquaredGroupCount() > 0)

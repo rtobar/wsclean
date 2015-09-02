@@ -63,6 +63,7 @@ public:
 		_manualBeamPA = positionAngle;
 	}
 	void SetFittedBeam(bool fittedBeam) { _fittedBeam = fittedBeam; }
+	void SetTheoreticBeam(bool theoreticBeam) { _theoreticBeam = theoreticBeam; }
 	void SetCircularBeam(bool circularBeam) { _circularBeam = circularBeam; }
 	void SetAntialiasingKernelSize(size_t kernelSize) { _antialiasingKernelSize = kernelSize; }
 	void SetOversamplingFactor(size_t oversampling) { _overSamplingFactor = oversampling; }
@@ -216,7 +217,7 @@ private:
 	size_t _imgWidth, _imgHeight, _channelsOut, _intervalCount;
 	double _pixelScaleX, _pixelScaleY;
 	double _manualBeamMajorSize, _manualBeamMinorSize, _manualBeamPA;
-	bool _fittedBeam, _circularBeam;
+	bool _fittedBeam, _theoreticBeam, _circularBeam;
 	double _memFraction, _absMemLimit, _minUVInLambda, _maxUVInLambda, _wLimit, _rankFilterLevel;
 	size_t _rankFilterSize;
 	size_t _nWLayers, _antialiasingKernelSize, _overSamplingFactor, _threadCount;

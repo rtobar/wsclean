@@ -90,13 +90,13 @@ void Deconvolution::performDynamicClean(const class ImagingTable& groupTable, bo
 		if(e.imageCount >= 1)
 		{
 			psfVecs[imgIndex].resize(_imgWidth * _imgHeight);
-			_psfImages->Load(psfVecs[imgIndex].data(), e.polarization, e.outputChannelIndex, false);
+			_psfImages->Load(psfVecs[imgIndex].data(), _psfPolarization, e.outputChannelIndex, false);
 			++imgIndex;
 		}
 		if(e.imageCount == 2)
 		{
 			psfVecs[imgIndex].resize(_imgWidth * _imgHeight);
-			_psfImages->Load(psfVecs[imgIndex].data(), e.polarization, e.outputChannelIndex, true);
+			_psfImages->Load(psfVecs[imgIndex].data(), _psfPolarization, e.outputChannelIndex, true);
 			++imgIndex;
 		}
 	}

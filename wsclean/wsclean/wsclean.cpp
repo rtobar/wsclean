@@ -35,7 +35,7 @@ WSClean::WSClean() :
 	_channelsOut(1), _intervalCount(1),
 	_pixelScaleX(0.01 * M_PI / 180.0), _pixelScaleY(0.01 * M_PI / 180.0),
 	_manualBeamMajorSize(0.0), _manualBeamMinorSize(0.0),
-	_manualBeamPA(0.0), _fittedBeam(true), _circularBeam(false),
+	_manualBeamPA(0.0), _fittedBeam(true), _theoreticBeam(false), _circularBeam(false),
 	_memFraction(1.0), _absMemLimit(0.0),
 	_minUVInLambda(0.0), _maxUVInLambda(0.0), _wLimit(0.0),
 	_rankFilterLevel(0.0), _rankFilterSize(16),
@@ -206,16 +206,23 @@ void WSClean::imagePSF(size_t currentChannelIndex)
 			_infoPerChannel[currentChannelIndex].beamPA = bPA;
 		}
 	}
-	else {
+	else if(_theoreticBeam) {
 		_infoPerChannel[currentChannelIndex].beamMaj = _inversionAlgorithm->BeamSize();
 		_infoPerChannel[currentChannelIndex].beamMin = _inversionAlgorithm->BeamSize();
 		_infoPerChannel[currentChannelIndex].beamPA = 0.0;
 		std::cout << "Beam size is " << Angle::ToNiceString(_inversionAlgorithm->BeamSize()) << '\n';
+	} else {
+		_infoPerChannel[currentChannelIndex].beamMaj = std::numeric_limits<double>::quiet_NaN();
+		_infoPerChannel[currentChannelIndex].beamMin = std::numeric_limits<double>::quiet_NaN();
+		_infoPerChannel[currentChannelIndex].beamPA = std::numeric_limits<double>::quiet_NaN();
 	}
-	_fitsWriter.SetBeamInfo(
-		_infoPerChannel[currentChannelIndex].beamMaj,
-		_infoPerChannel[currentChannelIndex].beamMin,
-		_infoPerChannel[currentChannelIndex].beamPA);
+	if(std::isfinite(_infoPerChannel[currentChannelIndex].beamMaj))
+	{
+		_fitsWriter.SetBeamInfo(
+			_infoPerChannel[currentChannelIndex].beamMaj,
+			_infoPerChannel[currentChannelIndex].beamMin,
+			_infoPerChannel[currentChannelIndex].beamPA);
+	}
 		
 	std::cout << "Writing psf image... " << std::flush;
 	const std::string name(getPSFPrefix(currentChannelIndex) + "-psf.fits");
@@ -839,12 +846,20 @@ void WSClean::runIndependentGroup(const ImagingTable& groupTable)
 				_modelImages.Load(modelImage, curPol, currentChannelIndex, isImaginary);
 			ModelRenderer renderer(_fitsWriter.RA(), _fitsWriter.Dec(), _pixelScaleX, _pixelScaleY, _fitsWriter.PhaseCentreDL(), _fitsWriter.PhaseCentreDM());
 			double beamMaj = _infoPerChannel[currentChannelIndex].beamMaj;
-			double beamMin = _infoPerChannel[currentChannelIndex].beamMin;
-			double beamPA = _infoPerChannel[currentChannelIndex].beamPA;
-			std::string beamStr =
-				"(beam=" + Angle::ToNiceString(beamMin) + "-" +
+			double beamMin, beamPA;
+			std::string beamStr;
+			if(std::isfinite(beamMaj))
+			{
+				beamMin = _infoPerChannel[currentChannelIndex].beamMin;
+				beamPA = _infoPerChannel[currentChannelIndex].beamPA;
+				beamStr = "(beam=" + Angle::ToNiceString(beamMin) + "-" +
 				Angle::ToNiceString(beamMaj) + ", PA=" +
 				Angle::ToNiceString(beamPA) + ")";
+			}
+			else {
+				beamStr = "(beam is neither fitted nor estimated -- using delta scales!)";
+				beamMaj = 0.0; beamMin = 0.0; beamPA = 0.0;
+			}
 			if(_deconvolution.MultiScale() || _deconvolution.FastMultiScale() || _deconvolution.UseMoreSane() || _deconvolution.UseIUWT())
 			{
 				std::cout << "Rendering sources to restored image " + beamStr + "... " << std::flush;
@@ -1036,16 +1051,20 @@ void WSClean::runFirstInversion(const ImagingTableEntry& entry)
 		// after imaging the PSF.
 		if(!doMakePSF)
 		{
-			if(_manualBeamMajorSize == 0.0)
-			{
+			if(_theoreticBeam) {
 				_infoPerChannel[entry.outputChannelIndex].beamMaj = _inversionAlgorithm->BeamSize();
 				_infoPerChannel[entry.outputChannelIndex].beamMin = _inversionAlgorithm->BeamSize();
 				_infoPerChannel[entry.outputChannelIndex].beamPA = 0.0;
 			}
-			else {
+			else if(_manualBeamMajorSize != 0.0) {
 				_infoPerChannel[entry.outputChannelIndex].beamMaj = _manualBeamMajorSize;
 				_infoPerChannel[entry.outputChannelIndex].beamMin = _manualBeamMinorSize;
 				_infoPerChannel[entry.outputChannelIndex].beamPA = _manualBeamPA;
+			}
+			else {
+				_infoPerChannel[entry.outputChannelIndex].beamMaj = std::numeric_limits<double>::quiet_NaN();
+				_infoPerChannel[entry.outputChannelIndex].beamMin = std::numeric_limits<double>::quiet_NaN();
+				_infoPerChannel[entry.outputChannelIndex].beamPA = std::numeric_limits<double>::quiet_NaN();
 			}
 		}
 	}

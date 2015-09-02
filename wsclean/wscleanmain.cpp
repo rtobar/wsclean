@@ -180,6 +180,16 @@ int main(int argc, char *argv[])
 			"-multiscale-scale-bias\n"
 			"   Parameter to prevent cleaning small scales in the large-scale iterations. A higher\n"
 			"   bias will give more focus to larger scales. Default: 0.6\n"
+			"-iuwt\n"
+			"   Use the IUWT deconvolution algorithm.\n"
+			"-moresane-ext <location>\n"
+			"   Use the MoreSane deconvolution algorithm, installed at the specified location.\n"
+			"-moresane-arg <arguments>\n"
+			"   Pass the specified arguments to moresane. Note that multiple parameters have to be\n"
+			"   enclosed in quotes.\n"
+			"-moresane-sl <sl1,sl2,...>\n"
+			"   MoreSane --sigmalevel setting for each major loop iteration. Useful to start at high\n"
+			"   levels and go down with subsequent loops, e.g. 20,10,5\n"
 			"-cleanborder <percentage>\n"
 			"   Set the border size in which no cleaning is performed, in percentage of the width/height of the image.\n"
 			"   With an image size of 1000 and clean border of 1%, each border is 10 pixels. Default: 5 (%).\n"
@@ -195,14 +205,6 @@ int main(int argc, char *argv[])
 			"   Default on: opposite of -nonegative.\n"
 			"-stopnegative\n"
 			"   Stop on negative components. Not the default.\n"
-			"-moresane-ext <location>\n"
-			"   Use the MoreSane deconvolution algorithm, installed at the specified location.\n"
-			"-moresane-arg <arguments>\n"
-			"   Pass the specified arguments to moresane. Note that multiple parameters have to be\n"
-			"   enclosed in quotes.\n"
-			"-moresane-sl <sl1,sl2,...>\n"
-			"   MoreSane --sigmalevel setting for each major loop iteration. Useful to start at high\n"
-			"   levels and go down with subsequent loops, e.g. 20,10,5\n"
 			"\n"
 			"  ** RESTORATION OPTIONS **\n"
 			"-beamsize <arcsec>\n"
@@ -214,7 +216,11 @@ int main(int argc, char *argv[])
 			"-fitbeam\n"
 			"   Determine beam shape by fitting the PSF (default if PSF is made).\n"
 			"-nofitbeam\n"
-			"   Determine beam shape from longest projected baseline.\n"
+			"   Do not determine beam shape from the PSF.\n"
+			"-theoreticbeam\n"
+			"   Write the beam in output fits files as calculated from the longest projected baseline.\n"
+			"   This method results in slightly less accurate integrated fluxes, but in simple imaging provide\n"
+			"   a beam size even without making the PSF. Default: off.\n"
 			"-circularbeam\n"
 			"   Force the beam to be circular: bmin will be set to bmaj.\n"
 			"-ellipticalbeam\n"
@@ -516,6 +522,11 @@ int main(int argc, char *argv[])
 		}
 		else if(param == "nofitbeam")
 		{
+			wsclean.SetFittedBeam(false);
+		}
+		else if(param == "theoreticbeam")
+		{
+			wsclean.SetTheoreticBeam(true);
 			wsclean.SetFittedBeam(false);
 		}
 		else if(param == "circularbeam")
