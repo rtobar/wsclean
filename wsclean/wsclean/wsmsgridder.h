@@ -56,6 +56,9 @@ class WSMSGridder : public InversionAlgorithm
 		size_t ActualInversionWidth() const { return _actualInversionWidth; }
 		size_t ActualInversionHeight() const { return _actualInversionHeight; }
 		
+		void SetTrimWidth(size_t trimWidth) { _trimWidth = trimWidth; }
+		void SetTrimHeight(size_t trimHeight) { _trimHeight = trimHeight; }
+		
 		virtual void FreeImagingData()
 		{
 			_gridder.reset();
@@ -134,6 +137,7 @@ class WSMSGridder : public InversionAlgorithm
 		size_t _cpuCount, _laneBufferSize;
 		int64_t _memSize;
 		ImageBufferAllocator* _imageBufferAllocator;
+		size_t _trimWidth, _trimHeight;
 		size_t _actualInversionWidth, _actualInversionHeight;
 		double _actualPixelSizeX, _actualPixelSizeY;
 };

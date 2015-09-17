@@ -62,6 +62,8 @@ int main(int argc, char *argv[])
 			"   Use image-prefix as prefix for output files. Default is 'wsclean'.\n"
 			"-size <width> <height>\n"
 			"   Default: 2048 x 2048\n"
+			"-trim <width> <height>\n"
+			"   After inversion, trim the image to the given size.\n"
 			"-scale <pixel-scale>\n"
 			"   Scale of a pixel. Default unit is degrees, but can be specificied, e.g. -scale 20asec. Default: 0.01deg.\n"
 			"-nwlayers <nwlayers>\n"
@@ -70,6 +72,9 @@ int main(int argc, char *argv[])
 			"   Splits the bandwidth and makes count nr. of images. Default: 1.\n"
 			"-predict <image-prefix>\n"
 			"   Only perform a single prediction for an existing image. Doesn't do any imaging or cleaning.\n"
+			"-subtract-model\n"
+			"   Subtract the model from the data column in the first iteration. This can be used to reimage\n"
+			"   an already cleaned image, e.g. at a different resolution.\n"
 			"-nosmallinversion and -smallinversion\n"
 			"   Perform inversion at the Nyquist resolution and upscale the image to the requested image size afterwards.\n"
 			"   This speeds up inversion considerably, but makes aliasing slightly worse. This effect is\n"
@@ -205,6 +210,11 @@ int main(int argc, char *argv[])
 			"   Default on: opposite of -nonegative.\n"
 			"-stopnegative\n"
 			"   Stop on negative components. Not the default.\n"
+			"-fit-spectral-pol <nterms>\n"
+			"   Fit a polynomial over frequency to each clean component. This has only effect\n"
+			"   when the channels are joined with -joinchannels.\n"
+			"-fit-spectral-log-pol <nterms>\n"
+			"   Like fit-spectral-pol, but fits a logarithmic polynomial over frequency instead.\n"
 			"\n"
 			"  ** RESTORATION OPTIONS **\n"
 			"-beamsize <arcsec>\n"
@@ -256,6 +266,10 @@ int main(int argc, char *argv[])
 		{
 			predictionMode = true;
 		}
+		else if(param == "subtract-model")
+		{
+			wsclean.SetSubtractModel(true);
+		}
 		else if(param == "size")
 		{
 			size_t
@@ -264,6 +278,14 @@ int main(int argc, char *argv[])
 			if(width != height)
 				throw std::runtime_error("width != height : Can't handle non-square images yet");
 			wsclean.SetImageSize(width, height);
+			argi += 2;
+		}
+		else if(param == "trim")
+		{
+			size_t
+				width = atoi(argv[argi+1]),
+				height = atoi(argv[argi+2]);
+			wsclean.SetTrimmedImageSize(width, height);
 			argi += 2;
 		}
 		else if(param == "scale")
@@ -474,6 +496,16 @@ int main(int argc, char *argv[])
 		else if(param == "joinchannels")
 		{
 			wsclean.SetJoinChannels(true);
+		}
+		else if(param == "fit-spectral-pol")
+		{
+			++argi;
+			wsclean.DeconvolutionInfo().SetFitSpectralPol(atoi(argv[argi]));
+		}
+		else if(param == "fit-spectral-log-pol")
+		{
+			++argi;
+			wsclean.DeconvolutionInfo().SetFitSpectralLogPol(atoi(argv[argi]));
 		}
 		else if(param == "field")
 		{

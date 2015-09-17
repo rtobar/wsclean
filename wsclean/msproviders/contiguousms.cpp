@@ -2,10 +2,10 @@
 #include <casacore/measures/Measures/MEpoch.h>
 #include <casacore/measures/TableMeasures/ScalarMeasColumn.h>
 
-ContiguousMS::ContiguousMS(const string& msPath, const std::string& dataColumnName, MSSelection selection, PolarizationEnum polOut, bool includeModel) :
+ContiguousMS::ContiguousMS(const string& msPath, const std::string& dataColumnName, MSSelection selection, PolarizationEnum polOut, size_t dataDescId, bool includeModel) :
 	_timestep(0),
 	_time(0.0),
-	_dataDescId(0),
+	_dataDescId(dataDescId),
 	_isModelColumnPrepared(false),
 	_selection(selection),
 	_polOut(polOut),
@@ -19,7 +19,7 @@ ContiguousMS::ContiguousMS(const string& msPath, const std::string& dataColumnNa
 	_dataColumn(_ms, dataColumnName),
 	_flagColumn(_ms, casacore::MS::columnName(casacore::MSMainEnums::FLAG))
 {
-	std::cout << "Opening " << msPath << " with contiguous MS reader.\n";
+	std::cout << "Opening " << msPath << ", spw " << _dataDescId << " with contiguous MS reader.\n";
 	
 	_inputPolarizations = GetMSPolarizations(_ms);
  
@@ -72,9 +72,10 @@ bool ContiguousMS::CurrentRowAvailable()
 	int fieldId = _fieldIdColumn(_row);
 	int a1 = _antenna1Column(_row);
 	int a2 = _antenna2Column(_row);
+	int dataDescId = _dataDescIdColumn(_row);
 	casacore::Vector<double> uvw = _uvwColumn(_row);
 	
-	while(!_selection.IsSelected(fieldId, _timestep, a1, a2, uvw)) {
+	while(!_selection.IsSelected(fieldId, _timestep, a1, a2, uvw) || dataDescId != _dataDescId) {
 		++_row;
 		if(_row >= _endRow)
 			return false;
@@ -83,6 +84,7 @@ bool ContiguousMS::CurrentRowAvailable()
 		a1 = _antenna1Column(_row);
 		a2 = _antenna2Column(_row);
 		uvw = _uvwColumn(_row);
+		dataDescId = _dataDescIdColumn(_row);
 		if(_time != _timeColumn(_row))
 		{
 			++_timestep;
@@ -105,7 +107,7 @@ void ContiguousMS::NextRow()
 	_isWeightRead = false;
 	_isModelRead = false;
 	
-	int fieldId, a1, a2;
+	int fieldId, a1, a2, dataDescId;
 	casacore::Vector<double> uvw;
 	do {
 		++_row;
@@ -116,12 +118,13 @@ void ContiguousMS::NextRow()
 		a1 = _antenna1Column(_row);
 		a2 = _antenna2Column(_row);
 		uvw = _uvwColumn(_row);
+		dataDescId = _dataDescIdColumn(_row);
 		if(_time != _timeColumn(_row))
 		{
 			++_timestep;
 			_time = _timeColumn(_row);
 		}
-	} while(!_selection.IsSelected(fieldId, _timestep, a1, a2, uvw));
+	} while(!_selection.IsSelected(fieldId, _timestep, a1, a2, uvw) || (dataDescId != _dataDescId) );
 }
 
 double ContiguousMS::StartTime()

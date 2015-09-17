@@ -85,8 +85,8 @@ void FastMultiScaleClean<ImageSetType>::executeMajorIterationForScale(double cur
 	
 	double thresholdBias = pow(this->_multiscaleThresholdBias, log2(currentScale));
 	std::cout << "Threshold bias: " << thresholdBias << '\n';
-	double oldSubtractionGain = this->_subtractionGain;
-	this->_subtractionGain *= sqrt(thresholdBias);
+	double oldSubtractionGain = this->_gain;
+	this->_gain *= sqrt(thresholdBias);
 	
 	// Fill the large and next scale images with the rescaled images
 	FFTResampler imageResampler(_originalWidth, _originalHeight, _rescaledWidth, _rescaledHeight, cpuCount, false);
@@ -140,14 +140,14 @@ void FastMultiScaleClean<ImageSetType>::executeMajorIterationForScale(double cur
 	
 	size_t peakIndex = componentX + componentY*_rescaledWidth;
 	double peakNormalized = _dataImageLargeScale->JoinedValueNormalized(peakIndex) * rescaleFactor * rescaleFactor;
-	double firstThreshold = this->_threshold, stopGainThreshold = fabs(peakNormalized*(1.0-this->_stopGain)/thresholdBias);
+	double firstThreshold = this->_threshold, stopGainThreshold = fabs(peakNormalized*(1.0-this->_mGain)/thresholdBias);
 	std::cout << "Scale-adjusted threshold: " << firstThreshold*thresholdBias << ", major iteration stops at " << stopGainThreshold*thresholdBias << '\n';
 	if(stopGainThreshold > firstThreshold)
 	{
 		firstThreshold = stopGainThreshold;
 		std::cout << "Next major iteration for this scale at: " << stopGainThreshold << '\n';
 	}
-	else if(this->_stopGain != 1.0) {
+	else if(this->_mGain != 1.0) {
 		std::cout << "Major iteration threshold reached global threshold of " << this->_threshold << " for this scale.\n";
 	}
 
@@ -180,7 +180,7 @@ void FastMultiScaleClean<ImageSetType>::executeMajorIterationForScale(double cur
 		for(size_t i=0; i!=cpuCount; ++i)
 			taskLanes[i]->write(task);
 		
-		currentScaleModel.AddComponent(largeScaleImage, peakIndex, this->_subtractionGain * rescaleFactor * rescaleFactor);
+		currentScaleModel.AddComponent(largeScaleImage, peakIndex, this->_gain * rescaleFactor * rescaleFactor);
 		
 		double peakUnnormalized = 0.0;
 		for(size_t i=0; i!=cpuCount; ++i)
@@ -254,7 +254,7 @@ void FastMultiScaleClean<ImageSetType>::executeMajorIterationForScale(double cur
 	allocator.Free(convolvedModel);
 	allocator.Free(kernelImage);
 	
-	this->_subtractionGain = oldSubtractionGain;
+	this->_gain = oldSubtractionGain;
 }
 
 template<typename ImageSetType>
@@ -319,11 +319,11 @@ void FastMultiScaleClean<ImageSetType>::cleanThreadFunc(ao::lane<CleanTask> *tas
 	{
 		for(size_t i=0; i!=imageSet.ImageCount(); ++i)
 		{
-			subtractImage(imageSet.GetImage(i), psfs[ImageSetType::PSFIndex(i)], task.cleanCompX, task.cleanCompY, this->_subtractionGain * task.peak.GetValue(i), cleanData.startY, cleanData.endY);
+			subtractImage(imageSet.GetImage(i), psfs[ImageSetType::PSFIndex(i)], task.cleanCompX, task.cleanCompY, this->_gain * task.peak.GetValue(i), cleanData.startY, cleanData.endY);
 		}
 		for(size_t i=0; i!=nextScaleSet.ImageCount(); ++i)
 		{
-			subtractImage(nextScaleSet.GetImage(i), psfs[ImageSetType::PSFIndex(i)], task.cleanCompX, task.cleanCompY, this->_subtractionGain * task.peak.GetValue(i), cleanData.startY, cleanData.endY);
+			subtractImage(nextScaleSet.GetImage(i), psfs[ImageSetType::PSFIndex(i)], task.cleanCompX, task.cleanCompY, this->_gain * task.peak.GetValue(i), cleanData.startY, cleanData.endY);
 		}
 		
 		CleanResult result;

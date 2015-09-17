@@ -27,7 +27,8 @@ public:
 	
 	Deconvolution& DeconvolutionInfo() { return _deconvolution; }
 	
-	void SetImageSize(size_t width, size_t height) { _imgWidth = width; _imgHeight = height; }
+	void SetImageSize(size_t width, size_t height) { _untrimmedWidth = width; _untrimmedHeight = height; }
+	void SetTrimmedImageSize(size_t width, size_t height) { _trimWidth = width; _trimHeight = height; }
 	void SetPixelScale(double pixelScale) { _pixelScaleX = pixelScale; _pixelScaleY = pixelScale; }
 	void SetNWlayers(size_t nWLayers) { _nWLayers = nWLayers; }
 	void SetColumnName(const std::string& columnName) { _columnName = columnName; }
@@ -71,6 +72,7 @@ public:
 	void SetTemporaryDirectory(const std::string& tempDir) { _temporaryDirectory = tempDir; }
 	void SetForceReorder(bool forceReorder) { _forceReorder = forceReorder; }
 	void SetForceNoReorder(bool forceNoReorder) { _forceNoReorder = forceNoReorder; }
+	void SetSubtractModel(bool subtractModel) { _subtractModel = subtractModel; }
 	void SetModelUpdateRequired(bool modelUpdateRequired) { _modelUpdateRequired = modelUpdateRequired; }
 	void SetMemFraction(double memFraction) { _memFraction = memFraction; }
 	void SetMemAbsLimit(double absMemLimit) { _absMemLimit = absMemLimit; }
@@ -114,6 +116,7 @@ private:
 	void runFirstInversion(const ImagingTableEntry& entry);
 	void prepareInversionAlgorithm(PolarizationEnum polarization);
 	
+	void validateDimensions();
 	void checkPolarizations();
 	void performReordering(bool isPredictMode);
 	
@@ -214,7 +217,9 @@ private:
 		) && !_forceNoReorder;
 	}
 	
-	size_t _imgWidth, _imgHeight, _channelsOut, _intervalCount;
+	size_t _untrimmedWidth, _untrimmedHeight;
+	size_t _trimWidth, _trimHeight;
+	size_t _channelsOut, _intervalCount;
 	double _pixelScaleX, _pixelScaleY;
 	double _manualBeamMajorSize, _manualBeamMinorSize, _manualBeamPA;
 	bool _fittedBeam, _theoreticBeam, _circularBeam;
@@ -230,7 +235,7 @@ private:
 	std::string _prefixName;
 	bool _smallInversion, _makePSF, _isWeightImageSaved, _isUVImageSaved, _isGriddingImageSaved, _dftPrediction, _dftWithBeam;
 	std::string _temporaryDirectory;
-	bool _forceReorder, _forceNoReorder, _modelUpdateRequired, _mfsWeighting;
+	bool _forceReorder, _forceNoReorder, _subtractModel, _modelUpdateRequired, _mfsWeighting;
 	enum WStackingGridder::GridModeEnum _gridMode;
 	std::vector<std::string> _filenames;
 	std::string _commandLine;
@@ -248,7 +253,7 @@ private:
 	};
 	std::vector<ChannelInfo> _infoPerChannel;
 	
-	std::unique_ptr<class InversionAlgorithm> _inversionAlgorithm;
+	std::unique_ptr<class WSMSGridder> _inversionAlgorithm;
 	std::unique_ptr<class ImageWeightCache> _imageWeightCache;
 	ImageBufferAllocator _imageAllocator;
 	Stopwatch _inversionWatch, _predictingWatch, _deconvolutionWatch;

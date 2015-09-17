@@ -18,13 +18,13 @@ void JoinedClean<ImageSetType>::ExecuteMajorIteration(ImageSetType& dataImage, I
 	
 	size_t peakIndex = componentX + componentY*_width;
 	double peakNormalized = dataImage.JoinedValueNormalized(peakIndex);
-	double firstThreshold = this->_threshold, stopGainThreshold = peakNormalized*(1.0-this->_stopGain);
+	double firstThreshold = this->_threshold, stopGainThreshold = peakNormalized*(1.0-this->_mGain);
 	if(stopGainThreshold > firstThreshold)
 	{
 		firstThreshold = stopGainThreshold;
 		std::cout << "Next major iteration at: " << stopGainThreshold << '\n';
 	}
-	else if(this->_stopGain != 1.0) {
+	else if(this->_mGain != 1.0) {
 		std::cout << "Major iteration threshold reached global threshold of " << this->_threshold << ": final major iteration.\n";
 	}
 
@@ -59,7 +59,7 @@ void JoinedClean<ImageSetType>::ExecuteMajorIteration(ImageSetType& dataImage, I
 		for(size_t i=0; i!=cpuCount; ++i)
 			taskLanes[i]->write(task);
 		
-		modelImage.AddComponent(dataImage, peakIndex, this->_subtractionGain);
+		modelImage.AddComponent(dataImage, peakIndex, this->_gain);
 		
 		double peakUnnormalized = 0.0;
 		for(size_t i=0; i!=cpuCount; ++i)
@@ -185,7 +185,7 @@ void JoinedClean<ImageSetType>::cleanThreadFunc(ao::lane<CleanTask> *taskLane, a
 	{
 		for(size_t i=0; i!=cleanData.dataImage->ImageCount(); ++i)
 		{
-			subtractImage(cleanData.dataImage->GetImage(i), cleanData.psfImages[ImageSetType::PSFIndex(i)], task.cleanCompX, task.cleanCompY, this->_subtractionGain * task.peak.GetValue(i), cleanData.startY, cleanData.endY);
+			subtractImage(cleanData.dataImage->GetImage(i), cleanData.psfImages[ImageSetType::PSFIndex(i)], task.cleanCompX, task.cleanCompY, this->_gain * task.peak.GetValue(i), cleanData.startY, cleanData.endY);
 		}
 		
 		CleanResult result;

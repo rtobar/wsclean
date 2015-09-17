@@ -18,7 +18,7 @@ class IUWTDeconvolution : public UntypedDeconvolutionAlgorithm
 public:
 	virtual void ExecuteMajorIteration(DynamicSet& dataImage, DynamicSet& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedMajorThreshold)
 	{
-		IUWTDeconvolutionAlgorithm algorithm(width, height, _subtractionGain, _stopGain, _cleanBorderRatio, _allowNegativeComponents);
+		IUWTDeconvolutionAlgorithm algorithm(width, height, _gain, _mGain, _cleanBorderRatio, _allowNegativeComponents);
 		algorithm.PerformMajorIteration(_iterationNumber, MaxNIter(), modelImage, dataImage, psfImages, reachedMajorThreshold);
 		if(_iterationNumber >= MaxNIter())
 			reachedMajorThreshold = false;

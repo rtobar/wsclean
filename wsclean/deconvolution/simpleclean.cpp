@@ -336,8 +336,8 @@ void SimpleClean::ExecuteMajorIterationST(double *dataImage, double *modelImage,
 	{
 		if(_iterationNumber % 10 == 0)
 			std::cout << "Iteration " << _iterationNumber << ": (" << componentX << ',' << componentY << "), " << peak << " Jy\n";
-		SubtractImage(dataImage, psfImage, width, height, componentX, componentY, _subtractionGain * peak);
-		modelImage[componentX + componentY*width] += _subtractionGain * peak;
+		SubtractImage(dataImage, psfImage, width, height, componentX, componentY, _gain * peak);
+		modelImage[componentX + componentY*width] += _gain * peak;
 		
 		peak = FindPeak(dataImage, width, height, componentX, componentY, _allowNegativeComponents, 0, height, CleanBorderRatio());
 		++_iterationNumber;
@@ -355,13 +355,13 @@ void SimpleClean::ExecuteMajorIteration(double* dataImage, double* modelImage, c
 		FindPeak(dataImage, width, height, componentX, componentY, _allowNegativeComponents, 0, height, CleanBorderRatio()) :
 		FindPeak(dataImage, width, height, componentX, componentY, _allowNegativeComponents, 0, height, _cleanMask, CleanBorderRatio());
 	std::cout << "Initial peak: " << peak << '\n';
-	double firstThreshold = _threshold, stopGainThreshold = fabs(peak*(1.0-_stopGain));
+	double firstThreshold = _threshold, stopGainThreshold = fabs(peak*(1.0-_mGain));
 	if(stopGainThreshold > firstThreshold)
 	{
 		firstThreshold = stopGainThreshold;
 		std::cout << "Next major iteration at: " << stopGainThreshold << '\n';
 	}
-	else if(_stopGain != 1.0) {
+	else if(_mGain != 1.0) {
 		std::cout << "Major iteration threshold reached global threshold of " << _threshold << ": final major iteration.\n";
 	}
 
@@ -398,7 +398,7 @@ void SimpleClean::ExecuteMajorIteration(double* dataImage, double* modelImage, c
 		for(size_t i=0; i!=_threadCount; ++i)
 			taskLanes[i]->write(task);
 		
-		modelImage[componentX + componentY*width] += _subtractionGain * peak;
+		modelImage[componentX + componentY*width] += _gain * peak;
 		
 		peak = 0.0;
 		for(size_t i=0; i!=_threadCount; ++i)
@@ -432,7 +432,7 @@ void SimpleClean::cleanThreadFunc(ao::lane<CleanTask> *taskLane, ao::lane<CleanR
 	CleanTask task;
 	while(taskLane->read(task))
 	{
-		PartialSubtractImage(cleanData.dataImage, cleanData.imgWidth, cleanData.imgHeight, cleanData.psfImage, cleanData.psfWidth, cleanData.psfHeight, task.cleanCompX, task.cleanCompY, _subtractionGain * task.peakLevel, cleanData.startY, cleanData.endY);
+		PartialSubtractImage(cleanData.dataImage, cleanData.imgWidth, cleanData.imgHeight, cleanData.psfImage, cleanData.psfWidth, cleanData.psfHeight, task.cleanCompX, task.cleanCompY, _gain * task.peakLevel, cleanData.startY, cleanData.endY);
 		
 		CleanResult result;
 		if(_cleanMask == 0)

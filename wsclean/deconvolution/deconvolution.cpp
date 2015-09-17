@@ -1,12 +1,12 @@
 #include "deconvolution.h"
 
-#include "deconvolutionalgorithm.h"
 #include "joinedclean.h"
 #include "simpleclean.h"
 #include "moresane.h"
-#include "multiscaledeconvolution.h"
 #include "fastmultiscaleclean.h"
 #include "iuwtdeconvolution.h"
+
+#include "../multiscale/multiscalealgorithm.h"
 
 #include "../casamaskreader.h"
 #include "../wsclean/imagingtable.h"
@@ -22,7 +22,9 @@ Deconvolution::Deconvolution() :
 	_fitsMask(), _casaMask(),
 	_useMoreSane(false),
 	_useIUWT(false),
-	_moreSaneLocation(), _moreSaneArgs()
+	_moreSaneLocation(), _moreSaneArgs(),
+	_spectralFittingMode(DeconvolutionAlgorithm::NoSpectralFitting),
+	_spectralFittingTerms(0)
 {
 }
 
@@ -217,13 +219,14 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 	_summedCount = groupTable.SquaredGroupCount();
 	if(_summedCount == 0)
 		throw std::runtime_error("Nothing to clean");
+	
 	ImagingTable firstSquaredGroup = groupTable.GetSquaredGroup(0);
 	_squaredCount = firstSquaredGroup.EntryCount();
 	_polarizations.clear();
 	for(size_t p=0; p!=_squaredCount; ++p)
 	{
 		if(_polarizations.count(firstSquaredGroup[p].polarization) != 0)
-			throw std::runtime_error("Two equal polarizations were given to deconvolution algorithm within a single olarized group");
+			throw std::runtime_error("Two equal polarizations were given to the deconvolution algorithm within a single polarized group");
 		else
 			_polarizations.insert(firstSquaredGroup[p].polarization);
 	}
@@ -238,7 +241,7 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 	}
 	else if(_multiscale)
 	{
-		_cleanAlgorithm.reset(new MultiScaleDeconvolution(*_imageAllocator, beamSize, pixelScaleX, pixelScaleY));
+		_cleanAlgorithm.reset(new MultiScaleAlgorithm(*_imageAllocator, beamSize, pixelScaleX, pixelScaleY));
 	}
 	else if(_squaredCount != 1)
 	{
@@ -308,14 +311,23 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 	
 	_cleanAlgorithm->SetMaxNIter(_nIter);
 	_cleanAlgorithm->SetThreshold(_threshold);
-	_cleanAlgorithm->SetSubtractionGain(_gain);
-	_cleanAlgorithm->SetStopGain(_mGain);
+	_cleanAlgorithm->SetGain(_gain);
+	_cleanAlgorithm->SetMGain(_mGain);
 	_cleanAlgorithm->SetCleanBorderRatio(_cleanBorderRatio);
 	_cleanAlgorithm->SetAllowNegativeComponents(_allowNegative);
 	_cleanAlgorithm->SetStopOnNegativeComponents(_stopOnNegative);
 	_cleanAlgorithm->SetThreadCount(threadCount);
 	_cleanAlgorithm->SetMultiscaleScaleBias(_multiscaleScaleBias);
 	_cleanAlgorithm->SetMultiscaleThresholdBias(_multiscaleThresholdBias);
+	_cleanAlgorithm->SetSpectralFittingMode(_spectralFittingMode, _spectralFittingTerms);
+	
+	ao::uvector<double> frequencies(_summedCount);
+	for(size_t i=0; i!=_summedCount; ++i)
+	{
+		ImagingTable group = groupTable.GetSquaredGroup(i);
+		frequencies[i] = group[0].CentralFrequency();
+	}
+	_cleanAlgorithm->InitializeFrequencies(frequencies);
 	
 	if(!_fitsMask.empty())
 	{

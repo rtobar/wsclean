@@ -67,6 +67,11 @@ public:
 	std::string tmpFilePrefix;
 	
 	std::string ToString();
+	
+	double CentralFrequency() const
+	{
+		return 0.5 * (minBandFrequency + maxBandFrequency);
+	}
 };
 
 class ImagingTable

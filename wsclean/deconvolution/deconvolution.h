@@ -51,7 +51,15 @@ public:
 	void SetMoreSaneLocation(const std::string& location) { _moreSaneLocation = location; }
 	void SetMoreSaneArgs(const std::string& arguments) { _moreSaneArgs = arguments; }
 	void SetMoreSaneSigmaLevels(const std::vector<std::string> &slevels) { _moreSaneSigmaLevels = slevels; }
-        void SetPrefixName(const std::string& prefixName) { _prefixName = prefixName; }
+	void SetPrefixName(const std::string& prefixName) { _prefixName = prefixName; }
+	void SetFitSpectralPol(size_t nTerms) {
+		_spectralFittingMode = DeconvolutionAlgorithm::PolynomialSpectralFitting;
+		_spectralFittingTerms = nTerms;
+	}
+	void SetFitSpectralLogPol(size_t nTerms) {
+		_spectralFittingMode = DeconvolutionAlgorithm::LogPolynomialSpectralFitting;
+		_spectralFittingTerms = nTerms;
+	}
 	
 	void InitializeDeconvolutionAlgorithm(const ImagingTable& groupTable, PolarizationEnum psfPolarization, ImageBufferAllocator* imageAllocator, size_t imgWidth, size_t imgHeight, double pixelScaleX, double pixelScaleY, size_t outputChannels, double beamSize, size_t threadCount);
 	
@@ -96,6 +104,9 @@ private:
 	std::string _moreSaneLocation, _moreSaneArgs;
 	std::vector<std::string> _moreSaneSigmaLevels;
 	std::string _prefixName;
+	
+	enum DeconvolutionAlgorithm::SpectralFittingMode _spectralFittingMode;
+	size_t _spectralFittingTerms;
 	
 	std::unique_ptr<class DeconvolutionAlgorithm> _cleanAlgorithm;
 	
