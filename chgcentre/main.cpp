@@ -662,7 +662,7 @@ int main(int argc, char **argv)
 			{
 				toZenith = true;
 			}
-			if(param == "geozenith")
+			else if(param == "geozenith")
 			{
 				toGeozenith = true;
 			}
