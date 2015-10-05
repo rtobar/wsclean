@@ -17,11 +17,11 @@ public:
 	
 private:
 	size_t _width, _height;
+	ao::uvector<double> _curPeakValues;
 	
 	struct CleanTask
 	{
 		size_t cleanCompX, cleanCompY;
-		typename ImageSetType::Value peak;
 	};
 	struct CleanResult
 	{

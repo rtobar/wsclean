@@ -301,7 +301,7 @@ class WStackingGridder
 		void StartInversionPass(size_t passIndex);
 		
 		/**
-		 * Finish an inversion gridding pass. This will perform the fourier Transforms of the currently gridded
+		 * Finish an inversion gridding pass. This will perform the Fourier transforms of the currently gridded
 		 * w-layers, and add each gridded layer to the final image including w-term corrections.
 		 * Therefore, it can take time.
 		 * @sa @ref StartInversionPass().
@@ -360,7 +360,7 @@ class WStackingGridder
 		
 #ifndef AVOID_CASACORE
 		/**
-		 * Predict the values for all channels in a band. This is a convencience function
+		 * Predict the values for all channels in a band. This is a convenience function
 		 * that will call @ref SampleDataSample() for all data values in the band specified by
 		 * @p dataDescId.
 		 * 
@@ -550,9 +550,9 @@ class WStackingGridder
 		{
 			return (_nWLayers * layerRangeIndex) / _nPasses;
 		}
-		template<bool IsComplex>
+		template<bool IsComplexImpl>
 		void projectOnImageAndCorrect(const std::complex<double> *source, double w, size_t threadIndex);
-		template<bool IsComplex>
+		template<bool IsComplexImpl>
 		void copyImageToLayerAndInverseCorrect(std::complex<double> *dest, double w);
 		void initializeSqrtLMLookupTable();
 		void initializeSqrtLMLookupTableForSampling();

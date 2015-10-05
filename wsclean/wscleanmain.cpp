@@ -215,6 +215,9 @@ int main(int argc, char *argv[])
 			"   when the channels are joined with -joinchannels.\n"
 			"-fit-spectral-log-pol <nterms>\n"
 			"   Like fit-spectral-pol, but fits a logarithmic polynomial over frequency instead.\n"
+			"-deconvolution-channels <nchannels>\n"
+			"   Decrease the number of channels as specified by -channelsout to the given number for\n"
+			"   deconvolution. Only possible in combination with one of the -fit-spectral options.\n"
 			"\n"
 			"  ** RESTORATION OPTIONS **\n"
 			"-beamsize <arcsec>\n"
@@ -506,6 +509,11 @@ int main(int argc, char *argv[])
 		{
 			++argi;
 			wsclean.DeconvolutionInfo().SetFitSpectralLogPol(atoi(argv[argi]));
+		}
+		else if(param == "deconvolution-channels")
+		{
+			++argi;
+			wsclean.DeconvolutionInfo().SetDeconvolutionChannels(atoi(argv[argi]));
 		}
 		else if(param == "field")
 		{

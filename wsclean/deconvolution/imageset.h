@@ -72,9 +72,9 @@ namespace deconvolution {
 			return image[pixelIndex]<0.0;
 		}
 		
-		void AddComponent(const SingleImageSet& source, size_t pixelIndex, double factor)
+		void AddComponent(size_t pixelIndex, const double* values)
 		{
-			image[pixelIndex] += source.image[pixelIndex] * factor;
+			image[pixelIndex] += values[0];
 		}
 		
 		size_t ImageCount() const { return 1; }
@@ -220,10 +220,10 @@ namespace deconvolution {
 				return false;
 		}
 		
-		void AddComponent(const PolarizedImageSet& source, size_t index, double factor)
+		void AddComponent(size_t index, const double* values)
 		{
 			for(size_t i=0; i!=PolCount; ++i)
-				images[i][index] += source.images[i][index] * factor;
+				images[i][index] += values[i];
 		}
 		
 		size_t ImageCount() const { return PolCount; }
@@ -330,11 +330,13 @@ namespace deconvolution {
 			return false;
 		}
 		
-		void AddComponent(const MultiImageSet& source, size_t index, double factor)
+		void AddComponent(size_t index, const double* values)
 		{
+			size_t vi = 0;
 			for(size_t i=0; i!=_sets.size(); ++i)
 			{
-				_sets[i]->AddComponent(*source._sets[i], index, factor);
+				_sets[i]->AddComponent(index, &values[vi]);
+				vi += _sets[i]->ImageCount();
 			}
 		}
 		

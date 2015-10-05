@@ -4,6 +4,8 @@
 #include <string>
 #include <cmath>
 
+#include "spectralfitter.h"
+
 #include "../polarizationenum.h"
 #include "../uvector.h"
 
@@ -14,12 +16,6 @@ namespace ao {
 class DeconvolutionAlgorithm
 {
 public:
-	enum SpectralFittingMode {
-		NoSpectralFitting,
-		PolynomialSpectralFitting,
-		LogPolynomialSpectralFitting
-	};
-	
 	virtual ~DeconvolutionAlgorithm() { }
 	
 	void SetMaxNIter(size_t nIter) { _maxIter = nIter; }
@@ -72,9 +68,7 @@ public:
 		_allowNegativeComponents = source._allowNegativeComponents;
 		_stopOnNegativeComponent = source._stopOnNegativeComponent;
 		_cleanMask = source._cleanMask;
-		_centralFrequencies = source._centralFrequencies;
-		_spectralFittingMode = source._spectralFittingMode;
-		_spectralFittingTerms = source._spectralFittingTerms;
+		_spectralFitter = source._spectralFitter;
 	}
 	
 	void SetMultiscaleThresholdBias(double bias)
@@ -87,14 +81,15 @@ public:
 	}
 	void SetSpectralFittingMode(SpectralFittingMode mode, size_t nTerms)
 	{
-		_spectralFittingMode = mode;
-		_spectralFittingTerms = nTerms;
+		_spectralFitter.SetMode(mode, nTerms);
 	}
 	
 	void InitializeFrequencies(const ao::uvector<double>& frequencies)
 	{
-		_centralFrequencies = frequencies;
+		_spectralFitter.SetFrequencies(frequencies.data(), frequencies.size());
 	}
+	
+	const SpectralFitter& Fitter() const { return _spectralFitter; }
 protected:
 	DeconvolutionAlgorithm();
 	
@@ -106,10 +101,7 @@ protected:
 	bool _allowNegativeComponents, _stopOnNegativeComponent;
 	const bool* _cleanMask;
 	
-	ao::uvector<double> _centralFrequencies;
-	
-	enum SpectralFittingMode _spectralFittingMode;
-	size_t _spectralFittingTerms;
+	SpectralFitter _spectralFitter;
 };
 
 template<typename ImageSetType>

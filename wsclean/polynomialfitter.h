@@ -13,7 +13,7 @@ public:
 	
 	void Fit(ao::uvector<double>& terms, size_t nTerms);
 	
-	static double Evaluate(double x, ao::uvector<double>& terms)
+	static double Evaluate(double x, const ao::uvector<double>& terms)
 	{
 		double val = terms[0];
 		double f = 1.0;

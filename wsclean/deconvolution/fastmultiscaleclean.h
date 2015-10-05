@@ -35,6 +35,7 @@ private:
 		_startScale, _minScale, _beamSize, _pixelSizeX, _pixelSizeY;
 	ImageSetType *_dataImageLargeScale, *_dataImageNextScale, *_dataImageOriginal, *_modelImage;
 	std::vector<double*> *_originalPsfs, *_scaledPsfs;
+	ao::uvector<double> _curPeakValues;
 	
 	void executeMajorIterationForScale(double currentScale, double nextScale, bool& reachedStopGain, bool& canCleanFurther);
 	
@@ -84,7 +85,6 @@ private:
 	struct CleanTask
 	{
 		size_t cleanCompX, cleanCompY;
-		typename ImageSetType::Value peak;
 	};
 	
 	struct CleanResult

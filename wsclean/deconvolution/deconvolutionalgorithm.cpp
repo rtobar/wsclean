@@ -4,7 +4,6 @@
 
 #include "../model/modelsource.h"
 #include "../model/model.h"
-#include "../polynomialfitter.h"
 
 #include <unistd.h>
 
@@ -21,8 +20,7 @@ DeconvolutionAlgorithm::DeconvolutionAlgorithm() :
 	_allowNegativeComponents(true),
 	_stopOnNegativeComponent(false),
 	_cleanMask(0),
-	_spectralFittingMode(NoSpectralFitting),
-	_spectralFittingTerms(0)
+	_spectralFitter(NoSpectralFitting, 0)
 {
 }
 
@@ -97,46 +95,7 @@ void DeconvolutionAlgorithm::RemoveNaNsInPSF(double* psf, size_t width, size_t h
 
 void DeconvolutionAlgorithm::PerformSpectralFit(double* values)
 {
-	switch(_spectralFittingMode)
-	{
-		default:
-		case NoSpectralFitting:
-			break;
-		case PolynomialSpectralFitting: {
-			PolynomialFitter fitter;
-			double refFreq = _centralFrequencies[_centralFrequencies.size()/2];
-			for(size_t i=0; i!=_centralFrequencies.size(); ++i)
-				fitter.AddDataPoint(_centralFrequencies[i] / refFreq, values[i]);
-			
-			ao::uvector<double> terms;
-			fitter.Fit(terms, _spectralFittingTerms);
-			
-			for(size_t i=0; i!=_centralFrequencies.size(); ++i) {
-				double newValue = fitter.Evaluate(_centralFrequencies[i] / refFreq, terms);
-				//std::cout << values[i] << "->" << newValue << ' ';
-				values[i] = newValue;
-			}
-			//std::cout << '\n';
-			
-		} break;
-		case LogPolynomialSpectralFitting: {
-			NonLinearPowerLawFitter fitter;
-			double refFreq = _centralFrequencies[_centralFrequencies.size()/2];
-			for(size_t i=0; i!=_centralFrequencies.size(); ++i)
-				fitter.AddDataPoint(_centralFrequencies[i] / refFreq, values[i]);
-			
-			ao::uvector<double> terms;
-			fitter.Fit(terms, _spectralFittingTerms);
-			
-			for(size_t i=0; i!=_centralFrequencies.size(); ++i) {
-				double newValue = fitter.Evaluate(_centralFrequencies[i], terms, refFreq);
-				//std::cout << values[i] << "->" << newValue << ' ';
-				values[i] = newValue;
-			}
-			//std::cout << '\n';
-			
-		} break;
-	}
+	_spectralFitter.FitAndEvaluate(values);
 }
 
 double Evaluate(double x, const ao::uvector<double>& terms, double referenceFrequencyHz=1.0);

@@ -16,7 +16,7 @@ else
 		mkdir /tmp/wsclean/wsclean
 		mkdir /tmp/wsclean/wsclean/examples
 		cd ..
-		cp -v CMakeLists.txt Doxyfile.in angle.h areaset.* banddata.* buffered_lane.* casamaskreader.* dftpredictionalgorithm.* fftconvolver.* fftresampler.* fftwmultithreadenabler.* fitsiochecker.* fitsreader.* fitswriter.* gaussianfitter.h imagecoordinates.* imageweights.* inversionalgorithm.* lane.* multibanddata.* nlplfitter.* matrix2x2.* modelrenderer.* msselection.* polarizationenum.* progressbar.* radeccoord.* stopwatch.* threadpool.* uvector.* weightmode.* wscleanmain.cpp wscversion.h /tmp/wsclean/
+		cp -v CMakeLists.txt Doxyfile.in angle.h areaset.* banddata.* buffered_lane.* casamaskreader.* dftpredictionalgorithm.* fftconvolver.* fftresampler.* fftwmultithreadenabler.* fitsiochecker.* fitsreader.* fitswriter.* gaussianfitter.h imagecoordinates.* imageoperations.* imageweights.* lane.* multibanddata.* nlplfitter.* matrix2x2.* modelrenderer.* msselection.* polarizationenum.* polynomialfitter.* progressbar.* radeccoord.* stopwatch.* threadpool.* uvector.* weightmode.* wscleanmain.cpp wscversion.h /tmp/wsclean/
 		cp -v aocommon/lane.h aocommon/lane_03.h aocommon/lane_11.h aocommon/uvector.h aocommon/uvector_03.h /tmp/wsclean/aocommon/
 		cp -v deconvolution/*.{h,cpp} /tmp/wsclean/deconvolution/
 		cp -v interface/*.{c,h,cpp,py} /tmp/wsclean/interface/

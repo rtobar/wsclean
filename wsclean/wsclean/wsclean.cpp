@@ -587,6 +587,13 @@ void WSClean::checkPolarizations()
 	}
 	if((hasXY && !hasYX) || (!hasXY && hasYX))
 		throw std::runtime_error("You are imaging only one of XY or YX polarizations. This is not possible -- you have to specify both XY and YX polarizations (the output of imaging both polarizations will be the XY and imaginary XY images).");
+	if(_deconvolution.IsSpectralFittingEnabled())
+	{
+		if(JoinPolarizations())
+			throw std::runtime_error("You have requested spectral fitting, but you are joining multiple polarizations. This is not supported. You probably want to turn off the joining of polarizations (leave out -joinpolarizations).");
+		if(!JoinChannels())
+			throw std::runtime_error("You have requested spectral fitting, but you are not joining channels. This is not possible: you probably want to turn channel joining on (add -joinchannels).");
+	}
 }
 
 void WSClean::performReordering(bool isPredictMode)

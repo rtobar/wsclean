@@ -77,7 +77,7 @@ void MultiScaleAlgorithm::ExecuteMajorIteration(DynamicSet& dirtySet, DynamicSet
 		_allocator.Allocate(_width*_height, doubleConvolvedPSFs[i]);
 	}
 	
-	DynamicSet individualConvolvedImages(&dirtySet.Table(), dirtySet.Allocator(), _width, _height);
+	DynamicSet individualConvolvedImages(&dirtySet.Table(), dirtySet.Allocator(), dirtySet.ChannelsInDeconvolution(), _width, _height);
 	
 	//
 	// The minor iteration loop

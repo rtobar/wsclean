@@ -94,7 +94,7 @@ ENDIF("${isSystemDir}" STREQUAL "-1")
 
 add_library(wsclean-lib
   casamaskreader.cpp dftpredictionalgorithm.cpp fftconvolver.cpp fftresampler.cpp fftwmultithreadenabler.cpp fitsiochecker.cpp fitsreader.cpp fitswriter.cpp imageweights.cpp nlplfitter.cpp modelrenderer.cpp polynomialfitter.cpp progressbar.cpp stopwatch.cpp
-  deconvolution/deconvolution.cpp deconvolution/deconvolutionalgorithm.cpp deconvolution/fastmultiscaleclean.cpp deconvolution/joinedclean.cpp deconvolution/moresane.cpp deconvolution/simpleclean.cpp
+  deconvolution/deconvolution.cpp deconvolution/deconvolutionalgorithm.cpp deconvolution/dynamicset.cpp deconvolution/fastmultiscaleclean.cpp deconvolution/joinedclean.cpp deconvolution/moresane.cpp deconvolution/simpleclean.cpp deconvolution/spectralfitter.cpp
   interface/wscleaninterface.cpp
   iuwt/imageanalysis.cpp iuwt/iuwtdecomposition.cpp iuwt/iuwtdeconvolutionalgorithm.cpp iuwt/iuwtmask.cpp
   model/model.cpp

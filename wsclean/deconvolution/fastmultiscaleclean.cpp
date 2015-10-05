@@ -176,11 +176,24 @@ void FastMultiScaleClean<ImageSetType>::executeMajorIterationForScale(double cur
 		CleanTask task;
 		task.cleanCompX = componentX;
 		task.cleanCompY = componentY;
-		task.peak = largeScaleImage.Get(peakIndex);
+		typename ImageSetType::Value peakValues = largeScaleImage.Get(peakIndex);
+		
 		for(size_t i=0; i!=cpuCount; ++i)
 			taskLanes[i]->write(task);
 		
-		currentScaleModel.AddComponent(largeScaleImage, peakIndex, this->_gain * rescaleFactor * rescaleFactor);
+		for(size_t i=0; i!=largeScaleImage.ImageCount(); ++i)
+			_curPeakValues[i] = peakValues.GetValue(i);
+		
+		this->PerformSpectralFit(_curPeakValues.data());
+		
+		ao::uvector<double> modelComponentValues(_curPeakValues.size());
+		for(size_t i=0; i!=largeScaleImage.ImageCount(); ++i)
+		{
+			_curPeakValues[i] *= this->_gain;
+			modelComponentValues[i] *= _curPeakValues[i] * rescaleFactor;
+		}
+		
+		currentScaleModel.AddComponent(peakIndex, modelComponentValues.data());
 		
 		double peakUnnormalized = 0.0;
 		for(size_t i=0; i!=cpuCount; ++i)
@@ -310,8 +323,6 @@ template<typename ImageSetType>
 void FastMultiScaleClean<ImageSetType>::cleanThreadFunc(ao::lane<CleanTask> *taskLane, ao::lane<CleanResult> *resultLane, CleanThreadData cleanData)
 {
 	CleanTask task;
-	// This initialization is not really necessary, but gcc warns about possible uninitialized values otherwise
-	task.peak = ImageSetType::Value::Zero();
 	ImageSetType& imageSet = *cleanData.parent->_dataImageLargeScale;
 	ImageSetType& nextScaleSet = *cleanData.parent->_dataImageNextScale;
 	const std::vector<double*>& psfs = *cleanData.parent->_scaledPsfs;
@@ -319,11 +330,11 @@ void FastMultiScaleClean<ImageSetType>::cleanThreadFunc(ao::lane<CleanTask> *tas
 	{
 		for(size_t i=0; i!=imageSet.ImageCount(); ++i)
 		{
-			subtractImage(imageSet.GetImage(i), psfs[ImageSetType::PSFIndex(i)], task.cleanCompX, task.cleanCompY, this->_gain * task.peak.GetValue(i), cleanData.startY, cleanData.endY);
+			subtractImage(imageSet.GetImage(i), psfs[ImageSetType::PSFIndex(i)], task.cleanCompX, task.cleanCompY, _curPeakValues[i], cleanData.startY, cleanData.endY);
 		}
 		for(size_t i=0; i!=nextScaleSet.ImageCount(); ++i)
 		{
-			subtractImage(nextScaleSet.GetImage(i), psfs[ImageSetType::PSFIndex(i)], task.cleanCompX, task.cleanCompY, this->_gain * task.peak.GetValue(i), cleanData.startY, cleanData.endY);
+			subtractImage(nextScaleSet.GetImage(i), psfs[ImageSetType::PSFIndex(i)], task.cleanCompX, task.cleanCompY, _curPeakValues[i], cleanData.startY, cleanData.endY);
 		}
 		
 		CleanResult result;

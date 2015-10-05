@@ -23,8 +23,9 @@ Deconvolution::Deconvolution() :
 	_useMoreSane(false),
 	_useIUWT(false),
 	_moreSaneLocation(), _moreSaneArgs(),
-	_spectralFittingMode(DeconvolutionAlgorithm::NoSpectralFitting),
-	_spectralFittingTerms(0)
+	_spectralFittingMode(NoSpectralFitting),
+	_spectralFittingTerms(0),
+	_requestedDeconvolutionChannelCount(0)
 {
 }
 
@@ -64,44 +65,14 @@ void Deconvolution::performDynamicClean(const class ImagingTable& groupTable, bo
 {
 	_imageAllocator->FreeUnused();
 	DynamicSet
-		residualSet(&groupTable, *_imageAllocator, _imgWidth, _imgHeight),
-		modelSet(&groupTable, *_imageAllocator, _imgWidth, _imgHeight);
-	size_t imgIndex = 0;
-	for(size_t i=0; i!=groupTable.EntryCount(); ++i)
-	{
-		const ImagingTableEntry& e = groupTable[i];
-		if(e.imageCount >= 1)
-		{
-			_residualImages->Load(residualSet[imgIndex], e.polarization, e.outputChannelIndex, false);
-			_modelImages->Load(modelSet[imgIndex], e.polarization, e.outputChannelIndex, false);
-			++imgIndex;
-		}
-		if(e.imageCount == 2)
-		{
-			_residualImages->Load(residualSet[imgIndex], e.polarization, e.outputChannelIndex, true);
-			_modelImages->Load(modelSet[imgIndex], e.polarization, e.outputChannelIndex, true);
-			++imgIndex;
-		}
-	}
-	imgIndex = 0;
+		residualSet(&groupTable, *_imageAllocator, _requestedDeconvolutionChannelCount, _imgWidth, _imgHeight),
+		modelSet(&groupTable, *_imageAllocator, _requestedDeconvolutionChannelCount, _imgWidth, _imgHeight);
+		
+	residualSet.LoadAndAverage(*_residualImages);
+	modelSet.LoadAndAverage(*_modelImages);
+	
 	std::vector<ao::uvector<double>> psfVecs(groupTable.SquaredGroupCount());
-	for(size_t i=0; i!=groupTable.SquaredGroupCount(); ++i)
-	{
-		ImagingTable subTable = groupTable.GetSquaredGroup(i);
-		const ImagingTableEntry& e = subTable.Front();
-		if(e.imageCount >= 1)
-		{
-			psfVecs[imgIndex].resize(_imgWidth * _imgHeight);
-			_psfImages->Load(psfVecs[imgIndex].data(), _psfPolarization, e.outputChannelIndex, false);
-			++imgIndex;
-		}
-		if(e.imageCount == 2)
-		{
-			psfVecs[imgIndex].resize(_imgWidth * _imgHeight);
-			_psfImages->Load(psfVecs[imgIndex].data(), _psfPolarization, e.outputChannelIndex, true);
-			++imgIndex;
-		}
-	}
+	residualSet.LoadAndAveragePSFs(*_psfImages, psfVecs, _psfPolarization);
 	
 	ao::uvector<const double*> psfs(groupTable.SquaredGroupCount());
 	for(size_t i=0; i!=psfVecs.size(); ++i)
@@ -112,23 +83,10 @@ void Deconvolution::performDynamicClean(const class ImagingTable& groupTable, bo
 		
 	algorithm.ExecuteMajorIteration(residualSet, modelSet, psfs, _imgWidth, _imgHeight, reachedMajorThreshold);
 	
-	imgIndex = 0;
-	for(size_t i=0; i!=groupTable.EntryCount(); ++i)
-	{
-		const ImagingTableEntry& e = groupTable[i];
-		if(e.imageCount >= 1)
-		{
-			_residualImages->Store(residualSet[imgIndex], e.polarization, e.outputChannelIndex, false);
-			_modelImages->Store(modelSet[imgIndex], e.polarization, e.outputChannelIndex, false);
-			++imgIndex;
-		}
-		if(e.imageCount == 2)
-		{
-			_residualImages->Store(residualSet[imgIndex], e.polarization, e.outputChannelIndex, true);
-			_modelImages->Store(modelSet[imgIndex], e.polarization, e.outputChannelIndex, true);
-			++imgIndex;
-		}
-	}
+	residualSet.AssignAndStore(*_residualImages);
+	
+	SpectralFitter fitter(_spectralFittingMode, _spectralFittingTerms);
+	modelSet.InterpolateAndStore(*_modelImages, _cleanAlgorithm->Fitter());
 }
 
 void Deconvolution::performSimpleClean(size_t currentChannelIndex, bool& reachedMajorThreshold, size_t majorIterationNr, PolarizationEnum polarization)
@@ -321,12 +279,8 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 	_cleanAlgorithm->SetMultiscaleThresholdBias(_multiscaleThresholdBias);
 	_cleanAlgorithm->SetSpectralFittingMode(_spectralFittingMode, _spectralFittingTerms);
 	
-	ao::uvector<double> frequencies(_summedCount);
-	for(size_t i=0; i!=_summedCount; ++i)
-	{
-		ImagingTable group = groupTable.GetSquaredGroup(i);
-		frequencies[i] = group[0].CentralFrequency();
-	}
+	ao::uvector<double> frequencies;
+	calculateDeconvolutionFrequencies(groupTable, frequencies);
 	_cleanAlgorithm->InitializeFrequencies(frequencies);
 	
 	if(!_fitsMask.empty())
@@ -358,4 +312,21 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 		}
 		_cleanAlgorithm->SetCleanMask(_cleanMask.data());
 	}
+}
+
+void Deconvolution::calculateDeconvolutionFrequencies(const ImagingTable& groupTable, ao::uvector<double>& frequencies)
+{
+	size_t deconvolutionChannels = _requestedDeconvolutionChannelCount;
+	if(deconvolutionChannels == 0) deconvolutionChannels = _summedCount;
+	frequencies.assign(deconvolutionChannels, 0.0);
+	ao::uvector<size_t> weights(deconvolutionChannels, 0);
+	for(size_t i=0; i!=_summedCount; ++i)
+	{
+		double freq = groupTable.GetSquaredGroup(i)[0].CentralFrequency();
+		size_t deconvolutionChannel = i * deconvolutionChannels / _summedCount;
+		frequencies[deconvolutionChannel] += freq;
+		weights[deconvolutionChannel]++;
+	}
+	for(size_t i=0; i!=deconvolutionChannels; ++i)
+		frequencies[i] /= weights[i];
 }

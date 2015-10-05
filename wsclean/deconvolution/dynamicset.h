@@ -11,23 +11,35 @@
 class DynamicSet
 {
 public:
-	DynamicSet(const ImagingTable* table, ImageBufferAllocator& allocator) :
-		_images(table->EntryCount(), 0),
+	DynamicSet(const ImagingTable* table, ImageBufferAllocator& allocator, size_t requestedChannelsInDeconvolution) :
+		_images(),
 		_imageSize(0),
+		_channelsInDeconvolution((requestedChannelsInDeconvolution==0) ? table->SquaredGroupCount() : requestedChannelsInDeconvolution),
 		_imagingTable(*table),
-		_imageIndexToPSFIndex(table->EntryCount()),
+		_imageIndexToPSFIndex(),
 		_allocator(allocator)
 	{
+		size_t nPol = table->GetSquaredGroup(0).EntryCount();
+		size_t nImages = nPol * _channelsInDeconvolution;
+		_images.assign(nImages, static_cast<double*>(0));
+		_imageIndexToPSFIndex.resize(nImages);
+		
 		initializeIndices();
 	}
 	
-	DynamicSet(const ImagingTable* table, ImageBufferAllocator& allocator, size_t width, size_t height) :
-		_images(table->EntryCount(), 0),
+	DynamicSet(const ImagingTable* table, ImageBufferAllocator& allocator, size_t requestedChannelsInDeconvolution, size_t width, size_t height) :
+		_images(),
 		_imageSize(width*height),
+		_channelsInDeconvolution((requestedChannelsInDeconvolution==0) ? table->SquaredGroupCount() : requestedChannelsInDeconvolution),
 		_imagingTable(*table),
-		_imageIndexToPSFIndex(table->EntryCount()),
+		_imageIndexToPSFIndex(),
 		_allocator(allocator)
 	{
+		size_t nPol = table->GetSquaredGroup(0).EntryCount();
+		size_t nImages = nPol * _channelsInDeconvolution;
+		_images.assign(nImages, static_cast<double*>(0));
+		_imageIndexToPSFIndex.resize(nImages);
+		
 		initializeIndices();
 		AllocateImages();
 	}
@@ -68,6 +80,14 @@ public:
 		return _allocator;
 	}
 	
+	void LoadAndAverage(class CachedImageSet& imageSet);
+	
+	void LoadAndAveragePSFs(class CachedImageSet& psfSet, std::vector<ao::uvector<double>>& psfImages, PolarizationEnum psfPolarization);
+	
+	void InterpolateAndStore(class CachedImageSet& imageSet, const class SpectralFitter& fitter);
+	
+	void AssignAndStore(class CachedImageSet& imageSet);
+	
 	/**
 	 * This function will calculate the integration over all images, squaring
 	 * images that are in the same square-imageg group. For example, with
@@ -81,49 +101,12 @@ public:
 	 * If the 'squared groups' are of size 1, the average of the groups will be
 	 * returned (i.e., without square-rooting the square).
 	 * 
-	 * This implies that the some will have normal flux values.
+	 * This implies that the sum will have normal flux values.
 	 * @param dest Pre-allocated output array that will be filled with the
 	 * integrated image.
 	 * @param scratch Pre-allocated scratch space, same size as image.
 	 */
-	void GetSquareIntegrated(double* dest, double* scratch) const
-	{
-		for(size_t sqIndex = 0; sqIndex!=_imagingTable.SquaredGroupCount(); ++sqIndex)
-		{
-			ImagingTable subTable = _imagingTable.GetSquaredGroup(sqIndex);
-			if(subTable.EntryCount() == 1)
-			{
-				const ImagingTableEntry& entry = subTable[0];
-				size_t imageIndex = _tableIndexToImageIndex.find(entry.index)->second;
-				assign(scratch, _images[imageIndex]);
-			}
-			else {
-				for(size_t eIndex = 0; eIndex!=subTable.EntryCount(); ++eIndex)
-				{
-					const ImagingTableEntry& entry = subTable[eIndex];
-					size_t imageIndex = _tableIndexToImageIndex.find(entry.index)->second;
-					if(eIndex == 0)
-					{
-						assign(scratch, _images[0]);
-						square(scratch);
-					}
-					else {
-						addSquared(scratch, _images[imageIndex]);
-					}
-				}
-				squareRoot(scratch);
-			}
-			
-			if(sqIndex == 0)
-				assign(dest, scratch);
-			else
-				add(dest, scratch);
-		}
-		if(_imagingTable.SquaredGroupCount() > 0.0)
-			multiply(dest, 1.0/_imagingTable.SquaredGroupCount());
-		else
-			assign(dest, 0.0);
-	}
+	void GetSquareIntegrated(double* dest, double* scratch) const;
 	
 	/**
 	 * This function will calculate the 'linear' integration over all images.
@@ -134,40 +117,21 @@ public:
 	 * @param dest Pre-allocated output array that will be filled with the average
 	 * values.
 	 */
-	void GetLinearIntegrated(double* dest) const
-	{
-		size_t addIndex = 0;
-		for(size_t sqIndex = 0; sqIndex!=_imagingTable.SquaredGroupCount(); ++sqIndex)
-		{
-			ImagingTable subTable = _imagingTable.GetSquaredGroup(sqIndex);
-			for(size_t eIndex = 0; eIndex!=subTable.EntryCount(); ++eIndex)
-			{
-				const ImagingTableEntry& entry = subTable[eIndex];
-				size_t imageIndex = _tableIndexToImageIndex.find(entry.index)->second;
-				if(addIndex == 0)
-					assign(dest, _images[imageIndex]);
-				else
-					add(dest, _images[imageIndex]);
-				++addIndex;
-			}
-		}
-		if(_imagingTable.SquaredGroupCount() > 0)
-			multiply(dest, 1.0/double(_imagingTable.SquaredGroupCount()));
-		else
-			assign(dest, 0.0);
-	}
+	void GetLinearIntegrated(double* dest) const;
 	
 	void GetIntegratedPSF(double* dest, const ao::uvector<const double*>& psfs)
 	{
 		memcpy(dest, psfs[0], sizeof(double) * _imageSize);
-		for(size_t sqIndex = 1; sqIndex!=_imagingTable.SquaredGroupCount(); ++sqIndex)
+		for(size_t i = 1; i!=PSFCount(); ++i)
 		{
-			add(dest, psfs[sqIndex]);
+			add(dest, psfs[i]);
 		}
-		multiply(dest, 1.0/double(_imagingTable.SquaredGroupCount()));
+		multiply(dest, 1.0/double(PSFCount()));
 	}
 	
-	size_t PSFCount() const { return _imagingTable.SquaredGroupCount(); }
+	size_t PSFCount() const { return _channelsInDeconvolution; }
+	
+	size_t ChannelsInDeconvolution() const { return _channelsInDeconvolution; }
 	
 	DynamicSet& operator=(double val)
 	{
@@ -194,7 +158,7 @@ public:
 	
 	DynamicSet* CreateTrimmed(size_t x1, size_t y1, size_t x2, size_t y2, size_t oldWidth) const
 	{
-		std::unique_ptr<DynamicSet> p(new DynamicSet(&_imagingTable, _allocator, x2-x1, y2-y1));
+		std::unique_ptr<DynamicSet> p(new DynamicSet(&_imagingTable, _allocator, _channelsInDeconvolution, x2-x1, y2-y1));
 		for(size_t i=0; i!=_images.size(); ++i)
 		{
 			copySmallerPart(_images[i], p->_images[i], x1, y1, x2, y2, oldWidth);
@@ -270,8 +234,11 @@ private:
 	
 	void multiply(double* image, double fact) const
 	{
-		for(size_t i=0; i!=_imageSize; ++i)
-			image[i] *= fact;
+		if(fact != 1.0)
+		{
+			for(size_t i=0; i!=_imageSize; ++i)
+				image[i] *= fact;
+		}
 	}
 	
 	void initializeIndices()
@@ -281,7 +248,7 @@ private:
 			_tableIndexToImageIndex.insert(
 				std::make_pair(_imagingTable[i].index, i));
 		}
-		for(size_t sqIndex = 0; sqIndex!=_imagingTable.SquaredGroupCount(); ++sqIndex)
+		for(size_t sqIndex = 0; sqIndex!=_channelsInDeconvolution; ++sqIndex)
 		{
 			ImagingTable subTable = _imagingTable.GetSquaredGroup(sqIndex);
 			for(size_t eIndex = 0; eIndex!=subTable.EntryCount(); ++eIndex)
@@ -307,8 +274,10 @@ private:
 		}
 	}
 	
+	void directStore(class CachedImageSet& imageSet);
+	
 	ao::uvector<double*> _images;
-	size_t _imageSize;
+	size_t _imageSize, _channelsInDeconvolution;
 	const ImagingTable& _imagingTable;
 	std::map<size_t, size_t> _tableIndexToImageIndex;
 	ao::uvector<size_t> _imageIndexToPSFIndex;
