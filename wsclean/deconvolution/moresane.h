@@ -19,7 +19,7 @@ class MoreSane : public UntypedDeconvolutionAlgorithm
 		
 		virtual void ExecuteMajorIteration(DynamicSet& dataImage, DynamicSet& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedMajorThreshold);
 		
-		void ExecuteMajorIteration(double* dataImage, double* modelImage, const double* psfImage, size_t width, size_t height, bool& reachedMajorThreshold);
+		void ExecuteMajorIteration(double* dataImage, double* modelImage, const double* psfImage, size_t width, size_t height);
 	private:
 		const std::string _moresaneLocation, _moresaneArguments;
 

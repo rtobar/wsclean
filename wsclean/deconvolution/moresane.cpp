@@ -9,7 +9,7 @@
 #include "../fitswriter.h"
 #include "../fftconvolver.h"
 
-void MoreSane::ExecuteMajorIteration(double* dataImage, double* modelImage, const double* psfImage, size_t width, size_t height, bool& reachedMajorThreshold)
+void MoreSane::ExecuteMajorIteration(double* dataImage, double* modelImage, const double* psfImage, size_t width, size_t height)
 {
 	if(_iterationNumber!=0)
 	{
@@ -86,9 +86,6 @@ void MoreSane::ExecuteMajorIteration(double* dataImage, double* modelImage, cons
 	unlink((outputName+"_model.fits").c_str());
 	unlink((outputName+"_residual.fits").c_str());
 	
-	++_iterationNumber;
-	
-	reachedMajorThreshold = _iterationNumber<_maxIter;
 }
 
 void MoreSane::ExecuteMajorIteration(DynamicSet& dataImage, DynamicSet& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedMajorThreshold)
@@ -97,6 +94,10 @@ void MoreSane::ExecuteMajorIteration(DynamicSet& dataImage, DynamicSet& modelIma
 	{
 		double* residualData = dataImage[i];
 		double* modelData = modelImage[i];
-		ExecuteMajorIteration(residualData, modelData, psfImages[dataImage.PSFIndex(i)], width, height, reachedMajorThreshold);
+		ExecuteMajorIteration(residualData, modelData, psfImages[dataImage.PSFIndex(i)], width, height);
 	}
+	
+	++_iterationNumber;
+	
+	reachedMajorThreshold = _iterationNumber<_maxIter;
 }
