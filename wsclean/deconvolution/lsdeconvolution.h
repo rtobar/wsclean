@@ -17,7 +17,7 @@ class LSDeconvolution : public TypedDeconvolutionAlgorithm<deconvolution::Single
 		LSDeconvolution();
 		~LSDeconvolution();
 		
-    virtual void ExecuteMajorIteration(ImageSet& dataImage, ImageSet& modelImage, std::vector<double*> psfImages, size_t width, size_t height, bool& reachedMajorThreshold)
+    virtual void ExecuteMajorIteration(ImageSet& dataImage, ImageSet& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedMajorThreshold)
 		{
       _allocator = dataImage.Allocator();
 			ExecuteMajorIteration(dataImage.GetImage(0), modelImage.GetImage(0), psfImages[0], width, height, reachedMajorThreshold);

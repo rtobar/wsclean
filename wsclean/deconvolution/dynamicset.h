@@ -70,6 +70,19 @@ public:
 		}
 	}
 	
+	double* Release(size_t imageIndex)
+	{
+		double* image = _images[imageIndex];
+		_images[imageIndex] = 0;
+		return image;
+	}
+	
+	void Claim(size_t imageIndex, double* data)
+	{
+		_allocator.Free(_images[imageIndex]);
+		_images[imageIndex] = data;
+	}
+	
 	bool IsAllocated() const
 	{
 		return _imageSize!=0;

@@ -5,7 +5,7 @@
 #include <boost/thread/thread.hpp>
 
 template<typename ImageSetType>
-void JoinedClean<ImageSetType>::ExecuteMajorIteration(ImageSetType& dataImage, ImageSetType& modelImage, std::vector<double*> psfImages, size_t width, size_t height, bool& reachedStopGain)
+void JoinedClean<ImageSetType>::ExecuteMajorIteration(ImageSetType& dataImage, ImageSetType& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedStopGain)
 {
 	if(this->_stopOnNegativeComponent)
 		this->_allowNegativeComponents = true;

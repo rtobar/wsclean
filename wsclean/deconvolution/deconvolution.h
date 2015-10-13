@@ -90,16 +90,19 @@ public:
 	bool UseIUWT() const { return _useIUWT; }
 	bool IsInitialized() const { return _cleanAlgorithm != 0; }
 private:
-	void performDynamicClean(const class ImagingTable& groupTable, bool& reachedMajorThreshold, size_t majorIterationNr);
-	
+	void performSimpleClean(DynamicSet& residual, DynamicSet& model, const ao::uvector<const double*>& psfs, bool& reachedMajorThreshold, size_t majorIterationNr);
 	void performSimpleClean(size_t currentChannelIndex, bool& reachedMajorThreshold, size_t majorIterationNr, PolarizationEnum polarization);
 	
+	template<size_t PolCount>
+	void performJoinedPolClean(DynamicSet& residual, DynamicSet& model, const ao::uvector<const double*>& psfs, bool& reachedMajorThreshold, size_t majorIterationNr);
 	template<size_t PolCount>
 	void performJoinedPolClean(size_t currentChannelIndex, bool& reachedMajorThreshold, size_t majorIterationNr);
 	
 	template<size_t PolCount>
 	void performJoinedPolFreqClean(bool& reachedMajorThreshold, size_t majorIterationNr);
-	
+	template<size_t PolCount>
+	void performJoinedPolFreqClean(DynamicSet& residual, DynamicSet& model, const ao::uvector<const double*>& psfs, bool& reachedMajorThreshold, size_t majorIterationNr);
+
 	void calculateDeconvolutionFrequencies(const ImagingTable& groupTable, ao::uvector<double>& frequencies);
 	
 	double _threshold, _gain, _mGain;

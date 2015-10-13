@@ -4,6 +4,8 @@
 #include "../wsclean/cachedimageset.h"
 #include "../wsclean/imagebufferallocator.h"
 
+#include "dynamicset.h"
+
 #include <vector>
 
 namespace deconvolution {
@@ -32,6 +34,12 @@ namespace deconvolution {
 		{
 		}
 		
+		SingleImageSet(double* allocatedData, ImageBufferAllocator& allocator) :
+			image(allocatedData),
+			_allocator(&allocator)
+		{
+		}
+		
 		~SingleImageSet()
 		{
 			_allocator->Free(image);
@@ -45,6 +53,12 @@ namespace deconvolution {
 		void Store(CachedImageSet& set, PolarizationEnum pol, size_t freqIndex) const
 		{
 			set.Store(image, pol, freqIndex, false);
+		}
+		
+		void Transfer(DynamicSet& destination)
+		{
+			destination.Claim(0, image);
+			image = 0;
 		}
 		
 		Value Get(size_t pixelIndex) const
@@ -128,10 +142,33 @@ namespace deconvolution {
 				images[i] = _allocator->Allocate(size);
 		}
 		
+		PolarizedImageSet(DynamicSet& source, ImageBufferAllocator& allocator) :
+			_allocator(&allocator)
+		{
+			for(size_t i=0; i!=PolCount; ++i)
+				images[i] = source.Release(i);
+		}
+		
+		PolarizedImageSet(DynamicSet& source, size_t offset, ImageBufferAllocator& allocator) :
+			_allocator(&allocator)
+		{
+			for(size_t i=0; i!=PolCount; ++i)
+				images[i] = source.Release(i+offset);
+		}
+		
 		~PolarizedImageSet()
 		{
 			for(size_t i=0; i!=PolCount; ++i)
 				_allocator->Free(images[i]);
+		}
+		
+		void Transfer(DynamicSet& destination, size_t offset)
+		{
+			for(size_t i=0; i!=PolCount; ++i)
+			{
+				destination.Claim(offset+i, images[i]);
+				images[i] = 0;
+			}
 		}
 		
 		void Load(CachedImageSet& set, PolarizationEnum polarization, size_t freqIndex)
@@ -273,11 +310,34 @@ namespace deconvolution {
 			}
 		}
 		
+		MultiImageSet(DynamicSet& source, size_t count, ImageBufferAllocator& allocator)
+		{
+			size_t imgIndex = 0;
+			for(size_t i=0; i!=count; ++i)
+			{
+				SingleImageSetType* img = new SingleImageSetType(source, imgIndex, allocator);
+				size_t imagesInGroup = img->ImageCount();
+				imgIndex += imagesInGroup;
+				_sets.push_back(img);
+			}
+		}
+		
 		~MultiImageSet()
 		{
 			for(typename std::vector<SingleImageSetType*>::const_iterator i=_sets.begin(); i!=_sets.end(); ++i)
 			{
 				delete *i;
+			}
+		}
+		
+		void Transfer(DynamicSet& destination)
+		{
+			size_t imgIndex = 0;
+			for(size_t i=0; i!=_sets.size(); ++i)
+			{
+				size_t imagesInGroup = _sets[i]->ImageCount();
+				_sets[i]->Transfer(destination, imgIndex);
+				imgIndex += imagesInGroup;
 			}
 		}
 		

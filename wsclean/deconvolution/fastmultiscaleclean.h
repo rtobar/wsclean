@@ -19,7 +19,7 @@ public:
 		_pixelSizeY(pixelSizeY)
 	{ }
 	
-	virtual void ExecuteMajorIteration(ImageSetType& dataImage, ImageSetType& modelImage, std::vector<double*> psfImages, size_t width, size_t height, bool& reachedStopGain);
+	virtual void ExecuteMajorIteration(ImageSetType& dataImage, ImageSetType& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedStopGain);
 	
 	static void MakeShapeFunction(double scaleSizeInPixels, ao::uvector<double>& output, size_t& n)
 	{
@@ -34,7 +34,8 @@ private:
 	double
 		_startScale, _minScale, _beamSize, _pixelSizeX, _pixelSizeY;
 	ImageSetType *_dataImageLargeScale, *_dataImageNextScale, *_dataImageOriginal, *_modelImage;
-	std::vector<double*> *_originalPsfs, *_scaledPsfs;
+	ao::uvector<const double*> _originalPsfs;
+	ao::uvector<double*> *_scaledPsfs;
 	ao::uvector<double> _curPeakValues;
 	
 	void executeMajorIterationForScale(double currentScale, double nextScale, bool& reachedStopGain, bool& canCleanFurther);

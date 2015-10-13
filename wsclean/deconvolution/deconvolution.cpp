@@ -38,31 +38,6 @@ void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedM
 {
 	std::cout << std::flush << " == Cleaning (" << majorIterationNr << ") ==\n";
 	
-	if(_useIUWT || _multiscale)
-		performDynamicClean(groupTable, reachedMajorThreshold, majorIterationNr);
-	else if(_summedCount != 1)
-	{
-		if(_squaredCount == 4)
-			performJoinedPolFreqClean<4>(reachedMajorThreshold, majorIterationNr);
-		else if(_squaredCount == 2)
-			performJoinedPolFreqClean<2>(reachedMajorThreshold, majorIterationNr);
-		else // if(_squaredCount == 1)
-			performJoinedPolFreqClean<1>(reachedMajorThreshold, majorIterationNr);
-	}
-	else if(_squaredCount != 1) {
-		size_t currentChannelIndex = groupTable.Front().outputChannelIndex;
-		if(_squaredCount == 4)
-			performJoinedPolClean<4>(currentChannelIndex, reachedMajorThreshold, majorIterationNr);
-		else // if(_squaredCount == 2)
-			performJoinedPolClean<2>(currentChannelIndex, reachedMajorThreshold, majorIterationNr);
-	}
-	else {
-		performSimpleClean(groupTable[0].outputChannelIndex, reachedMajorThreshold, majorIterationNr, groupTable[0].polarization);
-	}
-}
-
-void Deconvolution::performDynamicClean(const class ImagingTable& groupTable, bool& reachedMajorThreshold, size_t majorIterationNr)
-{
 	_imageAllocator->FreeUnused();
 	DynamicSet
 		residualSet(&groupTable, *_imageAllocator, _requestedDeconvolutionChannelCount, _imgWidth, _imgHeight),
@@ -78,10 +53,30 @@ void Deconvolution::performDynamicClean(const class ImagingTable& groupTable, bo
 	for(size_t i=0; i!=psfVecs.size(); ++i)
 		psfs[i] = psfVecs[i].data();
 	
-	UntypedDeconvolutionAlgorithm& algorithm =
-		static_cast<UntypedDeconvolutionAlgorithm&>(*_cleanAlgorithm);
-		
-	algorithm.ExecuteMajorIteration(residualSet, modelSet, psfs, _imgWidth, _imgHeight, reachedMajorThreshold);
+	if(_useIUWT || _multiscale || _useMoreSane)
+	{
+		UntypedDeconvolutionAlgorithm& algorithm =
+			static_cast<UntypedDeconvolutionAlgorithm&>(*_cleanAlgorithm);
+		algorithm.ExecuteMajorIteration(residualSet, modelSet, psfs, _imgWidth, _imgHeight, reachedMajorThreshold);
+	}
+	else if(_summedCount != 1)
+	{
+		if(_squaredCount == 4)
+			performJoinedPolFreqClean<4>(residualSet, modelSet, psfs, reachedMajorThreshold, majorIterationNr);
+		else if(_squaredCount == 2)
+			performJoinedPolFreqClean<2>(residualSet, modelSet, psfs, reachedMajorThreshold, majorIterationNr);
+		else // if(_squaredCount == 1)
+			performJoinedPolFreqClean<1>(residualSet, modelSet, psfs, reachedMajorThreshold, majorIterationNr);
+	}
+	else if(_squaredCount != 1) {
+		if(_squaredCount == 4)
+			performJoinedPolClean<4>(residualSet, modelSet, psfs, reachedMajorThreshold, majorIterationNr);
+		else // if(_squaredCount == 2)
+			performJoinedPolClean<2>(residualSet, modelSet, psfs, reachedMajorThreshold, majorIterationNr);
+	}
+	else {
+		performSimpleClean(residualSet, modelSet, psfs, reachedMajorThreshold, majorIterationNr);
+	}
 	
 	residualSet.AssignAndStore(*_residualImages);
 	
@@ -89,76 +84,43 @@ void Deconvolution::performDynamicClean(const class ImagingTable& groupTable, bo
 	modelSet.InterpolateAndStore(*_modelImages, _cleanAlgorithm->Fitter());
 }
 
-void Deconvolution::performSimpleClean(size_t currentChannelIndex, bool& reachedMajorThreshold, size_t majorIterationNr, PolarizationEnum polarization)
+void Deconvolution::performSimpleClean(DynamicSet& residual, DynamicSet& model, const ao::uvector<const double*>& psfs, bool& reachedMajorThreshold, size_t majorIterationNr)
 {
 	deconvolution::SingleImageSet
-		residualImage(_imgWidth*_imgHeight, *_imageAllocator),
-		modelImage(_imgWidth*_imgHeight, *_imageAllocator);
-	ImageBufferAllocator::Ptr psfImage;
-	_imageAllocator->Allocate(_imgWidth*_imgHeight, psfImage);
+		residualImage(residual.Release(0), *_imageAllocator),
+		modelImage(model.Release(0), *_imageAllocator);
 		
-	_residualImages->Load(residualImage.Data(), polarization, currentChannelIndex, false);
-	_modelImages->Load(modelImage.Data(), polarization, currentChannelIndex, false);
-	_psfImages->Load(psfImage.data(), _psfPolarization, currentChannelIndex, false);
-	
-	std::vector<double*> psfs(1, psfImage.data());
 	TypedDeconvolutionAlgorithm<deconvolution::SingleImageSet>& tAlgorithm =
 		static_cast<TypedDeconvolutionAlgorithm<deconvolution::SingleImageSet>&>(*_cleanAlgorithm);
 	tAlgorithm.ExecuteMajorIteration(residualImage, modelImage, psfs, _imgWidth, _imgHeight, reachedMajorThreshold);
 	
-	_modelImages->Store(modelImage.Data(), polarization, currentChannelIndex, false);
-	_residualImages->Store(residualImage.Data(), polarization, currentChannelIndex, false);
+	residualImage.Transfer(residual);
+	modelImage.Transfer(model);
 }
 
 template<size_t PolCount>
-void Deconvolution::performJoinedPolClean(size_t currentChannelIndex, bool& reachedMajorThreshold, size_t majorIterationNr)
+void Deconvolution::performJoinedPolClean(DynamicSet& residual, DynamicSet& model, const ao::uvector<const double*>& psfs, bool& reachedMajorThreshold, size_t majorIterationNr)
 {
 	typename JoinedClean<deconvolution::PolarizedImageSet<PolCount>>::ImageSet
-		modelSet(_imgWidth*_imgHeight, *_imageAllocator),
-		residualSet(_imgWidth*_imgHeight, *_imageAllocator);
+		modelSet(model, *_imageAllocator),
+		residualSet(residual, *_imageAllocator);
+		
+	static_cast<TypedDeconvolutionAlgorithm<deconvolution::PolarizedImageSet<PolCount>>&>(*_cleanAlgorithm).ExecuteMajorIteration(residualSet, modelSet, psfs, _imgWidth, _imgHeight, reachedMajorThreshold);
 	
-	ImageBufferAllocator::Ptr psfImage;
-	_imageAllocator->Allocate(_imgWidth*_imgHeight, psfImage);
-	_psfImages->Load(psfImage.data(), _psfPolarization, currentChannelIndex, false);
-	
-	modelSet.Load(*_modelImages, _polarizations, currentChannelIndex);
-	residualSet.Load(*_residualImages, _polarizations, currentChannelIndex);
-	
-	std::vector<double*> psfImages(1, psfImage.data());
-	static_cast<TypedDeconvolutionAlgorithm<deconvolution::PolarizedImageSet<PolCount>>&>(*_cleanAlgorithm).ExecuteMajorIteration(residualSet, modelSet, psfImages, _imgWidth, _imgHeight, reachedMajorThreshold);
-	
-	psfImage.reset();
-	modelSet.Store(*_modelImages, _polarizations, currentChannelIndex);
-	residualSet.Store(*_residualImages, _polarizations, currentChannelIndex);
+	modelSet.Transfer(model, 0);
+	residualSet.Transfer(residual, 0);
 }
 
 template<size_t PolCount>
-void Deconvolution::performJoinedPolFreqClean(bool& reachedMajorThreshold, size_t majorIterationNr)
+void Deconvolution::performJoinedPolFreqClean(DynamicSet& residual, DynamicSet& model, const ao::uvector<const double*>& psfs, bool& reachedMajorThreshold, size_t majorIterationNr)
 {
 	typename JoinedClean<deconvolution::MultiImageSet<deconvolution::PolarizedImageSet<PolCount>>>::ImageSet
-		modelSet(_imgWidth*_imgHeight, _summedCount, *_imageAllocator),
-		residualSet(_imgWidth*_imgHeight, _summedCount, *_imageAllocator);
+		modelSet(model, model.ChannelsInDeconvolution(), *_imageAllocator),
+		residualSet(residual, residual.ChannelsInDeconvolution(), *_imageAllocator);
+	static_cast<TypedDeconvolutionAlgorithm<deconvolution::MultiImageSet<deconvolution::PolarizedImageSet<PolCount>>>&>(*_cleanAlgorithm).ExecuteMajorIteration(residualSet, modelSet, psfs, _imgWidth, _imgHeight, reachedMajorThreshold);
 	
-	std::unique_ptr<ImageBufferAllocator::Ptr[]> psfImagePtrs(
-		new ImageBufferAllocator::Ptr[_summedCount]);
-	std::vector<double*> psfImages(_summedCount);
-	for(size_t ch=0; ch!=_summedCount; ++ch)
-	{
-		_imageAllocator->Allocate(_imgWidth*_imgHeight, psfImagePtrs[ch]);
-		_psfImages->Load(psfImagePtrs[ch].data(), _psfPolarization, ch, false);
-		psfImages[ch] = psfImagePtrs[ch].data();
-		
-		modelSet.Load(*_modelImages, _polarizations, ch);
-		residualSet.Load(*_residualImages, _polarizations, ch);
-	}
-	static_cast<TypedDeconvolutionAlgorithm<deconvolution::MultiImageSet<deconvolution::PolarizedImageSet<PolCount>>>&>(*_cleanAlgorithm).ExecuteMajorIteration(residualSet, modelSet, psfImages, _imgWidth, _imgHeight, reachedMajorThreshold);
-	
-	for(size_t ch=0; ch!=_summedCount; ++ch)
-	{
-		psfImagePtrs[ch].reset();
-		modelSet.Store(*_modelImages, _polarizations, ch);
-		residualSet.Store(*_residualImages, _polarizations, ch);
-	}
+	modelSet.Transfer(model);
+	residualSet.Transfer(residual);
 }
 
 void Deconvolution::FreeDeconvolutionAlgorithms()
@@ -191,7 +153,7 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 	
 	if(_useMoreSane)
 	{
-		_cleanAlgorithm.reset(new MoreSane(_moreSaneLocation, _moreSaneArgs, _moreSaneSigmaLevels, _prefixName));
+		_cleanAlgorithm.reset(new MoreSane(_moreSaneLocation, _moreSaneArgs, _moreSaneSigmaLevels, _prefixName, *_imageAllocator));
 	}
 	else if(_useIUWT)
 	{
