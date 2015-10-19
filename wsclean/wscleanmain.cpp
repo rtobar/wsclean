@@ -72,6 +72,11 @@ int main(int argc, char *argv[])
 			"   Splits the bandwidth and makes count nr. of images. Default: 1.\n"
 			"-predict <image-prefix>\n"
 			"   Only perform a single prediction for an existing image. Doesn't do any imaging or cleaning.\n"
+			"-predict-channels <nchannels>\n"
+			"   Interpolate from a given number of images to the number of channels that are predicted\n"
+			"   as specified by -channelsout. Will interpolate using the frequencies of the images.\n"
+			"   Use one the -fit-spectral-... options to specify the interpolation method / freedom.\n"
+			"   Only used when -predict is specified.\n"
 			"-subtract-model\n"
 			"   Subtract the model from the data column in the first iteration. This can be used to reimage\n"
 			"   an already cleaned image, e.g. at a different resolution.\n"
@@ -218,6 +223,7 @@ int main(int argc, char *argv[])
 			"-deconvolution-channels <nchannels>\n"
 			"   Decrease the number of channels as specified by -channelsout to the given number for\n"
 			"   deconvolution. Only possible in combination with one of the -fit-spectral options.\n"
+			"   Proper residuals/restored images will only be returned when mgain < 1.\n"
 			"\n"
 			"  ** RESTORATION OPTIONS **\n"
 			"-beamsize <arcsec>\n"
@@ -268,6 +274,11 @@ int main(int argc, char *argv[])
 		else if(param == "predict")
 		{
 			predictionMode = true;
+		}
+		else if(param == "predict-channels")
+		{
+			++argi;
+			wsclean.SetPredictChannels(atoi(argv[argi]));
 		}
 		else if(param == "subtract-model")
 		{

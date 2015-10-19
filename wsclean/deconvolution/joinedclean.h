@@ -48,6 +48,7 @@ private:
 	void findPeak(const ImageSetType& image, size_t& x, size_t& y, size_t startY, size_t stopY, const bool* mask) const;
 	
 	std::string peakDescription(const ImageSetType& image, size_t& x, size_t& y);
+	
 	void cleanThreadFunc(ao::lane<CleanTask>* taskLane, ao::lane<CleanResult>* resultLane, CleanThreadData cleanData);
 	
 	void subtractImage(double *image, const double *psf, size_t x, size_t y, double factor, size_t startY, size_t endY) const

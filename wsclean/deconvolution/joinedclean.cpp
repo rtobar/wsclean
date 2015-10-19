@@ -19,7 +19,8 @@ void JoinedClean<ImageSetType>::ExecuteMajorIteration(ImageSetType& dataImage, I
 	
 	size_t peakIndex = componentX + componentY*_width;
 	double peakNormalized = dataImage.JoinedValueNormalized(peakIndex);
-	double firstThreshold = this->_threshold, stopGainThreshold = peakNormalized*(1.0-this->_mGain);
+	double firstThreshold = this->_threshold;
+	double stopGainThreshold = std::fabs(peakNormalized)*(1.0-this->_mGain);
 	if(stopGainThreshold > firstThreshold)
 	{
 		firstThreshold = stopGainThreshold;

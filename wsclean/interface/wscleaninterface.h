@@ -43,16 +43,17 @@ void wsclean_deinitialize(void* userData);
 void wsclean_read(void* userData, DCOMPLEX* data, double* weights);
 
 /**
- * Write the final image out. (maybe nice for later)
+ * Write the final image out.
  * @p image The image data.
  */
 void wsclean_write(void* userData, const double* image);
 
-void wsclean_operator_A(void* userData,
-	void* dataOut, void* dataIn);
+/**
+ * Calculate the visibilities given the image data.
+ */
+void wsclean_operator_A(void* userData, DCOMPLEX* dataOut, const double* dataIn);
 
-void wsclean_operator_At(void* userData,
-	void* dataOut, void* dataIn);
+void wsclean_operator_At(void* userData, double* dataOut, const DCOMPLEX* dataIn);
 
 double wsclean_parse_angle(const char* angle);
 

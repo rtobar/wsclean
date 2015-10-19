@@ -85,11 +85,11 @@ void wsclean_initialize(
 	data_info->dataSize = selectedRows * nChannel;
 	data_info->lhs_data_type = imaging_data::DATA_TYPE_COMPLEX_DOUBLE;
 	data_info->rhs_data_type = imaging_data::DATA_TYPE_DOUBLE;
-	data_info->deinitialize_function = wsclean_deinitialize;
-	data_info->read_function = wsclean_read;
-	data_info->write_function = wsclean_write;
-	data_info->operator_A_function = wsclean_operator_A;
-	data_info->operator_At_function = wsclean_operator_At;
+	//data_info->deinitialize_function = wsclean_deinitialize;
+	//data_info->read_function = wsclean_read;
+	//data_info->write_function = wsclean_write;
+	//data_info->operator_A_function = wsclean_operator_A;
+	//data_info->operator_At_function = wsclean_operator_At;
 	
 	bool hasCorrected = ms.tableDesc().isColumn("CORRECTED_DATA");
 	if(hasCorrected) {
@@ -176,7 +176,7 @@ void wsclean_write(void* userData, const double* image)
 		FitsReader reader("tmp-operator-At-0-image.fits");
 		writer = FitsWriter(reader);
 	}
-	writer.Write("purify-wsclean-model.fits", image);
+	writer.Write("wsclean-model.fits", image);
 }
 
 void getCommandLine(std::vector<std::string>& commandline, const WSCleanUserData& userData)
@@ -206,23 +206,24 @@ void getCommandLine(std::vector<std::string>& commandline, const WSCleanUserData
 // Go from image to visibilities
 // dataIn :  double[] of size width*height
 // dataOut : complex double[] of size nvis: nchannels x nbaselines x ntimesteps
-void wsclean_operator_A(void* userData, void* dataOut, void* dataIn)
+void wsclean_operator_A(void* userData, DCOMPLEX* dataOut, const double* dataIn)
 {
 	WSCleanUserData* wscUserData = static_cast<WSCleanUserData*>(userData);
 	std::cout << "------ wsclean_operator_A(), image: " << wscUserData->width << " x " << wscUserData->height << ", pixelscale=" << Angle::ToNiceString(wscUserData->pixelScaleX) << "," << Angle::ToNiceString(wscUserData->pixelScaleY) << '\n';
 	
 	// Remove non-finite values
+	// TODO skipped now -- can't change input array without making a copy
 	size_t nonFiniteValues = 0;
 	double imageSum = 0.0;
 	for(size_t i=0; i!=wscUserData->width * wscUserData->height; ++i)
 	{
-		if(!std::isfinite(static_cast<double*>(dataIn)[i]))
+		if(!std::isfinite(dataIn[i]))
 		{
-			static_cast<double*>(dataIn)[i] = 0.0;
+			//dataIn[i] = 0.0;
 			++nonFiniteValues;
 		}
 		else {
-			imageSum += static_cast<double*>(dataIn)[i];
+			imageSum += dataIn[i];
 		}
 	}
 	if(nonFiniteValues != 0)
@@ -235,7 +236,7 @@ void wsclean_operator_A(void* userData, void* dataOut, void* dataIn)
 	// Write dataIn to a fits file
 	FitsWriter writer;
 	writer.SetImageDimensions(wscUserData->width, wscUserData->height, wscUserData->pixelScaleX, wscUserData->pixelScaleY);
-	writer.Write(filenameStr.str() + "-model.fits", static_cast<double*>(dataIn));
+	writer.Write(filenameStr.str() + "-model.fits", dataIn);
 	wscUserData->hasAImage = true;
 	
 	// Run WSClean -predict (creates/fills new column MODEL_DATA)
@@ -286,7 +287,7 @@ void wsclean_operator_A(void* userData, void* dataOut, void* dataIn)
 }
 
 // Go from visibilities to image
-void wsclean_operator_At(void* userData, void* dataOut, void* dataIn)
+void wsclean_operator_At(void* userData, double* dataOut, const DCOMPLEX* dataIn)
 {
 	// Write dataIn to the MODEL_DATA column
 	WSCleanUserData* wscUserData = static_cast<WSCleanUserData*>(userData);
@@ -339,7 +340,7 @@ void wsclean_operator_At(void* userData, void* dataOut, void* dataIn)
 	
 	// Read dirty image and store in dataOut
 	FitsReader reader(prefixName.str() + "-image.fits");
-	reader.Read(static_cast<double*>(dataOut));
+	reader.Read(dataOut);
 	++(wscUserData->nAtCalls);
 	std::cout << "------ end of wsclean_operator_At()\n";
 }

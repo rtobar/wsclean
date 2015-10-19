@@ -95,6 +95,8 @@ public:
 	void SetJoinChannels(bool joinChannels) { _joinedFrequencyCleaning = joinChannels; }
 	bool JoinChannels() const { return _joinedFrequencyCleaning; }
 	
+	void SetPredictChannels(size_t predictionChannels) { _predictionChannels = predictionChannels; }
+	
 	void AddInputMS(const std::string& msPath) { _filenames.push_back(msPath); }
 	
 	void RunClean();
@@ -146,11 +148,15 @@ private:
 	void predict(PolarizationEnum polarization, size_t channelIndex);
 	void dftPredict(const ImagingTable& squaredGroup);
 	
-	void makeMFSImage(const string& suffix, PolarizationEnum pol, bool isImaginary);
+	void makeMFSImage(const string& suffix, PolarizationEnum pol, bool isImaginary, bool isPSF = false);
+	void renderMFSImage(PolarizationEnum pol, bool isImaginary);
 	void writeFits(const string& suffix, const double* image, PolarizationEnum pol, size_t channelIndex, bool isImaginary);
 	void saveUVImage(const double* image, PolarizationEnum pol, size_t channelIndex, bool isImaginary, const std::string& prefix);
 	void writeFirstResidualImages(const ImagingTable& groupTable);
 	void writeModelImages(const ImagingTable& groupTable);
+	
+	void fitBeamSize(double& bMaj, double& bMin, double& bPA, const double* image, double beamEstimate);
+	void determineBeamSize(double& bMaj, double& bMin, double& bPA, const double* image, double theoreticBeam);
 	
 	std::string fourDigitStr(size_t val) const
 	{
@@ -190,7 +196,7 @@ private:
 		return partPrefixNameStr.str();
 	}
 	
-	std::string getMFSPrefix(PolarizationEnum polarization, bool isImaginary) const
+	std::string getMFSPrefix(PolarizationEnum polarization, bool isImaginary, bool isPSF) const
 	{
 		std::ostringstream partPrefixNameStr;
 		partPrefixNameStr << _prefixName;
@@ -198,7 +204,7 @@ private:
 			partPrefixNameStr << "-t" << fourDigitStr(_currentIntervalIndex);
 		if(_channelsOut != 1)
 			partPrefixNameStr << "-MFS";
-		if(_polarizations.size() != 1)
+		if(_polarizations.size() != 1 && !isPSF)
 		{
 			partPrefixNameStr << '-' << Polarization::TypeToShortString(polarization);
 			if(isImaginary)
@@ -228,6 +234,7 @@ private:
 	size_t _nWLayers, _antialiasingKernelSize, _overSamplingFactor, _threadCount;
 	size_t _startChannel, _endChannel;
 	bool _joinedPolarizationCleaning, _joinedFrequencyCleaning;
+	size_t _predictionChannels;
 	MSSelection _globalSelection;
 	std::string _columnName;
 	std::set<PolarizationEnum> _polarizations;
@@ -250,8 +257,10 @@ private:
 		double weight;
 		double bandStart, bandEnd;
 		double beamMaj, beamMin, beamPA;
+		double theoreticBeamSize;
 	};
 	std::vector<ChannelInfo> _infoPerChannel;
+	ChannelInfo _infoForMFS;
 	
 	std::unique_ptr<class WSMSGridder> _inversionAlgorithm;
 	std::unique_ptr<class ImageWeightCache> _imageWeightCache;

@@ -33,11 +33,11 @@ typedef struct
 		lhs_data_type,
 		rhs_data_type;
 		
-	void (*deinitialize_function)(void* userData);
+	/*void (*deinitialize_function)(void* userData);
 	void (*read_function)(void* userData, DCOMPLEX* data, double* weights);
 	void (*write_function)(void* userData, const double* image);
 	void (*operator_A_function)(void* userData, void* dataOut, void* dataIn);
-	void (*operator_At_function)(void* userData, void* dataOut, void* dataIn);
+	void (*operator_At_function)(void* userData, void* dataOut, void* dataIn);*/
 } imaging_data;
 
 #ifdef __cplusplus

@@ -44,6 +44,7 @@ WSClean::WSClean() :
 	_threadCount(sysconf(_SC_NPROCESSORS_ONLN)),
 	_startChannel(0), _endChannel(0),
 	_joinedPolarizationCleaning(false), _joinedFrequencyCleaning(false),
+	_predictionChannels(0),
 	_globalSelection(),
 	_columnName(),
 	_polarizations(),
@@ -174,50 +175,14 @@ void WSClean::imagePSF(size_t currentChannelIndex)
 	}
 	
 	_isFirstInversion = false;
-	if(_manualBeamMajorSize != 0.0)
-	{
-		_infoPerChannel[currentChannelIndex].beamMaj = _manualBeamMajorSize;
-		_infoPerChannel[currentChannelIndex].beamMin = _manualBeamMinorSize;
-		_infoPerChannel[currentChannelIndex].beamPA = _manualBeamPA;
-	} else if(_fittedBeam)
-	{
-		double bMaj, bMin, bPA;
-		GaussianFitter beamFitter;
-		std::cout << "Fitting beam... " << std::flush;
-		beamFitter.Fit2DGaussianCentred(
-			_inversionAlgorithm->ImageRealResult(),
-			_trimWidth, _trimHeight,
-			_inversionAlgorithm->BeamSize()*2.0/(_pixelScaleX+_pixelScaleY),
-			bMaj, bMin, bPA);
-		if(bMaj < 1.0) bMaj = 1.0;
-		if(bMin < 1.0) bMin = 1.0;
-		bMaj = bMaj*0.5*(_pixelScaleX+_pixelScaleY);
-		bMin = bMin*0.5*(_pixelScaleX+_pixelScaleY);
-		std::cout << "major=" << Angle::ToNiceString(bMaj) << ", minor=" <<
-		Angle::ToNiceString(bMin) << ", PA=" << Angle::ToNiceString(bPA) << ", theoretical=" <<
-		Angle::ToNiceString(_inversionAlgorithm->BeamSize())<< ".\n";
+	
+	double bMaj, bMin, bPA;
+	determineBeamSize(bMaj, bMin, bPA, _inversionAlgorithm->ImageRealResult(), _inversionAlgorithm->BeamSize());
+	_infoPerChannel[currentChannelIndex].theoreticBeamSize = _inversionAlgorithm->BeamSize();
+	_infoPerChannel[currentChannelIndex].beamMaj = bMaj;
+	_infoPerChannel[currentChannelIndex].beamMin = bMin;
+	_infoPerChannel[currentChannelIndex].beamPA = bPA;
 		
-		_infoPerChannel[currentChannelIndex].beamMaj = bMaj;
-		if(_circularBeam)
-		{
-			_infoPerChannel[currentChannelIndex].beamMin = bMaj;
-			_infoPerChannel[currentChannelIndex].beamPA = 0.0;
-		}
-		else {
-			_infoPerChannel[currentChannelIndex].beamMin = bMin;
-			_infoPerChannel[currentChannelIndex].beamPA = bPA;
-		}
-	}
-	else if(_theoreticBeam) {
-		_infoPerChannel[currentChannelIndex].beamMaj = _inversionAlgorithm->BeamSize();
-		_infoPerChannel[currentChannelIndex].beamMin = _inversionAlgorithm->BeamSize();
-		_infoPerChannel[currentChannelIndex].beamPA = 0.0;
-		std::cout << "Beam size is " << Angle::ToNiceString(_inversionAlgorithm->BeamSize()) << '\n';
-	} else {
-		_infoPerChannel[currentChannelIndex].beamMaj = std::numeric_limits<double>::quiet_NaN();
-		_infoPerChannel[currentChannelIndex].beamMin = std::numeric_limits<double>::quiet_NaN();
-		_infoPerChannel[currentChannelIndex].beamPA = std::numeric_limits<double>::quiet_NaN();
-	}
 	if(std::isfinite(_infoPerChannel[currentChannelIndex].beamMaj))
 	{
 		_fitsWriter.SetBeamInfo(
@@ -688,21 +653,32 @@ void WSClean::RunClean()
 		{
 			for(std::set<PolarizationEnum>::const_iterator pol=_polarizations.begin(); pol!=_polarizations.end(); ++pol)
 			{
+				bool psfWasMade = (_deconvolution.NIter() > 0 || _makePSF) && pol == _polarizations.begin();
+				
+				if(psfWasMade)
+					makeMFSImage("psf.fits", *pol, false, true);
+				
 				if(!(*pol == Polarization::YX && _polarizations.count(Polarization::XY)!=0))
 				{
-					makeMFSImage("image.fits", *pol, false);
-					if(_deconvolution.NIter() > 0)
+					makeMFSImage("dirty.fits", *pol, false);
+					if(_deconvolution.NIter() == 0)
+						makeMFSImage("image.fits", *pol, false);
+					else 
 					{
 						makeMFSImage("residual.fits", *pol, false);
 						makeMFSImage("model.fits", *pol, false);
+						renderMFSImage(*pol, false);
 					}
 					if(Polarization::IsComplex(*pol))
 					{
-						makeMFSImage("image.fits", *pol, true);
-						if(_deconvolution.NIter() > 0)
+						makeMFSImage("dirty.fits", *pol, true);
+						if(_deconvolution.NIter() == 0)
+								makeMFSImage("image.fits", *pol, true);
+						else
 						{
 							makeMFSImage("residual.fits", *pol, true);
 							makeMFSImage("model.fits", *pol, true);
+							renderMFSImage(*pol, true);
 						}
 					}
 				}
@@ -1138,7 +1114,7 @@ void WSClean::runFirstInversion(const ImagingTableEntry& entry)
 	clearCurMSProviders();
 }
 
-void WSClean::makeMFSImage(const string& suffix, PolarizationEnum pol, bool isImaginary)
+void WSClean::makeMFSImage(const string& suffix, PolarizationEnum pol, bool isImaginary, bool isPSF)
 {
 	double lowestFreq = 0.0, highestFreq = 0.0;
 	const size_t size = _trimWidth * _trimHeight;
@@ -1147,7 +1123,8 @@ void WSClean::makeMFSImage(const string& suffix, PolarizationEnum pol, bool isIm
 	FitsWriter writer;
 	for(size_t ch=0; ch!=_channelsOut; ++ch)
 	{
-		const std::string name(getPrefix(pol, ch, isImaginary) + '-' + suffix);
+		std::string prefixStr = isPSF ? getPSFPrefix(ch) : getPrefix(pol, ch, isImaginary);
+		const std::string name(prefixStr + '-' + suffix);
 		FitsReader reader(name);
 		if(ch == 0)
 		{
@@ -1178,12 +1155,63 @@ void WSClean::makeMFSImage(const string& suffix, PolarizationEnum pol, bool isIm
 	}
 	for(size_t i=0; i!=size; ++i)
 		mfsImage[i] /= weightImage[i];
+	
+	if(isPSF)
+	{
+		double bMaj, bMin, bPA;
+		determineBeamSize(bMaj, bMin, bPA, mfsImage.data(), _infoPerChannel.back().theoreticBeamSize);
+		_infoForMFS.beamMaj = bMaj;
+		_infoForMFS.beamMin = bMin;
+		_infoForMFS.beamPA = bPA;
+	}
+	if(std::isfinite(_infoForMFS.beamMaj))
+		writer.SetBeamInfo(_infoForMFS.beamMaj, _infoForMFS.beamMin, _infoForMFS.beamPA);
+	else
+		writer.SetNoBeamInfo();
+	
+	std::string mfsName(getMFSPrefix(pol, isImaginary, isPSF) + '-' + suffix);
+	std::cout << "Writing " << mfsName << "...\n";
 	writer.SetFrequency((lowestFreq+highestFreq)*0.5, highestFreq-lowestFreq);
-	writer.SetNoBeamInfo();
 	writer.SetExtraKeyword("WSCIMGWG", weightSum);
 	writer.RemoveExtraKeyword("WSCCHANS");
 	writer.RemoveExtraKeyword("WSCCHANE");
-	writer.Write(getMFSPrefix(pol, isImaginary) + '-' + suffix, mfsImage.data());
+	writer.Write(mfsName, mfsImage.data());
+}
+
+void WSClean::renderMFSImage(PolarizationEnum pol, bool isImaginary)
+{
+	const size_t size = _trimWidth * _trimHeight;
+	
+	std::string mfsPrefix(getMFSPrefix(pol, isImaginary, false));
+	FitsReader residualReader(mfsPrefix + "-residual.fits");
+	FitsReader modelReader(mfsPrefix + "-model.fits");
+	ao::uvector<double> image(size), modelImage(size);
+	residualReader.Read(image.data());
+	modelReader.Read(modelImage.data());
+	
+	ModelRenderer renderer(_fitsWriter.RA(), _fitsWriter.Dec(), _pixelScaleX, _pixelScaleY, _fitsWriter.PhaseCentreDL(), _fitsWriter.PhaseCentreDM());
+	double beamMaj = _infoForMFS.beamMaj;
+	double beamMin, beamPA;
+	std::string beamStr;
+	if(std::isfinite(beamMaj))
+	{
+		beamMin = _infoForMFS.beamMin;
+		beamPA = _infoForMFS.beamPA;
+		beamStr = "(beam=" + Angle::ToNiceString(beamMin) + "-" +
+		Angle::ToNiceString(beamMaj) + ", PA=" +
+		Angle::ToNiceString(beamPA) + ")";
+	}
+	else {
+		beamStr = "(beam is neither fitted nor estimated -- using delta scales!)";
+		beamMaj = 0.0; beamMin = 0.0; beamPA = 0.0;
+	}
+	std::cout << "Rendering sources to restored image " + beamStr + "... " << std::flush;
+	renderer.Restore(image.data(), modelImage.data(), _trimWidth, _trimHeight, beamMaj, beamMin, beamPA, Polarization::StokesI);
+	std::cout << "DONE\n";
+	
+	std::cout << "Writing " + mfsPrefix + "-image.fits...\n";
+	FitsWriter imageWriter(residualReader);
+	imageWriter.Write(mfsPrefix + "-image.fits", image.data());
 }
 
 void WSClean::writeFits(const string& suffix, const double* image, PolarizationEnum pol, size_t channelIndex, bool isImaginary)
@@ -1387,5 +1415,52 @@ void WSClean::addPolarizationsToImagingTable(size_t& joinedGroupIndex, size_t& s
 	{
 		++joinedGroupIndex;
 		++squaredGroupIndex;
+	}
+}
+
+void WSClean::fitBeamSize(double& bMaj, double& bMin, double& bPA, const double* image, double beamEstimate)
+{
+	GaussianFitter beamFitter;
+	std::cout << "Fitting beam... " << std::flush;
+	beamFitter.Fit2DGaussianCentred(
+		image,
+		_trimWidth, _trimHeight,
+		beamEstimate,
+		bMaj, bMin, bPA);
+	if(bMaj < 1.0) bMaj = 1.0;
+	if(bMin < 1.0) bMin = 1.0;
+	bMaj = bMaj*0.5*(_pixelScaleX+_pixelScaleY);
+	bMin = bMin*0.5*(_pixelScaleX+_pixelScaleY);
+}
+
+void WSClean::determineBeamSize(double& bMaj, double& bMin, double& bPA, const double* image, double theoreticBeam)
+{
+	if(_manualBeamMajorSize != 0.0)
+	{
+		bMaj = _manualBeamMajorSize;
+		bMin = _manualBeamMinorSize;
+		bPA = _manualBeamPA;
+	} else if(_fittedBeam)
+	{
+		fitBeamSize(bMaj, bMin, bPA, image, theoreticBeam*2.0/(_pixelScaleX+_pixelScaleY));
+		std::cout << "major=" << Angle::ToNiceString(bMaj) << ", minor=" <<
+		Angle::ToNiceString(bMin) << ", PA=" << Angle::ToNiceString(bPA) << ", theoretical=" <<
+		Angle::ToNiceString(theoreticBeam)<< ".\n";
+		
+		if(_circularBeam)
+		{
+			bMin = bMaj;
+			bPA = 0.0;
+		}
+	}
+	else if(_theoreticBeam) {
+		bMaj = theoreticBeam;
+		bMin = theoreticBeam;
+		bPA = 0.0;
+		std::cout << "Beam size is " << Angle::ToNiceString(theoreticBeam) << '\n';
+	} else {
+		bMaj = std::numeric_limits<double>::quiet_NaN();
+		bMin = std::numeric_limits<double>::quiet_NaN();
+		bPA = std::numeric_limits<double>::quiet_NaN();
 	}
 }
