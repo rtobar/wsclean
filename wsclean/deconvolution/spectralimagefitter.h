@@ -14,6 +14,12 @@ public:
 	{
 	}
 	
+	~SpectralImageFitter()
+	{
+		clearTerms();
+		clearImages();
+	}
+	
 	void AddImage(const double* image, double frequencyHz)
 	{
 		double* newImg = _allocator.Allocate(_width*_height);
@@ -24,6 +30,7 @@ public:
 	
 	void PerformFit()
 	{
+		clearTerms();
 		for(size_t i=0; i!=_fitter.NTerms(); ++i)
 			_terms.push_back(_allocator.Allocate(_width*_height));
 		
@@ -44,15 +51,38 @@ public:
 			else
 				_fitter.Fit(terms, values.data());
 			
-			
+			for(size_t t=0; t!=terms.size(); ++t)
+				_terms[t][px] = terms[t];
 		}
 	}
 	
 	void Interpolate(double* destination, double frequency)
 	{
+		ao::uvector<double> terms(_fitter.NTerms());
+		for(size_t px=0; px!=_width*_height; ++px)
+		{
+			for(size_t t=0; t!=terms.size(); ++t)
+				terms[t] = _terms[t][px];
+			*destination = _fitter.Evaluate(terms, frequency);
+			++destination;
+		}
 	}
 	
 private:
+	void clearTerms()
+	{
+		for(size_t i=0; i!=_terms.size(); ++i)
+			_allocator.Free(_terms[i]);
+		_terms.clear();
+	}
+	
+	void clearImages()
+	{
+		for(size_t i=0; i!=_images.size(); ++i)
+			_allocator.Free(_images[i]);
+		_images.clear();
+	}
+	
 	size_t _width, _height;
 	ImageBufferAllocator& _allocator;
 	SpectralFitter& _fitter;
