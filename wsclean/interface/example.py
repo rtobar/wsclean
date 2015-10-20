@@ -12,6 +12,7 @@ else:
 	parameters.imageHeight = 512
 	parameters.pixelScaleX = '1amin'
 	parameters.pixelScaleY = '1amin'
+	parameters.extraOptions = '-weight natural'
 
 # Test the operator
 	o = Operator(parameters)
@@ -28,7 +29,7 @@ else:
 	
 	o.backward(image, data)
 	
-	o.write(image)
+	o.write("name.fits", image)
 
 # Test the full cleaning command
 	wsc=WSClean()

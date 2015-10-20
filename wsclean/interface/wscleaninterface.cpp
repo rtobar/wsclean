@@ -10,6 +10,8 @@
 
 #include <casacore/ms/MeasurementSets/MeasurementSet.h>
 
+#include <boost/thread/mutex.hpp>
+
 struct WSCleanUserData
 {
 	std::string msPath;
@@ -166,8 +168,9 @@ void wsclean_read(void* userData, DCOMPLEX* data, double* weights)
 	}
 }
 
-void wsclean_write(void* userData, const double* image)
+void wsclean_write(void* userData, const char* filename, const double* image)
 {
+	std::cout << "wsclean_write() : Writing " << filename << "...\n";
 	WSCleanUserData* wscUserData = static_cast<WSCleanUserData*>(userData);
 	FitsWriter writer;
 	writer.SetImageDimensions(wscUserData->width, wscUserData->height, wscUserData->pixelScaleX, wscUserData->pixelScaleY);
@@ -176,7 +179,7 @@ void wsclean_write(void* userData, const double* image)
 		FitsReader reader("tmp-operator-At-0-image.fits");
 		writer = FitsWriter(reader);
 	}
-	writer.Write("wsclean-model.fits", image);
+	writer.Write(filename, image);
 }
 
 void getCommandLine(std::vector<std::string>& commandline, const WSCleanUserData& userData)

@@ -22,6 +22,7 @@
 #include "../model/model.h"
 
 #include "../deconvolution/deconvolutionalgorithm.h"
+#include "../deconvolution/dynamicset.h"
 
 #include "imageweightcache.h"
 
@@ -705,6 +706,11 @@ void WSClean::RunPredict()
 	for(_currentIntervalIndex=0; _currentIntervalIndex!=_intervalCount; ++_currentIntervalIndex)
 	{
 		makeImagingTable();
+		
+		if(_predictionChannels != 0)
+		{
+			
+		}
 		
 		_globalSelection = selectInterval(fullSelection);
 		

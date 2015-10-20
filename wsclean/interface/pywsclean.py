@@ -51,10 +51,10 @@ class Operator(object):
 		_wsclean.read(self._userdata, data, weights)
 		return data,weights
 
-	def write(self, data):
+	def write(self, filename, data):
 		"""Write a FITS image with the correct keywords etc."""
 		dataCont = numpy.ascontiguousarray(data)
-		_wsclean.write(self._userdata, data)
+		_wsclean.write(self._userdata, filename, data)
 
 	def forward(self, dataOut, dataIn):
 		"""Perform the forward operation. This is 'prediction': convert

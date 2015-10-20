@@ -106,8 +106,8 @@ set_target_properties(wsclean-lib PROPERTIES OUTPUT_NAME wsclean)
 add_executable(wsclean wscleanmain.cpp)
 target_link_libraries(wsclean wsclean-lib ${CASA_LIBS} ${FFTW3_LIB} ${FFTW3_THREADS_LIB} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${FITSIO_LIB} ${GSL_LIB} ${GSL_CBLAS_LIB} ${PTHREAD_LIB} ${LBEAM_LIBS})
 
-add_executable(purifyexample EXCLUDE_FROM_ALL interface/purifyexample.c)
-target_link_libraries(purifyexample wsclean-lib ${CASA_LIBS} ${FFTW3_LIB} ${FFTW3_THREADS_LIB} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${FITSIO_LIB} ${GSL_LIB} ${GSL_CBLAS_LIB} ${LBEAM_LIBS})
+add_executable(interfaceexample EXCLUDE_FROM_ALL interface/interfaceexample.c)
+target_link_libraries(interfaceexample wsclean-lib ${CASA_LIBS} ${FFTW3_LIB} ${FFTW3_THREADS_LIB} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${FITSIO_LIB} ${GSL_LIB} ${GSL_CBLAS_LIB} ${LBEAM_LIBS})
 
 set_target_properties(wsclean PROPERTIES COMPILE_FLAGS "-std=c++0x")
 set_target_properties(wsclean-lib PROPERTIES COMPILE_FLAGS "-std=c++0x")
