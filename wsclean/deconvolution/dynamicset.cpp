@@ -70,7 +70,7 @@ void DynamicSet::InterpolateAndStore(CachedImageSet& imageSet, const SpectralFit
 	else {
 		std::cout << "Interpolating from " << _channelsInDeconvolution << " to " << _imagingTable.SquaredGroupCount() << " channels...\n";
 		
-		// TODO SpectralFitter should also do the interpolation of images; here we should
+		// TODO should use spectralimagefitter to do the interpolation of images; here we should
 		// just unpack the data structure
 		
 		// The following loop will make an 'image' with at each pixel
