@@ -12,7 +12,7 @@ else:
 	parameters.imageHeight = 512
 	parameters.pixelScaleX = '1amin'
 	parameters.pixelScaleY = '1amin'
-	parameters.extraOptions = '-weight natural'
+	parameters.extraParameters = '-weight natural'
 
 # Test the operator
 	o = Operator(parameters)

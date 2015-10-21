@@ -87,7 +87,7 @@ static PyObject* wsclean_initialize_func(PyObject* self, PyObject* args)
 	scaleStr = getStringAttribute(parameters, "pixelScaleY");
 	if(!scaleStr) return NULL;
 	p.pixelScaleY = wsclean_parse_angle(scaleStr);
-	p.extraParameters = getStringAttribute(parameters,"extraParameters");
+	p.extraParameters = getStringAttribute(parameters, "extraParameters");
 	if(!p.extraParameters) return NULL;
 
 	void *userData;

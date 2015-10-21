@@ -42,6 +42,10 @@ class Operator(object):
 	def data_size(self):
 		"""Get the number of visibilities"""
 		return self._imagingdata.dataSize
+	
+	def image_size(self):
+		"""Get the number of pixels in the image"""
+		return self._parameters.imageWidth * self._parameters.imageHeight
 
 	def read(self):
 		"""Read the visibilities and return as a (data,weight) tuple. """
@@ -61,6 +65,13 @@ class Operator(object):
 		an image into visibilities. dataOut should be an complex double array
 		that will be filled with visibilities, dataIn should be an array
 		of doubles, representing the image for the operator input."""
+		
+		if numpy.shape(dataOut)[0]!=self.data_size():
+			raise RuntimeError('Size of output argument ('+str(numpy.shape(dataOut)[0])+') does not match the image size (' + str(self.data_size()) +')')
+		
+		if numpy.shape(dataIn)[0]!=self.image_size():
+			raise RuntimeError('Shape of input argument ('+str(numpy.shape(dataIn)[0])+') does not match the number of visibilities (' + str(self.image_size()) + ')')
+		
 		dataOutCont = numpy.ascontiguousarray(dataOut)
 		dataInCont = numpy.ascontiguousarray(dataIn)
 		_wsclean.operator_A(self._userdata, dataOut, dataIn)
@@ -70,10 +81,16 @@ class Operator(object):
 		convert visibilities into an image. dataOut should be an array
 		of doubles, which will be filled with the image, dataOut should be an array
 		of complex doubles, representing the visibilities for the operator input."""
+		
+		if numpy.shape(dataOut)[0]!=self.image_size():
+			raise RuntimeError('Size of output argument ('+str(numpy.shape(dataOut)[0])+') does not match the number of visibilities (' + str(self.data_size()) +')')
+		
+		if numpy.shape(dataIn)[0]!=self.data_size():
+			raise RuntimeError('Shape of input argument ('+str(numpy.shape(dataIn)[0])+') does not match the image size')
+		
 		dataOutCont = numpy.ascontiguousarray(dataOut)
 		dataInCont = numpy.ascontiguousarray(dataIn)
 		_wsclean.operator_At(self._userdata, dataOut, dataIn)
-
 
 class WSClean(object):
 	"""The Python interface to WSClean
