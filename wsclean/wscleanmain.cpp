@@ -57,6 +57,29 @@ int main(int argc, char *argv[])
 			"   contain valid model data after imaging. It can save time to not update\n"
 			"   the model data column.\n"
 			"\n"
+			"  ** WEIGHTING OPTIONS **\n"
+			"-weight <weightmode>\n"
+			"   Weightmode can be: natural, mwa, uniform, briggs. Default: uniform. When using Briggs' weighting,\n"
+			"   add the robustness parameter, like: \"-weight briggs 0.5\".\n"
+			"-superweight <factor>\n"
+			"   Increase the weight gridding box size, similar to Casa's superuniform weighting scheme. Default: 1.0\n"
+			"   The factor can be rational and can be less than one for subpixel weighting.\n"
+			"-mfsweighting\n"
+			"   In spectral mode, calculate the weights as if the image was made using MFS. This makes sure that the sum of\n"
+			"   channel images equals the MFS weights. Otherwise, the channel image will become a bit more naturally weighted.\n"
+			"   This is only relevant for weighting modes that require gridding (i.e., Uniform, Briggs').\n"
+			"   Default: off, unless -joinchannels is specified.\n"
+			"-nomfsweighting\n"
+			"   Opposite of -mfsweighting; can be used to turn off MFS weighting in -joinchannels mode.\n"
+			"-weighting-rank-filter <level>\n"
+			"   Filter the weights and set high weights to the local mean. The level parameter specifies\n"
+			"   the filter level; any value larger than level*localmean will be set to level*localmean.\n"
+			"-weighting-rank-filter-size <size>\n"
+			"   Set size of weighting rank filter. Default: 16.\n"
+			"-taper-gaussian <beamsize>\n"
+			"   Taper the weights with a Gaussian function. This will reduce the contribution of long baselines.\n"
+			"   The beamsize is by default in asec, but a unit can be specified (\"2amin\").\n"
+			"\n"
 			"  ** INVERSION OPTIONS **\n"
 			"-name <image-prefix>\n"
 			"   Use image-prefix as prefix for output files. Default is 'wsclean'.\n"
@@ -84,24 +107,6 @@ int main(int argc, char *argv[])
 			"   Perform inversion at the Nyquist resolution and upscale the image to the requested image size afterwards.\n"
 			"   This speeds up inversion considerably, but makes aliasing slightly worse. This effect is\n"
 			"   in most cases <1%. Default: on.\n"
-			"-weight <weightmode>\n"
-			"   Weightmode can be: natural, mwa, uniform, briggs. Default: uniform. When using Briggs' weighting,\n"
-			"   add the robustness parameter, like: \"-weight briggs 0.5\".\n"
-			"-superweight <factor>\n"
-			"   Increase the weight gridding box size, similar to Casa's superuniform weighting scheme. Default: 1.0\n"
-			"   The factor can be rational and can be less than one for subpixel weighting.\n"
-			"-mfsweighting\n"
-			"   In spectral mode, calculate the weights as if the image was made using MFS. This makes sure that the sum of\n"
-			"   channel images equals the MFS weights. Otherwise, the channel image will become a bit more naturally weighted.\n"
-			"   This is only relevant for weighting modes that require gridding (i.e., Uniform, Briggs').\n"
-			"   Default: off, unless -joinchannels is specified.\n"
-			"-nomfsweighting\n"
-			"   Opposite of -mfsweighting; can be used to turn off MFS weighting in -joinchannels mode.\n"
-			"-weighting-rank-filter <level>\n"
-			"   Filter the weights and set high weights to the local mean. The level parameter specifies\n"
-			"   the filter level; any value larger than level*localmean will be set to level*localmean.\n"
-			"-weighting-rank-filter-size <size>\n"
-			"   Set size of weighting rank filter. Default: 16.\n"
 			"-gridmode <nn or kb>\n"
 			"   Kernel and mode used for gridding: kb = Kaiser-Bessel (default with 7 pixels), nn = nearest\n"
 			"   neighbour (no kernel). Default: kb.\n"
@@ -459,6 +464,12 @@ int main(int argc, char *argv[])
 		else if(param == "mfsweighting")
 		{
 			mfsWeighting = true;
+		}
+		else if(param == "taper-gaussian")
+		{
+			++argi;
+			double taperBeamSize = Angle::Parse(argv[argi], "Gaussian taper", Angle::Arcseconds);
+			wsclean.SetGaussianTaper(taperBeamSize);
 		}
 		else if(param == "multiscale")
 		{

@@ -50,3 +50,9 @@ else:
 	#  only sets the column used in the 'image' command)
 	wsc.predict([sys.argv[1]], 'wsclean')
 
+	try:
+		o.backward(data, image)
+		raise RuntimeError('Should have crashed!')
+	except:
+		print 'Ok, specifying wrong input gave an exception.'
+

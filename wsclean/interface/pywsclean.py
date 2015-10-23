@@ -83,10 +83,10 @@ class Operator(object):
 		of complex doubles, representing the visibilities for the operator input."""
 		
 		if numpy.shape(dataOut)[0]!=self.image_size():
-			raise RuntimeError('Size of output argument ('+str(numpy.shape(dataOut)[0])+') does not match the number of visibilities (' + str(self.data_size()) +')')
+			raise RuntimeError('Size of output argument ('+str(numpy.shape(dataOut)[0])+') does not match the image size (' + str(self.image_size())+  ')')
 		
 		if numpy.shape(dataIn)[0]!=self.data_size():
-			raise RuntimeError('Shape of input argument ('+str(numpy.shape(dataIn)[0])+') does not match the image size')
+			raise RuntimeError('Shape of input argument ('+str(numpy.shape(dataIn)[0])+') does not match the number of visibilities (' + str(self.data_size()) +')')
 		
 		dataOutCont = numpy.ascontiguousarray(dataOut)
 		dataInCont = numpy.ascontiguousarray(dataIn)

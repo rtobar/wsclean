@@ -80,6 +80,7 @@ public:
 	void SetMaxUVWInM(double maxUVW) { _globalSelection.SetMaxUVWInM(maxUVW); }
 	void SetMinUVInLambda(double lambda) { _minUVInLambda = lambda; }
 	void SetMaxUVInLambda(double lambda) { _maxUVInLambda = lambda; }
+	void SetGaussianTaper(double beamSize) { _gaussianTaperBeamSize = beamSize; }
 	void SetWLimit(double wLimit) { _wLimit = wLimit; }
 	void SetCommandLine(const std::string& cmdLine) { _commandLine = cmdLine; }
 	void SetSaveWeights(bool saveWeights) { _isWeightImageSaved = saveWeights; }
@@ -231,6 +232,7 @@ private:
 	bool _fittedBeam, _theoreticBeam, _circularBeam;
 	double _memFraction, _absMemLimit, _minUVInLambda, _maxUVInLambda, _wLimit, _rankFilterLevel;
 	size_t _rankFilterSize;
+	double _gaussianTaperBeamSize;
 	size_t _nWLayers, _antialiasingKernelSize, _overSamplingFactor, _threadCount;
 	size_t _startChannel, _endChannel;
 	bool _joinedPolarizationCleaning, _joinedFrequencyCleaning;

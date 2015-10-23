@@ -41,6 +41,7 @@ WSClean::WSClean() :
 	_memFraction(1.0), _absMemLimit(0.0),
 	_minUVInLambda(0.0), _maxUVInLambda(0.0), _wLimit(0.0),
 	_rankFilterLevel(0.0), _rankFilterSize(16),
+	_gaussianTaperBeamSize(0.0),
 	_nWLayers(0), _antialiasingKernelSize(7), _overSamplingFactor(63),
 	_threadCount(sysconf(_SC_NPROCESSORS_ONLN)),
 	_startChannel(0), _endChannel(0),
@@ -640,7 +641,7 @@ void WSClean::RunClean()
 		
 		_infoPerChannel.assign(_channelsOut, ChannelInfo());
 		
-		_imageWeightCache.reset(new ImageWeightCache(_weightMode, _untrimmedWidth, _untrimmedHeight, _pixelScaleX, _pixelScaleY, _minUVInLambda, _maxUVInLambda, _rankFilterLevel, _rankFilterSize));
+		_imageWeightCache.reset(new ImageWeightCache(_weightMode, _untrimmedWidth, _untrimmedHeight, _pixelScaleX, _pixelScaleY, _minUVInLambda, _maxUVInLambda, _rankFilterLevel, _rankFilterSize, _gaussianTaperBeamSize));
 		
 		if(_mfsWeighting)
 			initializeMFSImageWeights();
@@ -709,7 +710,7 @@ void WSClean::RunPredict()
 		
 		if(_predictionChannels != 0)
 		{
-			
+			// TODO
 		}
 		
 		_globalSelection = selectInterval(fullSelection);
@@ -718,7 +719,7 @@ void WSClean::RunPredict()
 		
 		if(_doReorder) performReordering(true);
 		
-		_imageWeightCache.reset(new ImageWeightCache(_weightMode, _untrimmedWidth, _untrimmedHeight, _pixelScaleX, _pixelScaleY, _minUVInLambda, _maxUVInLambda, _rankFilterLevel, _rankFilterSize));
+		_imageWeightCache.reset(new ImageWeightCache(_weightMode, _untrimmedWidth, _untrimmedHeight, _pixelScaleX, _pixelScaleY, _minUVInLambda, _maxUVInLambda, _rankFilterLevel, _rankFilterSize, _gaussianTaperBeamSize));
 		
 		for(size_t groupIndex=0; groupIndex!=_imagingTable.SquaredGroupCount(); ++groupIndex)
 		{

@@ -59,6 +59,7 @@ class ImageWeights
 		
 		void SetMaxUVRange(double maxUVInLambda);
 		void SetMinUVRange(double minUVInLambda);
+		void SetGaussianTaper(double beamSize);
 		
 		void GetGrid(double* image) const;
 		void Save(const std::string& filename) const;
@@ -87,6 +88,17 @@ class ImageWeights
 			}
 			x = int(floor(u*_imageWidth*_pixelScaleX + _imageWidth/2));
 			y = int(floor(v*_imageHeight*_pixelScaleY));
+		}
+		
+		void xyToUV(int x, int y, double& u, double& v) const
+		{
+			if(x < 0.0) {
+				x = -x;
+				y = -y;
+			}
+			
+			u = double(x-int(_imageWidth/2)) / double(_imageWidth*_pixelScaleX);
+			v = double(y) / double(_imageHeight*_pixelScaleY);
 		}
 		
 		bool isWithinLimits(int x, int y) const

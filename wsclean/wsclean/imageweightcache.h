@@ -11,7 +11,7 @@
 class ImageWeightCache
 {
 public:
-	ImageWeightCache(const WeightMode& weightMode, size_t imageWidth, size_t imageHeight, double pixelScaleX, double pixelScaleY, double minUVInLambda, double maxUVInLambda, double rankFilterLevel, size_t rankFilterSize) :
+	ImageWeightCache(const WeightMode& weightMode, size_t imageWidth, size_t imageHeight, double pixelScaleX, double pixelScaleY, double minUVInLambda, double maxUVInLambda, double rankFilterLevel, size_t rankFilterSize, double gaussianTaperBeamSize) :
 		_weightMode(weightMode),
 		_imageWidth(imageWidth),
 		_imageHeight(imageHeight),
@@ -21,6 +21,7 @@ public:
 		_maxUVInLambda(maxUVInLambda),
 		_rankFilterLevel(rankFilterLevel),
 		_rankFilterSize(rankFilterSize),
+		_gaussianTaperBeamSize(gaussianTaperBeamSize),
 		_currentWeightChannel(std::numeric_limits<size_t>::max()),
 		_currentWeightInterval(std::numeric_limits<size_t>::max())
 	{
@@ -49,12 +50,14 @@ public:
 	
 	void InitializeWeightTapers()
 	{
+		if(_rankFilterLevel >= 1.0)
+			_imageWeights->RankFilter(_rankFilterLevel, _rankFilterSize);
 		if(_minUVInLambda!=0.0)
 			_imageWeights->SetMinUVRange(_minUVInLambda);
 		if(_maxUVInLambda!=0.0)
 			_imageWeights->SetMaxUVRange(_maxUVInLambda);
-		if(_rankFilterLevel >= 1.0)
-			_imageWeights->RankFilter(_rankFilterLevel, _rankFilterSize);
+		if(_gaussianTaperBeamSize != 0.0)
+			_imageWeights->SetGaussianTaper(_gaussianTaperBeamSize);
 	}
 
 private:
@@ -80,6 +83,7 @@ private:
 	double _minUVInLambda, _maxUVInLambda;
 	double _rankFilterLevel;
 	size_t _rankFilterSize;
+	double _gaussianTaperBeamSize;
 	
 	size_t _currentWeightChannel, _currentWeightInterval;
 };
