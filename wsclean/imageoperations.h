@@ -38,7 +38,7 @@ public:
 			double* ptr = &output[y*outWidth];
 			for(size_t x=0; x!=startX; ++x)
 				ptr[x] = 0.0;
-			memcpy(&output[y*outWidth + startX], &input[(y-startY)*inWidth + startX], inWidth*sizeof(double));
+			memcpy(&output[y*outWidth + startX], &input[(y-startY)*inWidth], inWidth*sizeof(double));
 			for(size_t x=endX; x!=outWidth; ++x)
 				ptr[x] = 0.0;
 		}

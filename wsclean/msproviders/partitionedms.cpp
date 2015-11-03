@@ -72,7 +72,7 @@ PartitionedMS::PartitionedMS(const Handle& handle, size_t partIndex, Polarizatio
 	}
 	
 	_weightFile.open(partPrefix+"-w.tmp", std::ios::in);
-	if(_weightFile.bad())
+	if(!_weightFile.good())
 		throw std::runtime_error("Error opening temporary data file");
 	_weightBuffer.resize(_partHeader.channelCount);
 	_modelBuffer.resize(_partHeader.channelCount);
@@ -417,7 +417,7 @@ PartitionedMS::Handle PartitionedMS::Partition(const string& msPath, const std::
 			meta.w = uvwArray(2);
 			meta.dataDescId = dataDescId;
 			metaFile.write(reinterpret_cast<char*>(&meta), sizeof(MetaRecord));
-			if(metaFile.bad())
+			if(!metaFile.good())
 				throw std::runtime_error("Error writing to temporary file");
 				
 			dataColumn.get(row, dataArray);
@@ -440,14 +440,14 @@ PartitionedMS::Handle PartitionedMS::Partition(const string& msPath, const std::
 					PartitionFiles& f = files[fileIndex];
 					copyWeightedData(dataBuffer.data(), partStartCh, partEndCh, msPolarizations, dataArray, weightArray, flagArray, *p);
 					f.data->write(reinterpret_cast<char*>(dataBuffer.data()), (partEndCh - partStartCh) * sizeof(std::complex<float>));
-					if(f.data->bad())
+					if(!f.data->good())
 						throw std::runtime_error("Error writing to temporary data file");
 					
 					if(initialModelRequired)
 					{
 						copyWeightedData(dataBuffer.data(), partStartCh, partEndCh, msPolarizations, modelArray, weightArray, flagArray, *p);
 						f.model->write(reinterpret_cast<char*>(dataBuffer.data()), (partEndCh - partStartCh) * sizeof(std::complex<float>));
-						if(f.model->bad())
+						if(!f.model->good())
 							throw std::runtime_error("Error writing to temporary data file");
 					}
 					
@@ -455,7 +455,7 @@ PartitionedMS::Handle PartitionedMS::Partition(const string& msPath, const std::
 					{
 						copyWeights(weightBuffer.data(), partStartCh, partEndCh, msPolarizations, dataArray, weightArray, flagArray, *p);
 						f.weight->write(reinterpret_cast<char*>(weightBuffer.data()), (partEndCh - partStartCh) * sizeof(float));
-						if(f.weight->bad())
+						if(!f.weight->good())
 							throw std::runtime_error("Error writing to temporary weights file");
 					}
 					++fileIndex;
@@ -485,7 +485,7 @@ PartitionedMS::Handle PartitionedMS::Partition(const string& msPath, const std::
 			PartitionFiles& f = files[fileIndex];
 			f.data->seekp(0, std::ios::beg);
 			f.data->write(reinterpret_cast<char*>(&header), sizeof(PartHeader));
-			if(f.data->bad())
+			if(!f.data->good())
 				throw std::runtime_error("Error writing to temporary data file");
 			
 			delete f.data;
@@ -524,10 +524,12 @@ void PartitionedMS::unpartition(const PartitionedMS::Handle& handle)
 	
 	ChannelRange firstRange = handle._data->_channels[0];
 	std::ifstream firstDataFile(getPartPrefix(msPath.data(), 0, *pols.begin(), firstRange.dataDescId, handle._data->_temporaryDirectory)+".tmp", std::ios::in);
-	if(firstDataFile.bad())
+	if(!firstDataFile.good())
 		throw std::runtime_error("Error opening temporary data file");
 	PartHeader firstPartHeader;
 	firstDataFile.read(reinterpret_cast<char*>(&firstPartHeader), sizeof(PartHeader));
+	if(!firstDataFile.good())
+		throw std::runtime_error("Error reading from temporary data file");
 	
 	if(firstPartHeader.hasModel)
 	{
@@ -590,7 +592,7 @@ void PartitionedMS::unpartition(const PartitionedMS::Handle& handle)
 				for(size_t part=0; part!=channelParts; ++part)
 				{
 					size_t
-						dataDescId = handle._data->_channels[part].dataDescId,
+						dataDescId = handle._data->_channels[part].dataDescId, //TODO take this into account
 						partStartCh = handle._data->_channels[part].start,
 						partEndCh = handle._data->_channels[part].end;
 					
