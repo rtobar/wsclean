@@ -42,6 +42,8 @@ WSClean::WSClean() :
 	_minUVInLambda(0.0), _maxUVInLambda(0.0), _wLimit(0.0),
 	_rankFilterLevel(0.0), _rankFilterSize(16),
 	_gaussianTaperBeamSize(0.0),
+	_tukeyTaperInLambda(0.0), _tukeyInnerTaperInLambda(0.0),
+	_edgeTaperInLambda(0.0), _edgeTukeyTaperInLambda(0.0),
 	_nWLayers(0), _antialiasingKernelSize(7), _overSamplingFactor(63),
 	_threadCount(sysconf(_SC_NPROCESSORS_ONLN)),
 	_startChannel(0), _endChannel(0),
@@ -641,7 +643,7 @@ void WSClean::RunClean()
 		
 		_infoPerChannel.assign(_channelsOut, ChannelInfo());
 		
-		_imageWeightCache.reset(new ImageWeightCache(_weightMode, _untrimmedWidth, _untrimmedHeight, _pixelScaleX, _pixelScaleY, _minUVInLambda, _maxUVInLambda, _rankFilterLevel, _rankFilterSize, _gaussianTaperBeamSize));
+		_imageWeightCache.reset(createWeightCache());
 		
 		if(_mfsWeighting)
 			initializeMFSImageWeights();
@@ -689,6 +691,13 @@ void WSClean::RunClean()
 	}
 }
 
+ImageWeightCache* WSClean::createWeightCache()
+{
+	ImageWeightCache* cache = new ImageWeightCache(_weightMode, _untrimmedWidth, _untrimmedHeight, _pixelScaleX, _pixelScaleY, _minUVInLambda, _maxUVInLambda, _rankFilterLevel, _rankFilterSize);
+	cache->SetTaperInfo(_gaussianTaperBeamSize, _tukeyTaperInLambda, _tukeyInnerTaperInLambda, _edgeTaperInLambda, _edgeTukeyTaperInLambda);
+	return cache;
+}
+
 void WSClean::RunPredict()
 {
 	if(JoinChannels())
@@ -719,7 +728,7 @@ void WSClean::RunPredict()
 		
 		if(_doReorder) performReordering(true);
 		
-		_imageWeightCache.reset(new ImageWeightCache(_weightMode, _untrimmedWidth, _untrimmedHeight, _pixelScaleX, _pixelScaleY, _minUVInLambda, _maxUVInLambda, _rankFilterLevel, _rankFilterSize, _gaussianTaperBeamSize));
+		_imageWeightCache.reset(createWeightCache());
 		
 		for(size_t groupIndex=0; groupIndex!=_imagingTable.SquaredGroupCount(); ++groupIndex)
 		{

@@ -79,6 +79,17 @@ int main(int argc, char *argv[])
 			"-taper-gaussian <beamsize>\n"
 			"   Taper the weights with a Gaussian function. This will reduce the contribution of long baselines.\n"
 			"   The beamsize is by default in asec, but a unit can be specified (\"2amin\").\n"
+			"-taper-tukey <lambda>\n"
+			"   Taper the outer weights with a Tukey transition. Lambda specifies the size of the transition; use in\n"
+			"   combination with -maxuv-l.\n"
+			"-taper-inner-tukey <lambda>\n"
+			"   Taper the weights with a Tukey transition. Lambda specifies the size of the transition; use in\n"
+			"   combination with -minuv-l.\n"
+			"-taper-edge <lambda>\n"
+			"   Taper the weights with a rectangle, to keep a space of lambda between the edge and gridded visibilities.\n"
+			"-taper-edge-tukey <lambda>\n"
+			"   Taper the edge weights with a Tukey window. Lambda is the size of the Tukey transition. When -taper-edge\n"
+			"   is also specified, the Tukey transition starts inside the inner rectangle.\n"
 			"\n"
 			"  ** INVERSION OPTIONS **\n"
 			"-name <image-prefix>\n"
@@ -470,6 +481,26 @@ int main(int argc, char *argv[])
 			++argi;
 			double taperBeamSize = Angle::Parse(argv[argi], "Gaussian taper", Angle::Arcseconds);
 			wsclean.SetGaussianTaper(taperBeamSize);
+		}
+		else if(param == "taper-edge")
+		{
+			++argi;
+			wsclean.SetEdgeTaper(atof(argv[argi]));
+		}
+		else if(param == "taper-edge-tukey")
+		{
+			++argi;
+			wsclean.SetEdgeTukeyTaper(atof(argv[argi]));
+		}
+		else if(param == "taper-tukey")
+		{
+			++argi;
+			wsclean.SetTukeyTaper(atof(argv[argi]));
+		}
+		else if(param == "taper-inner-tukey")
+		{
+			++argi;
+			wsclean.SetTukeyInnerTaper(atof(argv[argi]));
 		}
 		else if(param == "multiscale")
 		{

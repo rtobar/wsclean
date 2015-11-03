@@ -23,8 +23,6 @@
 #include <iostream>
 #include <stdexcept>
 
-#include <boost/thread/thread.hpp>
-
 WSMSGridder::MSData::MSData() : matchingRows(0), totalRowsProcessed(0)
 { }
 
@@ -43,7 +41,7 @@ WSMSGridder::WSMSGridder(ImageBufferAllocator* imageAllocator, size_t threadCoun
 	_startTime(0.0),
 	_gridMode(WStackingGridder::NearestNeighbour),
 	_cpuCount(threadCount),
-	_laneBufferSize(_cpuCount*2),
+	_laneBufferSize(std::max<size_t>(_cpuCount*2,1024)),
 	_imageBufferAllocator(imageAllocator),
 	_trimWidth(0), _trimHeight(0),
 	_actualInversionWidth(0), _actualInversionHeight(0),
@@ -313,8 +311,24 @@ void WSMSGridder::gridMeasurementSet(MSData &msData)
 	std::vector<std::complex<float>> modelBuffer(selectedBand.MaxChannels());
 	std::vector<float> weightBuffer(selectedBand.MaxChannels());
 	
-	lane_write_buffer<InversionWorkItem> writeBuffer(&*_inversionWorkLane, 128);
+	// Samples of the same w-layer are collected in a buffer
+	// before they are written into the lane. This is done because writing
+	// to a lane is reasonably slow; it requires holding a mutex. Without
+	// these buffers, writing the lane was a bottleneck and multithreading
+	// did not help. I think.
+	std::unique_ptr<lane_write_buffer<InversionWorkSample>[]>
+		bufferedLanes(new lane_write_buffer<InversionWorkSample>[_cpuCount]);
+	size_t bufferSize = std::max<size_t>(8u, _inversionCPULanes[0].capacity()/8);
+	bufferSize = std::min<size_t>(128, std::min(bufferSize, _inversionCPULanes[0].capacity()));
+	for(size_t i=0; i!=_cpuCount; ++i)
+	{
+		bufferedLanes[i].reset(&_inversionCPULanes[i], bufferSize);
+	}
 	
+	InversionWorkItem newItem;
+	ao::uvector<std::complex<float>> newItemData(selectedBand.MaxChannels());
+	newItem.data = newItemData.data();
+			
 	size_t rowsRead = 0;
 	msData.msProvider->Reset();
 	while(msData.msProvider->CurrentRowAvailable())
@@ -328,12 +342,10 @@ void WSMSGridder::gridMeasurementSet(MSData &msData)
 			w2 = wInMeters / curBand.SmallestWavelength();
 		if(_gridder->IsInLayerRange(w1, w2))
 		{
-			InversionWorkItem newItem;
 			newItem.u = uInMeters;
 			newItem.v = vInMeters;
 			newItem.w = wInMeters;
 			newItem.dataDescId = dataDescId;
-			newItem.data = new std::complex<float>[curBand.ChannelCount()];
 			
 			if(DoImagePSF())
 			{
@@ -413,7 +425,18 @@ void WSMSGridder::gridMeasurementSet(MSData &msData)
 				} break;
 			}
 			
-			writeBuffer.write(newItem);
+			InversionWorkSample sampleData;
+			for(size_t ch=0; ch!=curBand.ChannelCount(); ++ch)
+			{
+				double wavelength = curBand.ChannelWavelength(ch);
+				sampleData.sample = newItem.data[ch];
+				sampleData.uInLambda = newItem.u / wavelength;
+				sampleData.vInLambda = newItem.v / wavelength;
+				sampleData.wInLambda = newItem.w / wavelength;
+				size_t cpu = _gridder->WToLayer(sampleData.wInLambda) % _cpuCount;
+				//std::cout << cpu << ' ' << lanes[cpu].size() << '\n';
+				bufferedLanes[cpu].write(sampleData);
+			}
 			
 			++rowsRead;
 		}
@@ -421,59 +444,39 @@ void WSMSGridder::gridMeasurementSet(MSData &msData)
 		msData.msProvider->NextRow();
 	}
 	
+	for(size_t i=0; i!=_cpuCount; ++i)
+		bufferedLanes[i].write_end();
+	
 	if(Verbose())
 		std::cout << "Rows that were required: " << rowsRead << '/' << msData.matchingRows << '\n';
 	msData.totalRowsProcessed += rowsRead;
 }
 
-void WSMSGridder::workThreadParallel(const MultiBandData* selectedBand)
+void WSMSGridder::startInversionWorkThreads(size_t maxChannelCount)
 {
-	std::unique_ptr<ao::lane<InversionWorkSample>[]> lanes(new ao::lane<InversionWorkSample>[_cpuCount]);
+	_inversionCPULanes.reset(new ao::lane<InversionWorkSample>[_cpuCount]);
 	boost::thread_group group;
-	// Samples of the same w-layer are collected in a buffer
-	// before they are written into the lane. This is done because writing
-	// to a lane is reasonably slow; it requires holding a mutex. Without
-	// these buffers, writing the lane was a bottleneck and multithreading
-	// did not help.
-	std::unique_ptr<lane_write_buffer<InversionWorkSample>[]>
-		bufferedLanes(new lane_write_buffer<InversionWorkSample>[_cpuCount]);
-	size_t bufferedLaneSize = std::max<size_t>(selectedBand->FirstBand().ChannelCount(), _laneBufferSize);
+	_threadGroup.reset(new boost::thread_group());
 	for(size_t i=0; i!=_cpuCount; ++i)
 	{
-		lanes[i].resize(selectedBand->FirstBand().ChannelCount() * _laneBufferSize);
-		bufferedLanes[i].reset(&lanes[i], bufferedLaneSize);
-		
-		group.add_thread(new boost::thread(&WSMSGridder::workThreadPerSample, this, &lanes[i]));
+		_inversionCPULanes[i].resize(maxChannelCount * _laneBufferSize);
+		set_lane_debug_name(_inversionCPULanes[i], "Work lane (buffered) containing individual visibility samples");
+		_threadGroup->add_thread(new boost::thread(&WSMSGridder::workThreadPerSample, this, &_inversionCPULanes[i]));
 	}
-	
-	lane_read_buffer<InversionWorkItem> readBuffer(&*_inversionWorkLane, 32);
-	
-	InversionWorkItem workItem;
-	while(readBuffer.read(workItem))
-	{
-		const BandData& curBand = (*selectedBand)[workItem.dataDescId];
-		InversionWorkSample sampleData;
-		for(size_t ch=0; ch!=curBand.ChannelCount(); ++ch)
-		{
-			double wavelength = curBand.ChannelWavelength(ch);
-			sampleData.sample = workItem.data[ch];
-			sampleData.uInLambda = workItem.u / wavelength;
-			sampleData.vInLambda = workItem.v / wavelength;
-			sampleData.wInLambda = workItem.w / wavelength;
-			size_t cpu = _gridder->WToLayer(sampleData.wInLambda) % _cpuCount;
-			//std::cout << cpu << ' ' << lanes[cpu].size() << '\n';
-			bufferedLanes[cpu].write(sampleData);
-		}
-		delete[] workItem.data;
-	}
-	for(size_t i=0; i!=_cpuCount; ++i)
-		bufferedLanes[i].write_end();
-	group.join_all();
+}
+
+void WSMSGridder::finishInversionWorkThreads()
+{
+	_threadGroup->join_all();
+	_threadGroup.reset();
+	_inversionCPULanes.reset();
 }
 
 void WSMSGridder::workThreadPerSample(ao::lane<InversionWorkSample>* workLane)
 {
-	lane_read_buffer<InversionWorkSample> buffer(workLane, std::min(_laneBufferSize*16, workLane->capacity()));
+	size_t bufferSize = std::max<size_t>(8u, workLane->capacity()/8);
+	bufferSize = std::min<size_t>(128,std::min(bufferSize, workLane->capacity()));
+	lane_read_buffer<InversionWorkSample> buffer(workLane, bufferSize);
 	InversionWorkSample sampleData;
 	while(buffer.read(sampleData))
 	{
@@ -489,7 +492,11 @@ void WSMSGridder::predictMeasurementSet(MSData &msData)
 	
 	size_t rowsProcessed = 0;
 	
-	ao::lane<PredictionWorkItem> calcLane(_laneBufferSize+_cpuCount), writeLane(_laneBufferSize);
+	ao::lane<PredictionWorkItem>
+		calcLane(_laneBufferSize+_cpuCount),
+		writeLane(_laneBufferSize);
+	set_lane_debug_name(calcLane, "Prediction calculation lane (buffered) containing full row data");
+	set_lane_debug_name(writeLane, "Prediction write lane containing full row data");
 	lane_write_buffer<PredictionWorkItem> bufferedCalcLane(&calcLane, _laneBufferSize);
 	boost::thread writeThread(&WSMSGridder::predictWriteThread, this, &writeLane, &msData);
 	boost::thread_group calcThreads;
@@ -605,26 +612,28 @@ void WSMSGridder::Invert()
 		std::cout << "Gridding pass " << pass << "... ";
 		if(Verbose()) std::cout << '\n';
 		else std::cout << std::flush;
-		_inversionWorkLane.reset(new ao::lane<InversionWorkItem>(2048));
+		
+		//_inversionWorkLane.reset(new ao::lane<InversionWorkItem>(2048));
+		//set_lane_debug_name(*_inversionWorkLane, "Inversion work lane containing full row data");
 		
 		_gridder->StartInversionPass(pass);
 		
 		for(size_t i=0; i!=MeasurementSetCount(); ++i)
 		{
-			_inversionWorkLane->clear();
+			//_inversionWorkLane->clear();
 			
 			MSData& msData = msDataVector[i];
 			
 			const MultiBandData selectedBand(msData.SelectedBand());
 			
-			boost::thread thread(&WSMSGridder::workThreadParallel, this, &selectedBand);
+			startInversionWorkThreads(selectedBand.MaxChannels());
 		
 			gridMeasurementSet(msData);
 			
-			_inversionWorkLane->write_end();
-			thread.join();
+			//_inversionWorkLane->write_end();
+			finishInversionWorkThreads();
 		}
-		_inversionWorkLane.reset();
+		//_inversionWorkLane.reset();
 		
 		std::cout << "Fourier transforms...\n";
 		_gridder->FinishInversionPass();

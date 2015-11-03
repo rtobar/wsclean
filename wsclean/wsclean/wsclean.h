@@ -81,6 +81,10 @@ public:
 	void SetMinUVInLambda(double lambda) { _minUVInLambda = lambda; }
 	void SetMaxUVInLambda(double lambda) { _maxUVInLambda = lambda; }
 	void SetGaussianTaper(double beamSize) { _gaussianTaperBeamSize = beamSize; }
+	void SetTukeyTaper(double transitionSizeInLambda) { _tukeyTaperInLambda = transitionSizeInLambda; }
+	void SetTukeyInnerTaper(double transitionSizeInLambda) { _tukeyInnerTaperInLambda = transitionSizeInLambda; }
+	void SetEdgeTaper(double sizeInLambda) { _edgeTaperInLambda = sizeInLambda; }
+	void SetEdgeTukeyTaper(double sizeInLambda) { _edgeTukeyTaperInLambda = sizeInLambda; }
 	void SetWLimit(double wLimit) { _wLimit = wLimit; }
 	void SetCommandLine(const std::string& cmdLine) { _commandLine = cmdLine; }
 	void SetSaveWeights(bool saveWeights) { _isWeightImageSaved = saveWeights; }
@@ -141,6 +145,7 @@ private:
 	void makeImagingTable();
 	void makeImagingTableEntry(const std::vector<double>& channels, size_t outChannelIndex, ImagingTableEntry& entry);
 	void addPolarizationsToImagingTable(size_t& joinedGroupIndex, size_t& squaredGroupIndex, size_t outChannelIndex, const ImagingTableEntry& templateEntry);
+	class ImageWeightCache* createWeightCache();
 	
 	void imagePSF(size_t currentChannelIndex);
 	void imageGridding();
@@ -232,7 +237,7 @@ private:
 	bool _fittedBeam, _theoreticBeam, _circularBeam;
 	double _memFraction, _absMemLimit, _minUVInLambda, _maxUVInLambda, _wLimit, _rankFilterLevel;
 	size_t _rankFilterSize;
-	double _gaussianTaperBeamSize;
+	double _gaussianTaperBeamSize, _tukeyTaperInLambda, _tukeyInnerTaperInLambda, _edgeTaperInLambda, _edgeTukeyTaperInLambda;
 	size_t _nWLayers, _antialiasingKernelSize, _overSamplingFactor, _threadCount;
 	size_t _startChannel, _endChannel;
 	bool _joinedPolarizationCleaning, _joinedFrequencyCleaning;

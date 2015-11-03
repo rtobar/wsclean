@@ -12,13 +12,35 @@
  * @headername{lane.h}
  */
 
+//#define LANE_DEBUG_MODE
+
+#ifdef LANE_DEBUG_MODE
+#include <string>
+#include <iostream>
+#include <sstream>
+#include <cmath>
+#endif
+
 namespace ao
 {
+
+#ifdef LANE_DEBUG_MODE
+#define set_lane_debug_name(lane, str) (lane).setDebugName(str)
+#define LANE_REGISTER_DEBUG_INFO registerDebugInfo()
+#define LANE_REPORT_DEBUG_INFO reportDebugInfo()
+	
+#else
+
+#define set_lane_debug_name(lane, str)
+#define LANE_REGISTER_DEBUG_INFO
+#define LANE_REPORT_DEBUG_INFO
+
+#endif
 
 /**
  * @brief The lane is an efficient cyclic buffer that is synchronized.
  * @details
- * A lane can typically used in a multi-threaded producer-consumer
+ * A lane can typically be used in a multi-threaded producer-consumer
  * situation. The lane also holds a state which allows for
  * an ellegant way of communicating from producer(s) to
  * consumer(s) that all data has been produced.
@@ -128,6 +150,7 @@ class lane
 		 */
 		~lane()
 		{
+			LANE_REPORT_DEBUG_INFO;
 			delete[] _buffer;
 		}
 		
@@ -183,6 +206,7 @@ class lane
 		void write(const value_type& element)
 		{
 			std::unique_lock<std::mutex> lock(_mutex);
+			LANE_REGISTER_DEBUG_INFO;
 			
 			if(_status == status_normal)
 			{
@@ -209,6 +233,7 @@ class lane
 		void write(value_type&& element)
 		{
 			std::unique_lock<std::mutex> lock(_mutex);
+			LANE_REGISTER_DEBUG_INFO;
 			
 			if(_status == status_normal)
 			{
@@ -217,6 +242,7 @@ class lane
 				
 				_buffer[_write_position] = std::move(element);
 				_write_position = (_write_position+1) % _capacity;
+				--_free_write_space;
 				// Now that there is less free write space, there is more free read
 				// space and thus readers can possibly continue.
 				_reading_possible_condition.notify_all();
@@ -226,6 +252,7 @@ class lane
 		void write(const value_type* elements, size_t n)
 		{
 			std::unique_lock<std::mutex> lock(_mutex);
+			LANE_REGISTER_DEBUG_INFO;
 			
 			if(_status == status_normal)
 			{
@@ -250,6 +277,7 @@ class lane
 		bool read(value_type& destination)
 		{
 			std::unique_lock<std::mutex> lock(_mutex);
+			LANE_REGISTER_DEBUG_INFO;
 			while(free_read_space() == 0 && _status == status_normal)
 				_reading_possible_condition.wait(lock);
 			if(free_read_space() == 0)
@@ -269,6 +297,7 @@ class lane
 			size_t n_left = n;
 			
 			std::unique_lock<std::mutex> lock(_mutex);
+			LANE_REGISTER_DEBUG_INFO;
 			
 			size_t free_space = free_read_space();
 			size_t read_size = free_space > n ? n : free_space;
@@ -294,6 +323,7 @@ class lane
 		void write_end()
 		{
 			std::lock_guard<std::mutex> lock(_mutex);
+			LANE_REGISTER_DEBUG_INFO;
 			_status = status_end;
 			_writing_possible_condition.notify_all();
 			_reading_possible_condition.notify_all();
@@ -329,6 +359,19 @@ class lane
 			_free_write_space = new_capacity;
 			_status = status_normal;
 		}
+		
+#ifdef LANE_DEBUG_MODE
+		/**
+		 * Change the name of this lane to make it appear in the output along
+		 * with statistics. Do not use this function directly; use the
+		 * set_lane_debug_name() macro instead.
+		 * @param nameStr New debug description of this lane.
+		 */
+		void setDebugName(const std::string& nameStr)
+		{
+			_debugName = nameStr;
+		}
+#endif
 	private:
 		Tp* _buffer;
 		
@@ -420,6 +463,26 @@ class lane
 				_writing_possible_condition.notify_all();
 			}
 		}
+#ifdef LANE_DEBUG_MODE
+		void registerDebugInfo()
+		{
+			_debugSummedSize += _capacity - _free_write_space;
+			_debugMeasureCount++;
+		}
+		void reportDebugInfo()
+		{
+			std::stringstream str;
+			str
+				<< "*** Debug report for the following lane: ***\n"
+				<< "\"" << _debugName << "\"\n"
+				<< "Capacity: " << _capacity << '\n'
+				<< "Total read/write ops: " << _debugMeasureCount << '\n'
+				<< "Average size of buffer, measured per read/write op.: " << round(double(_debugSummedSize)*100.0/_debugMeasureCount)/100.0 << '\n';
+			std::cout << str.str();
+		}
+		std::string _debugName;
+		size_t _debugSummedSize = 0, _debugMeasureCount = 0;
+#endif
 };
 
 template<typename Tp>

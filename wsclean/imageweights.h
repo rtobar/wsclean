@@ -60,6 +60,10 @@ class ImageWeights
 		void SetMaxUVRange(double maxUVInLambda);
 		void SetMinUVRange(double minUVInLambda);
 		void SetGaussianTaper(double beamSize);
+		void SetTukeyTaper(double transitionSizeInLambda, double maxUVInLambda);
+		void SetTukeyInnerTaper(double transitionSizeInLambda, double minUVInLambda);
+		void SetEdgeTaper(double sizeInLambda);
+		void SetEdgeTukeyTaper(double transitionSizeInLambda, double edgeSizeInLambda);
 		
 		void GetGrid(double* image) const;
 		void Save(const std::string& filename) const;
@@ -92,7 +96,7 @@ class ImageWeights
 		
 		void xyToUV(int x, int y, double& u, double& v) const
 		{
-			if(x < 0.0) {
+			if(y < 0.0) {
 				x = -x;
 				y = -y;
 			}
@@ -118,6 +122,15 @@ class ImageWeights
 		}
 		
 		double windowMean(size_t x, size_t y, size_t windowSize);
+		
+		/**
+		 * Returns Tukey tapering function. This function is
+		 * 0 when x=0 and 1 when x=n.
+		 */
+		double tukeyFrom0ToN(double x, double n)
+		{
+			return 0.5 * (1.0 + cos((M_PI/n) * (x - n)));
+		}
 		
 		template<typename T>
 		static T frequencyToWavelength(const T frequency)
