@@ -15,6 +15,8 @@ find_library(CASA_MEASURES_LIB casa_measures REQUIRED)
 find_library(CASA_FITS_LIB casa_fits REQUIRED)
 find_library(FFTW3_LIB fftw3 REQUIRED)
 find_library(FFTW3_THREADS_LIB fftw3_threads REQUIRED)
+#Prevent accidentally finding old BoostConfig.cmake file from casapy
+set(Boost_NO_BOOST_CMAKE ON)
 find_package(Boost COMPONENTS filesystem thread system REQUIRED)
 find_library(PTHREAD_LIB pthread REQUIRED)
 find_library(FITSIO_LIB cfitsio REQUIRED)
