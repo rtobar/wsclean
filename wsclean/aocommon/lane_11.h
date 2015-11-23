@@ -27,12 +27,16 @@ namespace ao
 #ifdef LANE_DEBUG_MODE
 #define set_lane_debug_name(lane, str) (lane).setDebugName(str)
 #define LANE_REGISTER_DEBUG_INFO registerDebugInfo()
+#define LANE_REGISTER_DEBUG_WRITE_WAIT registerDebugWriteWait()
+#define LANE_REGISTER_DEBUG_READ_WAIT registerDebugReadWait()
 #define LANE_REPORT_DEBUG_INFO reportDebugInfo()
 	
 #else
 
 #define set_lane_debug_name(lane, str)
 #define LANE_REGISTER_DEBUG_INFO
+#define LANE_REGISTER_DEBUG_WRITE_WAIT
+#define LANE_REGISTER_DEBUG_READ_WAIT
 #define LANE_REPORT_DEBUG_INFO
 
 #endif
@@ -211,7 +215,10 @@ class lane
 			if(_status == status_normal)
 			{
 				while(_free_write_space == 0)
+				{
+					LANE_REGISTER_DEBUG_WRITE_WAIT;
 					_writing_possible_condition.wait(lock);
+				}
 				
 				_buffer[_write_position] = element;
 				_write_position = (_write_position+1) % _capacity;
@@ -238,7 +245,10 @@ class lane
 			if(_status == status_normal)
 			{
 				while(_free_write_space == 0)
+				{
+					LANE_REGISTER_DEBUG_WRITE_WAIT;
 					_writing_possible_condition.wait(lock);
+				}
 				
 				_buffer[_write_position] = std::move(element);
 				_write_position = (_write_position+1) % _capacity;
@@ -264,6 +274,7 @@ class lane
 					elements += write_size;
 				
 					do {
+						LANE_REGISTER_DEBUG_WRITE_WAIT;
 						_writing_possible_condition.wait(lock);
 					} while(_free_write_space == 0 && _status == status_normal);
 					
@@ -279,7 +290,10 @@ class lane
 			std::unique_lock<std::mutex> lock(_mutex);
 			LANE_REGISTER_DEBUG_INFO;
 			while(free_read_space() == 0 && _status == status_normal)
+			{
+				LANE_REGISTER_DEBUG_READ_WAIT;
 				_reading_possible_condition.wait(lock);
+			}
 			if(free_read_space() == 0)
 				return false;
 			else
@@ -309,6 +323,7 @@ class lane
 				destinations += read_size;
 				
 				do {
+					LANE_REGISTER_DEBUG_READ_WAIT;
 					_reading_possible_condition.wait(lock);
 				} while(free_read_space() == 0 && _status == status_normal);
 				
@@ -469,19 +484,34 @@ class lane
 			_debugSummedSize += _capacity - _free_write_space;
 			_debugMeasureCount++;
 		}
+		void registerDebugReadWait()
+		{
+			++_debugReadWaitCount;
+		}
+		void registerDebugWriteWait()
+		{
+			++_debugWriteWaitCount;
+		}
 		void reportDebugInfo()
 		{
-			std::stringstream str;
-			str
-				<< "*** Debug report for the following lane: ***\n"
-				<< "\"" << _debugName << "\"\n"
-				<< "Capacity: " << _capacity << '\n'
-				<< "Total read/write ops: " << _debugMeasureCount << '\n'
-				<< "Average size of buffer, measured per read/write op.: " << round(double(_debugSummedSize)*100.0/_debugMeasureCount)/100.0 << '\n';
-			std::cout << str.str();
+			if(!_debugName.empty())
+			{
+				std::stringstream str;
+				str
+					<< "*** Debug report for the following lane: ***\n"
+					<< "\"" << _debugName << "\"\n"
+					<< "Capacity: " << _capacity << '\n'
+					<< "Total read/write ops: " << _debugMeasureCount << '\n'
+					<< "Average size of buffer, measured per read/write op.: " << round(double(_debugSummedSize)*100.0/_debugMeasureCount)/100.0 << '\n'
+					<< "Number of wait events during reading: " << _debugReadWaitCount << '\n'
+					<< "Number of wait events during writing: " << _debugWriteWaitCount << '\n';
+				std::cout << str.str();
+			}
 		}
 		std::string _debugName;
-		size_t _debugSummedSize = 0, _debugMeasureCount = 0;
+		size_t
+			_debugSummedSize = 0, _debugMeasureCount = 0,
+			_debugReadWaitCount = 0, _debugWriteWaitCount = 0;
 #endif
 };
 
