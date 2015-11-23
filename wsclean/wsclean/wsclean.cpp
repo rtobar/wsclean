@@ -886,7 +886,7 @@ void WSClean::runIndependentGroup(const ImagingTable& groupTable)
 			if(_deconvolution.MultiScale() || _deconvolution.FastMultiScale() || _deconvolution.UseMoreSane() || _deconvolution.UseIUWT())
 			{
 				std::cout << "Rendering sources to restored image " + beamStr + "... " << std::flush;
-				renderer.Restore(restoredImage, modelImage, _trimWidth, _trimHeight, beamMaj, beamMin, beamPA, Polarization::StokesI);
+				renderer.Restore(restoredImage, modelImage, _trimWidth, _trimHeight, beamMaj, beamMin, beamPA);
 				std::cout << "DONE\n";
 			}
 			else {
@@ -1222,7 +1222,7 @@ void WSClean::renderMFSImage(PolarizationEnum pol, bool isImaginary)
 		beamMaj = 0.0; beamMin = 0.0; beamPA = 0.0;
 	}
 	std::cout << "Rendering sources to restored image " + beamStr + "... " << std::flush;
-	renderer.Restore(image.data(), modelImage.data(), _trimWidth, _trimHeight, beamMaj, beamMin, beamPA, Polarization::StokesI);
+	renderer.Restore(image.data(), modelImage.data(), _trimWidth, _trimHeight, beamMaj, beamMin, beamPA);
 	std::cout << "DONE\n";
 	
 	std::cout << "Writing " + mfsPrefix + "-image.fits...\n";

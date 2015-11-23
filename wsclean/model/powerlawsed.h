@@ -11,6 +11,19 @@ public:
 		for(size_t p=0; p!=4; ++p) _factors[p] = 0.0;
 	}
 	
+	PowerLawSED(double referenceFrequency, double constantFlux) :
+		_referenceFrequency(referenceFrequency),
+		_terms(1)
+	{
+		double refBrightness = constantFlux;
+		if(refBrightness <= 0.0)
+			refBrightness = 1.0;
+		_terms[0] = refBrightness;
+		_factors[0] = constantFlux / refBrightness;
+		for(size_t p=1; p!=4; ++p)
+			_factors[p] = 0.0;
+	}
+	
 	virtual PowerLawSED* Clone() const
 	{
 		return new PowerLawSED(*this);

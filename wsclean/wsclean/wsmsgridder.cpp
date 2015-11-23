@@ -1,6 +1,7 @@
 #include "wsmsgridder.h"
 
 #include "imagebufferallocator.h"
+#include "smallinversionoptimization.h"
 
 #include "../imageweights.h"
 #include "../buffered_lane.h"
@@ -216,19 +217,18 @@ void WSMSGridder::initializeMeasurementSet(size_t msIndex, WSMSGridder::MSData& 
 	
 	if(SmallInversion())
 	{
-		double totalWidth = _actualInversionWidth * _actualPixelSizeX, totalHeight = _actualInversionHeight * _actualPixelSizeY;
-		// Calc min res based on Nyquist sampling rate
-		size_t minResX = size_t(ceil(totalWidth*2 / _beamSize));
-		if(minResX%4 != 0) minResX += 4 - (minResX%4);
-		size_t minResY = size_t(ceil(totalHeight*2 / _beamSize));
-		if(minResY%4 != 0) minResY += 4 - (minResY%4);
-		if(minResX < _actualInversionWidth || minResY < _actualInversionHeight)
+		size_t optWidth, optHeight, minWidth, minHeight;
+		SmallInversionOptimization::DetermineOptimalSize(_actualInversionWidth, _actualPixelSizeX, _beamSize, minWidth, optWidth);
+		SmallInversionOptimization::DetermineOptimalSize(_actualInversionHeight, _actualPixelSizeY, _beamSize, minHeight, optHeight);
+		if(optWidth < _actualInversionWidth || optHeight < _actualInversionHeight)
 		{
-			_actualInversionWidth = std::max(std::min(minResX, _actualInversionWidth), size_t(32));
-			_actualInversionHeight = std::max(std::min(minResY, _actualInversionHeight), size_t(32));
-			std::cout << "Setting small inversion image size of " << _actualInversionWidth << " x " << _actualInversionHeight << "\n";
-			_actualPixelSizeX = totalWidth / _actualInversionWidth;
-			_actualPixelSizeY = totalHeight / _actualInversionHeight;
+			size_t newWidth = std::max(std::min(optWidth, _actualInversionWidth), size_t(32));
+			size_t newHeight = std::max(std::min(optHeight, _actualInversionHeight), size_t(32));
+			std::cout << "Minimal inversion size: " << minWidth << " x" << minHeight << ", using optimal: " << newWidth << " x " << newHeight << "\n";
+			_actualPixelSizeX = (double(_actualInversionWidth) * _actualPixelSizeX) / double(newWidth);
+			_actualPixelSizeY = (double(_actualInversionHeight) * _actualPixelSizeY) / double(newHeight);
+			_actualInversionWidth = newWidth;
+			_actualInversionHeight = newHeight;
 		}
 		else {
 			std::cout << "Small inversion enabled, but inversion resolution already smaller than beam size: not using optimization.\n";

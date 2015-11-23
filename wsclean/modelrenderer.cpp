@@ -152,7 +152,7 @@ void ModelRenderer::Restore(double* imageData, size_t imageWidth, size_t imageHe
 /**
  * Restore a diffuse image (e.g. produced with multi-scale clean)
  */
-void ModelRenderer::Restore(double* imageData, double* modelData, size_t imageWidth, size_t imageHeight, long double beamMaj, long double beamMin, long double beamPA, PolarizationEnum polarization)
+void ModelRenderer::Restore(double* imageData, double* modelData, size_t imageWidth, size_t imageHeight, long double beamMaj, long double beamMin, long double beamPA)
 {
 	if(beamMaj == 0.0 && beamMin == 0.0)
 	{
