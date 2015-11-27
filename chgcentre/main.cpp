@@ -1,24 +1,24 @@
 #include <iostream>
 #include <memory>
 
-#include <ms/MeasurementSets/MeasurementSet.h>
+#include <casacore/ms/MeasurementSets/MeasurementSet.h>
 
-#include <measures/TableMeasures/ArrayMeasColumn.h>
-#include <measures/TableMeasures/ScalarMeasColumn.h>
+#include <casacore/measures/TableMeasures/ArrayMeasColumn.h>
+#include <casacore/measures/TableMeasures/ScalarMeasColumn.h>
 
-#include <measures/Measures/MBaseline.h>
-#include <measures/Measures/MCBaseline.h>
-#include <measures/Measures/MCPosition.h>
-#include <measures/Measures/MCDirection.h>
-#include <measures/Measures/MCuvw.h>
-#include <measures/Measures/MDirection.h>
-#include <measures/Measures/MEpoch.h>
-#include <measures/Measures/MPosition.h>
-#include <measures/Measures/Muvw.h>
-#include <measures/Measures/MeasConvert.h>
-#include <measures/Measures/MeasTable.h>
+#include <casacore/measures/Measures/MBaseline.h>
+#include <casacore/measures/Measures/MCBaseline.h>
+#include <casacore/measures/Measures/MCPosition.h>
+#include <casacore/measures/Measures/MCDirection.h>
+#include <casacore/measures/Measures/MCuvw.h>
+#include <casacore/measures/Measures/MDirection.h>
+#include <casacore/measures/Measures/MEpoch.h>
+#include <casacore/measures/Measures/MPosition.h>
+#include <casacore/measures/Measures/Muvw.h>
+#include <casacore/measures/Measures/MeasConvert.h>
+#include <casacore/measures/Measures/MeasTable.h>
 
-#include <tables/Tables/TableRecord.h>
+#include <casacore/tables/Tables/TableRecord.h>
 
 #include "radeccoord.h"
 #include "banddata.h"
@@ -26,7 +26,7 @@
 #include "imagecoordinates.h"
 #include "multibanddata.h"
 
-using namespace casa;
+using namespace casacore;
 
 std::vector<MPosition> antennas;
 
@@ -100,32 +100,32 @@ void rotateVisibilities(const BandData &bandData, double shiftFactor, unsigned p
 	}
 }
 
-casa::MPosition ArrayCentroid(MeasurementSet& set)
+casacore::MPosition ArrayCentroid(MeasurementSet& set)
 {
-	casa::MSAntenna aTable = set.antenna();
+	casacore::MSAntenna aTable = set.antenna();
 	if(aTable.nrow() == 0) throw std::runtime_error("No antennae in set");
-	casa::MPosition::ROScalarColumn antPosColumn(aTable, aTable.columnName(casa::MSAntennaEnums::POSITION));
+	casacore::MPosition::ROScalarColumn antPosColumn(aTable, aTable.columnName(casacore::MSAntennaEnums::POSITION));
 	double x = 0.0, y = 0.0, z = 0.0;
 	for(size_t row=0; row!=aTable.nrow(); ++row)
 	{
-		casa::MPosition antPos = antPosColumn(row);
-		casa::Vector<casa::Double> vec = antPos.getValue().getVector();
+		casacore::MPosition antPos = antPosColumn(row);
+		casacore::Vector<casacore::Double> vec = antPos.getValue().getVector();
 		x += vec[0]; y += vec[1]; z += vec[2];
 	}
-	casa::MPosition arrayPos = antPosColumn(0);
+	casacore::MPosition arrayPos = antPosColumn(0);
 	double count = aTable.nrow();
-	arrayPos.set(casa::MVPosition(x/count, y/count, z/count), arrayPos.getRef());
+	arrayPos.set(casacore::MVPosition(x/count, y/count, z/count), arrayPos.getRef());
 	return arrayPos;
 }
 
-casa::MPosition ArrayPosition(MeasurementSet& set, bool fallBackToCentroid=false)
+casacore::MPosition ArrayPosition(MeasurementSet& set, bool fallBackToCentroid=false)
 {
 	static bool hasArrayPos = false;
 	static MPosition arrayPos;
 	if(!hasArrayPos)
 	{
 		MSObservation obsTable(set.observation());
-		ROScalarColumn<String> telescopeNameColumn(obsTable, obsTable.columnName(casa::MSObservation::TELESCOPE_NAME));
+		ROScalarColumn<String> telescopeNameColumn(obsTable, obsTable.columnName(casacore::MSObservation::TELESCOPE_NAME));
 		bool hasTelescopeName = telescopeNameColumn.nrow()!=0;
 		bool hasObservatoryInfo = hasTelescopeName && MeasTable::Observatory(arrayPos, telescopeNameColumn(0));
 		if(!hasTelescopeName || !hasObservatoryInfo) {
@@ -156,14 +156,14 @@ casa::MPosition ArrayPosition(MeasurementSet& set, bool fallBackToCentroid=false
 
 MDirection ZenithDirection(MeasurementSet& set, size_t rowIndex)
 {
-	casa::MPosition arrayPos = ArrayPosition(set);
-	casa::MEpoch::ROScalarColumn timeColumn(set, set.columnName(casa::MSMainEnums::TIME));
-	casa::MEpoch time = timeColumn(rowIndex);
-	casa::MeasFrame frame(arrayPos, time);
-	const casa::MDirection::Ref azelRef(casa::MDirection::AZEL, frame);
-	const casa::MDirection::Ref j2000Ref(casa::MDirection::J2000, frame);
-	casa::MDirection zenithAzEl(casa::MVDirection(0.0, 0.0, 1.0), azelRef);
-	return casa::MDirection::Convert(zenithAzEl, j2000Ref)();
+	casacore::MPosition arrayPos = ArrayPosition(set);
+	casacore::MEpoch::ROScalarColumn timeColumn(set, set.columnName(casacore::MSMainEnums::TIME));
+	casacore::MEpoch time = timeColumn(rowIndex);
+	casacore::MeasFrame frame(arrayPos, time);
+	const casacore::MDirection::Ref azelRef(casacore::MDirection::AZEL, frame);
+	const casacore::MDirection::Ref j2000Ref(casacore::MDirection::J2000, frame);
+	casacore::MDirection zenithAzEl(casacore::MVDirection(0.0, 0.0, 1.0), azelRef);
+	return casacore::MDirection::Convert(zenithAzEl, j2000Ref)();
 }
 
 MDirection ZenithDirection(MeasurementSet& set)
@@ -186,7 +186,7 @@ void processField(
 	bool onlyUVW, bool shiftback, bool flipUVWSign, bool force)
 {
 	MultiBandData bandData(set.spectralWindow(), set.dataDescription());
-	ROScalarColumn<casa::String> nameCol(fieldTable, fieldTable.columnName(MSFieldEnums::NAME));
+	ROScalarColumn<casacore::String> nameCol(fieldTable, fieldTable.columnName(MSFieldEnums::NAME));
 	MDirection::ArrayColumn phaseDirCol(fieldTable, fieldTable.columnName(MSFieldEnums::PHASE_DIR));
 	MEpoch::ROScalarColumn timeCol(set, set.columnName(MSMainEnums::TIME));
 	
@@ -201,8 +201,8 @@ void processField(
 		uvwOutCol(set, set.columnName(MSMainEnums::UVW));
 	
 	const bool
-		hasCorrData = set.isColumn(casa::MSMainEnums::CORRECTED_DATA),
-		hasModelData = set.isColumn(casa::MSMainEnums::MODEL_DATA);
+		hasCorrData = set.isColumn(casacore::MSMainEnums::CORRECTED_DATA),
+		hasModelData = set.isColumn(casacore::MSMainEnums::MODEL_DATA);
 	std::auto_ptr<ArrayColumn<Complex> > dataCol, correctedDataCol, modelDataCol;
 	if(!onlyUVW)
 	{
@@ -361,7 +361,7 @@ void processField(
 void showChanges(
 	MeasurementSet &set, int fieldIndex, MSField &fieldTable, const MDirection &newDirection, bool flipUVWSign)
 {
-	ROScalarColumn<casa::String> nameCol(fieldTable, fieldTable.columnName(MSFieldEnums::NAME));
+	ROScalarColumn<casacore::String> nameCol(fieldTable, fieldTable.columnName(MSFieldEnums::NAME));
 	MDirection::ROArrayColumn phaseDirCol(fieldTable, fieldTable.columnName(MSFieldEnums::PHASE_DIR));
 	MEpoch::ROScalarColumn timeCol(set, set.columnName(MSMainEnums::TIME));
 	
@@ -422,7 +422,7 @@ void rotateToGeoZenith(
 	MeasurementSet &set, int fieldIndex, MSField &fieldTable, bool onlyUVW)
 {
 	MultiBandData bandData(set.spectralWindow(), set.dataDescription());
-	ROScalarColumn<casa::String> nameCol(fieldTable, fieldTable.columnName(MSFieldEnums::NAME));
+	ROScalarColumn<casacore::String> nameCol(fieldTable, fieldTable.columnName(MSFieldEnums::NAME));
 	MDirection::ArrayColumn phaseDirCol(fieldTable, fieldTable.columnName(MSFieldEnums::PHASE_DIR));
 	MEpoch::ROScalarColumn timeCol(set, set.columnName(MSMainEnums::TIME));
 	
@@ -437,8 +437,8 @@ void rotateToGeoZenith(
 		uvwOutCol(set, set.columnName(MSMainEnums::UVW));
 	
 	const bool
-		hasCorrData = set.isColumn(casa::MSMainEnums::CORRECTED_DATA),
-		hasModelData = set.isColumn(casa::MSMainEnums::MODEL_DATA);
+		hasCorrData = set.isColumn(casacore::MSMainEnums::CORRECTED_DATA),
+		hasModelData = set.isColumn(casacore::MSMainEnums::MODEL_DATA);
 	std::auto_ptr<ArrayColumn<Complex> > dataCol, correctedDataCol, modelDataCol;
 	if(!onlyUVW)
 	{
@@ -573,18 +573,18 @@ void readAntennas(MeasurementSet &set, std::vector<MPosition> &antennas)
 MDirection MinWDirection(MeasurementSet& set)
 {
 	MPosition centroid = ArrayCentroid(set);
-	casa::Vector<casa::Double> cvec = centroid.getValue().getVector();
+	casacore::Vector<casacore::Double> cvec = centroid.getValue().getVector();
 	double cx = cvec[0], cy = cvec[1], cz = cvec[2];
 	
-	casa::MSAntenna aTable = set.antenna();
-	casa::MPosition::ROScalarColumn antPosColumn(aTable, aTable.columnName(casa::MSAntennaEnums::POSITION));
+	casacore::MSAntenna aTable = set.antenna();
+	casacore::MPosition::ROScalarColumn antPosColumn(aTable, aTable.columnName(casacore::MSAntennaEnums::POSITION));
 	integer n = 3, m = aTable.nrow(), lda = m, ldu = m, ldvt = n;
 	std::vector<double> a(m*n);
 	
 	for(size_t row=0; row!=aTable.nrow(); ++row)
 	{
 		MPosition pos = antPosColumn(row);
-		casa::Vector<casa::Double> vec = pos.getValue().getVector();
+		casacore::Vector<casacore::Double> vec = pos.getValue().getVector();
 		a[row] = vec[0]-cx, a[row+m] = vec[1]-cy, a[row+2*m] = vec[2]-cz;
 	}
 	
@@ -609,13 +609,13 @@ MDirection MinWDirection(MeasurementSet& set)
 			x = -x; y =-y; z = -z;
 		}
 		
-		casa::MEpoch::ROScalarColumn timeColumn(set, set.columnName(casa::MSMainEnums::TIME));
-		casa::MEpoch time = timeColumn(set.nrow()/2);
-		casa::MeasFrame frame(centroid, time);
-		MDirection::Ref ref(casa::MDirection::ITRF, frame);
-		casa::MDirection direction(casa::MVDirection(x, y, z), ref);
-		const casa::MDirection::Ref j2000Ref(casa::MDirection::J2000, frame);
-		return casa::MDirection::Convert(direction, j2000Ref)();
+		casacore::MEpoch::ROScalarColumn timeColumn(set, set.columnName(casacore::MSMainEnums::TIME));
+		casacore::MEpoch time = timeColumn(set.nrow()/2);
+		casacore::MeasFrame frame(centroid, time);
+		MDirection::Ref ref(casacore::MDirection::ITRF, frame);
+		casacore::MDirection direction(casacore::MVDirection(x, y, z), ref);
+		const casacore::MDirection::Ref j2000Ref(casacore::MDirection::J2000, frame);
+		return casacore::MDirection::Convert(direction, j2000Ref)();
 	}
 }
 
