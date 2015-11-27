@@ -2,12 +2,18 @@ cmake_minimum_required(VERSION 2.6)
 
 project(wsclean)
 
+#if(NOT CMAKE_BUILD_TYPE)
+#  set(CMAKE_BUILD_TYPE "Release")
+#endif()
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -Wall -DNDEBUG -ggdb")
+
 if(PORTABLE)
-  set(CMAKE_CXX_FLAGS "-O3 -Wall -DNDEBUG -ggdb")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ")
 else()
-  set(CMAKE_CXX_FLAGS "-O3 -Wall -DNDEBUG -march=native -msse4.1 -ggdb") 
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -msse4.1") 
 endif(PORTABLE)
-  
+
 find_library(CASA_MS_LIB casa_ms REQUIRED)
 find_library(CASA_TABLES_LIB casa_tables REQUIRED)
 find_library(CASA_CASA_LIB casa_casa REQUIRED)
@@ -144,3 +150,5 @@ if(DOXYGEN_FOUND)
     COMMENT "Generating API documentation with Doxygen" VERBATIM)
 
 endif(DOXYGEN_FOUND)
+
+message(STATUS "Flags passed to C++ compiler: " ${CMAKE_CXX_FLAGS})
