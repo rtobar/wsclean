@@ -10,14 +10,14 @@
 #include <iostream>
 
 template<typename ImageSetType>
-void FastMultiScaleClean<ImageSetType>::ExecuteMajorIteration(ImageSetType& dataImage, ImageSetType& modelImage, std::vector<double*> psfImages, size_t width, size_t height, bool& reachedStopGain)
+void FastMultiScaleClean<ImageSetType>::ExecuteMajorIteration(ImageSetType& dataImage, ImageSetType& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedStopGain)
 {
 	if(this->_stopOnNegativeComponent)
 		this->_allowNegativeComponents = true;
 	_originalWidth = width;
 	_originalHeight = height;
 	
-	_originalPsfs = &psfImages;
+	_originalPsfs = psfImages;
 	_dataImageOriginal = &dataImage;
 	_modelImage = &modelImage;
 	
@@ -75,7 +75,7 @@ void FastMultiScaleClean<ImageSetType>::executeMajorIterationForScale(double cur
 		largeScaleImage(_rescaledWidth*_rescaledHeight, *_dataImageOriginal),
 		nextScaleImage(_rescaledWidth*_rescaledHeight, *_dataImageOriginal),
 		currentScaleModel(_rescaledWidth*_rescaledHeight, *_modelImage);
-	std::vector<double*> scaledPsfs(_originalPsfs->size());
+	ao::uvector<double*> scaledPsfs(_originalPsfs.size());
 	_dataImageLargeScale = &largeScaleImage;
 	_dataImageNextScale = &nextScaleImage;
 	_scaledPsfs = &scaledPsfs;
@@ -85,19 +85,22 @@ void FastMultiScaleClean<ImageSetType>::executeMajorIterationForScale(double cur
 	
 	double thresholdBias = pow(this->_multiscaleThresholdBias, log2(currentScale));
 	std::cout << "Threshold bias: " << thresholdBias << '\n';
-	double oldSubtractionGain = this->_subtractionGain;
-	this->_subtractionGain *= sqrt(thresholdBias);
+	double oldSubtractionGain = this->_gain;
+	this->_gain *= sqrt(thresholdBias);
 	
 	// Fill the large and next scale images with the rescaled images
 	FFTResampler imageResampler(_originalWidth, _originalHeight, _rescaledWidth, _rescaledHeight, cpuCount, false);
 	imageResampler.Start();
 	for(size_t i=0; i!=_dataImageOriginal->ImageCount(); ++i)
 		imageResampler.AddTask(_dataImageOriginal->GetImage(i), largeScaleImage.GetImage(i));
-	for(size_t i=0; i!=_originalPsfs->size(); ++i)
+	double* psfScratch = allocator.Allocate(_rescaledWidth*_rescaledHeight);
+	for(size_t i=0; i!=_originalPsfs.size(); ++i)
 	{
+		memcpy(psfScratch, _originalPsfs[i], _originalWidth*_originalHeight*sizeof(double));
 		scaledPsfs[i] = allocator.Allocate(_rescaledWidth*_rescaledHeight);
-		imageResampler.AddTask((*_originalPsfs)[i], scaledPsfs[i]);
+		imageResampler.AddTask(psfScratch, scaledPsfs[i]);
 	}
+	allocator.Free(psfScratch);
 	imageResampler.Finish();
 	
 	for(size_t i=0; i!=_dataImageOriginal->ImageCount(); ++i)
@@ -140,14 +143,14 @@ void FastMultiScaleClean<ImageSetType>::executeMajorIterationForScale(double cur
 	
 	size_t peakIndex = componentX + componentY*_rescaledWidth;
 	double peakNormalized = _dataImageLargeScale->JoinedValueNormalized(peakIndex) * rescaleFactor * rescaleFactor;
-	double firstThreshold = this->_threshold, stopGainThreshold = fabs(peakNormalized*(1.0-this->_stopGain)/thresholdBias);
+	double firstThreshold = this->_threshold, stopGainThreshold = fabs(peakNormalized*(1.0-this->_mGain)/thresholdBias);
 	std::cout << "Scale-adjusted threshold: " << firstThreshold*thresholdBias << ", major iteration stops at " << stopGainThreshold*thresholdBias << '\n';
 	if(stopGainThreshold > firstThreshold)
 	{
 		firstThreshold = stopGainThreshold;
 		std::cout << "Next major iteration for this scale at: " << stopGainThreshold << '\n';
 	}
-	else if(this->_stopGain != 1.0) {
+	else if(this->_mGain != 1.0) {
 		std::cout << "Major iteration threshold reached global threshold of " << this->_threshold << " for this scale.\n";
 	}
 
@@ -176,11 +179,24 @@ void FastMultiScaleClean<ImageSetType>::executeMajorIterationForScale(double cur
 		CleanTask task;
 		task.cleanCompX = componentX;
 		task.cleanCompY = componentY;
-		task.peak = largeScaleImage.Get(peakIndex);
+		typename ImageSetType::Value peakValues = largeScaleImage.Get(peakIndex);
+		
 		for(size_t i=0; i!=cpuCount; ++i)
 			taskLanes[i]->write(task);
 		
-		currentScaleModel.AddComponent(largeScaleImage, peakIndex, this->_subtractionGain * rescaleFactor * rescaleFactor);
+		for(size_t i=0; i!=largeScaleImage.ImageCount(); ++i)
+			_curPeakValues[i] = peakValues.GetValue(i);
+		
+		this->PerformSpectralFit(_curPeakValues.data());
+		
+		ao::uvector<double> modelComponentValues(_curPeakValues.size());
+		for(size_t i=0; i!=largeScaleImage.ImageCount(); ++i)
+		{
+			_curPeakValues[i] *= this->_gain;
+			modelComponentValues[i] *= _curPeakValues[i] * rescaleFactor;
+		}
+		
+		currentScaleModel.AddComponent(peakIndex, modelComponentValues.data());
 		
 		double peakUnnormalized = 0.0;
 		for(size_t i=0; i!=cpuCount; ++i)
@@ -239,7 +255,7 @@ void FastMultiScaleClean<ImageSetType>::executeMajorIterationForScale(double cur
 			++modelPtr;
 			++dest;
 		}
-		FFTConvolver::PrepareKernel(preparedPsf, (*_originalPsfs)[_modelImage->PSFIndex(i)], _originalWidth, _originalHeight);
+		FFTConvolver::PrepareKernel(preparedPsf, _originalPsfs[_modelImage->PSFIndex(i)], _originalWidth, _originalHeight);
 		FFTConvolver::ConvolveSameSize(convolvedModel, preparedPsf, _originalWidth, _originalHeight);
 		dest = _dataImageOriginal->GetImage(i);
 		destEnd = dest + _originalWidth*_originalHeight;
@@ -254,7 +270,7 @@ void FastMultiScaleClean<ImageSetType>::executeMajorIterationForScale(double cur
 	allocator.Free(convolvedModel);
 	allocator.Free(kernelImage);
 	
-	this->_subtractionGain = oldSubtractionGain;
+	this->_gain = oldSubtractionGain;
 }
 
 template<typename ImageSetType>
@@ -310,20 +326,18 @@ template<typename ImageSetType>
 void FastMultiScaleClean<ImageSetType>::cleanThreadFunc(ao::lane<CleanTask> *taskLane, ao::lane<CleanResult> *resultLane, CleanThreadData cleanData)
 {
 	CleanTask task;
-	// This initialization is not really necessary, but gcc warns about possible uninitialized values otherwise
-	task.peak = ImageSetType::Value::Zero();
 	ImageSetType& imageSet = *cleanData.parent->_dataImageLargeScale;
 	ImageSetType& nextScaleSet = *cleanData.parent->_dataImageNextScale;
-	const std::vector<double*>& psfs = *cleanData.parent->_scaledPsfs;
+	const ao::uvector<double*>& psfs = *cleanData.parent->_scaledPsfs;
 	while(taskLane->read(task))
 	{
 		for(size_t i=0; i!=imageSet.ImageCount(); ++i)
 		{
-			subtractImage(imageSet.GetImage(i), psfs[ImageSetType::PSFIndex(i)], task.cleanCompX, task.cleanCompY, this->_subtractionGain * task.peak.GetValue(i), cleanData.startY, cleanData.endY);
+			subtractImage(imageSet.GetImage(i), psfs[ImageSetType::PSFIndex(i)], task.cleanCompX, task.cleanCompY, _curPeakValues[i], cleanData.startY, cleanData.endY);
 		}
 		for(size_t i=0; i!=nextScaleSet.ImageCount(); ++i)
 		{
-			subtractImage(nextScaleSet.GetImage(i), psfs[ImageSetType::PSFIndex(i)], task.cleanCompX, task.cleanCompY, this->_subtractionGain * task.peak.GetValue(i), cleanData.startY, cleanData.endY);
+			subtractImage(nextScaleSet.GetImage(i), psfs[ImageSetType::PSFIndex(i)], task.cleanCompX, task.cleanCompY, _curPeakValues[i], cleanData.startY, cleanData.endY);
 		}
 		
 		CleanResult result;

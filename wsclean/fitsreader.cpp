@@ -211,40 +211,41 @@ void FitsReader::initialize()
 	else
 		_phaseCentreDM = 0.0;
 	
+	_dateObs = 0.0;
 	readDateKeyIfExists("DATE-OBS", _dateObs);
-	if(naxis >= 3)
+	
+	if(naxis >= 3 && readStringKey("CTYPE3") == "FREQ")
 	{
-		if(readStringKey("CTYPE3") == "FREQ")
-		{
-			_frequency = readDoubleKey("CRVAL3");
-			_bandwidth = readDoubleKey("CDELT3");
-		}
-	} else {
+		_frequency = readDoubleKey("CRVAL3");
+		_bandwidth = readDoubleKey("CDELT3");
+	}
+	else {
 		_frequency = 0.0;
 		_bandwidth = 0.0;
 	}
-	if(naxis >= 4)
+	
+	if(naxis >= 4 && readStringKey("CTYPE4") == "STOKES")
 	{
-		if(readStringKey("CTYPE4") == "STOKES")
+		double val = readDoubleKey("CRVAL4");
+		switch(int(val))
 		{
-			double val = readDoubleKey("CRVAL4");
-			switch(int(val))
-			{
-				default: throw std::runtime_error("Unknown polarization specified in fits file");
-				case 1: _polarization = Polarization::StokesI; break;
-				case 2: _polarization = Polarization::StokesQ; break;
-				case 3: _polarization = Polarization::StokesU; break;
-				case 4: _polarization = Polarization::StokesV; break;
-				case -1: _polarization = Polarization::RR; break;
-				case -2: _polarization = Polarization::LL; break;
-				case -3: _polarization = Polarization::RL; break;
-				case -4: _polarization = Polarization::LR; break;
-				case -5: _polarization = Polarization::XX; break;
-				case -6: _polarization = Polarization::YY; break;
-				case -7: _polarization = Polarization::XY; break;
-				case -8: _polarization = Polarization::YX; break;
-			}
+			default: throw std::runtime_error("Unknown polarization specified in fits file");
+			case 1: _polarization = Polarization::StokesI; break;
+			case 2: _polarization = Polarization::StokesQ; break;
+			case 3: _polarization = Polarization::StokesU; break;
+			case 4: _polarization = Polarization::StokesV; break;
+			case -1: _polarization = Polarization::RR; break;
+			case -2: _polarization = Polarization::LL; break;
+			case -3: _polarization = Polarization::RL; break;
+			case -4: _polarization = Polarization::LR; break;
+			case -5: _polarization = Polarization::XX; break;
+			case -6: _polarization = Polarization::YY; break;
+			case -7: _polarization = Polarization::XY; break;
+			case -8: _polarization = Polarization::YX; break;
 		}
+	}
+	else {
+		_polarization = Polarization::StokesI;
 	}
 	double bMaj=0.0, bMin=0.0, bPa=0.0;
 	if(ReadDoubleKeyIfExists("BMAJ", bMaj) && ReadDoubleKeyIfExists("BMIN", bMin) && ReadDoubleKeyIfExists("BPA", bPa))
@@ -260,7 +261,12 @@ void FitsReader::initialize()
 		_beamMinorAxisRad = 0.0;
 		_beamPositionAngle = 0.0;
 	}
+	
+	_origin = std::string();
+	_originComment = std::string();
 	ReadStringKeyIfExists("ORIGIN", _origin, _originComment);
+	
+	_history.clear();
 	readHistory();
 }
 

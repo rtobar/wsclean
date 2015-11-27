@@ -306,6 +306,14 @@ public:
 		
 		void AddSource(const ModelSource& source) { _sources.push_back(source); }
 		
+		double TotalFlux(PolarizationEnum polarization) const
+		{
+			double f = 0.0;
+			for(const_iterator s=_sources.begin(); s!=_sources.end(); ++s)
+				f += s->TotalFlux(polarization);
+			return f;
+		}
+		
 		double MeanRA() const
 		{
 			std::vector<double> raValues;

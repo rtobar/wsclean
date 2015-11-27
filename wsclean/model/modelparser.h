@@ -210,7 +210,7 @@ class ModelParser : private Tokenizer
 				throw std::runtime_error("Expecting {");
 			double refFrequency = 0.0;
 			double brightness[4] = { 0.0, 0.0, 0.0, 0.0 };
-			std::vector<double> terms;
+			ao::uvector<double> terms;
 			bool hasFrequency = false, hasBrightness = false;
 			while(getToken(token) && token != "}")
 			{

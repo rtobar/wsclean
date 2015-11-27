@@ -442,7 +442,7 @@ public:
 	}
 	
 	
-	void FitLogPolynomial(std::vector<double>& terms, size_t nTerms, PolarizationEnum polarization, double referenceFrequencyHz = 1.0) const
+	void FitLogPolynomial(ao::uvector<double>& terms, size_t nTerms, PolarizationEnum polarization, double referenceFrequencyHz = 1.0) const
 	{
 		NonLinearPowerLawFitter fitter;
 		size_t n = 0;

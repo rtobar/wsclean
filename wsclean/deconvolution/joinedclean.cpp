@@ -5,12 +5,13 @@
 #include <boost/thread/thread.hpp>
 
 template<typename ImageSetType>
-void JoinedClean<ImageSetType>::ExecuteMajorIteration(ImageSetType& dataImage, ImageSetType& modelImage, std::vector<double*> psfImages, size_t width, size_t height, bool& reachedStopGain)
+void JoinedClean<ImageSetType>::ExecuteMajorIteration(ImageSetType& dataImage, ImageSetType& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedStopGain)
 {
 	if(this->_stopOnNegativeComponent)
 		this->_allowNegativeComponents = true;
 	_width = width;
 	_height = height;
+	_curPeakValues.resize(dataImage.ImageCount());
 	
 	size_t componentX=0, componentY=0;
 	findPeak(dataImage, componentX, componentY);
@@ -18,13 +19,14 @@ void JoinedClean<ImageSetType>::ExecuteMajorIteration(ImageSetType& dataImage, I
 	
 	size_t peakIndex = componentX + componentY*_width;
 	double peakNormalized = dataImage.JoinedValueNormalized(peakIndex);
-	double firstThreshold = this->_threshold, stopGainThreshold = peakNormalized*(1.0-this->_stopGain);
+	double firstThreshold = this->_threshold;
+	double stopGainThreshold = std::fabs(peakNormalized)*(1.0-this->_mGain);
 	if(stopGainThreshold > firstThreshold)
 	{
 		firstThreshold = stopGainThreshold;
 		std::cout << "Next major iteration at: " << stopGainThreshold << '\n';
 	}
-	else if(this->_stopGain != 1.0) {
+	else if(this->_mGain != 1.0) {
 		std::cout << "Major iteration threshold reached global threshold of " << this->_threshold << ": final major iteration.\n";
 	}
 
@@ -55,11 +57,20 @@ void JoinedClean<ImageSetType>::ExecuteMajorIteration(ImageSetType& dataImage, I
 		CleanTask task;
 		task.cleanCompX = componentX;
 		task.cleanCompY = componentY;
-		task.peak = dataImage.Get(peakIndex);
+		typename ImageSetType::Value peakValues = dataImage.Get(peakIndex);
+		
+		for(size_t i=0; i!=dataImage.ImageCount(); ++i)
+			_curPeakValues[i] = peakValues.GetValue(i);
+		
+		this->PerformSpectralFit(_curPeakValues.data());
+		
+		for(size_t i=0; i!=dataImage.ImageCount(); ++i)
+			_curPeakValues[i] *= this->_gain;
+			
 		for(size_t i=0; i!=cpuCount; ++i)
 			taskLanes[i]->write(task);
 		
-		modelImage.AddComponent(dataImage, peakIndex, this->_subtractionGain);
+		modelImage.AddComponent(peakIndex, _curPeakValues.data());
 		
 		double peakUnnormalized = 0.0;
 		for(size_t i=0; i!=cpuCount; ++i)
@@ -179,13 +190,11 @@ template<typename ImageSetType>
 void JoinedClean<ImageSetType>::cleanThreadFunc(ao::lane<CleanTask> *taskLane, ao::lane<CleanResult> *resultLane, CleanThreadData cleanData)
 {
 	CleanTask task;
-	// This initialization is not really necessary, but gcc warns about possible uninitialized values otherwise
-	task.peak = ImageSetType::Value::Zero();
 	while(taskLane->read(task))
 	{
 		for(size_t i=0; i!=cleanData.dataImage->ImageCount(); ++i)
 		{
-			subtractImage(cleanData.dataImage->GetImage(i), cleanData.psfImages[ImageSetType::PSFIndex(i)], task.cleanCompX, task.cleanCompY, this->_subtractionGain * task.peak.GetValue(i), cleanData.startY, cleanData.endY);
+			subtractImage(cleanData.dataImage->GetImage(i), cleanData.psfImages[ImageSetType::PSFIndex(i)], task.cleanCompX, task.cleanCompY, _curPeakValues[i], cleanData.startY, cleanData.endY);
 		}
 		
 		CleanResult result;

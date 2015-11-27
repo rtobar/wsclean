@@ -21,11 +21,11 @@ public:
 	
 	struct ChannelRange
 	{
-		size_t band, start, end;
+		size_t dataDescId, start, end;
 		bool operator<(const ChannelRange& rhs) const
 		{
-			if(band < rhs.band) return true;
-			if(band > rhs.band) return false;
+			if(dataDescId < rhs.dataDescId) return true;
+			if(dataDescId > rhs.dataDescId) return false;
 			if(start < rhs.start) return true;
 			if(start > rhs.start) return false;
 			return end < rhs.end;
@@ -61,7 +61,7 @@ public:
 	
 	virtual double StartTime() { return _metaHeader.startTime; }
 	
-	static Handle Partition(const string& msPath, const std::vector<ChannelRange>& channels, class MSSelection& selection, const string& dataColumnName, bool includeWeights, bool includeModel, bool modelUpdateRequired, const std::set<PolarizationEnum>& polsOut, const std::string& temporaryDirectory);
+	static Handle Partition(const string& msPath, const std::vector<ChannelRange>& channels, class MSSelection& selection, const string& dataColumnName, bool includeWeights, bool includeModel, bool initialModelRequired, bool modelUpdateRequired, const std::set<PolarizationEnum>& polsOut, const std::string& temporaryDirectory);
 	
 	class Handle {
 	public:
@@ -131,11 +131,11 @@ private:
 	{
 		uint64_t channelCount;
 		uint64_t channelStart;
-		uint32_t bandIndex;
+		uint32_t dataDescId;
 		bool hasModel, hasWeights;
 	} _partHeader;
 	
-	static std::string getPartPrefix(const std::string& msPath, size_t partIndex, PolarizationEnum pol, size_t bandIndex, const std::string& tempDir);
+	static std::string getPartPrefix(const std::string& msPath, size_t partIndex, PolarizationEnum pol, size_t dataDescId, const std::string& tempDir);
 	static std::string getMetaFilename(const std::string& msPath, const std::string& tempDir);
 };
 

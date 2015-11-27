@@ -51,7 +51,22 @@ public:
 	void SetMoreSaneLocation(const std::string& location) { _moreSaneLocation = location; }
 	void SetMoreSaneArgs(const std::string& arguments) { _moreSaneArgs = arguments; }
 	void SetMoreSaneSigmaLevels(const std::vector<std::string> &slevels) { _moreSaneSigmaLevels = slevels; }
-        void SetPrefixName(const std::string& prefixName) { _prefixName = prefixName; }
+	void SetPrefixName(const std::string& prefixName) { _prefixName = prefixName; }
+	
+	bool IsSpectralFittingEnabled() {
+		return _spectralFittingMode != NoSpectralFitting;
+	}
+	void SetFitSpectralPol(size_t nTerms) {
+		_spectralFittingMode = PolynomialSpectralFitting;
+		_spectralFittingTerms = nTerms;
+	}
+	void SetFitSpectralLogPol(size_t nTerms) {
+		_spectralFittingMode = LogPolynomialSpectralFitting;
+		_spectralFittingTerms = nTerms;
+	}
+	void SetDeconvolutionChannels(size_t deconvolutionChannelCount) {
+		_requestedDeconvolutionChannelCount = deconvolutionChannelCount;
+	}
 	
 	void InitializeDeconvolutionAlgorithm(const ImagingTable& groupTable, PolarizationEnum psfPolarization, ImageBufferAllocator* imageAllocator, size_t imgWidth, size_t imgHeight, double pixelScaleX, double pixelScaleY, size_t outputChannels, double beamSize, size_t threadCount);
 	
@@ -75,15 +90,20 @@ public:
 	bool UseIUWT() const { return _useIUWT; }
 	bool IsInitialized() const { return _cleanAlgorithm != 0; }
 private:
-	void performDynamicClean(const class ImagingTable& groupTable, bool& reachedMajorThreshold, size_t majorIterationNr);
-	
+	void performSimpleClean(DynamicSet& residual, DynamicSet& model, const ao::uvector<const double*>& psfs, bool& reachedMajorThreshold, size_t majorIterationNr);
 	void performSimpleClean(size_t currentChannelIndex, bool& reachedMajorThreshold, size_t majorIterationNr, PolarizationEnum polarization);
 	
+	template<size_t PolCount>
+	void performJoinedPolClean(DynamicSet& residual, DynamicSet& model, const ao::uvector<const double*>& psfs, bool& reachedMajorThreshold, size_t majorIterationNr);
 	template<size_t PolCount>
 	void performJoinedPolClean(size_t currentChannelIndex, bool& reachedMajorThreshold, size_t majorIterationNr);
 	
 	template<size_t PolCount>
 	void performJoinedPolFreqClean(bool& reachedMajorThreshold, size_t majorIterationNr);
+	template<size_t PolCount>
+	void performJoinedPolFreqClean(DynamicSet& residual, DynamicSet& model, const ao::uvector<const double*>& psfs, bool& reachedMajorThreshold, size_t majorIterationNr);
+
+	void calculateDeconvolutionFrequencies(const ImagingTable& groupTable, ao::uvector<double>& frequencies);
 	
 	double _threshold, _gain, _mGain;
 	size_t _nIter;
@@ -96,6 +116,17 @@ private:
 	std::string _moreSaneLocation, _moreSaneArgs;
 	std::vector<std::string> _moreSaneSigmaLevels;
 	std::string _prefixName;
+	
+	enum SpectralFittingMode _spectralFittingMode;
+	size_t _spectralFittingTerms;
+	
+	/**
+	 * The number of channels used during deconvolution. This can be used to
+	 * image with more channels than deconvolution. Before deconvolution,
+	 * channels are averaged, and after deconvolution they are interpolated.
+	 * It is 0 when all channels should be used.
+	 */
+	size_t _requestedDeconvolutionChannelCount;
 	
 	std::unique_ptr<class DeconvolutionAlgorithm> _cleanAlgorithm;
 	

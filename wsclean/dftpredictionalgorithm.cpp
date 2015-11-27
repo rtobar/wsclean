@@ -306,7 +306,6 @@ void DFTPredictionAlgorithm::UpdateBeam(LBeamEvaluator& beamEvaluator)
 {
 	if(!_hasBeam)
 	{
-		std::cout << "Using beam in prediction...\n";
 		_hasBeam = true;
 	}
 	for(DFTPredictionInput::iterator component=_input.begin(); component!=_input.end(); ++component)

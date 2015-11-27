@@ -9,26 +9,24 @@
 #include "../uvector.h"
 
 #include "../deconvolution/dynamicset.h"
+#include "../deconvolution/deconvolutionalgorithm.h"
 
 #include "../wsclean/imagebufferallocator.h"
 
-class MultiScaleAlgorithm
+class MultiScaleAlgorithm : public UntypedDeconvolutionAlgorithm
 {
 public:
-	MultiScaleAlgorithm(class ImageBufferAllocator& allocator, size_t width, size_t height, double beamScale, double threshold, double gain, double mGain, double borderRatio, bool allowNegativeComponents, double scaleBias, size_t threadCount);
+	MultiScaleAlgorithm(class ImageBufferAllocator& allocator, double beamSize, double pixelScaleX, double pixelScaleY);
 	
 	void SetCleanMask(const bool* cleanMask) { _cleanMask = cleanMask; }
 	
-	void PerformMajorIteration(size_t& iterCounter, size_t nIter, DynamicSet& modelSet, DynamicSet& dirtySet, const ao::uvector<const double*>& psfs, bool& reachedMajorThreshold);
+	//void PerformMajorIteration(size_t& iterCounter, size_t nIter, DynamicSet& modelSet, DynamicSet& dirtySet, const ao::uvector<const double*>& psfs, bool& reachedMajorThreshold);
+	
+	virtual void ExecuteMajorIteration(DynamicSet& dataImage, DynamicSet& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedMajorThreshold);	
 private:
 	class ImageBufferAllocator& _allocator;
 	size_t _width, _height;
-	double _beamScale, _threshold, _gain, _mGain;
-	double _borderRatio;
-	bool _allowNegativeComponents;
-	double _scaleBias;
-	size_t _threadCount;
-	const bool* _cleanMask;
+	double _beamSizeInPixels;
 	bool _verbose;
 	ThreadedDeconvolutionTools* _tools;
 	

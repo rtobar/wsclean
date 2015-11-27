@@ -27,7 +27,8 @@ public:
 	
 	Deconvolution& DeconvolutionInfo() { return _deconvolution; }
 	
-	void SetImageSize(size_t width, size_t height) { _imgWidth = width; _imgHeight = height; }
+	void SetImageSize(size_t width, size_t height) { _untrimmedWidth = width; _untrimmedHeight = height; }
+	void SetTrimmedImageSize(size_t width, size_t height) { _trimWidth = width; _trimHeight = height; }
 	void SetPixelScale(double pixelScale) { _pixelScaleX = pixelScale; _pixelScaleY = pixelScale; }
 	void SetNWlayers(size_t nWLayers) { _nWLayers = nWLayers; }
 	void SetColumnName(const std::string& columnName) { _columnName = columnName; }
@@ -71,6 +72,7 @@ public:
 	void SetTemporaryDirectory(const std::string& tempDir) { _temporaryDirectory = tempDir; }
 	void SetForceReorder(bool forceReorder) { _forceReorder = forceReorder; }
 	void SetForceNoReorder(bool forceNoReorder) { _forceNoReorder = forceNoReorder; }
+	void SetSubtractModel(bool subtractModel) { _subtractModel = subtractModel; }
 	void SetModelUpdateRequired(bool modelUpdateRequired) { _modelUpdateRequired = modelUpdateRequired; }
 	void SetMemFraction(double memFraction) { _memFraction = memFraction; }
 	void SetMemAbsLimit(double absMemLimit) { _absMemLimit = absMemLimit; }
@@ -78,6 +80,11 @@ public:
 	void SetMaxUVWInM(double maxUVW) { _globalSelection.SetMaxUVWInM(maxUVW); }
 	void SetMinUVInLambda(double lambda) { _minUVInLambda = lambda; }
 	void SetMaxUVInLambda(double lambda) { _maxUVInLambda = lambda; }
+	void SetGaussianTaper(double beamSize) { _gaussianTaperBeamSize = beamSize; }
+	void SetTukeyTaper(double transitionSizeInLambda) { _tukeyTaperInLambda = transitionSizeInLambda; }
+	void SetTukeyInnerTaper(double transitionSizeInLambda) { _tukeyInnerTaperInLambda = transitionSizeInLambda; }
+	void SetEdgeTaper(double sizeInLambda) { _edgeTaperInLambda = sizeInLambda; }
+	void SetEdgeTukeyTaper(double sizeInLambda) { _edgeTukeyTaperInLambda = sizeInLambda; }
 	void SetWLimit(double wLimit) { _wLimit = wLimit; }
 	void SetCommandLine(const std::string& cmdLine) { _commandLine = cmdLine; }
 	void SetSaveWeights(bool saveWeights) { _isWeightImageSaved = saveWeights; }
@@ -92,6 +99,8 @@ public:
 	
 	void SetJoinChannels(bool joinChannels) { _joinedFrequencyCleaning = joinChannels; }
 	bool JoinChannels() const { return _joinedFrequencyCleaning; }
+	
+	void SetPredictChannels(size_t predictionChannels) { _predictionChannels = predictionChannels; }
 	
 	void AddInputMS(const std::string& msPath) { _filenames.push_back(msPath); }
 	
@@ -114,6 +123,7 @@ private:
 	void runFirstInversion(const ImagingTableEntry& entry);
 	void prepareInversionAlgorithm(PolarizationEnum polarization);
 	
+	void validateDimensions();
 	void checkPolarizations();
 	void performReordering(bool isPredictMode);
 	
@@ -135,6 +145,7 @@ private:
 	void makeImagingTable();
 	void makeImagingTableEntry(const std::vector<double>& channels, size_t outChannelIndex, ImagingTableEntry& entry);
 	void addPolarizationsToImagingTable(size_t& joinedGroupIndex, size_t& squaredGroupIndex, size_t outChannelIndex, const ImagingTableEntry& templateEntry);
+	class ImageWeightCache* createWeightCache();
 	
 	void imagePSF(size_t currentChannelIndex);
 	void imageGridding();
@@ -143,11 +154,15 @@ private:
 	void predict(PolarizationEnum polarization, size_t channelIndex);
 	void dftPredict(const ImagingTable& squaredGroup);
 	
-	void makeMFSImage(const string& suffix, PolarizationEnum pol, bool isImaginary);
+	void makeMFSImage(const string& suffix, PolarizationEnum pol, bool isImaginary, bool isPSF = false);
+	void renderMFSImage(PolarizationEnum pol, bool isImaginary);
 	void writeFits(const string& suffix, const double* image, PolarizationEnum pol, size_t channelIndex, bool isImaginary);
 	void saveUVImage(const double* image, PolarizationEnum pol, size_t channelIndex, bool isImaginary, const std::string& prefix);
 	void writeFirstResidualImages(const ImagingTable& groupTable);
 	void writeModelImages(const ImagingTable& groupTable);
+	
+	void fitBeamSize(double& bMaj, double& bMin, double& bPA, const double* image, double beamEstimate);
+	void determineBeamSize(double& bMaj, double& bMin, double& bPA, const double* image, double theoreticBeam);
 	
 	std::string fourDigitStr(size_t val) const
 	{
@@ -187,7 +202,7 @@ private:
 		return partPrefixNameStr.str();
 	}
 	
-	std::string getMFSPrefix(PolarizationEnum polarization, bool isImaginary) const
+	std::string getMFSPrefix(PolarizationEnum polarization, bool isImaginary, bool isPSF) const
 	{
 		std::ostringstream partPrefixNameStr;
 		partPrefixNameStr << _prefixName;
@@ -195,7 +210,7 @@ private:
 			partPrefixNameStr << "-t" << fourDigitStr(_currentIntervalIndex);
 		if(_channelsOut != 1)
 			partPrefixNameStr << "-MFS";
-		if(_polarizations.size() != 1)
+		if(_polarizations.size() != 1 && !isPSF)
 		{
 			partPrefixNameStr << '-' << Polarization::TypeToShortString(polarization);
 			if(isImaginary)
@@ -214,15 +229,19 @@ private:
 		) && !_forceNoReorder;
 	}
 	
-	size_t _imgWidth, _imgHeight, _channelsOut, _intervalCount;
+	size_t _untrimmedWidth, _untrimmedHeight;
+	size_t _trimWidth, _trimHeight;
+	size_t _channelsOut, _intervalCount;
 	double _pixelScaleX, _pixelScaleY;
 	double _manualBeamMajorSize, _manualBeamMinorSize, _manualBeamPA;
 	bool _fittedBeam, _theoreticBeam, _circularBeam;
 	double _memFraction, _absMemLimit, _minUVInLambda, _maxUVInLambda, _wLimit, _rankFilterLevel;
 	size_t _rankFilterSize;
+	double _gaussianTaperBeamSize, _tukeyTaperInLambda, _tukeyInnerTaperInLambda, _edgeTaperInLambda, _edgeTukeyTaperInLambda;
 	size_t _nWLayers, _antialiasingKernelSize, _overSamplingFactor, _threadCount;
 	size_t _startChannel, _endChannel;
 	bool _joinedPolarizationCleaning, _joinedFrequencyCleaning;
+	size_t _predictionChannels;
 	MSSelection _globalSelection;
 	std::string _columnName;
 	std::set<PolarizationEnum> _polarizations;
@@ -230,7 +249,7 @@ private:
 	std::string _prefixName;
 	bool _smallInversion, _makePSF, _isWeightImageSaved, _isUVImageSaved, _isGriddingImageSaved, _dftPrediction, _dftWithBeam;
 	std::string _temporaryDirectory;
-	bool _forceReorder, _forceNoReorder, _modelUpdateRequired, _mfsWeighting;
+	bool _forceReorder, _forceNoReorder, _subtractModel, _modelUpdateRequired, _mfsWeighting;
 	enum WStackingGridder::GridModeEnum _gridMode;
 	std::vector<std::string> _filenames;
 	std::string _commandLine;
@@ -245,10 +264,12 @@ private:
 		double weight;
 		double bandStart, bandEnd;
 		double beamMaj, beamMin, beamPA;
+		double theoreticBeamSize;
 	};
 	std::vector<ChannelInfo> _infoPerChannel;
+	ChannelInfo _infoForMFS;
 	
-	std::unique_ptr<class InversionAlgorithm> _inversionAlgorithm;
+	std::unique_ptr<class WSMSGridder> _inversionAlgorithm;
 	std::unique_ptr<class ImageWeightCache> _imageWeightCache;
 	ImageBufferAllocator _imageAllocator;
 	Stopwatch _inversionWatch, _predictingWatch, _deconvolutionWatch;

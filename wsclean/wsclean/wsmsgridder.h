@@ -13,6 +13,8 @@
 #include <casacore/casa/Arrays/Array.h>
 #include <casacore/tables/Tables/ArrayColumn.h>
 
+#include <boost/thread/thread.hpp>
+
 namespace casacore {
 	class MeasurementSet;
 }
@@ -55,6 +57,9 @@ class WSMSGridder : public InversionAlgorithm
 		
 		size_t ActualInversionWidth() const { return _actualInversionWidth; }
 		size_t ActualInversionHeight() const { return _actualInversionHeight; }
+		
+		void SetTrimWidth(size_t trimWidth) { _trimWidth = trimWidth; }
+		void SetTrimHeight(size_t trimHeight) { _trimHeight = trimHeight; }
 		
 		virtual void FreeImagingData()
 		{
@@ -114,7 +119,8 @@ class WSMSGridder : public InversionAlgorithm
 			}
 		}
 		
-		void workThreadParallel(const MultiBandData* selectedBand);
+		void startInversionWorkThreads(size_t maxChannelCount);
+		void finishInversionWorkThreads();
 		void workThreadPerSample(ao::lane<InversionWorkSample>* workLane);
 		
 		void predictCalcThread(ao::lane<PredictionWorkItem>* inputLane, ao::lane<PredictionWorkItem>* outputLane);
@@ -123,6 +129,8 @@ class WSMSGridder : public InversionAlgorithm
 
 		std::unique_ptr<WStackingGridder> _gridder;
 		std::unique_ptr<ao::lane<InversionWorkItem>> _inversionWorkLane;
+		std::unique_ptr<ao::lane<InversionWorkSample>[]> _inversionCPULanes;
+		std::unique_ptr<boost::thread_group> _threadGroup;
 		double _phaseCentreRA, _phaseCentreDec, _phaseCentreDL, _phaseCentreDM;
 		bool _denormalPhaseCentre, _hasFrequencies;
 		double _freqHigh, _freqLow;
@@ -134,6 +142,7 @@ class WSMSGridder : public InversionAlgorithm
 		size_t _cpuCount, _laneBufferSize;
 		int64_t _memSize;
 		ImageBufferAllocator* _imageBufferAllocator;
+		size_t _trimWidth, _trimHeight;
 		size_t _actualInversionWidth, _actualInversionHeight;
 		double _actualPixelSizeX, _actualPixelSizeY;
 };

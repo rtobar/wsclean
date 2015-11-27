@@ -10,6 +10,8 @@
 
 #include <casacore/ms/MeasurementSets/MeasurementSet.h>
 
+#include <boost/thread/mutex.hpp>
+
 struct WSCleanUserData
 {
 	std::string msPath;
@@ -22,6 +24,8 @@ struct WSCleanUserData
 	std::string dataColumn;
 	bool hasAImage, hasAtImage;
 	size_t nACalls, nAtCalls;
+	
+	boost::mutex mutex;
 };
 
 template<typename T>
@@ -51,17 +55,19 @@ void wsclean_main(const std::vector<std::string>& parms)
 
 void wsclean_initialize(
 	void** userData,
-	const imaging_parameters* domain_info,
-	imaging_data* data_info
+	const imaging_parameters* parameters,
+	imaging_data* imgData
 )
 {
 	WSCleanUserData* wscUserData = new WSCleanUserData();
-	wscUserData->msPath = domain_info->msPath;
-	wscUserData->width = domain_info->imageWidth;
-	wscUserData->height = domain_info->imageHeight;
-	wscUserData->pixelScaleX = domain_info->pixelScaleX;
-	wscUserData->pixelScaleY = domain_info->pixelScaleY;
-	wscUserData->extraParameters = domain_info->extraParameters;
+	boost::mutex::scoped_lock lock(wscUserData->mutex);
+	
+	wscUserData->msPath = parameters->msPath;
+	wscUserData->width = parameters->imageWidth;
+	wscUserData->height = parameters->imageHeight;
+	wscUserData->pixelScaleX = parameters->pixelScaleX;
+	wscUserData->pixelScaleY = parameters->pixelScaleY;
+	wscUserData->extraParameters = parameters->extraParameters;
 	wscUserData->hasAImage = false;
 	wscUserData->hasAtImage = false;
 	wscUserData->nACalls = 0;
@@ -82,14 +88,14 @@ void wsclean_initialize(
 			++selectedRows;
 	}
 	
-	data_info->dataSize = selectedRows * nChannel;
-	data_info->lhs_data_type = imaging_data::DATA_TYPE_COMPLEX_DOUBLE;
-	data_info->rhs_data_type = imaging_data::DATA_TYPE_DOUBLE;
-	data_info->deinitialize_function = wsclean_deinitialize;
-	data_info->read_function = wsclean_read;
-	data_info->write_function = wsclean_write;
-	data_info->operator_A_function = wsclean_operator_A;
-	data_info->operator_At_function = wsclean_operator_At;
+	imgData->dataSize = selectedRows * nChannel;
+	imgData->lhs_data_type = imaging_data::DATA_TYPE_COMPLEX_DOUBLE;
+	imgData->rhs_data_type = imaging_data::DATA_TYPE_DOUBLE;
+	//data_info->deinitialize_function = wsclean_deinitialize;
+	//data_info->read_function = wsclean_read;
+	//data_info->write_function = wsclean_write;
+	//data_info->operator_A_function = wsclean_operator_A;
+	//data_info->operator_At_function = wsclean_operator_At;
 	
 	bool hasCorrected = ms.tableDesc().isColumn("CORRECTED_DATA");
 	if(hasCorrected) {
@@ -104,12 +110,15 @@ void wsclean_initialize(
 void wsclean_deinitialize(void* userData)
 {
 	WSCleanUserData* wscUserData = static_cast<WSCleanUserData*>(userData);
+	boost::mutex::scoped_lock lock(wscUserData->mutex);
 	delete wscUserData;
 }
 
 void wsclean_read(void* userData, DCOMPLEX* data, double* weights)
 {
 	WSCleanUserData* wscUserData = static_cast<WSCleanUserData*>(userData);
+	boost::mutex::scoped_lock lock(wscUserData->mutex);
+	
 	casacore::MeasurementSet ms(wscUserData->msPath);
 	BandData bandData(ms.spectralWindow());
 	size_t nChannels = bandData.ChannelCount();
@@ -166,9 +175,12 @@ void wsclean_read(void* userData, DCOMPLEX* data, double* weights)
 	}
 }
 
-void wsclean_write(void* userData, const double* image)
+void wsclean_write(void* userData, const char* filename, const double* image)
 {
 	WSCleanUserData* wscUserData = static_cast<WSCleanUserData*>(userData);
+	boost::mutex::scoped_lock lock(wscUserData->mutex);
+	
+	std::cout << "wsclean_write() : Writing " << filename << "...\n";
 	FitsWriter writer;
 	writer.SetImageDimensions(wscUserData->width, wscUserData->height, wscUserData->pixelScaleX, wscUserData->pixelScaleY);
 	if(wscUserData->hasAtImage)
@@ -176,7 +188,7 @@ void wsclean_write(void* userData, const double* image)
 		FitsReader reader("tmp-operator-At-0-image.fits");
 		writer = FitsWriter(reader);
 	}
-	writer.Write("purify-wsclean-model.fits", image);
+	writer.Write(filename, image);
 }
 
 void getCommandLine(std::vector<std::string>& commandline, const WSCleanUserData& userData)
@@ -206,23 +218,26 @@ void getCommandLine(std::vector<std::string>& commandline, const WSCleanUserData
 // Go from image to visibilities
 // dataIn :  double[] of size width*height
 // dataOut : complex double[] of size nvis: nchannels x nbaselines x ntimesteps
-void wsclean_operator_A(void* userData, void* dataOut, void* dataIn)
+void wsclean_operator_A(void* userData, DCOMPLEX* dataOut, const double* dataIn)
 {
 	WSCleanUserData* wscUserData = static_cast<WSCleanUserData*>(userData);
+	boost::mutex::scoped_lock lock(wscUserData->mutex);
+	
 	std::cout << "------ wsclean_operator_A(), image: " << wscUserData->width << " x " << wscUserData->height << ", pixelscale=" << Angle::ToNiceString(wscUserData->pixelScaleX) << "," << Angle::ToNiceString(wscUserData->pixelScaleY) << '\n';
 	
 	// Remove non-finite values
+	// TODO skipped now -- can't change input array without making a copy
 	size_t nonFiniteValues = 0;
 	double imageSum = 0.0;
 	for(size_t i=0; i!=wscUserData->width * wscUserData->height; ++i)
 	{
-		if(!std::isfinite(static_cast<double*>(dataIn)[i]))
+		if(!std::isfinite(dataIn[i]))
 		{
-			static_cast<double*>(dataIn)[i] = 0.0;
+			//dataIn[i] = 0.0;
 			++nonFiniteValues;
 		}
 		else {
-			imageSum += static_cast<double*>(dataIn)[i];
+			imageSum += dataIn[i];
 		}
 	}
 	if(nonFiniteValues != 0)
@@ -235,7 +250,7 @@ void wsclean_operator_A(void* userData, void* dataOut, void* dataIn)
 	// Write dataIn to a fits file
 	FitsWriter writer;
 	writer.SetImageDimensions(wscUserData->width, wscUserData->height, wscUserData->pixelScaleX, wscUserData->pixelScaleY);
-	writer.Write(filenameStr.str() + "-model.fits", static_cast<double*>(dataIn));
+	writer.Write(filenameStr.str() + "-model.fits", dataIn);
 	wscUserData->hasAImage = true;
 	
 	// Run WSClean -predict (creates/fills new column MODEL_DATA)
@@ -286,10 +301,12 @@ void wsclean_operator_A(void* userData, void* dataOut, void* dataIn)
 }
 
 // Go from visibilities to image
-void wsclean_operator_At(void* userData, void* dataOut, void* dataIn)
+void wsclean_operator_At(void* userData, double* dataOut, const DCOMPLEX* dataIn)
 {
-	// Write dataIn to the MODEL_DATA column
 	WSCleanUserData* wscUserData = static_cast<WSCleanUserData*>(userData);
+	boost::mutex::scoped_lock lock(wscUserData->mutex);
+	
+	// Write dataIn to the MODEL_DATA column
 	std::cout << "------ wsclean_operator_At(), image: " << wscUserData->width << " x " << wscUserData->height << ", pixelscale=" << Angle::ToNiceString(wscUserData->pixelScaleX) << "," << Angle::ToNiceString(wscUserData->pixelScaleY) << '\n';
 	casacore::MeasurementSet ms(wscUserData->msPath, casacore::Table::Update);
 	BandData bandData(ms.spectralWindow());
@@ -339,7 +356,7 @@ void wsclean_operator_At(void* userData, void* dataOut, void* dataIn)
 	
 	// Read dirty image and store in dataOut
 	FitsReader reader(prefixName.str() + "-image.fits");
-	reader.Read(static_cast<double*>(dataOut));
+	reader.Read(dataOut);
 	++(wscUserData->nAtCalls);
 	std::cout << "------ end of wsclean_operator_At()\n";
 }

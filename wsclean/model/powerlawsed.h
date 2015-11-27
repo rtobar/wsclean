@@ -11,6 +11,19 @@ public:
 		for(size_t p=0; p!=4; ++p) _factors[p] = 0.0;
 	}
 	
+	PowerLawSED(double referenceFrequency, double constantFlux) :
+		_referenceFrequency(referenceFrequency),
+		_terms(1)
+	{
+		double refBrightness = constantFlux;
+		if(refBrightness <= 0.0)
+			refBrightness = 1.0;
+		_terms[0] = refBrightness;
+		_factors[0] = constantFlux / refBrightness;
+		for(size_t p=1; p!=4; ++p)
+			_factors[p] = 0.0;
+	}
+	
 	virtual PowerLawSED* Clone() const
 	{
 		return new PowerLawSED(*this);
@@ -20,7 +33,7 @@ public:
 	{
 		std::ostringstream str;
 		double term1 = _terms.size()>1 ? _terms[1] : 0.0;
-		double f = NonLinearPowerLawFitter::Term0ToFactor(_terms[0], term1);
+		double f = _terms[0];
 		double
 			i=f*_factors[0], q=f*_factors[1],
 			u=f*_factors[2], v=f*_factors[3];
@@ -77,15 +90,14 @@ public:
 		return _referenceFrequency;
 	}
 	
-	void SetData(double referenceFrequency, const double* brightnessVector, const std::vector<double>& siTerms)
+	void SetData(double referenceFrequency, const double* brightnessVector, const ao::uvector<double>& siTerms)
 	{
 		_referenceFrequency = referenceFrequency;
 		double refBrightness = brightnessVector[0];
 		if(refBrightness <= 0.0)
 			refBrightness = 1.0;
 		_terms.resize(siTerms.size()+1);
-		double siterm0 = siTerms.empty() ? 0 : siTerms[0];
-		_terms[0] = NonLinearPowerLawFitter::FactorToTerm0(refBrightness, siterm0);
+		_terms[0] = refBrightness;
 		for(size_t i=0; i!=siTerms.size(); ++i)
 			_terms[i+1] = siTerms[i];
 		for(size_t p=0; p!=4; ++p)
@@ -95,7 +107,7 @@ public:
 	void GetData(double& referenceFrequency, double* brightnessVector, std::vector<double>& siTerms) const
 	{
 		referenceFrequency = _referenceFrequency;
-		double f = NonLinearPowerLawFitter::Term0ToFactor(_terms[0], _terms[1]);
+		double f = _terms[0];
 		for(size_t p=0; p!=4; ++p)
 			brightnessVector[p] = f*_factors[p];
 		siTerms.resize(_terms.size()-1);
@@ -105,7 +117,7 @@ public:
 private:
 	double _referenceFrequency;
 	double _factors[4];
-	std::vector<double> _terms;
+	ao::uvector<double> _terms;
 };
 
 #endif

@@ -12,6 +12,7 @@ else:
 	parameters.imageHeight = 512
 	parameters.pixelScaleX = '1amin'
 	parameters.pixelScaleY = '1amin'
+	parameters.extraParameters = '-weight natural'
 
 # Test the operator
 	o = Operator(parameters)
@@ -28,7 +29,7 @@ else:
 	
 	o.backward(image, data)
 	
-	o.write(image)
+	o.write("name.fits", image)
 
 # Test the full cleaning command
 	wsc=WSClean()
@@ -48,4 +49,10 @@ else:
 	# (note that the column is always called MODEL_DATA, the datacolumn parameter
 	#  only sets the column used in the 'image' command)
 	wsc.predict([sys.argv[1]], 'wsclean')
+
+	try:
+		o.backward(data, image)
+		raise RuntimeError('Should have crashed!')
+	except:
+		print 'Ok, specifying wrong input gave an exception.'
 

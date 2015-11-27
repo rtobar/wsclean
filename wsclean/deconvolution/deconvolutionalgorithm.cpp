@@ -9,8 +9,8 @@
 
 DeconvolutionAlgorithm::DeconvolutionAlgorithm() :
 	_threshold(0.0),
-	_subtractionGain(0.1),
-	_stopGain(1.0),
+	_gain(0.1),
+	_mGain(1.0),
 	_cleanBorderRatio(0.05),
 	_multiscaleThresholdBias(0.7),
 	_multiscaleScaleBias(0.6),
@@ -19,7 +19,8 @@ DeconvolutionAlgorithm::DeconvolutionAlgorithm() :
 	_threadCount(sysconf(_SC_NPROCESSORS_ONLN)),
 	_allowNegativeComponents(true),
 	_stopOnNegativeComponent(false),
-	_cleanMask(0)
+	_cleanMask(0),
+	_spectralFitter(NoSpectralFitting, 0)
 {
 }
 
@@ -91,3 +92,10 @@ void DeconvolutionAlgorithm::RemoveNaNsInPSF(double* psf, size_t width, size_t h
 	else
 		psfHeight = imageHeight / 2;
 }*/
+
+void DeconvolutionAlgorithm::PerformSpectralFit(double* values)
+{
+	_spectralFitter.FitAndEvaluate(values);
+}
+
+double Evaluate(double x, const ao::uvector<double>& terms, double referenceFrequencyHz=1.0);

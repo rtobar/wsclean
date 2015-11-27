@@ -15,6 +15,8 @@ find_library(CASA_MEASURES_LIB casa_measures REQUIRED)
 find_library(CASA_FITS_LIB casa_fits REQUIRED)
 find_library(FFTW3_LIB fftw3 REQUIRED)
 find_library(FFTW3_THREADS_LIB fftw3_threads REQUIRED)
+#Prevent accidentally finding old BoostConfig.cmake file from casapy
+set(Boost_NO_BOOST_CMAKE ON)
 find_package(Boost COMPONENTS filesystem thread system REQUIRED)
 find_library(PTHREAD_LIB pthread REQUIRED)
 find_library(FITSIO_LIB cfitsio REQUIRED)
@@ -53,6 +55,7 @@ include_directories(${GSL_INCLUDE_DIR})
 
 set(CMAKE_REQUIRED_FLAGS "-std=c++0x")
 include(CheckCXXSourceCompiles)
+
 check_cxx_source_compiles(
 "#include \"${CMAKE_CURRENT_SOURCE_DIR}/aocommon/uvector.h\"
 int main(int argc, char* argv[])
@@ -94,25 +97,37 @@ IF("${isSystemDir}" STREQUAL "-1")
    SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 ENDIF("${isSystemDir}" STREQUAL "-1")
 
-add_library(wsclean-lib
-  casamaskreader.cpp dftpredictionalgorithm.cpp fftconvolver.cpp fftresampler.cpp fftwmultithreadenabler.cpp fitsiochecker.cpp fitsreader.cpp fitswriter.cpp imageweights.cpp nlplfitter.cpp modelrenderer.cpp progressbar.cpp stopwatch.cpp
-  deconvolution/deconvolution.cpp deconvolution/deconvolutionalgorithm.cpp deconvolution/fastmultiscaleclean.cpp deconvolution/joinedclean.cpp deconvolution/moresane.cpp deconvolution/simpleclean.cpp
+add_library(wsclean-object OBJECT
+  casamaskreader.cpp dftpredictionalgorithm.cpp fftconvolver.cpp fftresampler.cpp fftwmultithreadenabler.cpp fitsiochecker.cpp fitsreader.cpp fitswriter.cpp imageweights.cpp nlplfitter.cpp modelrenderer.cpp polynomialfitter.cpp progressbar.cpp stopwatch.cpp
+  deconvolution/deconvolution.cpp deconvolution/deconvolutionalgorithm.cpp deconvolution/dynamicset.cpp deconvolution/fastmultiscaleclean.cpp deconvolution/joinedclean.cpp deconvolution/moresane.cpp deconvolution/simpleclean.cpp deconvolution/spectralfitter.cpp
   interface/wscleaninterface.cpp
   iuwt/imageanalysis.cpp iuwt/iuwtdecomposition.cpp iuwt/iuwtdeconvolutionalgorithm.cpp iuwt/iuwtmask.cpp
   model/model.cpp
   msproviders/contiguousms.cpp msproviders/msprovider.cpp msproviders/partitionedms.cpp
   multiscale/multiscalealgorithm.cpp multiscale/multiscaletransforms.cpp multiscale/threadeddeconvolutiontools.cpp
-  wsclean/imagingtable.cpp wsclean/wsclean.cpp wsclean/wsmsgridder.cpp wsclean/wstackinggridder.cpp ${LBEAM_FILES})
+  wsclean/imagingtable.cpp wsclean/wsclean.cpp wsclean/wsmsgridder.cpp wsclean/wstackinggridder.cpp
+	${LBEAM_FILES})
+
+set_property(TARGET wsclean-object PROPERTY POSITION_INDEPENDENT_CODE 1)
+
+set(WSCLEANFILES $<TARGET_OBJECTS:wsclean-object>)
+
+add_library(wsclean-lib STATIC ${WSCLEANFILES})
 set_target_properties(wsclean-lib PROPERTIES OUTPUT_NAME wsclean)
+
+add_library(wsclean-shared SHARED ${WSCLEANFILES})
+target_link_libraries(wsclean-shared)
 
 add_executable(wsclean wscleanmain.cpp)
 target_link_libraries(wsclean wsclean-lib ${CASA_LIBS} ${FFTW3_LIB} ${FFTW3_THREADS_LIB} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${FITSIO_LIB} ${GSL_LIB} ${GSL_CBLAS_LIB} ${PTHREAD_LIB} ${LBEAM_LIBS})
 
-add_executable(purifyexample EXCLUDE_FROM_ALL interface/purifyexample.c)
-target_link_libraries(purifyexample wsclean-lib ${CASA_LIBS} ${FFTW3_LIB} ${FFTW3_THREADS_LIB} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${FITSIO_LIB} ${GSL_LIB} ${GSL_CBLAS_LIB} ${LBEAM_LIBS})
+add_executable(interfaceexample EXCLUDE_FROM_ALL interface/interfaceexample.c)
+target_link_libraries(interfaceexample wsclean-lib ${CASA_LIBS} ${FFTW3_LIB} ${FFTW3_THREADS_LIB} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${FITSIO_LIB} ${GSL_LIB} ${GSL_CBLAS_LIB} ${LBEAM_LIBS})
 
+set_target_properties(wsclean-object PROPERTIES COMPILE_FLAGS "-std=c++0x")
 set_target_properties(wsclean PROPERTIES COMPILE_FLAGS "-std=c++0x")
 set_target_properties(wsclean-lib PROPERTIES COMPILE_FLAGS "-std=c++0x")
+set_target_properties(wsclean-shared PROPERTIES COMPILE_FLAGS "-std=c++0x")
 
 install(TARGETS wsclean DESTINATION bin)
 install(TARGETS wsclean-lib DESTINATION lib)

@@ -14,7 +14,7 @@
 class NLPLFitterData
 {
 public:
-	typedef std::vector<std::pair<double, double>> PointVec;
+	typedef ao::uvector<std::pair<double, double>> PointVec;
 	PointVec points;
 	size_t nTerms;
 #ifdef HAVE_GSL
@@ -287,7 +287,7 @@ void NonLinearPowerLawFitter::Fit(double& a, double& b, double& c)
 	}
 }
 
-void NonLinearPowerLawFitter::fit_implementation(std::vector<double>& terms, size_t nTerms)
+void NonLinearPowerLawFitter::fit_implementation(ao::uvector<double>& terms, size_t nTerms)
 {
 	_data->nTerms = nTerms;
 	const gsl_multifit_fdfsolver_type *T = gsl_multifit_fdfsolver_lmsder;
@@ -358,7 +358,7 @@ void NonLinearPowerLawFitter::AddDataPoint(double x, double y)
 	_data->points.push_back(std::make_pair(x, y));
 }
 
-void NonLinearPowerLawFitter::Fit(std::vector<double>& terms, size_t nTerms)
+void NonLinearPowerLawFitter::Fit(ao::uvector<double>& terms, size_t nTerms)
 {
 	terms.assign(nTerms, 0.0);
 	
@@ -370,13 +370,34 @@ void NonLinearPowerLawFitter::Fit(std::vector<double>& terms, size_t nTerms)
 	
 	double a, b;
 	Fit(a, b);
-	terms[0] = log10(b); // - a*log(NLPLFact);
-	if(nTerms > 1) terms[1] = a;
+	bool isNegative = b < 0.0;
+	if(isNegative)
+	{
+		for(NLPLFitterData::PointVec::iterator i=_data->points.begin(); i!=_data->points.end(); ++i)
+		{
+			i->second = -i->second;
+		}
+		terms[0] = -log10(-b);
+		a = -a;
+	}
+	else {
+		terms[0] = log10(b); // - a*log(NLPLFact);
+	}
 	
-	fit_implementation(terms, nTerms);
+	if(b != 0.0)
+	{
+		if(nTerms > 1) terms[1] = a;
+		
+		fit_implementation(terms, nTerms);
+	}
+	
+	if(isNegative)
+		terms[0] = -exp10(terms[0]);
+	else
+		terms[0] = exp10(terms[0]);
 }
 
-void NonLinearPowerLawFitter::FitStable(std::vector<double>& terms, size_t nTerms)
+void NonLinearPowerLawFitter::FitStable(ao::uvector<double>& terms, size_t nTerms)
 {
 	terms.assign(nTerms, 0.0);
 	if(nTerms == 0)
@@ -384,14 +405,36 @@ void NonLinearPowerLawFitter::FitStable(std::vector<double>& terms, size_t nTerm
 	
 	double a, b;
 	Fit(a, b);
-	terms[0] = log10(b); // - a*log(NLPLFact);
-	if(nTerms > 1) terms[1] = a;
-	size_t nTermsEstimated = 2;
-	while(nTermsEstimated < nTerms)
+	
+	bool isNegative = b < 0.0;
+	if(isNegative)
 	{
-		++nTermsEstimated;
-		fit_implementation(terms, nTermsEstimated);
+		for(NLPLFitterData::PointVec::iterator i=_data->points.begin(); i!=_data->points.end(); ++i)
+		{
+			i->second = -i->second;
+		}
+		terms[0] = -log10(-b);
+		a = -a;
 	}
+	else {
+		terms[0] = log10(b); // - a*log(NLPLFact);
+	}
+		
+	if(b != 0.0)
+	{
+		if(nTerms > 1) terms[1] = a;
+		size_t nTermsEstimated = 2;
+		while(nTermsEstimated < nTerms)
+		{
+			++nTermsEstimated;
+			fit_implementation(terms, nTermsEstimated);
+		}
+	}
+	
+	if(isNegative)
+		terms[0] = -exp10(terms[0]);
+	else
+		terms[0] = exp10(terms[0]);
 }
 
 void NonLinearPowerLawFitter::FastFit(double& exponent, double& factor)
@@ -443,15 +486,16 @@ void NonLinearPowerLawFitter::FastFit(double& exponent, double& factor)
 	}
 }
 
-double NonLinearPowerLawFitter::Evaluate(double x, const std::vector<double>& terms, double referenceFrequencyHz)
+double NonLinearPowerLawFitter::Evaluate(double x, const ao::uvector<double>& terms, double referenceFrequencyHz)
 {
 	if(terms.empty()) return 0.0;
 	double y = 0.0;
 	const double lg = log10(x/referenceFrequencyHz);
-	for(size_t k=0; k!=terms.size(); ++k)
+	
+	for(size_t k=0; k!=terms.size()-1; ++k)
 	{
 		size_t j = terms.size()-k-1;
 		y = y * lg + terms[j];
 	}
-	return exp10(y);
+	return exp10(y * lg) * terms[0];
 }

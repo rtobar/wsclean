@@ -15,7 +15,7 @@
 class ContiguousMS : public MSProvider
 {
 public:
-	ContiguousMS(const string& msPath, const std::string& dataColumnName, MSSelection selection, PolarizationEnum polOut, bool includeModel);
+	ContiguousMS(const string& msPath, const std::string& dataColumnName, MSSelection selection, PolarizationEnum polOut, size_t dataDescIndex, bool includeModel);
 	
 	virtual casacore::MeasurementSet &MS() { return _ms; }
 	

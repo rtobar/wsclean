@@ -57,23 +57,7 @@ int main(int argc, char *argv[])
 			"   contain valid model data after imaging. It can save time to not update\n"
 			"   the model data column.\n"
 			"\n"
-			"  ** INVERSION OPTIONS **\n"
-			"-name <image-prefix>\n"
-			"   Use image-prefix as prefix for output files. Default is 'wsclean'.\n"
-			"-size <width> <height>\n"
-			"   Default: 2048 x 2048\n"
-			"-scale <pixel-scale>\n"
-			"   Scale of a pixel. Default unit is degrees, but can be specificied, e.g. -scale 20asec. Default: 0.01deg.\n"
-			"-nwlayers <nwlayers>\n"
-			"   Number of w-layers to use. Default: minimum suggested #w-layers for first MS.\n"
-			"-channelsout <count>\n"
-			"   Splits the bandwidth and makes count nr. of images. Default: 1.\n"
-			"-predict <image-prefix>\n"
-			"   Only perform a single prediction for an existing image. Doesn't do any imaging or cleaning.\n"
-			"-nosmallinversion and -smallinversion\n"
-			"   Perform inversion at the Nyquist resolution and upscale the image to the requested image size afterwards.\n"
-			"   This speeds up inversion considerably, but makes aliasing slightly worse. This effect is\n"
-			"   in most cases <1%. Default: on.\n"
+			"  ** WEIGHTING OPTIONS **\n"
 			"-weight <weightmode>\n"
 			"   Weightmode can be: natural, mwa, uniform, briggs. Default: uniform. When using Briggs' weighting,\n"
 			"   add the robustness parameter, like: \"-weight briggs 0.5\".\n"
@@ -92,6 +76,49 @@ int main(int argc, char *argv[])
 			"   the filter level; any value larger than level*localmean will be set to level*localmean.\n"
 			"-weighting-rank-filter-size <size>\n"
 			"   Set size of weighting rank filter. Default: 16.\n"
+			"-taper-gaussian <beamsize>\n"
+			"   Taper the weights with a Gaussian function. This will reduce the contribution of long baselines.\n"
+			"   The beamsize is by default in asec, but a unit can be specified (\"2amin\").\n"
+			"-taper-tukey <lambda>\n"
+			"   Taper the outer weights with a Tukey transition. Lambda specifies the size of the transition; use in\n"
+			"   combination with -maxuv-l.\n"
+			"-taper-inner-tukey <lambda>\n"
+			"   Taper the weights with a Tukey transition. Lambda specifies the size of the transition; use in\n"
+			"   combination with -minuv-l.\n"
+			"-taper-edge <lambda>\n"
+			"   Taper the weights with a rectangle, to keep a space of lambda between the edge and gridded visibilities.\n"
+			"-taper-edge-tukey <lambda>\n"
+			"   Taper the edge weights with a Tukey window. Lambda is the size of the Tukey transition. When -taper-edge\n"
+			"   is also specified, the Tukey transition starts inside the inner rectangle.\n"
+			"\n"
+			"  ** INVERSION OPTIONS **\n"
+			"-name <image-prefix>\n"
+			"   Use image-prefix as prefix for output files. Default is 'wsclean'.\n"
+			"-size <width> <height>\n"
+			"   Default: 2048 x 2048\n"
+			"-trim <width> <height>\n"
+			"   After inversion, trim the image to the given size.\n"
+			"-scale <pixel-scale>\n"
+			"   Scale of a pixel. Default unit is degrees, but can be specificied, e.g. -scale 20asec. Default: 0.01deg.\n"
+			"-nwlayers <nwlayers>\n"
+			"   Number of w-layers to use. Default: minimum suggested #w-layers for first MS.\n"
+			"-channelsout <count>\n"
+			"   Splits the bandwidth and makes count nr. of images. Default: 1.\n"
+			"-predict\n"
+			"   Only perform a single prediction for an existing image. Doesn't do any imaging or cleaning.\n"
+			"   The input images should have the same name as the model output images would have in normal imaging mode.\n"
+			"-predict-channels <nchannels>\n"
+			"   Interpolate from a given number of images to the number of channels that are predicted\n"
+			"   as specified by -channelsout. Will interpolate using the frequencies of the images.\n"
+			"   Use one the -fit-spectral-... options to specify the interpolation method / freedom.\n"
+			"   Only used when -predict is specified.\n"
+			"-subtract-model\n"
+			"   Subtract the model from the data column in the first iteration. This can be used to reimage\n"
+			"   an already cleaned image, e.g. at a different resolution.\n"
+			"-nosmallinversion and -smallinversion\n"
+			"   Perform inversion at the Nyquist resolution and upscale the image to the requested image size afterwards.\n"
+			"   This speeds up inversion considerably, but makes aliasing slightly worse. This effect is\n"
+			"   in most cases <1%. Default: on.\n"
 			"-gridmode <nn or kb>\n"
 			"   Kernel and mode used for gridding: kb = Kaiser-Bessel (default with 7 pixels), nn = nearest\n"
 			"   neighbour (no kernel). Default: kb.\n"
@@ -205,6 +232,15 @@ int main(int argc, char *argv[])
 			"   Default on: opposite of -nonegative.\n"
 			"-stopnegative\n"
 			"   Stop on negative components. Not the default.\n"
+			"-fit-spectral-pol <nterms>\n"
+			"   Fit a polynomial over frequency to each clean component. This has only effect\n"
+			"   when the channels are joined with -joinchannels.\n"
+			"-fit-spectral-log-pol <nterms>\n"
+			"   Like fit-spectral-pol, but fits a logarithmic polynomial over frequency instead.\n"
+			"-deconvolution-channels <nchannels>\n"
+			"   Decrease the number of channels as specified by -channelsout to the given number for\n"
+			"   deconvolution. Only possible in combination with one of the -fit-spectral options.\n"
+			"   Proper residuals/restored images will only be returned when mgain < 1.\n"
 			"\n"
 			"  ** RESTORATION OPTIONS **\n"
 			"-beamsize <arcsec>\n"
@@ -256,6 +292,15 @@ int main(int argc, char *argv[])
 		{
 			predictionMode = true;
 		}
+		else if(param == "predict-channels")
+		{
+			++argi;
+			wsclean.SetPredictChannels(atoi(argv[argi]));
+		}
+		else if(param == "subtract-model")
+		{
+			wsclean.SetSubtractModel(true);
+		}
 		else if(param == "size")
 		{
 			size_t
@@ -264,6 +309,14 @@ int main(int argc, char *argv[])
 			if(width != height)
 				throw std::runtime_error("width != height : Can't handle non-square images yet");
 			wsclean.SetImageSize(width, height);
+			argi += 2;
+		}
+		else if(param == "trim")
+		{
+			size_t
+				width = atoi(argv[argi+1]),
+				height = atoi(argv[argi+2]);
+			wsclean.SetTrimmedImageSize(width, height);
 			argi += 2;
 		}
 		else if(param == "scale")
@@ -424,6 +477,32 @@ int main(int argc, char *argv[])
 		{
 			mfsWeighting = true;
 		}
+		else if(param == "taper-gaussian")
+		{
+			++argi;
+			double taperBeamSize = Angle::Parse(argv[argi], "Gaussian taper", Angle::Arcseconds);
+			wsclean.SetGaussianTaper(taperBeamSize);
+		}
+		else if(param == "taper-edge")
+		{
+			++argi;
+			wsclean.SetEdgeTaper(atof(argv[argi]));
+		}
+		else if(param == "taper-edge-tukey")
+		{
+			++argi;
+			wsclean.SetEdgeTukeyTaper(atof(argv[argi]));
+		}
+		else if(param == "taper-tukey")
+		{
+			++argi;
+			wsclean.SetTukeyTaper(atof(argv[argi]));
+		}
+		else if(param == "taper-inner-tukey")
+		{
+			++argi;
+			wsclean.SetTukeyInnerTaper(atof(argv[argi]));
+		}
 		else if(param == "multiscale")
 		{
 			wsclean.DeconvolutionInfo().SetMultiscale(true);
@@ -474,6 +553,21 @@ int main(int argc, char *argv[])
 		else if(param == "joinchannels")
 		{
 			wsclean.SetJoinChannels(true);
+		}
+		else if(param == "fit-spectral-pol")
+		{
+			++argi;
+			wsclean.DeconvolutionInfo().SetFitSpectralPol(atoi(argv[argi]));
+		}
+		else if(param == "fit-spectral-log-pol")
+		{
+			++argi;
+			wsclean.DeconvolutionInfo().SetFitSpectralLogPol(atoi(argv[argi]));
+		}
+		else if(param == "deconvolution-channels")
+		{
+			++argi;
+			wsclean.DeconvolutionInfo().SetDeconvolutionChannels(atoi(argv[argi]));
 		}
 		else if(param == "field")
 		{

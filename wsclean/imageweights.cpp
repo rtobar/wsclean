@@ -4,6 +4,7 @@
 
 #include "msproviders/msprovider.h"
 #include "fitswriter.h"
+#include "angle.h"
 
 #include <cmath>
 #include <iostream>
@@ -265,6 +266,99 @@ void ImageWeights::SetMaxUVRange(double maxUVInLambda)
 	}
 }
 
+void ImageWeights::SetTukeyTaper(double transitionSizeInLambda, double maxUVInLambda)
+{
+	ao::uvector<double>::iterator i = _grid.begin();
+	const double maxUVSq = maxUVInLambda * maxUVInLambda;
+	const double transitionDistSq = (maxUVInLambda-transitionSizeInLambda) * (maxUVInLambda-transitionSizeInLambda);
+	for(size_t y=0; y!=_imageHeight/2; ++y)
+	{
+		for(size_t x=0; x!=_imageWidth; ++x)
+		{
+			double u, v;
+			xyToUV(x, y, u, v);
+			double distSq = u*u + v*v;
+			if(distSq > maxUVSq)
+				*i = 0.0;
+			else if(distSq > transitionDistSq)
+			{
+				*i *= tukeyFrom0ToN(maxUVInLambda - sqrt(distSq), transitionSizeInLambda);
+			}
+			++i;
+		}
+	}
+}
+
+void ImageWeights::SetTukeyInnerTaper(double transitionSizeInLambda, double minUVInLambda)
+{
+	ao::uvector<double>::iterator i = _grid.begin();
+	const double minUVSq = minUVInLambda * minUVInLambda;
+	const double totalSizeSq = (minUVInLambda+transitionSizeInLambda) * (minUVInLambda+transitionSizeInLambda);
+	for(size_t y=0; y!=_imageHeight/2; ++y)
+	{
+		for(size_t x=0; x!=_imageWidth; ++x)
+		{
+			double u, v;
+			xyToUV(x, y, u, v);
+			double distSq = u*u + v*v;
+			if(distSq < minUVSq)
+				*i = 0.0;
+			else if(distSq < totalSizeSq)
+			{
+				*i *= tukeyFrom0ToN(sqrt(distSq) - minUVInLambda, transitionSizeInLambda);
+			}
+			++i;
+		}
+	}
+}
+
+void ImageWeights::SetEdgeTaper(double sizeInLambda)
+{
+	ao::uvector<double>::iterator i = _grid.begin();
+	double maxU, maxV;
+	xyToUV(_imageWidth, _imageHeight/2, maxU, maxV);
+	for(size_t y=0; y!=_imageHeight/2; ++y)
+	{
+		for(size_t x=0; x!=_imageWidth; ++x)
+		{
+			double u, v;
+			xyToUV(x, y, u, v);
+			if(maxU-std::fabs(u) < sizeInLambda || maxV-std::fabs(v) < sizeInLambda)
+				*i = 0.0;
+			++i;
+		}
+	}
+}
+
+void ImageWeights::SetEdgeTukeyTaper(double transitionSizeInLambda, double edgeSizeInLambda)
+{
+	ao::uvector<double>::iterator i = _grid.begin();
+	double maxU, maxV;
+	xyToUV(_imageWidth, _imageHeight/2, maxU, maxV);
+	double totalSize = transitionSizeInLambda + edgeSizeInLambda;
+	for(size_t y=0; y!=_imageHeight/2; ++y)
+	{
+		for(size_t x=0; x!=_imageWidth; ++x)
+		{
+			double u, v;
+			xyToUV(x, y, u, v);
+			double uDist = maxU-std::fabs(u);
+			double vDist = maxV-std::fabs(v);
+			if(uDist < edgeSizeInLambda || vDist < edgeSizeInLambda)
+				*i = 0.0;
+			else if(uDist < totalSize || vDist < totalSize)
+			{
+				double ru = uDist - edgeSizeInLambda;
+				double rv = vDist - edgeSizeInLambda;
+				if(ru > transitionSizeInLambda) ru = transitionSizeInLambda;
+				if(rv > transitionSizeInLambda) rv = transitionSizeInLambda;
+				*i *= tukeyFrom0ToN(ru, transitionSizeInLambda) * tukeyFrom0ToN(rv, transitionSizeInLambda);
+			}
+			++i;
+		}
+	}
+}
+
 void ImageWeights::GetGrid(double* image) const
 {
 	const double* srcPtr = _grid.data();
@@ -309,6 +403,30 @@ void ImageWeights::RankFilter(double rankLimit, size_t windowSize)
 		}
 	}
 	_grid = newGrid;
+}
+
+void ImageWeights::SetGaussianTaper(double beamSize)
+{
+	std::cout << "Applying " << Angle::ToNiceString(beamSize) << " Gaussian taper...\n";
+	double halfPowerUV = 1.0 / (beamSize * 2.0 * M_PI);
+	const long double sigmaToHP = 2.0L * sqrtl(2.0L * logl(2.0L));
+	double minusTwoSigmaSq = halfPowerUV * sigmaToHP;
+	std::cout << "UV taper: " << minusTwoSigmaSq << '\n';
+	minusTwoSigmaSq *= -2.0 * minusTwoSigmaSq;
+	for(size_t y=0; y!=_imageHeight/2; ++y)
+	{
+		for(size_t x=0; x!=_imageWidth; ++x)
+		{
+			double val = _grid[y*_imageWidth + x];
+			if(val != 0.0)
+			{
+				double u, v;
+				xyToUV(x, y, u, v);
+				double gaus = exp((u*u + v*v) / minusTwoSigmaSq);
+				_grid[y*_imageWidth + x] = val * gaus;
+			}
+		}
+	}
 }
 
 double ImageWeights::windowMean(size_t x, size_t y, size_t windowSize)

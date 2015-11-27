@@ -4,6 +4,8 @@
 #include <string>
 #include <cmath>
 
+#include "spectralfitter.h"
+
 #include "../polarizationenum.h"
 #include "../uvector.h"
 
@@ -20,9 +22,9 @@ public:
 	
 	void SetThreshold(double threshold) { _threshold = threshold; }
 	
-	void SetSubtractionGain(double gain) { _subtractionGain = gain; }
+	void SetGain(double gain) { _gain = gain; }
 	
-	void SetStopGain(double stopGain) { _stopGain = stopGain; }
+	void SetMGain(double mGain) { _mGain = mGain; }
 	
 	void SetAllowNegativeComponents(bool allowNegativeComponents) { _allowNegativeComponents = allowNegativeComponents; }
 	
@@ -34,8 +36,8 @@ public:
 	
 	size_t MaxNIter() const { return _maxIter; }
 	double Threshold() const { return _threshold; }
-	double SubtractionGain() const { return _subtractionGain; }
-	double StopGain() const { return _stopGain; }
+	double Gain() const { return _gain; }
+	double MGain() const { return _mGain; }
 	double CleanBorderRatio() const { return _cleanBorderRatio; }
 	bool AllowNegativeComponents() const { return _allowNegativeComponents; }
 	bool StopOnNegativeComponents() const { return _allowNegativeComponents; }
@@ -58,13 +60,15 @@ public:
 	void CopyConfigFrom(const DeconvolutionAlgorithm& source)
 	{
 		_threshold = source._threshold;
-		_subtractionGain = source._subtractionGain;
-		_stopGain = source._stopGain;
+		_gain = source._gain;
+		_mGain = source._mGain;
 		_cleanBorderRatio = source._cleanBorderRatio;
 		_maxIter = source._maxIter;
 		// skip _iterationNumber
 		_allowNegativeComponents = source._allowNegativeComponents;
 		_stopOnNegativeComponent = source._stopOnNegativeComponent;
+		_cleanMask = source._cleanMask;
+		_spectralFitter = source._spectralFitter;
 	}
 	
 	void SetMultiscaleThresholdBias(double bias)
@@ -75,14 +79,29 @@ public:
 	{
 		_multiscaleScaleBias = bias;
 	}
+	void SetSpectralFittingMode(SpectralFittingMode mode, size_t nTerms)
+	{
+		_spectralFitter.SetMode(mode, nTerms);
+	}
+	
+	void InitializeFrequencies(const ao::uvector<double>& frequencies)
+	{
+		_spectralFitter.SetFrequencies(frequencies.data(), frequencies.size());
+	}
+	
+	const SpectralFitter& Fitter() const { return _spectralFitter; }
 protected:
 	DeconvolutionAlgorithm();
 	
-	double _threshold, _subtractionGain, _stopGain, _cleanBorderRatio;
+	void PerformSpectralFit(double* values);
+	
+	double _threshold, _gain, _mGain, _cleanBorderRatio;
 	double _multiscaleThresholdBias, _multiscaleScaleBias;
 	size_t _maxIter, _iterationNumber, _threadCount;
 	bool _allowNegativeComponents, _stopOnNegativeComponent;
 	const bool* _cleanMask;
+	
+	SpectralFitter _spectralFitter;
 };
 
 template<typename ImageSetType>
@@ -93,7 +112,7 @@ public:
 	
 	virtual ~TypedDeconvolutionAlgorithm() { }
 	
-	virtual void ExecuteMajorIteration(ImageSetType& dataImage, ImageSetType& modelImage, std::vector<double*> psfImages, size_t width, size_t height, bool& reachedStopGain) = 0;
+	virtual void ExecuteMajorIteration(ImageSetType& dataImage, ImageSetType& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedStopGain) = 0;
 	
 private:
 };

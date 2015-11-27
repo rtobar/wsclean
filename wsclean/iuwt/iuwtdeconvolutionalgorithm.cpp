@@ -896,7 +896,7 @@ void IUWTDeconvolutionAlgorithm::PerformMajorIteration(size_t& iterCounter, size
 		measureRMSPerScale(psf.data(), convolvedPSF.data(), scratch.data(), maxScale, _psfResponse);
 	}
 	
-	DynamicSet structureModel(&modelSet.Table(), dirtySet.Allocator(), _width, _height);
+	DynamicSet structureModel(&modelSet.Table(), dirtySet.Allocator(), modelSet.ChannelsInDeconvolution(), _width, _height);
 	
 	std::unique_ptr<IUWTDecomposition> iuwt(new IUWTDecomposition(curEndScale, _width, _height));
 	
@@ -983,8 +983,8 @@ void IUWTDeconvolutionAlgorithm::PerformMajorIteration(size_t& iterCounter, size
 	table.Update();
 	ImageBufferAllocator allocator;
 	DynamicSet
-		dirtySet(&table, allocator, _width, _height),
-		modelSet(&table, allocator, _width, _height);
+		dirtySet(&table, allocator, 1, _width, _height),
+		modelSet(&table, allocator, 1, _width, _height);
 	ao::uvector<const double*> psfs(1, psf);
 	memcpy(dirtySet[0], dirty, _width*_height*sizeof(double));
 	memcpy(modelSet[0], model, _width*_height*sizeof(double));
