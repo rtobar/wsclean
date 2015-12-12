@@ -2,6 +2,7 @@
 #define IMAGE_WEIGHT_CACHE_H
 
 #include "inversionalgorithm.h"
+#include "logger.h"
 
 #include "../imageweights.h"
 #include "../weightmode.h"
@@ -87,17 +88,18 @@ public:
 private:
 	void recalculateWeights(InversionAlgorithm& inversion)
 	{
-		std::cout << "Precalculating weights for " << _weightMode.ToString() << " weighting... " << std::flush;
+		Logger::Info << "Precalculating weights for " << _weightMode.ToString() << " weighting... ";
+		Logger::Info.Flush();
 		ResetWeights();
 		for(size_t i=0; i!=inversion.MeasurementSetCount(); ++i)
 		{
 			_imageWeights->Grid(inversion.MeasurementSet(i), inversion.Selection(i));
 			if(inversion.MeasurementSetCount() > 1)
-				std::cout << i << ' ' << std::flush;
+				(Logger::Info << i << ' ').Flush();
 		}
 		_imageWeights->FinishGridding();
 		InitializeWeightTapers();
-		std::cout << "DONE\n";
+		Logger::Info << "DONE\n";
 	}
 	
 	std::unique_ptr<ImageWeights> _imageWeights;

@@ -1,16 +1,19 @@
 #include "progressbar.h"
 
+#include "wsclean/logger.h"
+
 #include <iostream>
 
 ProgressBar::ProgressBar(const std::string& taskDescription) :
 	_taskDescription(taskDescription),
 	_displayedDots(0)
 {
-	std::cout << taskDescription << ":";
+	Logger::Info << taskDescription << ":";
 	if(taskDescription.size() < 40)
-		std::cout << " 0%" << std::flush;
+		Logger::Info << " 0%";
 	else
-		std::cout << "\n 0%" << std::flush;
+		Logger::Info << "\n 0%";
+	Logger::Info.Flush();
 }
 
 ProgressBar::~ProgressBar()
@@ -29,12 +32,12 @@ void ProgressBar::SetProgress(size_t taskIndex, size_t taskCount)
 		{
 			++_displayedDots;
 			if(_displayedDots % 5 == 0)
-				std::cout << ((_displayedDots/5)*10) << '%';
+				Logger::Info << ((_displayedDots/5)*10) << '%';
 			else
-				std::cout << '.';
+				Logger::Info << '.';
 		}
 		if(progress == 100)
-			std::cout << '\n';
-		std::cout << std::flush;
+			Logger::Info << '\n';
+		Logger::Info.Flush();
 	}
 }

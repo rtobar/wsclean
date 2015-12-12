@@ -48,7 +48,7 @@ public:
 	{
 		if(_writer.Width() == 0 || _writer.Height() == 0)
 			throw std::runtime_error("Writer is not set.");
-		std::cout << "Loading " << name(polarization, freqIndex, isImaginary) << '\n';
+		Logger::Debug << "Loading " << name(polarization, freqIndex, isImaginary) << '\n';
 		if(_polCount == 1 && _freqCount == 1)
 			if(_image == 0)
 				throw std::runtime_error("Loading image before store");
@@ -64,7 +64,7 @@ public:
 	{
 		if(_writer.Width() == 0 || _writer.Height() == 0)
 			throw std::runtime_error("Writer is not set.");
-		std::cout << "Storing " << name(polarization, freqIndex, isImaginary) << '\n';
+		Logger::Debug << "Storing " << name(polarization, freqIndex, isImaginary) << '\n';
 		if(_polCount == 1 && _freqCount == 1)
 		{
 			if(_image == 0)

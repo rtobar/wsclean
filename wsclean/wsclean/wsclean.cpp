@@ -1,6 +1,8 @@
 #include "wsclean.h"
 
+#include "imageweightcache.h"
 #include "inversionalgorithm.h"
+#include "logger.h"
 #include "wsmsgridder.h"
 
 #include "../angle.h"
@@ -24,8 +26,6 @@
 #include "../deconvolution/deconvolutionalgorithm.h"
 #include "../deconvolution/dynamicset.h"
 
-#include "imageweightcache.h"
-
 #include <iostream>
 #include <memory>
 
@@ -34,6 +34,7 @@ std::string commandLine;
 WSClean::WSClean() :
 	_untrimmedWidth(2048), _untrimmedHeight(2048),
 	_trimWidth(0), _trimHeight(0),
+	_nwWidth(0), _nwHeight(0),
 	_channelsOut(1), _intervalCount(1),
 	_pixelScaleX(0.01 * M_PI / 180.0), _pixelScaleY(0.01 * M_PI / 180.0),
 	_manualBeamMajorSize(0.0), _manualBeamMinorSize(0.0),
@@ -161,7 +162,8 @@ void WSClean::updateCleanParameters(FitsWriter& writer, size_t minorIterationNr,
 
 void WSClean::imagePSF(size_t currentChannelIndex)
 {
-	std::cout << std::flush << " == Constructing PSF ==\n";
+	Logger::Info.Flush();
+	Logger::Info << " == Constructing PSF ==\n";
 	_inversionWatch.Start();
 	_inversionAlgorithm->SetDoImagePSF(true);
 	_inversionAlgorithm->SetVerbose(_isFirstInversion);
@@ -195,15 +197,17 @@ void WSClean::imagePSF(size_t currentChannelIndex)
 			_infoPerChannel[currentChannelIndex].beamPA);
 	}
 		
-	std::cout << "Writing psf image... " << std::flush;
+	Logger::Info << "Writing psf image... ";
+	Logger::Info.Flush();
 	const std::string name(getPSFPrefix(currentChannelIndex) + "-psf.fits");
 	_fitsWriter.Write(name, _inversionAlgorithm->ImageRealResult());
-	std::cout << "DONE\n";
+	Logger::Info << "DONE\n";
 }
 
 void WSClean::imageGridding()
 {
-	std::cout << "Writing gridding correction image... " << std::flush;
+	Logger::Info << "Writing gridding correction image... ";
+	Logger::Info.Flush();
 	double* gridding = _imageAllocator.Allocate(_inversionAlgorithm->ActualInversionWidth() * _inversionAlgorithm->ActualInversionHeight());
 	_inversionAlgorithm->GetGriddingCorrectionImage(&gridding[0]);
 	FitsWriter fitsWriter;
@@ -211,12 +215,13 @@ void WSClean::imageGridding()
 	fitsWriter.SetImageDimensions(_inversionAlgorithm->ActualInversionWidth(), _inversionAlgorithm->ActualInversionHeight());
 	fitsWriter.Write(_prefixName + "-gridding.fits", &gridding[0]);
 	_imageAllocator.Free(gridding);
-	std::cout << "DONE\n";
+	Logger::Info << "DONE\n";
 }
 
 void WSClean::imageMainFirst(PolarizationEnum polarization, size_t joinedChannelIndex)
 {
-	std::cout << std::flush << " == Constructing image ==\n";
+	Logger::Info.Flush();
+	Logger::Info << " == Constructing image ==\n";
 	_inversionWatch.Start();
 	if(_nWLayers != 0)
 		_inversionAlgorithm->SetWGridSize(_nWLayers);
@@ -236,7 +241,8 @@ void WSClean::imageMainFirst(PolarizationEnum polarization, size_t joinedChannel
 
 void WSClean::imageMainNonFirst(PolarizationEnum polarization, size_t joinedChannelIndex)
 {
-	std::cout << std::flush << " == Constructing image ==\n";
+	Logger::Info.Flush();
+	Logger::Info << " == Constructing image ==\n";
 	_inversionWatch.Start();
 	_inversionAlgorithm->SetDoSubtractModel(true);
 	_inversionAlgorithm->Invert();
@@ -251,7 +257,7 @@ void WSClean::storeAndCombineXYandYX(CachedImageSet& dest, PolarizationEnum pola
 {
 	if(polarization == Polarization::YX && _polarizations.count(Polarization::XY)!=0)
 	{
-		std::cout << "Adding XY and YX together...\n";
+		Logger::Info << "Adding XY and YX together...\n";
 		double
 			*xyImage = _imageAllocator.Allocate(_trimWidth*_trimHeight);
 		dest.Load(xyImage, Polarization::XY, joinedChannelIndex, isImaginary);
@@ -275,7 +281,8 @@ void WSClean::storeAndCombineXYandYX(CachedImageSet& dest, PolarizationEnum pola
 
 void WSClean::predict(PolarizationEnum polarization, size_t joinedChannelIndex)
 {
-	std::cout << std::flush << " == Converting model image to visibilities ==\n";
+	Logger::Info.Flush();
+	Logger::Info << " == Converting model image to visibilities ==\n";
 	const size_t size = _trimWidth*_trimHeight;
 	double
 		*modelImageReal = _imageAllocator.Allocate(size),
@@ -311,7 +318,8 @@ void WSClean::predict(PolarizationEnum polarization, size_t joinedChannelIndex)
 
 void WSClean::dftPredict(const ImagingTable& squaredGroup)
 {
-	std::cout << std::flush << " == Predicting visibilities ==\n";
+	Logger::Info.Flush();
+	Logger::Info << " == Predicting visibilities ==\n";
 	const size_t size = _trimWidth*_trimHeight;
 	double
 		*modelImageReal = _imageAllocator.Allocate(size),
@@ -354,7 +362,7 @@ void WSClean::dftPredict(const ImagingTable& squaredGroup)
 	image->FindComponents(input, _inversionAlgorithm->PhaseCentreRA(), _inversionAlgorithm->PhaseCentreDec(), _pixelScaleX, _pixelScaleY, _inversionAlgorithm->PhaseCentreDL(), _inversionAlgorithm->PhaseCentreDM(), firstBand.ChannelCount());
 	// Free the input model images
 	image.reset();
-	std::cout << "Number of components to be predicted: " << input.ComponentCount() << '\n';
+	Logger::Info << "Number of components to be predicted: " << input.ComponentCount() << '\n';
 	
 	_predictingWatch.Start();
 	
@@ -382,11 +390,11 @@ void WSClean::dftPredict(const ImagingTable& squaredGroup)
 			
 			if(_dftWithBeam)
 			{
-				std::cout << "Converting model to absolute values...\n";
+				Logger::Info << "Converting model to absolute values...\n";
 				predicter.Input().ConvertApparentToAbsolute(ms);
 			}
 			
-			std::cout << "Creating row mapping...\n";
+			Logger::Info << "Creating row mapping...\n";
 			std::vector<size_t> msToRowId;
 			msProviders[0]->MakeMSRowToRowIdMapping(msToRowId, _globalSelection);
 			
@@ -463,7 +471,7 @@ void WSClean::initializeImageWeights(const ImagingTableEntry& entry)
 
 void WSClean::initializeMFSImageWeights()
 {
-	std::cout << "Precalculating MFS weights for " << _weightMode.ToString() << " weighting...\n";
+	Logger::Info << "Precalculating MFS weights for " << _weightMode.ToString() << " weighting...\n";
 	_imageWeightCache->ResetWeights();
 	if(_doReorder)
 	{
@@ -495,7 +503,8 @@ void WSClean::initializeMFSImageWeights()
 			{
 				ContiguousMS msProvider(_filenames[i], _columnName, _globalSelection, *_polarizations.begin(), d, _deconvolution.MGain() != 1.0);
 				_imageWeightCache->Weights().Grid(msProvider,  _globalSelection);
-				std::cout << '.' << std::flush;
+				Logger::Info << '.';
+				Logger::Info.Flush();
 			}
 		}
 	}
@@ -507,11 +516,11 @@ void WSClean::initializeMFSImageWeights()
 
 void WSClean::prepareInversionAlgorithm(PolarizationEnum polarization)
 {
-	static_cast<WSMSGridder&>(*_inversionAlgorithm).SetGridMode(_gridMode);
+	_inversionAlgorithm->SetGridMode(_gridMode);
 	_inversionAlgorithm->SetImageWidth(_untrimmedWidth);
 	_inversionAlgorithm->SetImageHeight(_untrimmedHeight);
-	_inversionAlgorithm->SetTrimWidth(_trimWidth);
-	_inversionAlgorithm->SetTrimHeight(_trimHeight);
+	_inversionAlgorithm->SetTrimSize(_trimWidth, _trimHeight);
+	_inversionAlgorithm->SetNWSize(_nwWidth, _nwHeight);
 	_inversionAlgorithm->SetPixelSizeX(_pixelScaleX);
 	_inversionAlgorithm->SetPixelSizeY(_pixelScaleY);
 	if(_nWLayers != 0)
@@ -617,10 +626,10 @@ void WSClean::RunClean()
 		casacore::MeasurementSet ms(_filenames.front());
 		bool hasCorrected = ms.tableDesc().isColumn("CORRECTED_DATA");
 		if(hasCorrected) {
-			std::cout << "First measurement set has corrected data: tasks will be applied on the corrected data column.\n";
+			Logger::Info << "First measurement set has corrected data: tasks will be applied on the corrected data column.\n";
 			_columnName = "CORRECTED_DATA";
 		} else {
-			std::cout << "No corrected data in first measurement set: tasks will be applied on the data column.\n";
+			Logger::Info << "No corrected data in first measurement set: tasks will be applied on the data column.\n";
 			_columnName= "DATA";
 		}
 	}
@@ -840,7 +849,7 @@ void WSClean::runIndependentGroup(const ImagingTable& groupTable)
 			
 		} while(reachedMajorThreshold);
 		
-		std::cout << _majorIterationNr << " major iterations were performed.\n";
+		Logger::Info << _majorIterationNr << " major iterations were performed.\n";
 	}
 	
 	_inversionAlgorithm->FreeImagingData();
@@ -885,9 +894,10 @@ void WSClean::runIndependentGroup(const ImagingTable& groupTable)
 			}
 			if(_deconvolution.MultiScale() || _deconvolution.FastMultiScale() || _deconvolution.UseMoreSane() || _deconvolution.UseIUWT())
 			{
-				std::cout << "Rendering sources to restored image " + beamStr + "... " << std::flush;
+				Logger::Info << "Rendering sources to restored image " + beamStr + "... ";
+				Logger::Info.Flush();
 				renderer.Restore(restoredImage, modelImage, _trimWidth, _trimHeight, beamMaj, beamMin, beamPA);
-				std::cout << "DONE\n";
+				Logger::Info << "DONE\n";
 			}
 			else {
 				Model model;
@@ -895,25 +905,28 @@ void WSClean::runIndependentGroup(const ImagingTable& groupTable)
 				DeconvolutionAlgorithm::GetModelFromImage(model, modelImage, _trimWidth, _trimHeight, _fitsWriter.RA(), _fitsWriter.Dec(), _pixelScaleX, _pixelScaleY, _fitsWriter.PhaseCentreDL(), _fitsWriter.PhaseCentreDM(), 0.0, _fitsWriter.Frequency(), Polarization::StokesI);
 				
 				if(beamMaj == beamMin) {
-					std::cout << "Rendering " << model.SourceCount() << " circular sources to restored image " + beamStr + "... " << std::flush;
+					Logger::Info << "Rendering " << model.SourceCount() << " circular sources to restored image " + beamStr + "... ";
+					Logger::Info.Flush();
 					renderer.Restore(restoredImage, _trimWidth, _trimHeight, model, beamMaj, freqLow, freqHigh, Polarization::StokesI);
 				}
 				else {
-					std::cout << "Rendering " << model.SourceCount() << " elliptical sources to restored image " + beamStr + "... " << std::flush;
+					Logger::Info << "Rendering " << model.SourceCount() << " elliptical sources to restored image " + beamStr + "... ";
+					Logger::Info.Flush();
 					renderer.Restore(restoredImage, _trimWidth, _trimHeight, model, beamMaj, beamMin, beamPA, freqLow, freqHigh, Polarization::StokesI);
 				}
-				std::cout << "DONE\n";
+				Logger::Info << "DONE\n";
 			}
-			std::cout << "Writing restored image... " << std::flush;
+			Logger::Info << "Writing restored image... ";
+			Logger::Info.Flush();
 			writeFits("image.fits", restoredImage, curPol, currentChannelIndex, isImaginary);
-			std::cout << "DONE\n";
+			Logger::Info << "DONE\n";
 			_imageAllocator.Free(restoredImage);
 			_imageAllocator.Free(modelImage);
 		}
 	} // end joined index loop
 	
 	_imageAllocator.ReportStatistics();
-	std::cout << "Inversion: " << _inversionWatch.ToString() << ", prediction: " << _predictingWatch.ToString() << ", deconvolution: " << _deconvolutionWatch.ToString() << '\n';
+	Logger::Info << "Inversion: " << _inversionWatch.ToString() << ", prediction: " << _predictingWatch.ToString() << ", deconvolution: " << _deconvolutionWatch.ToString() << '\n';
 	
 	_prefixName = rootPrefix;
 	
@@ -923,7 +936,7 @@ void WSClean::runIndependentGroup(const ImagingTable& groupTable)
 
 void WSClean::writeFirstResidualImages(const ImagingTable& groupTable)
 {
-	std::cout << "Writing first iteration image(s)...\n";
+	Logger::Info << "Writing first iteration image(s)...\n";
 	ImageBufferAllocator::Ptr ptr;
 	_imageAllocator.Allocate(_trimWidth*_trimHeight, ptr);
 	for(size_t e=0; e!=groupTable.EntryCount(); ++e)
@@ -943,7 +956,7 @@ void WSClean::writeFirstResidualImages(const ImagingTable& groupTable)
 
 void WSClean::writeModelImages(const ImagingTable& groupTable)
 {
-	std::cout << "Writing model image...\n";
+	Logger::Info << "Writing model image...\n";
 	ImageBufferAllocator::Ptr ptr;
 	_imageAllocator.Allocate(_trimWidth*_trimHeight, ptr);
 	for(size_t e=0; e!=groupTable.EntryCount(); ++e)
@@ -978,7 +991,7 @@ void WSClean::predictGroup(const ImagingTable& imagingGroup)
 			FitsReader reader(getPrefix(entry.polarization, entry.outputChannelIndex, i==1) + "-model.fits");
 			_fitsWriter = FitsWriter(reader);
 			_modelImages.SetFitsWriter(_fitsWriter);
-			std::cout << "Reading " << reader.Filename() << "...\n";
+			Logger::Info << "Reading " << reader.Filename() << "...\n";
 			double* buffer = _imageAllocator.Allocate(_trimWidth*_trimHeight);
 			if(reader.ImageWidth()!=_trimWidth || reader.ImageHeight()!=_trimHeight)
 				throw std::runtime_error("Inconsistent image size: input image did not match with specified dimensions.");
@@ -1002,7 +1015,7 @@ void WSClean::predictGroup(const ImagingTable& imagingGroup)
 	} // end of polarization loop
 	
 	_imageAllocator.ReportStatistics();
-	std::cout << "Inversion: " << _inversionWatch.ToString() << ", prediction: " << _predictingWatch.ToString() << ", cleaning: " << _deconvolutionWatch.ToString() << '\n';
+	Logger::Info << "Inversion: " << _inversionWatch.ToString() << ", prediction: " << _predictingWatch.ToString() << ", cleaning: " << _deconvolutionWatch.ToString() << '\n';
 	
 	_prefixName = rootPrefix;
 	
@@ -1117,7 +1130,7 @@ void WSClean::runFirstInversion(const ImagingTableEntry& entry)
 			savedPol = Polarization::XY;
 		double* dirtyImage = _imageAllocator.Allocate(_trimWidth * _trimHeight);
 		_residualImages.Load(dirtyImage, savedPol, entry.outputChannelIndex, false);
-		std::cout << "Writing dirty image...\n";
+		Logger::Info << "Writing dirty image...\n";
 		writeFits("dirty.fits", dirtyImage, savedPol, entry.outputChannelIndex, false);
 		if(Polarization::IsComplex(entry.polarization))
 		{
@@ -1156,7 +1169,7 @@ void WSClean::makeMFSImage(const string& suffix, PolarizationEnum pol, bool isIm
 		double weight;
 		if(!reader.ReadDoubleKeyIfExists("WSCIMGWG", weight))
 		{
-			std::cout << "Error: image " << name << " did not have the WSCIMGWG keyword.\n";
+			Logger::Error << "Error: image " << name << " did not have the WSCIMGWG keyword.\n";
 			weight = 0.0;
 		}
 		weightSum += weight;
@@ -1186,7 +1199,7 @@ void WSClean::makeMFSImage(const string& suffix, PolarizationEnum pol, bool isIm
 		writer.SetNoBeamInfo();
 	
 	std::string mfsName(getMFSPrefix(pol, isImaginary, isPSF) + '-' + suffix);
-	std::cout << "Writing " << mfsName << "...\n";
+	Logger::Info << "Writing " << mfsName << "...\n";
 	writer.SetFrequency((lowestFreq+highestFreq)*0.5, highestFreq-lowestFreq);
 	writer.SetExtraKeyword("WSCIMGWG", weightSum);
 	writer.RemoveExtraKeyword("WSCCHANS");
@@ -1221,11 +1234,12 @@ void WSClean::renderMFSImage(PolarizationEnum pol, bool isImaginary)
 		beamStr = "(beam is neither fitted nor estimated -- using delta scales!)";
 		beamMaj = 0.0; beamMin = 0.0; beamPA = 0.0;
 	}
-	std::cout << "Rendering sources to restored image " + beamStr + "... " << std::flush;
+	Logger::Info << "Rendering sources to restored image " + beamStr + "... ";
+	Logger::Info.Flush();
 	renderer.Restore(image.data(), modelImage.data(), _trimWidth, _trimHeight, beamMaj, beamMin, beamPA);
-	std::cout << "DONE\n";
+	Logger::Info << "DONE\n";
 	
-	std::cout << "Writing " + mfsPrefix + "-image.fits...\n";
+	Logger::Info << "Writing " + mfsPrefix + "-image.fits...\n";
 	FitsWriter imageWriter(residualReader);
 	imageWriter.Write(mfsPrefix + "-image.fits", image.data());
 }
@@ -1270,7 +1284,8 @@ MSSelection WSClean::selectInterval(MSSelection& fullSelection)
 		}
 		else {
 			casacore::MeasurementSet ms(_filenames[0]);
-			std::cout << "Counting number of scans... " << std::flush;
+			Logger::Info << "Counting number of scans... ";
+			Logger::Info.Flush();
 			casacore::ROScalarColumn<double> timeColumn(ms, casacore::MS::columnName(casacore::MSMainEnums::TIME));
 			double time = timeColumn(0);
 			size_t timestepIndex = 0;
@@ -1282,7 +1297,7 @@ MSSelection WSClean::selectInterval(MSSelection& fullSelection)
 					time = timeColumn(row);
 				}
 			}
-			std::cout << "DONE (" << timestepIndex << ")\n";
+			Logger::Info << "DONE (" << timestepIndex << ")\n";
 			tS = 0;
 			tE = timestepIndex;
 			// Store the full interval in the selection, so that it doesn't need to be determined again.
@@ -1437,7 +1452,8 @@ void WSClean::addPolarizationsToImagingTable(size_t& joinedGroupIndex, size_t& s
 void WSClean::fitBeamSize(double& bMaj, double& bMin, double& bPA, const double* image, double beamEstimate)
 {
 	GaussianFitter beamFitter;
-	std::cout << "Fitting beam... " << std::flush;
+	Logger::Info << "Fitting beam... ";
+	Logger::Info.Flush();
 	beamFitter.Fit2DGaussianCentred(
 		image,
 		_trimWidth, _trimHeight,
@@ -1459,7 +1475,7 @@ void WSClean::determineBeamSize(double& bMaj, double& bMin, double& bPA, const d
 	} else if(_fittedBeam)
 	{
 		fitBeamSize(bMaj, bMin, bPA, image, theoreticBeam*2.0/(_pixelScaleX+_pixelScaleY));
-		std::cout << "major=" << Angle::ToNiceString(bMaj) << ", minor=" <<
+		Logger::Info << "major=" << Angle::ToNiceString(bMaj) << ", minor=" <<
 		Angle::ToNiceString(bMin) << ", PA=" << Angle::ToNiceString(bPA) << ", theoretical=" <<
 		Angle::ToNiceString(theoreticBeam)<< ".\n";
 		
@@ -1473,7 +1489,7 @@ void WSClean::determineBeamSize(double& bMaj, double& bMin, double& bPA, const d
 		bMaj = theoreticBeam;
 		bMin = theoreticBeam;
 		bPA = 0.0;
-		std::cout << "Beam size is " << Angle::ToNiceString(theoreticBeam) << '\n';
+		Logger::Info << "Beam size is " << Angle::ToNiceString(theoreticBeam) << '\n';
 	} else {
 		bMaj = std::numeric_limits<double>::quiet_NaN();
 		bMin = std::numeric_limits<double>::quiet_NaN();

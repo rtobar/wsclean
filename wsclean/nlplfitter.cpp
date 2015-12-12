@@ -145,7 +145,7 @@ public:
 				const double a_j = gsl_vector_get(xvec, j);
 				fity = a_j + fity * lg;
 			}
-			//std::cout << x << ':' << fity << " / \n";
+			//std::cout << x << ':' << fity << " / " << exp10(fity) << "\n";
 			gsl_vector_set(f, i, exp10(fity) - y);
 		}
 			
@@ -316,8 +316,13 @@ void NonLinearPowerLawFitter::fit_implementation(ao::uvector<double>& terms, siz
 		status = gsl_multifit_test_delta(_data->solver->dx, _data->solver->x, 1e-6, 1e-6);
 		
   } while (status == GSL_CONTINUE && iter < 5000);
-	//std::cout << "niter=" << iter << ", status=" << gsl_strerror(status) << "\n";
 	
+	if(status != GSL_SUCCESS)
+	{
+		std::cout << "Warning: not converged! (niter=" << iter << ", status=" << gsl_strerror(status) << ")\n";
+		//for(size_t i=0; i!=nTerms; ++i)
+		//	terms[i] = std::numeric_limits<double>::quiet_NaN();
+	}
 	for(size_t i=0; i!=nTerms; ++i)
 		terms[i] = gsl_vector_get (_data->solver->x, i);
 	

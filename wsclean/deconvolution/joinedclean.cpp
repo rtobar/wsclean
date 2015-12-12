@@ -15,7 +15,7 @@ void JoinedClean<ImageSetType>::ExecuteMajorIteration(ImageSetType& dataImage, I
 	
 	size_t componentX=0, componentY=0;
 	findPeak(dataImage, componentX, componentY);
-	std::cout << "Initial peak: " << peakDescription(dataImage, componentX, componentY) << '\n';
+	Logger::Info << "Initial peak: " << peakDescription(dataImage, componentX, componentY) << '\n';
 	
 	size_t peakIndex = componentX + componentY*_width;
 	double peakNormalized = dataImage.JoinedValueNormalized(peakIndex);
@@ -24,10 +24,10 @@ void JoinedClean<ImageSetType>::ExecuteMajorIteration(ImageSetType& dataImage, I
 	if(stopGainThreshold > firstThreshold)
 	{
 		firstThreshold = stopGainThreshold;
-		std::cout << "Next major iteration at: " << stopGainThreshold << '\n';
+		Logger::Info << "Next major iteration at: " << stopGainThreshold << '\n';
 	}
 	else if(this->_mGain != 1.0) {
-		std::cout << "Major iteration threshold reached global threshold of " << this->_threshold << ": final major iteration.\n";
+		Logger::Info << "Major iteration threshold reached global threshold of " << this->_threshold << ": final major iteration.\n";
 	}
 
 	size_t cpuCount = this->_threadCount;
@@ -52,7 +52,7 @@ void JoinedClean<ImageSetType>::ExecuteMajorIteration(ImageSetType& dataImage, I
 			(this->_iterationNumber <= 100 && this->_iterationNumber % 10 == 0) ||
 			(this->_iterationNumber <= 1000 && this->_iterationNumber % 100 == 0) ||
 			this->_iterationNumber % 1000 == 0)
-			std::cout << "Iteration " << this->_iterationNumber << ": " << peakDescription(dataImage, componentX, componentY) << '\n';
+			Logger::Info << "Iteration " << this->_iterationNumber << ": " << peakDescription(dataImage, componentX, componentY) << '\n';
 		
 		CleanTask task;
 		task.cleanCompX = componentX;
@@ -97,7 +97,7 @@ void JoinedClean<ImageSetType>::ExecuteMajorIteration(ImageSetType& dataImage, I
 		delete taskLanes[i];
 		delete resultLanes[i];
 	}
-	std::cout << "Stopped on peak " << peakNormalized << '\n';
+	Logger::Info << "Stopped on peak " << peakNormalized << '\n';
 	reachedStopGain = std::fabs(peakNormalized) <= stopGainThreshold && (peakNormalized != 0.0);
 }
 

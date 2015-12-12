@@ -331,18 +331,18 @@ void SimpleClean::ExecuteMajorIterationST(double *dataImage, double *modelImage,
 {
 	size_t componentX, componentY;
 	double peak = FindPeak(dataImage, width, height, componentX, componentY, _allowNegativeComponents, 0, height, CleanBorderRatio());
-	std::cout << "Initial peak: " << peak << '\n';
+	Logger::Info << "Initial peak: " << peak << '\n';
 	while(fabs(peak) > _threshold && _iterationNumber < _maxIter)
 	{
 		if(_iterationNumber % 10 == 0)
-			std::cout << "Iteration " << _iterationNumber << ": (" << componentX << ',' << componentY << "), " << peak << " Jy\n";
+			Logger::Info << "Iteration " << _iterationNumber << ": (" << componentX << ',' << componentY << "), " << peak << " Jy\n";
 		SubtractImage(dataImage, psfImage, width, height, componentX, componentY, _gain * peak);
 		modelImage[componentX + componentY*width] += _gain * peak;
 		
 		peak = FindPeak(dataImage, width, height, componentX, componentY, _allowNegativeComponents, 0, height, CleanBorderRatio());
 		++_iterationNumber;
 	}
-	std::cout << "Stopped on peak " << peak << '\n';
+	Logger::Info << "Stopped on peak " << peak << '\n';
 }
 
 void SimpleClean::ExecuteMajorIteration(double* dataImage, double* modelImage, const double* psfImage, size_t width, size_t height, bool& reachedStopGain)
@@ -354,15 +354,15 @@ void SimpleClean::ExecuteMajorIteration(double* dataImage, double* modelImage, c
 	double peak = _cleanMask==0 ?
 		FindPeak(dataImage, width, height, componentX, componentY, _allowNegativeComponents, 0, height, CleanBorderRatio()) :
 		FindPeak(dataImage, width, height, componentX, componentY, _allowNegativeComponents, 0, height, _cleanMask, CleanBorderRatio());
-	std::cout << "Initial peak: " << peak << '\n';
+	Logger::Info << "Initial peak: " << peak << '\n';
 	double firstThreshold = _threshold, stopGainThreshold = fabs(peak*(1.0-_mGain));
 	if(stopGainThreshold > firstThreshold)
 	{
 		firstThreshold = stopGainThreshold;
-		std::cout << "Next major iteration at: " << stopGainThreshold << '\n';
+		Logger::Info << "Next major iteration at: " << stopGainThreshold << '\n';
 	}
 	else if(_mGain != 1.0) {
-		std::cout << "Major iteration threshold reached global threshold of " << _threshold << ": final major iteration.\n";
+		Logger::Info << "Major iteration threshold reached global threshold of " << _threshold << ": final major iteration.\n";
 	}
 
 	std::vector<ao::lane<CleanTask>*> taskLanes(_threadCount);
@@ -389,7 +389,7 @@ void SimpleClean::ExecuteMajorIteration(double* dataImage, double* modelImage, c
 			(_iterationNumber <= 100 && _iterationNumber % 10 == 0) ||
 			(_iterationNumber <= 1000 && _iterationNumber % 100 == 0) ||
 			_iterationNumber % 1000 == 0)
-			std::cout << "Iteration " << _iterationNumber << ": (" << componentX << ',' << componentY << "), " << peak << " Jy\n";
+			Logger::Info << "Iteration " << _iterationNumber << ": (" << componentX << ',' << componentY << "), " << peak << " Jy\n";
 		
 		CleanTask task;
 		task.cleanCompX = componentX;
@@ -423,7 +423,7 @@ void SimpleClean::ExecuteMajorIteration(double* dataImage, double* modelImage, c
 		delete taskLanes[i];
 		delete resultLanes[i];
 	}
-	std::cout << "Stopped on peak " << peak << '\n';
+	Logger::Info << "Stopped on peak " << peak << '\n';
 	reachedStopGain = (fabs(peak) <= stopGainThreshold) && (peak != 0.0);
 }
 

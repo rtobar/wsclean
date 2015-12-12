@@ -13,12 +13,12 @@ void MoreSane::ExecuteMajorIteration(double* dataImage, double* modelImage, cons
 {
 	if(_iterationNumber!=0)
 	{
-		std::cout << "Convolving model with psf...\n";
+		Logger::Info << "Convolving model with psf...\n";
 		ImageBufferAllocator::Ptr preparedPsf;
 		_allocator->Allocate(width*height, preparedPsf);
 		FFTConvolver::PrepareKernel(preparedPsf.data(), psfImage, width, height);
 		FFTConvolver::ConvolveSameSize(modelImage, preparedPsf.data(), width, height);
-		std::cout << "Adding model back to residual...\n";
+		Logger::Info << "Adding model back to residual...\n";
 		for(size_t i=0; i!=width*height; ++i)
 			dataImage[i] += modelImage[i];
 	}
@@ -50,7 +50,7 @@ void MoreSane::ExecuteMajorIteration(double* dataImage, double* modelImage, cons
 		commandLine << " -sl " << _moresaneSigmaLevels[std::min(_iterationNumber,_moresaneSigmaLevels.size()-1)] << " ";
 	}
 	
-	std::cout << "Running: " << commandLine.str() << std::endl;
+	Logger::Info << "Running: " << commandLine.str() << '\n';
 	int pid = vfork();
 	switch (pid) {
 		case -1: // Error

@@ -5,6 +5,7 @@
 #include "msproviders/msprovider.h"
 #include "fitswriter.h"
 #include "angle.h"
+#include "wsclean/logger.h"
 
 #include <cmath>
 #include <iostream>
@@ -407,11 +408,11 @@ void ImageWeights::RankFilter(double rankLimit, size_t windowSize)
 
 void ImageWeights::SetGaussianTaper(double beamSize)
 {
-	std::cout << "Applying " << Angle::ToNiceString(beamSize) << " Gaussian taper...\n";
+	Logger::Info << "Applying " << Angle::ToNiceString(beamSize) << " Gaussian taper...\n";
 	double halfPowerUV = 1.0 / (beamSize * 2.0 * M_PI);
 	const long double sigmaToHP = 2.0L * sqrtl(2.0L * logl(2.0L));
 	double minusTwoSigmaSq = halfPowerUV * sigmaToHP;
-	std::cout << "UV taper: " << minusTwoSigmaSq << '\n';
+	Logger::Info << "UV taper: " << minusTwoSigmaSq << '\n';
 	minusTwoSigmaSq *= -2.0 * minusTwoSigmaSq;
 	for(size_t y=0; y!=_imageHeight/2; ++y)
 	{

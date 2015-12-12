@@ -197,6 +197,16 @@ public:
 		e2 = trHalf - term;
 	}
 	
+	static void EigenValues(const std::complex<double>* matrix, std::complex<double> &e1, std::complex<double> &e2)
+	{
+		std::complex<double> tr = matrix[0] + matrix[3];
+		std::complex<double> d = matrix[0]*matrix[3] - matrix[1]*matrix[2];
+		std::complex<double> term = sqrt(tr*tr*0.25-d);
+		std::complex<double> trHalf = tr*0.5;
+		e1 = trHalf + term;
+		e2 = trHalf - term;
+	}
+	
 	static void EigenValuesAndVectors(const double* matrix, double &e1, double &e2, double* vec1, double* vec2)
 	{
 		double tr = matrix[0] + matrix[3];
@@ -300,6 +310,8 @@ public:
 	}
 	const std::complex<double>& operator[](size_t index) const { return _values[index]; }
 	std::complex<double>& operator[](size_t index) { return _values[index]; }
+	const double& IndexReal(size_t index) const { return reinterpret_cast<const double(&)[2]>(_values[index/2])[index%2]; }
+	double& IndexReal(size_t index) { return reinterpret_cast<double(&)[2]>(_values[index/2])[index%2]; }
 	static MC2x2 Zero()
 	{
 		return MC2x2(0.0, 0.0, 0.0, 0.0);
@@ -364,6 +376,10 @@ public:
 	void CopyValues(std::complex<double>* values) const
 	{
 		Matrix2x2::Assign(values, _values);
+	}
+	void EigenValues(std::complex<double> &e1, std::complex<double> &e2) const
+	{
+		Matrix2x2::EigenValues(_values, e1, e2);
 	}
 private:
 	std::complex<double> _values[4];

@@ -30,7 +30,8 @@ public:
 	void SetImageSize(size_t width, size_t height) { _untrimmedWidth = width; _untrimmedHeight = height; }
 	void SetTrimmedImageSize(size_t width, size_t height) { _trimWidth = width; _trimHeight = height; }
 	void SetPixelScale(double pixelScale) { _pixelScaleX = pixelScale; _pixelScaleY = pixelScale; }
-	void SetNWlayers(size_t nWLayers) { _nWLayers = nWLayers; }
+	void SetNWLayers(size_t nWLayers) { _nWLayers = nWLayers; }
+	void SetNWLayersForSize(size_t width, size_t height) { _nwWidth = width; _nwHeight = height; }
 	void SetColumnName(const std::string& columnName) { _columnName = columnName; }
 	void SetPolarizations(const std::set<PolarizationEnum>& polarizations) { _polarizations = polarizations; }
 	void SetMakePSF(bool makePSF) { _makePSF = makePSF; }
@@ -231,6 +232,7 @@ private:
 	
 	size_t _untrimmedWidth, _untrimmedHeight;
 	size_t _trimWidth, _trimHeight;
+	size_t _nwWidth, _nwHeight;
 	size_t _channelsOut, _intervalCount;
 	double _pixelScaleX, _pixelScaleY;
 	double _manualBeamMajorSize, _manualBeamMinorSize, _manualBeamPA;

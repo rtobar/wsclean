@@ -36,7 +36,8 @@ Deconvolution::~Deconvolution()
 
 void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedMajorThreshold, size_t majorIterationNr)
 {
-	std::cout << std::flush << " == Cleaning (" << majorIterationNr << ") ==\n";
+	Logger::Info.Flush();
+	Logger::Info << " == Cleaning (" << majorIterationNr << ") ==\n";
 	
 	_imageAllocator->FreeUnused();
 	DynamicSet
@@ -249,7 +250,7 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 	{
 		if(_cleanMask.empty())
 		{
-			std::cout << "Reading mask '" << _fitsMask << "'...\n";
+			Logger::Info << "Reading mask '" << _fitsMask << "'...\n";
 			FitsReader maskReader(_fitsMask);
 			if(maskReader.ImageWidth() != _imgWidth || maskReader.ImageHeight() != _imgHeight)
 				throw std::runtime_error("Specified Fits file mask did not have same dimensions as output image!");
@@ -265,7 +266,7 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 	{
 		if(_cleanMask.empty())
 		{
-			std::cout << "Reading CASA mask '" << _casaMask << "'...\n";
+			Logger::Info << "Reading CASA mask '" << _casaMask << "'...\n";
 			_cleanMask.assign(_imgWidth*_imgHeight, false);
 			CasaMaskReader maskReader(_casaMask);
 			if(maskReader.Width() != _imgWidth || maskReader.Height() != _imgHeight)

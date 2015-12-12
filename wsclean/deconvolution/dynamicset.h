@@ -198,6 +198,11 @@ public:
 		for(size_t i=0; i!=size(); ++i)
 			addFactor(_images[i], rhs._images[i], factor);
 	}
+	
+	void Set(size_t index, const double* rhs)
+	{
+		assign(_images[index], rhs);
+	}
 private:
 	void assign(double* lhs, const double* rhs) const
 	{

@@ -1,4 +1,5 @@
 #include "contiguousms.h"
+#include "../wsclean/logger.h"
 #include <casacore/measures/Measures/MEpoch.h>
 #include <casacore/measures/TableMeasures/ScalarMeasColumn.h>
 
@@ -19,7 +20,7 @@ ContiguousMS::ContiguousMS(const string& msPath, const std::string& dataColumnNa
 	_dataColumn(_ms, dataColumnName),
 	_flagColumn(_ms, casacore::MS::columnName(casacore::MSMainEnums::FLAG))
 {
-	std::cout << "Opening " << msPath << ", spw " << _dataDescId << " with contiguous MS reader.\n";
+	Logger::Info << "Opening " << msPath << ", spw " << _dataDescId << " with contiguous MS reader.\n";
 	
 	_inputPolarizations = GetMSPolarizations(_ms);
  
@@ -46,7 +47,7 @@ ContiguousMS::ContiguousMS(const string& msPath, const std::string& dataColumnNa
 	if(!_msHasWeights)
 	{
 		_weightArray.set(1);
-		std::cout << "WARNING: This measurement set has no or an invalid WEIGHT_SPECTRUM column; all visibilities are assumed to have equal weight.\n";
+		Logger::Info << "WARNING: This measurement set has no or an invalid WEIGHT_SPECTRUM column; all visibilities are assumed to have equal weight.\n";
 	}
 	
 	getRowRange(_ms, selection, _startRow, _endRow);

@@ -13,8 +13,6 @@ class IUWTDeconvolutionAlgorithm
 public:
 	IUWTDeconvolutionAlgorithm(size_t width, size_t height, double gain, double mGain, double cleanBorder, bool allowNegativeComponents, double thresholdLevel=4.0, double tolerance=0.75);
 	
-	void PerformMajorIteration(size_t& iterCounter, size_t nIter, double* model, double* dirty, const double* psf, bool& reachedMajorThreshold);
-	
 	void PerformMajorIteration(size_t& iterCounter, size_t nIter, class DynamicSet& modelSet, class DynamicSet& dirtySet, const ao::uvector<const double*>& psfs, bool& reachedMajorThreshold);
 	
 	void Subtract(double* dest, const ao::uvector<double>& rhs);

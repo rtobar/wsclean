@@ -1,5 +1,6 @@
 #include "fftresampler.h"
 #include "uvector.h"
+#include "wsclean/logger.h"
 
 #include <complex>
 #include <iostream>
@@ -45,8 +46,7 @@ void FFTResampler::runThread()
 		size_t fftInWidth = _inputWidth/2+1;
 		std::complex<double>
 			*fftData = reinterpret_cast<std::complex<double>*>(fftw_malloc(fftInWidth*_inputHeight*sizeof(std::complex<double>)));
-		if(_verbose)
-			std::cout << "FFT " << _inputWidth << " x " << _inputHeight << " real -> complex...\n";
+		if(_verbose) Logger::Debug << "FFT " << _inputWidth << " x " << _inputHeight << " real -> complex...\n";
 		fftw_execute_dft_r2c(_inToFPlan, task.input, reinterpret_cast<fftw_complex*>(fftData));
 		
 		size_t fftOutWidth = _outputWidth/2+1;
@@ -96,8 +96,7 @@ void FFTResampler::runThread()
 		
 		fftw_free(fftData);
 		
-		if(_verbose)
-			std::cout << "FFT " << _outputWidth << " x " << _outputHeight << " complex -> real...\n";
+		if(_verbose) Logger::Debug << "FFT " << _outputWidth << " x " << _outputHeight << " complex -> real...\n";
 		fftw_execute_dft_c2r(_fToOutPlan, reinterpret_cast<fftw_complex*>(newfftData), task.output);
 		
 		fftw_free(newfftData);
@@ -130,8 +129,7 @@ void FFTResampler::SingleFT(const double* input, double* realOutput, double* ima
 	size_t fftInWidth = _inputWidth/2+1;
 	std::complex<double>
 		*fftData = reinterpret_cast<std::complex<double>*>(fftw_malloc(fftInWidth*_inputHeight*sizeof(std::complex<double>)));
-	if(_verbose)
-		std::cout << "FFT " << _inputWidth << " x " << _inputHeight << " real -> complex...\n";
+	if(_verbose) Logger::Debug << "FFT " << _inputWidth << " x " << _inputHeight << " real -> complex...\n";
 	fftw_execute_dft_r2c(_inToFPlan, data.data(), reinterpret_cast<fftw_complex*>(fftData));
 	
 	size_t midX = _inputWidth/2;

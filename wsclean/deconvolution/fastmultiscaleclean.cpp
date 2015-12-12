@@ -27,11 +27,11 @@ void FastMultiScaleClean<ImageSetType>::ExecuteMajorIteration(ImageSetType& data
 	size_t iterationsAtStart = this->_iterationNumber;
 	do {
 		double nextScale = currentScale*0.5;
-		std::cout << "Current scale: " << (currentScale*_pixelSizeX*180.0*60.0/M_PI) << " arcmin (" << round(currentScale) << " pixels).\n";
+		Logger::Info << "Current scale: " << (currentScale*_pixelSizeX*180.0*60.0/M_PI) << " arcmin (" << round(currentScale) << " pixels).\n";
 		bool reachedStopGainOnCurrentScale, canCleanFurther;
 		size_t iterationsAtStartOfThisScale = this->_iterationNumber;
 		executeMajorIterationForScale(currentScale, nextScale, reachedStopGainOnCurrentScale, canCleanFurther);
-		std::cout << "Finished scale " << (currentScale*_pixelSizeX*180.0*60.0/M_PI) << " arcmin (" << round(currentScale) << " pixels), " << (this->_iterationNumber-iterationsAtStartOfThisScale) << " iterations performed, progressing to next scale.\n";
+		Logger::Info << "Finished scale " << (currentScale*_pixelSizeX*180.0*60.0/M_PI) << " arcmin (" << round(currentScale) << " pixels), " << (this->_iterationNumber-iterationsAtStartOfThisScale) << " iterations performed, progressing to next scale.\n";
 		if(canCleanFurther)
 			reachedStopGain = reachedStopGain && reachedStopGainOnCurrentScale;
 		currentScale = nextScale;
@@ -39,7 +39,7 @@ void FastMultiScaleClean<ImageSetType>::ExecuteMajorIteration(ImageSetType& data
 	
 	if(this->_iterationNumber < this->_maxIter)
 	{
-		std::cout << "Minimum scale reached, finishing cleaning with delta functions.\n";
+		Logger::Info << "Minimum scale reached, finishing cleaning with delta functions.\n";
 		// Finish off with normal clean
 		JoinedClean<ImageSetType> joinedClean;
 		joinedClean.CopyConfigFrom(*this);
@@ -50,9 +50,9 @@ void FastMultiScaleClean<ImageSetType>::ExecuteMajorIteration(ImageSetType& data
 		this->_iterationNumber = joinedClean.IterationNumber();
 	}
 	if(reachedStopGain)
-		std::cout << "Multiscale clean finished this major iteration after " << this->_iterationNumber-iterationsAtStart << " iterations; continuing after prediction/inversion round.\n";
+		Logger::Info << "Multiscale clean finished this major iteration after " << this->_iterationNumber-iterationsAtStart << " iterations; continuing after prediction/inversion round.\n";
 	else
-		std::cout << "Multiscale clean performed " << this->_iterationNumber-iterationsAtStart << " in this iteration. Absolute stopping criteria reached.\n";
+		Logger::Info << "Multiscale clean performed " << this->_iterationNumber-iterationsAtStart << " in this iteration. Absolute stopping criteria reached.\n";
 }
 
 template<typename ImageSetType>
@@ -84,12 +84,12 @@ void FastMultiScaleClean<ImageSetType>::executeMajorIterationForScale(double cur
 	size_t cpuCount = this->_threadCount;
 	
 	double thresholdBias = pow(this->_multiscaleThresholdBias, log2(currentScale));
-	std::cout << "Threshold bias: " << thresholdBias << '\n';
+	Logger::Info << "Threshold bias: " << thresholdBias << '\n';
 	double oldSubtractionGain = this->_gain;
 	this->_gain *= sqrt(thresholdBias);
 	
 	// Fill the large and next scale images with the rescaled images
-	FFTResampler imageResampler(_originalWidth, _originalHeight, _rescaledWidth, _rescaledHeight, cpuCount, false);
+	FFTResampler imageResampler(_originalWidth, _originalHeight, _rescaledWidth, _rescaledHeight, cpuCount);
 	imageResampler.Start();
 	for(size_t i=0; i!=_dataImageOriginal->ImageCount(); ++i)
 		imageResampler.AddTask(_dataImageOriginal->GetImage(i), largeScaleImage.GetImage(i));
@@ -139,19 +139,19 @@ void FastMultiScaleClean<ImageSetType>::executeMajorIterationForScale(double cur
 		
 	size_t componentX=0, componentY=0;
 	findPeak(componentX, componentY);
-	std::cout << "Initial peak: " << peakDescription(largeScaleImage, componentX, componentY, rescaleFactor) << '\n';
+	Logger::Info << "Initial peak: " << peakDescription(largeScaleImage, componentX, componentY, rescaleFactor) << '\n';
 	
 	size_t peakIndex = componentX + componentY*_rescaledWidth;
 	double peakNormalized = _dataImageLargeScale->JoinedValueNormalized(peakIndex) * rescaleFactor * rescaleFactor;
 	double firstThreshold = this->_threshold, stopGainThreshold = fabs(peakNormalized*(1.0-this->_mGain)/thresholdBias);
-	std::cout << "Scale-adjusted threshold: " << firstThreshold*thresholdBias << ", major iteration stops at " << stopGainThreshold*thresholdBias << '\n';
+	Logger::Info << "Scale-adjusted threshold: " << firstThreshold*thresholdBias << ", major iteration stops at " << stopGainThreshold*thresholdBias << '\n';
 	if(stopGainThreshold > firstThreshold)
 	{
 		firstThreshold = stopGainThreshold;
-		std::cout << "Next major iteration for this scale at: " << stopGainThreshold << '\n';
+		Logger::Info << "Next major iteration for this scale at: " << stopGainThreshold << '\n';
 	}
 	else if(this->_mGain != 1.0) {
-		std::cout << "Major iteration threshold reached global threshold of " << this->_threshold << " for this scale.\n";
+		Logger::Info << "Major iteration threshold reached global threshold of " << this->_threshold << " for this scale.\n";
 	}
 
 	std::vector<ao::lane<CleanTask>*> taskLanes(cpuCount);
@@ -174,7 +174,7 @@ void FastMultiScaleClean<ImageSetType>::executeMajorIterationForScale(double cur
 			(this->_iterationNumber <= 100 && this->_iterationNumber % 10 == 0) ||
 			(this->_iterationNumber <= 1000 && this->_iterationNumber % 100 == 0) ||
 			this->_iterationNumber % 1000 == 0)
-			std::cout << "Iteration " << this->_iterationNumber << ": " << peakDescription(largeScaleImage, componentX, componentY, rescaleFactor) << '\n';
+			Logger::Info << "Iteration " << this->_iterationNumber << ": " << peakDescription(largeScaleImage, componentX, componentY, rescaleFactor) << '\n';
 		
 		CleanTask task;
 		task.cleanCompX = componentX;
@@ -212,7 +212,7 @@ void FastMultiScaleClean<ImageSetType>::executeMajorIterationForScale(double cur
 		}
 		if(peakUnnormalized == 0.0)
 		{
-			std::cout << "No more components found at current scale: continuing to next scale.\n";
+			Logger::Info << "No more components found at current scale: continuing to next scale.\n";
 			canCleanFurther = false;
 			break;
 		}
@@ -229,7 +229,7 @@ void FastMultiScaleClean<ImageSetType>::executeMajorIterationForScale(double cur
 		delete taskLanes[i];
 		delete resultLanes[i];
 	}
-	std::cout << "Stopped on peak " << peakNormalized << '\n';
+	Logger::Info << "Stopped on peak " << peakNormalized << '\n';
 	reachedStopGain = fabs(peakNormalized) <= stopGainThreshold*thresholdBias;
 	
 	for(size_t i=0; i!=scaledPsfs.size(); ++i)

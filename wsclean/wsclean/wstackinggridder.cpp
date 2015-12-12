@@ -1,5 +1,6 @@
 #include "wstackinggridder.h"
 #include "imagebufferallocator.h"
+#include "logger.h"
 
 #include <fftw3.h>
 
@@ -56,7 +57,7 @@ void WStackingGridder::PrepareWLayers(size_t nWLayers, double maxMem, double min
 		if(_nFFTThreads==0) _nFFTThreads = 1;
 		remainingMem = maxMem - _nFFTThreads * memPerCore;
 		
-		std::cout <<
+		Logger::Warn <<
 			"WARNING: the amount of available memory is too low for the image size,\n"
 			"       : not all cores might be used.\n"
 			"       : nr buffers avail for FFT: " << _nFFTThreads << " remaining mem: " << round(remainingMem/1.0e8)/10.0 << " GB \n";
@@ -81,7 +82,7 @@ void WStackingGridder::PrepareWLayers(size_t nWLayers, double maxMem, double min
 		maxNWLayersPerPass=1;
 	_nPasses = (nWLayers+maxNWLayersPerPass-1)/maxNWLayersPerPass;
 	if(_nPasses == 0) _nPasses = 1;
-	std::cout << "Will process " << (_nWLayers / _nPasses) << "/" << _nWLayers << " w-layers per pass.\n";
+	Logger::Info << "Will process " << (_nWLayers / _nPasses) << "/" << _nWLayers << " w-layers per pass.\n";
 	
 	_curLayerRangeIndex = 0;
 }

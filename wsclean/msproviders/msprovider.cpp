@@ -1,5 +1,7 @@
 #include "msprovider.h"
 
+#include "../wsclean/logger.h"
+
 #include <casacore/ms/MeasurementSets/MeasurementSet.h>
 #include <casacore/tables/Tables/ArrayColumn.h>
 #include <casacore/tables/Tables/ScalarColumn.h>
@@ -535,7 +537,8 @@ void MSProvider::getRowRange(casacore::MeasurementSet& ms, const MSSelection& se
 	endRow = ms.nrow();
 	if(selection.HasInterval())
 	{
-		std::cout << "Determining first and last row index... " << std::flush;
+		Logger::Info << "Determining first and last row index... ";
+		Logger::Info.Flush();
 		casacore::ROScalarColumn<double> timeColumn(ms, casacore::MS::columnName(casacore::MSMainEnums::TIME));
 		double time = timeColumn(0);
 		size_t timestepIndex = 0;
@@ -554,7 +557,7 @@ void MSProvider::getRowRange(casacore::MeasurementSet& ms, const MSSelection& se
 				time = timeColumn(row);
 			}
 		}
-		std::cout << "DONE (" << startRow << '-' << endRow << ")\n";
+		Logger::Info << "DONE (" << startRow << '-' << endRow << ")\n";
 	}
 }
 
@@ -574,7 +577,7 @@ void MSProvider::initializeModelColumn(casacore::MeasurementSet& ms)
 		}
 		if(!isDefined || !isSameShape)
 		{
-			std::cout << "WARNING: Your model column does not have the same shape as your data column: resetting MODEL column.\n";
+			Logger::Info << "WARNING: Your model column does not have the same shape as your data column: resetting MODEL column.\n";
 			casacore::Array<casacore::Complex> zeroArray(dataShape);
 			for(casacore::Array<casacore::Complex>::contiter i=zeroArray.cbegin(); i!=zeroArray.cend(); ++i)
 				*i = std::complex<float>(0.0, 0.0);
@@ -583,7 +586,8 @@ void MSProvider::initializeModelColumn(casacore::MeasurementSet& ms)
 		}
 	}
 	else { //if(!_ms.isColumn(casacore::MSMainEnums::MODEL_DATA))
-		std::cout << "Adding model data column... " << std::flush;
+		Logger::Info << "Adding model data column... ";
+		Logger::Info.Flush();
 		casacore::IPosition shape = dataColumn.shape(0);
 		casacore::ArrayColumnDesc<casacore::Complex> modelColumnDesc(ms.columnName(casacore::MSMainEnums::MODEL_DATA), shape);
 		try {
@@ -602,7 +606,7 @@ void MSProvider::initializeModelColumn(casacore::MeasurementSet& ms)
 		for(size_t row=0; row!=ms.nrow(); ++row)
 			modelColumn.put(row, zeroArray);
 		
-		std::cout << "DONE\n";
+		Logger::Info << "DONE\n";
 	}
 }
 

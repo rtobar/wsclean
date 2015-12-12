@@ -1,6 +1,7 @@
 #include "wsmsgridder.h"
 
 #include "imagebufferallocator.h"
+#include "logger.h"
 #include "smallinversionoptimization.h"
 
 #include "../imageweights.h"
@@ -45,6 +46,7 @@ WSMSGridder::WSMSGridder(ImageBufferAllocator* imageAllocator, size_t threadCoun
 	_laneBufferSize(std::max<size_t>(_cpuCount*2,1024)),
 	_imageBufferAllocator(imageAllocator),
 	_trimWidth(0), _trimHeight(0),
+	_nwWidth(0), _nwHeight(0),
 	_actualInversionWidth(0), _actualInversionHeight(0),
 	_actualPixelSizeX(0), _actualPixelSizeY(0)
 {
@@ -52,17 +54,17 @@ WSMSGridder::WSMSGridder(ImageBufferAllocator* imageAllocator, size_t threadCoun
 	_memSize = (int64_t) pageCount * (int64_t) pageSize;
 	double memSizeInGB = (double) _memSize / (1024.0*1024.0*1024.0);
 	if(memFraction == 1.0 && absMemLimit == 0.0) {
-		std::cout << "Detected " << round(memSizeInGB*10.0)/10.0 << " GB of system memory, usage not limited.\n";
+		Logger::Info << "Detected " << round(memSizeInGB*10.0)/10.0 << " GB of system memory, usage not limited.\n";
 	}
 	else {
 		double limitInGB = memSizeInGB*memFraction;
 		if(absMemLimit!=0.0 && limitInGB > absMemLimit)
 			limitInGB = absMemLimit;
-		std::cout << "Detected " << round(memSizeInGB*10.0)/10.0 << " GB of system memory, usage limited to " << round(limitInGB*10.0)/10.0 << " GB (frac=" << round(memFraction*1000.0)/10.0 << "%, ";
+		Logger::Info << "Detected " << round(memSizeInGB*10.0)/10.0 << " GB of system memory, usage limited to " << round(limitInGB*10.0)/10.0 << " GB (frac=" << round(memFraction*1000.0)/10.0 << "%, ";
 		if(absMemLimit == 0.0)
-			std::cout << "no limit)\n";
+			Logger::Info << "no limit)\n";
 		else
-			std::cout << "limit=" << round(absMemLimit*10.0)/10.0 << "GB)\n";
+			Logger::Info << "limit=" << round(absMemLimit*10.0)/10.0 << "GB)\n";
 		
 		_memSize = int64_t((double) pageCount * (double) pageSize * memFraction);
 		if(absMemLimit!=0.0 && double(_memSize) > double(1024.0*1024.0*1024.0) * absMemLimit)
@@ -91,7 +93,7 @@ void WSMSGridder::initializeMeasurementSet(size_t msIndex, WSMSGridder::MSData& 
 	{
 		msData.startChannel = Selection(msIndex).ChannelRangeStart();
 		msData.endChannel = Selection(msIndex).ChannelRangeEnd();
-		std::cout << "Selected channels: " << msData.startChannel << '-' << msData.endChannel << '\n';
+		Logger::Info << "Selected channels: " << msData.startChannel << '-' << msData.endChannel << '\n';
 		const BandData& firstBand = msData.bandData.FirstBand();
 		if(msData.startChannel >= firstBand.ChannelCount() || msData.endChannel > firstBand.ChannelCount()
 			|| msData.startChannel == msData.endChannel)
@@ -142,9 +144,10 @@ void WSMSGridder::initializeMeasurementSet(size_t msIndex, WSMSGridder::MSData& 
 
 	_denormalPhaseCentre = _phaseCentreDL != 0.0 || _phaseCentreDM != 0.0;
 	if(_denormalPhaseCentre)
-		std::cout << "Set has denormal phase centre: dl=" << _phaseCentreDL << ", dm=" << _phaseCentreDM << '\n';
+		Logger::Info << "Set has denormal phase centre: dl=" << _phaseCentreDL << ", dm=" << _phaseCentreDM << '\n';
 	
-	std::cout << "Determining min and max w & theoretical beam size... " << std::flush;
+	Logger::Info << "Determining min and max w & theoretical beam size... ";
+	Logger::Info.Flush();
 	msData.maxW = 0.0;
 	msData.minW = 1e100;
 	double maxBaseline = 0.0;
@@ -198,7 +201,7 @@ void WSMSGridder::initializeMeasurementSet(size_t msIndex, WSMSGridder::MSData& 
 		msData.maxW = 0.0;
 	}
 	_beamSize = 1.0 / maxBaseline;
-	std::cout << "DONE (w=[" << msData.minW << ":" << msData.maxW << "] lambdas, maxuvw=" << maxBaseline << " lambda, beam=" << Angle::ToNiceString(_beamSize) << ")\n";
+	Logger::Info << "DONE (w=[" << msData.minW << ":" << msData.maxW << "] lambdas, maxuvw=" << maxBaseline << " lambda, beam=" << Angle::ToNiceString(_beamSize) << ")\n";
 	if(HasWLimit()) {
 		msData.maxW *= (1.0 - WLimit());
 		if(msData.maxW < msData.minW) msData.maxW = msData.minW;
@@ -224,22 +227,29 @@ void WSMSGridder::initializeMeasurementSet(size_t msIndex, WSMSGridder::MSData& 
 		{
 			size_t newWidth = std::max(std::min(optWidth, _actualInversionWidth), size_t(32));
 			size_t newHeight = std::max(std::min(optHeight, _actualInversionHeight), size_t(32));
-			std::cout << "Minimal inversion size: " << minWidth << " x" << minHeight << ", using optimal: " << newWidth << " x " << newHeight << "\n";
+			Logger::Info << "Minimal inversion size: " << minWidth << " x " << minHeight << ", using optimal: " << newWidth << " x " << newHeight << "\n";
 			_actualPixelSizeX = (double(_actualInversionWidth) * _actualPixelSizeX) / double(newWidth);
 			_actualPixelSizeY = (double(_actualInversionHeight) * _actualPixelSizeY) / double(newHeight);
 			_actualInversionWidth = newWidth;
 			_actualInversionHeight = newHeight;
 		}
 		else {
-			std::cout << "Small inversion enabled, but inversion resolution already smaller than beam size: not using optimization.\n";
+			Logger::Info << "Small inversion enabled, but inversion resolution already smaller than beam size: not using optimization.\n";
 		}
 	}
 	
 	if(Verbose() || !HasWGridSize())
 	{
+		size_t wWidth, wHeight;
+		if(_nwWidth==0 && _nwHeight==0) {
+			wWidth = _trimWidth; wHeight = _trimHeight;
+		}
+		else {
+			wWidth = _nwWidth; wHeight = _nwHeight;
+		}
 		double
-			maxL = _trimWidth * PixelSizeX() * 0.5 + fabs(_phaseCentreDL),
-			maxM = _trimHeight * PixelSizeY() * 0.5 + fabs(_phaseCentreDM),
+			maxL = wWidth * PixelSizeX() * 0.5 + fabs(_phaseCentreDL),
+			maxM = wHeight * PixelSizeY() * 0.5 + fabs(_phaseCentreDM),
 			lmSq = maxL * maxL + maxM * maxM;
 		double cMinW = IsComplex() ? -msData.maxW : msData.minW;
 		double radiansForAllLayers;
@@ -256,20 +266,20 @@ void WSMSGridder::initializeMeasurementSet(size_t msIndex, WSMSGridder::MSData& 
 			double memoryRequired = double(_cpuCount) * double(sizeof(double))*double(_actualInversionWidth*_actualInversionHeight);
 			if(4.0 * memoryRequired < double(_memSize))
 			{
-				std::cout <<
+				Logger::Info <<
 					"The theoretically suggested number of w-layers (" << suggestedGridSize << ") is less than the number of availables\n"
 					"cores (" << _cpuCount << "). Changing suggested number of w-layers to " << _cpuCount << ".\n";
 				suggestedGridSize = _cpuCount;
 			}
 			else {
-				std::cout <<
+				Logger::Info <<
 					"The theoretically suggested number of w-layers (" << suggestedGridSize << ") is less than the number of availables\n"
 					"cores (" << _cpuCount << "), but there is not enough memory available to increase the number of w-layers.\n"
 					"Not all cores can be used efficiently.\n";
 			}
 		}
 		if(Verbose())
-			std::cout << "Suggested number of w-layers: " << ceil(suggestedGridSize) << '\n';
+			Logger::Info << "Suggested number of w-layers: " << ceil(suggestedGridSize) << '\n';
 		if(!HasWGridSize())
 			SetWGridSize(suggestedGridSize);
 	}
@@ -296,12 +306,12 @@ void WSMSGridder::countSamplesPerLayer(MSData& msData)
 		++msData.matchingRows;
 		msData.msProvider->NextRow();
 	}
-	std::cout << "Visibility count per layer: ";
+	Logger::Debug << "Visibility count per layer: ";
 	for(std::vector<size_t>::const_iterator i=sampleCount.begin(); i!=sampleCount.end(); ++i)
 	{
-		std::cout << *i << ' ';
+		Logger::Debug << *i << ' ';
 	}
-	std::cout << '\n';
+	Logger::Debug << '\n';
 }
 
 void WSMSGridder::gridMeasurementSet(MSData &msData)
@@ -434,7 +444,7 @@ void WSMSGridder::gridMeasurementSet(MSData &msData)
 				sampleData.vInLambda = newItem.v / wavelength;
 				sampleData.wInLambda = newItem.w / wavelength;
 				size_t cpu = _gridder->WToLayer(sampleData.wInLambda) % _cpuCount;
-				//std::cout << cpu << ' ' << lanes[cpu].size() << '\n';
+				//Logger::Info << cpu << ' ' << lanes[cpu].size() << '\n';
 				bufferedLanes[cpu].write(sampleData);
 			}
 			
@@ -448,7 +458,7 @@ void WSMSGridder::gridMeasurementSet(MSData &msData)
 		bufferedLanes[i].write_end();
 	
 	if(Verbose())
-		std::cout << "Rows that were required: " << rowsRead << '/' << msData.matchingRows << '\n';
+		Logger::Info << "Rows that were required: " << rowsRead << '/' << msData.matchingRows << '\n';
 	msData.totalRowsProcessed += rowsRead;
 }
 
@@ -544,7 +554,7 @@ void WSMSGridder::predictMeasurementSet(MSData &msData)
 		bufferedCalcLane.write(newItem);
 	}
 	if(Verbose())
-		std::cout << "Rows that were required: " << rowsProcessed << '/' << msData.matchingRows << '\n';
+		Logger::Info << "Rows that were required: " << rowsProcessed << '/' << msData.matchingRows << '\n';
 	msData.totalRowsProcessed += rowsProcessed;
 	
 	bufferedCalcLane.write_end();
@@ -600,7 +610,7 @@ void WSMSGridder::Invert()
 	//_imager->SetImageConjugatePart(Polarization() == Polarization::YX && IsComplex());
 	_gridder->PrepareWLayers(WGridSize(), double(_memSize)*(7.0/10.0), minW, maxW);
 	
-	if(Verbose())
+	if(Verbose() && Logger::IsVerbose())
 	{
 		for(size_t i=0; i!=MeasurementSetCount(); ++i)
 			countSamplesPerLayer(msDataVector[i]);
@@ -609,9 +619,9 @@ void WSMSGridder::Invert()
 	_totalWeight = 0.0;
 	for(size_t pass=0; pass!=_gridder->NPasses(); ++pass)
 	{
-		std::cout << "Gridding pass " << pass << "... ";
-		if(Verbose()) std::cout << '\n';
-		else std::cout << std::flush;
+		Logger::Info << "Gridding pass " << pass << "... ";
+		if(Verbose()) Logger::Info << '\n';
+		else Logger::Info.Flush();
 		
 		//_inversionWorkLane.reset(new ao::lane<InversionWorkItem>(2048));
 		//set_lane_debug_name(*_inversionWorkLane, "Inversion work lane containing full row data");
@@ -635,7 +645,7 @@ void WSMSGridder::Invert()
 		}
 		//_inversionWorkLane.reset();
 		
-		std::cout << "Fourier transforms...\n";
+		Logger::Info << "Fourier transforms...\n";
 		_gridder->FinishInversionPass();
 	}
 	
@@ -648,16 +658,16 @@ void WSMSGridder::Invert()
 			totalMatchingRows += msDataVector[i].matchingRows;
 		}
 		
-		std::cout << "Total rows read: " << totalRowsRead;
+		Logger::Info << "Total rows read: " << totalRowsRead;
 		if(totalMatchingRows != 0)
-			std::cout << " (overhead: " << std::max(0.0, round(totalRowsRead * 100.0 / totalMatchingRows - 100.0)) << "%)";
-		std::cout << '\n';
+			Logger::Info << " (overhead: " << std::max(0.0, round(totalRowsRead * 100.0 / totalMatchingRows - 100.0)) << "%)";
+		Logger::Info << '\n';
 	}
 	
 	if(NormalizeForWeighting())
 		_gridder->FinalizeImage(1.0/_totalWeight, false);
 	else {
-		std::cout << "Not dividing by normalization factor of " << _totalWeight << ".\n";
+		Logger::Info << "Not dividing by normalization factor of " << _totalWeight << ".\n";
 		_gridder->FinalizeImage(1.0, true);
 	}
 	
@@ -687,7 +697,7 @@ void WSMSGridder::Invert()
 	
 	if(_trimWidth != ImageWidth() || _trimHeight != ImageHeight())
 	{
-		std::cout << "Trimming " << ImageWidth() << " x " << ImageHeight() << " -> " << _trimWidth << " x " << _trimHeight << '\n';
+		Logger::Info << "Trimming " << ImageWidth() << " x " << ImageHeight() << " -> " << _trimWidth << " x " << _trimHeight << '\n';
 		// Perform trimming
 		
 		double *trimmed = _imageBufferAllocator->Allocate(_trimWidth * _trimHeight);
@@ -742,7 +752,7 @@ void WSMSGridder::Predict(double* real, double* imaginary)
 	ImageBufferAllocator::Ptr untrimmedReal, untrimmedImag;
 	if(_trimWidth != ImageWidth() || _trimHeight != ImageHeight())
 	{
-		std::cout << "Untrimming " << _trimWidth << " x " << _trimHeight << " -> " << ImageWidth() << " x " << ImageHeight() << '\n';
+		Logger::Info << "Untrimming " << _trimWidth << " x " << _trimHeight << " -> " << ImageWidth() << " x " << ImageHeight() << '\n';
 		// Undo trimming (i.e., extend with zeros)
 		// The input is of size _trimWidth x _trimHeight
 		// This will make the model image of size ImageWidth() x ImageHeight()
@@ -783,9 +793,9 @@ void WSMSGridder::Predict(double* real, double* imaginary)
 	
 	for(size_t pass=0; pass!=_gridder->NPasses(); ++pass)
 	{
-		std::cout << "Fourier transforms for pass " << pass << "... ";
-		if(Verbose()) std::cout << '\n';
-		else std::cout << std::flush;
+		Logger::Info << "Fourier transforms for pass " << pass << "... ";
+		if(Verbose()) Logger::Info << '\n';
+		else Logger::Info.Flush();
 		if(imaginary == 0)
 			_gridder->InitializePrediction(real);
 		else
@@ -793,7 +803,7 @@ void WSMSGridder::Predict(double* real, double* imaginary)
 		
 		_gridder->StartPredictionPass(pass);
 		
-		std::cout << "Predicting...\n";
+		Logger::Info << "Predicting...\n";
 		for(size_t i=0; i!=MeasurementSetCount(); ++i)
 			predictMeasurementSet(msDataVector[i]);
 	}
@@ -810,10 +820,10 @@ void WSMSGridder::Predict(double* real, double* imaginary)
 		totalMatchingRows += msDataVector[i].matchingRows;
 	}
 	
-	std::cout << "Total rows written: " << totalRowsWritten;
+	Logger::Info << "Total rows written: " << totalRowsWritten;
 	if(totalMatchingRows != 0)
-		std::cout << " (overhead: " << std::max(0.0, round(totalRowsWritten * 100.0 / totalMatchingRows - 100.0)) << "%)";
-	std::cout << '\n';
+		Logger::Info << " (overhead: " << std::max(0.0, round(totalRowsWritten * 100.0 / totalMatchingRows - 100.0)) << "%)";
+	Logger::Info << '\n';
 	delete[] msDataVector;
 }
 

@@ -2,6 +2,7 @@
 #include "spectralfitter.h"
 
 #include "../wsclean/cachedimageset.h"
+#include "../wsclean/logger.h"
 
 void DynamicSet::LoadAndAverage(CachedImageSet& imageSet)
 {
@@ -68,7 +69,7 @@ void DynamicSet::InterpolateAndStore(CachedImageSet& imageSet, const SpectralFit
 		directStore(imageSet);
 	}
 	else {
-		std::cout << "Interpolating from " << _channelsInDeconvolution << " to " << _imagingTable.SquaredGroupCount() << " channels...\n";
+		Logger::Info << "Interpolating from " << _channelsInDeconvolution << " to " << _imagingTable.SquaredGroupCount() << " channels...\n";
 		
 		// TODO should use spectralimagefitter to do the interpolation of images; here we should
 		// just unpack the data structure
@@ -134,7 +135,7 @@ void DynamicSet::AssignAndStore(CachedImageSet& imageSet)
 		directStore(imageSet);
 	}
 	else {
-		std::cout << "Assigning from " << _channelsInDeconvolution << " to " << _imagingTable.SquaredGroupCount() << " channels...\n";
+		Logger::Info << "Assigning from " << _channelsInDeconvolution << " to " << _imagingTable.SquaredGroupCount() << " channels...\n";
 		size_t imgIndex = 0;
 		for(size_t sqIndex=0; sqIndex!=_imagingTable.SquaredGroupCount(); ++sqIndex)
 		{

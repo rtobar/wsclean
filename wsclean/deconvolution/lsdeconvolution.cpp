@@ -66,7 +66,7 @@ struct LSDeconvolutionData
 		gsl_vector_set(f, lsData.width*lsData.height, lsData.regularization*totalModelledFlux);
 		
 #ifdef OUTPUT_LSD_DEBUG_INFO
-		std::cout << "Current RMS=" << sqrt(rmsSum / (lsData.height*lsData.width)) << ", mean flux in model=" << totalModelledFlux/lsData.maskPositions.size() << ", peak=" << peakFlux << ", total cost=" << cost << '\n';
+		Logger::Debug << "Current RMS=" << sqrt(rmsSum / (lsData.height*lsData.width)) << ", mean flux in model=" << totalModelledFlux/lsData.maskPositions.size() << ", peak=" << peakFlux << ", total cost=" << cost << '\n';
 #endif
 		
 		return GSL_SUCCESS;
@@ -75,7 +75,7 @@ struct LSDeconvolutionData
 	static int fitting_func_deriv(const gsl_vector *xvec, void *data, gsl_matrix *J)
 	{
 #ifdef OUTPUT_LSD_DEBUG_INFO
-		//std::cout << "Calculating Jacobian... " << std::flush;
+		//Logger::Info << "Calculating Jacobian... " << std::flush;
 #endif
 		const LSDeconvolutionData &lsData = *reinterpret_cast<LSDeconvolutionData*>(data);
 
@@ -123,7 +123,7 @@ struct LSDeconvolutionData
 			gsl_matrix_set(J, lsData.width*lsData.height, p, dpval * lsData.regularization);
 		}
 #ifdef OUTPUT_LSD_DEBUG_INFO
-		//std::cout << "DONE\n";
+		//Logger::Info << "DONE\n";
 #endif
 		return GSL_SUCCESS;
 	}
@@ -164,7 +164,7 @@ void LSDeconvolution::linearFit(double* dataImage, double* modelImage, const dou
 {
 	ao::uvector<std::pair<size_t, size_t>> maskPositions;
 	getMaskPositions(maskPositions, _cleanMask, width, height);
-	std::cout << "Running LSDeconvolution with " << maskPositions.size() << " parameters.\n";
+	Logger::Info << "Running LSDeconvolution with " << maskPositions.size() << " parameters.\n";
 	
 	// y = X c
 	//   - y is vector of N,     N=number of data points (pixels in image)
@@ -207,10 +207,11 @@ void LSDeconvolution::linearFit(double* dataImage, double* modelImage, const dou
 		}
 	}
 	
-	std::cout << "psf(0,0) = " << psfImage[midX%width + (midY%height)*width] << "\n";
-	std::cout << "Fitting... " << std::flush;
+	Logger::Info << "psf(0,0) = " << psfImage[midX%width + (midY%height)*width] << "\n";
+	Logger::Info << "Fitting... ";
+	Logger::Info.Flush();
 	int result = gsl_multifit_linear(x, y, c, cov, &chisq, work);
-	std::cout << "result=" << gsl_strerror(result) << "\n";
+	Logger::Info << "result=" << gsl_strerror(result) << "\n";
 	gsl_multifit_linear_free(work);
 	
 	for(size_t i=0; i!=n; ++n)
@@ -258,7 +259,7 @@ void LSDeconvolution::nonLinearFit(double* dataImage, double* modelImage, const 
 		
 	getMaskPositions(_data->maskPositions, _cleanMask, width, height);
 	size_t parameterCount = _data->maskPositions.size(), dataCount = width * height + 1;
-	std::cout << "Running LSDeconvolution with " << parameterCount << " parameters.\n";
+	Logger::Info << "Running LSDeconvolution with " << parameterCount << " parameters.\n";
 	
 	const gsl_multifit_fdfsolver_type *T = gsl_multifit_fdfsolver_lmsder;
 	_data->solver = gsl_multifit_fdfsolver_alloc (T, dataCount, parameterCount);
@@ -293,7 +294,7 @@ void LSDeconvolution::nonLinearFit(double* dataImage, double* modelImage, const 
 		status = gsl_multifit_test_delta(_data->solver->dx, _data->solver->x, 1e-4, 1e-4);
 		
   } while (status == GSL_CONTINUE && iter < 100);
-	std::cout << "niter=" << iter << ", status=" << gsl_strerror(status) << "\n";
+	Logger::Info << "niter=" << iter << ", status=" << gsl_strerror(status) << "\n";
 	
 	for(size_t p=0; p!=parameterCount; ++p)
 	{

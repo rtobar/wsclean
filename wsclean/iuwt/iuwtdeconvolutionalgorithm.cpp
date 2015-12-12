@@ -713,34 +713,41 @@ void IUWTDeconvolutionAlgorithm::performSubImageFitAll(IUWTDecomposition& iuwt, 
 {
 	size_t width = iuwt.Width(), height = iuwt.Height();
 	
-	std::cout << "Fitting structure in images: ";
-	ao::uvector<double> correctionFactors;
-	scratchA = dirty;
-	performSubImageFitSingle(iuwt, mask, structureModel, scratchB, maxComp, psf, scratchA, 0, correctionFactors);
-		
-	fittedModel = 0.0;
-	
-	for(size_t imgIndex=0; imgIndex!=_dirtySet->size(); ++imgIndex)
+	if(_dirtySet->size() == 1)
 	{
-		std::cout << '.' << std::flush;
-		const double* subPsf = _psfs[_dirtySet->PSFIndex(imgIndex)];
-		
-		trim(scratchA, (*_dirtySet)[imgIndex], _width, _height, _curBoxXStart, _curBoxYStart, _curBoxXEnd, _curBoxYEnd);
-		
-		ao::uvector<double> smallSubPsf;
-		const double *subPsfData;
-		if(_width != width || _height != height)
-		{
-			trimPsf(smallSubPsf, subPsf, _width, _height, width, height);
-			subPsfData = smallSubPsf.data();
-		}
-		else {
-			subPsfData = subPsf;
-		}
-	
-		performSubImageFitSingle(iuwt, mask, structureModel, scratchB, maxComp, subPsfData, scratchA, fittedModel[imgIndex], correctionFactors);
+		// With only one image, we don't have to refit
+		fittedModel.Set(0, structureModel.data());
 	}
-	std::cout << '\n';
+	else {
+		std::cout << "Fitting structure in images: " << std::flush;
+		ao::uvector<double> correctionFactors;
+		scratchA = dirty;
+		performSubImageFitSingle(iuwt, mask, structureModel, scratchB, maxComp, psf, scratchA, 0, correctionFactors);
+			
+		fittedModel = 0.0;
+		
+		for(size_t imgIndex=0; imgIndex!=_dirtySet->size(); ++imgIndex)
+		{
+			std::cout << '.' << std::flush;
+			const double* subPsf = _psfs[_dirtySet->PSFIndex(imgIndex)];
+			
+			trim(scratchA, (*_dirtySet)[imgIndex], _width, _height, _curBoxXStart, _curBoxYStart, _curBoxXEnd, _curBoxYEnd);
+			
+			ao::uvector<double> smallSubPsf;
+			const double *subPsfData;
+			if(_width != width || _height != height)
+			{
+				trimPsf(smallSubPsf, subPsf, _width, _height, width, height);
+				subPsfData = smallSubPsf.data();
+			}
+			else {
+				subPsfData = subPsf;
+			}
+		
+			performSubImageFitSingle(iuwt, mask, structureModel, scratchB, maxComp, subPsfData, scratchA, fittedModel[imgIndex], correctionFactors);
+		}
+		std::cout << '\n';
+	}
 }
 
 void IUWTDeconvolutionAlgorithm::performSubImageFitSingle(IUWTDecomposition& iuwt, const IUWTMask& mask, const ao::uvector<double>& structureModel, ao::uvector<double>& scratchB, const ImageAnalysis::Component& maxComp, const double* psf, ao::uvector<double>& subDirty, double* fittedSubModel, ao::uvector<double>& correctionFactors)
@@ -971,23 +978,3 @@ void IUWTDeconvolutionAlgorithm::PerformMajorIteration(size_t& iterCounter, size
 		++iterCounter;
 	} while(iterCounter!=nIter && doContinue);
 }
-
-void IUWTDeconvolutionAlgorithm::PerformMajorIteration(size_t& iterCounter, size_t nIter, double* model, double* dirty, const double* psf, bool& reachedMajorThreshold)
-{
-	ImagingTable table;
-	ImagingTableEntry& e = table.AddEntry();
-	e.index = 0;
-	e.squaredDeconvolutionIndex = 0;
-	e.outputChannelIndex = 0;
-	e.outputTimestepIndex = 0;
-	table.Update();
-	ImageBufferAllocator allocator;
-	DynamicSet
-		dirtySet(&table, allocator, 1, _width, _height),
-		modelSet(&table, allocator, 1, _width, _height);
-	ao::uvector<const double*> psfs(1, psf);
-	memcpy(dirtySet[0], dirty, _width*_height*sizeof(double));
-	memcpy(modelSet[0], model, _width*_height*sizeof(double));
-	PerformMajorIteration(iterCounter, nIter, modelSet, dirtySet, psfs, reachedMajorThreshold);
-}
-

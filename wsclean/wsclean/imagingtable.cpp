@@ -1,4 +1,5 @@
 #include "imagingtable.h"
+#include "logger.h"
 #include <map>
 
 ImagingTableEntry::ImagingTableEntry() :
@@ -44,15 +45,15 @@ ImagingTable ImagingTable::GetSquaredGroup(size_t index) const
 
 void ImagingTable::Print()
 {
-	std::cout << "=== IMAGING TABLE ===\n"
+	Logger::Info << "=== IMAGING TABLE ===\n"
 		"       # Pol Ch JG ²G Freq(MHz)\n";
 	for(size_t i=0; i!=IndependentGroupCount(); ++i)
 	{
 		bool isLastGroup = ((i+1) == IndependentGroupCount());
-		std::cout << "| Independent group:\n";
+		Logger::Info << "| Independent group:\n";
 		GetIndependentGroup(i).printIndependentGroup(isLastGroup);
 		if(!isLastGroup)
-			std::cout << "|\n";
+			Logger::Info << "|\n";
 	}
 }
 
@@ -65,29 +66,29 @@ void ImagingTable::printIndependentGroup(bool isFinal)
 		for(size_t j=0; j!=table._entries.size(); ++j)
 		{
 			if(i == 0 && j==0)
-				std::cout << "+-";
+				Logger::Info << "+-";
 			else if(isFinal)
-				std::cout << "  ";
+				Logger::Info << "  ";
 			else
-				std::cout << "| ";
+				Logger::Info << "| ";
 			
 			if(j == 0)
-				std::cout << "+-";
+				Logger::Info << "+-";
 			else if(isSecondFinal)
-				std::cout << "  ";
+				Logger::Info << "  ";
 			else
-				std::cout << "| ";
-			std::cout << "J-";
-			std::cout << table._entries[j].ToString() << '\n';
+				Logger::Info << "| ";
+			Logger::Info << "J-";
+			Logger::Info << table._entries[j].ToString() << '\n';
 		}
 		if(isFinal && isSecondFinal)
-			std::cout << '\n';
+			Logger::Info << '\n';
 		else if(isFinal)
-			std::cout << "  |\n";
+			Logger::Info << "  |\n";
 		else if(isSecondFinal)
-			std::cout << "|\n";
+			Logger::Info << "|\n";
 		else
-			std::cout << "| |\n";
+			Logger::Info << "| |\n";
 	}
 }
 

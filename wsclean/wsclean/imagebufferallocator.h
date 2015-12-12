@@ -6,6 +6,7 @@
 #include <vector>
 #include <stdexcept>
 #include <mutex>
+#include "logger.h"
 
 //#define USE_DIRECT_ALLOCATOR
 
@@ -85,7 +86,7 @@ public:
 		{
 			totalSize += double(i->size) * double(sizeof(double)*2);
 		}
-		std::cout << "Image buf alloc stats:\n"
+		Logger::Info << "Image buf alloc stats:\n"
 			"         max alloc'd images = " << _nRealMax << " real + " << _nComplexMax << " complex\n"
 			"       max allocated chunks = " << _buffers.size() << "\n"
 			"      current allocated mem = " << round(totalSize/1e8)/10.0 << " GB \n";
@@ -226,7 +227,7 @@ public:
 		}
 		if(unusedCount != 0)
 		{
-			std::cout << "Freed " << unusedCount << " image buffer(s).\n";
+			Logger::Info << "Freed " << unusedCount << " image buffer(s).\n";
 		}
 	}
 	

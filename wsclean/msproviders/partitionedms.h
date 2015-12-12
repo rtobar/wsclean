@@ -3,6 +3,7 @@
 
 #include <fstream>
 #include <string>
+#include <map>
 
 #include <casacore/ms/MeasurementSets/MeasurementSet.h>
 #include <casacore/tables/Tables/ArrayColumn.h>
@@ -21,7 +22,8 @@ public:
 	
 	struct ChannelRange
 	{
-		size_t dataDescId, start, end;
+		int dataDescId;
+		size_t start, end;
 		bool operator<(const ChannelRange& rhs) const
 		{
 			if(dataDescId < rhs.dataDescId) return true;
@@ -84,11 +86,11 @@ public:
 	private:
 		struct HandleData
 		{
-			HandleData(const std::string& metaFile, const std::string& msPath, const string& dataColumnName, const std::string& temporaryDirectory, const std::vector<ChannelRange>& channels, bool modelUpdateRequired, const std::set<PolarizationEnum>& polarizations, const MSSelection& selection) :
-			_metaFile(metaFile), _msPath(msPath), _dataColumnName(dataColumnName), _temporaryDirectory(temporaryDirectory), _channels(channels), _modelUpdateRequired(modelUpdateRequired),
+			HandleData(const std::string& msPath, const string& dataColumnName, const std::string& temporaryDirectory, const std::vector<ChannelRange>& channels, bool modelUpdateRequired, const std::set<PolarizationEnum>& polarizations, const MSSelection& selection) :
+			_msPath(msPath), _dataColumnName(dataColumnName), _temporaryDirectory(temporaryDirectory), _channels(channels), _modelUpdateRequired(modelUpdateRequired),
 			_polarizations(polarizations), _selection(selection), _referenceCount(1) { }
 			
-			std::string _metaFile, _msPath, _dataColumnName, _temporaryDirectory;
+			std::string _msPath, _dataColumnName, _temporaryDirectory;
 			std::vector<ChannelRange> _channels;
 			bool _modelUpdateRequired;
 			std::set<PolarizationEnum> _polarizations;
@@ -97,8 +99,8 @@ public:
 		} *_data;
 		
 		void decrease();
-		Handle(const std::string& metaFile, const std::string& msPath, const string& dataColumnName, const std::string& temporaryDirectory, const std::vector<ChannelRange>& channels, bool modelUpdateRequired, const std::set<PolarizationEnum>& polarizations, const MSSelection& selection) :
-			_data(new HandleData(metaFile, msPath, dataColumnName, temporaryDirectory, channels, modelUpdateRequired, polarizations, selection))
+		Handle(const std::string& msPath, const string& dataColumnName, const std::string& temporaryDirectory, const std::vector<ChannelRange>& channels, bool modelUpdateRequired, const std::set<PolarizationEnum>& polarizations, const MSSelection& selection) :
+			_data(new HandleData(msPath, dataColumnName, temporaryDirectory, channels, modelUpdateRequired, polarizations, selection))
 		{
 		}
 	};
@@ -106,6 +108,8 @@ public:
 	virtual void MakeMSRowToRowIdMapping(std::vector<size_t>& msToId, const MSSelection& selection);
 private:
 	static void unpartition(const Handle& handle);
+	
+	static void getDataDescIdMap(std::map<size_t,size_t>& dataDescIds, const vector<PartitionedMS::ChannelRange>& channels);
 	
 	casacore::MeasurementSet _ms;
 	std::ifstream _metaFile, _weightFile, _dataFile;
@@ -136,7 +140,7 @@ private:
 	} _partHeader;
 	
 	static std::string getPartPrefix(const std::string& msPath, size_t partIndex, PolarizationEnum pol, size_t dataDescId, const std::string& tempDir);
-	static std::string getMetaFilename(const std::string& msPath, const std::string& tempDir);
+	static std::string getMetaFilename(const std::string& msPath, const std::string& tempDir, size_t dataDescId);
 };
 
 #endif

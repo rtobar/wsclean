@@ -116,9 +116,15 @@ class Model
 		void GetClusterNames(std::vector<std::string>& clusterNames) {
 			clusterNames.clear();
 			clusterNames.reserve(_clusters.size());
-			for(std::map<std::string,ModelCluster>::const_iterator i=_clusters.begin();
-					i!=_clusters.end(); ++i)
-				clusterNames.push_back(i->first);
+			std::set<std::string> clusterWasAdded;
+			for(const_iterator s=begin(); s!=end(); ++s)
+			{
+				if(clusterWasAdded.count(s->ClusterName()) == 0)
+				{
+					clusterNames.push_back(s->ClusterName());
+					clusterWasAdded.insert(s->ClusterName());
+				}
+			}
 		}
 		
 		void RemoveSource(size_t index) { _sources.erase(_sources.begin() + index); }
