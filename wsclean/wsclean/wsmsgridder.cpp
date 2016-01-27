@@ -41,7 +41,7 @@ WSMSGridder::WSMSGridder(ImageBufferAllocator* imageAllocator, size_t threadCoun
 	_beamSize(0.0),
 	_totalWeight(0.0),
 	_startTime(0.0),
-	_gridMode(WStackingGridder::NearestNeighbour),
+	_gridMode(WStackingGridder::KaiserBesselKernel),
 	_cpuCount(threadCount),
 	_laneBufferSize(std::max<size_t>(_cpuCount*2,1024)),
 	_imageBufferAllocator(imageAllocator),

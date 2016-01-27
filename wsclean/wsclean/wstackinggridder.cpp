@@ -18,7 +18,7 @@ WStackingGridder::WStackingGridder(size_t width, size_t height, double pixelSize
 	_phaseCentreDM(0.0),
 	_isComplex(false),
 	_imageConjugatePart(false),
-	_gridMode(KaiserBessel),
+	_gridMode(KaiserBesselKernel),
 	_overSamplingFactor(overSamplingFactor),
 	_kernelSize(kernelSize),
 	_imageData(fftThreadCount),
@@ -232,8 +232,18 @@ void WStackingGridder::makeKernels()
 {
 	_griddingKernels.resize(_overSamplingFactor * _overSamplingFactor);
 	_1dKernel.resize(_kernelSize*_overSamplingFactor);
-	const double alpha = _kernelSize;
-	makeKernel(_1dKernel, alpha, _overSamplingFactor);
+	const double alpha = 8.6;
+	
+	switch(_gridMode)
+	{
+		case NearestNeighbourGridding:
+		case KaiserBesselKernel:
+			makeKaiserBesselKernel(_1dKernel, alpha, _overSamplingFactor);
+			break;
+		case RectangularKernel:
+			makeRectangularKernel(_1dKernel, _overSamplingFactor);
+			break;
+	}
 	
 	std::vector<std::vector<double>>::iterator gridKernelIter = _griddingKernels.begin();
 	for(size_t j=0; j!=_overSamplingFactor; ++j)
@@ -257,7 +267,16 @@ void WStackingGridder::makeKernels()
 	}
 }
 
-void WStackingGridder::makeKernel(std::vector<double> &kernel, double alpha, size_t overSamplingFactor)
+void WStackingGridder::GetKaiserBesselKernel(double* kernel, size_t n, bool multiplyWithSinc)
+{
+	double alpha = 8.6;
+	std::vector<double> v(n);
+	makeKaiserBesselKernel(v, alpha, n/7, multiplyWithSinc);
+	for(size_t i=0; i!=n; ++i)
+		kernel[i] = v[i];
+}
+
+void WStackingGridder::makeKaiserBesselKernel(std::vector<double> &kernel, double alpha, size_t overSamplingFactor, bool withSinc)
 {
 	size_t
 		n = kernel.size(),
@@ -268,13 +287,31 @@ void WStackingGridder::makeKernel(std::vector<double> &kernel, double alpha, siz
 	for(size_t i=1; i!=mid+1; i++)
 	{
 		double x = i;
-		sincKernel[i] = sin(M_PI*filterRatio*x)/(M_PI*x);
+		sincKernel[i] = withSinc ? (sin(M_PI*filterRatio*x)/(M_PI*x)) : filterRatio;
 	}
-	const double
-		normFactor = double(overSamplingFactor) / bessel0(alpha, 1e-8),
-		nSquared = n*n;
+	const double normFactor = double(overSamplingFactor) / bessel0(alpha, 1e-8);
 	for(size_t i=0; i!=mid+1; i++)
-		kernel[mid+i] = sincKernel[i] * bessel0(alpha * sqrt(1.0-(double(i*i)/nSquared)), 1e-8) * normFactor;
+	{
+		double term = double(i)/mid;
+		kernel[mid+i] = sincKernel[i] * bessel0(alpha * sqrt(1.0-(term*term)), 1e-8) * normFactor;
+	}
+	for(size_t i=0; i!=mid; i++)
+		kernel[i] = kernel[n-1-i];
+}
+
+void WStackingGridder::makeRectangularKernel(std::vector<double> &kernel, size_t overSamplingFactor)
+{
+	size_t
+		n = kernel.size(),
+		mid = n/2;
+	const double filterRatio = 1.0 / double(overSamplingFactor); // FILTER POINT / TOTAL BANDWIDTH
+	kernel[mid] = 1.0;
+	const double normFactor = double(overSamplingFactor);
+	for(size_t i=1; i!=mid+1; i++)
+	{
+		double x = i;
+		kernel[mid+i] = normFactor * sin(M_PI*filterRatio*x)/(M_PI*x);
+	}
 	for(size_t i=0; i!=mid; i++)
 		kernel[i] = kernel[n-1-i];
 }
@@ -286,14 +323,14 @@ double WStackingGridder::bessel0(double x, double precision)
 	double
 		d = 0.0,
 		ds = 1.0,
-		s = 1.0;
+		sum = 1.0;
 	do
 	{
 		d += 2.0;
 		ds *= x*x/(d*d);
-		s += ds;
-	} while (ds > s*precision);
-	return s;
+		sum += ds;
+	} while (ds > sum*precision);
+	return sum;
 }
 
 void WStackingGridder::AddDataSample(std::complex<float> sample, double uInLambda, double vInLambda, double wInLambda)
@@ -320,8 +357,19 @@ void WStackingGridder::AddDataSample(std::complex<float> sample, double uInLambd
 	{
 		size_t layerIndex = wLayer - layerOffset;
 		std::complex<double>* uvData = _layeredUVData[layerIndex];
-		if(_gridMode == KaiserBessel)
+		if(_gridMode == NearestNeighbourGridding)
 		{
+			int
+				x = int(round(uInLambda * _pixelSizeX * _width)),
+				y = int(round(vInLambda * _pixelSizeY * _height));
+			if(x > -int(_width)/2 && y > -int(_height)/2 && x <= int(_width)/2 && y <= int(_height)/2)
+			{
+				if(x < 0) x += _width;
+				if(y < 0) y += _height;
+				uvData[x + y*_width] += sample;
+			}
+		}
+		else {
 			double
 				xExact = uInLambda * _pixelSizeX * _width,
 				yExact = vInLambda * _pixelSizeY * _height;
@@ -372,19 +420,6 @@ void WStackingGridder::AddDataSample(std::complex<float> sample, double uInLambd
 				}
 			}
 		}
-		else {
-			int
-				x = int(round(uInLambda * _pixelSizeX * _width)),
-				y = int(round(vInLambda * _pixelSizeY * _height));
-			if(x > -int(_width)/2 && y > -int(_height)/2 && x <= int(_width)/2 && y <= int(_height)/2)
-			{
-				if(x < 0) x += _width;
-				if(y < 0) y += _height;
-				uvData[x + y*_width] += sample;
-			} else {
-				//std::cout << "Sample fell off uv-plane (" << x << "," << y << ")\n";
-			}
-		}
 	}
 }
 
@@ -408,8 +443,22 @@ void WStackingGridder::SampleDataSample(std::complex<double>& value, double uInL
 		size_t layerIndex = wLayer - layerOffset;
 		std::complex<double>* uvData = _layeredUVData[layerIndex];
 		std::complex<double> sample;
-		if(_gridMode == KaiserBessel)
+		if(_gridMode == NearestNeighbourGridding)
 		{
+			int
+				x = int(round(uInLambda * _pixelSizeX * _width)),
+				y = int(round(vInLambda * _pixelSizeY * _height));
+			if(x > -int(_width)/2 && y > -int(_height)/2 && x <= int(_width)/2 && y <= int(_height)/2)
+			{
+				if(x < 0) x += _width;
+				if(y < 0) y += _height;
+				sample = uvData[x + y*_width];
+			} else {
+				sample = std::complex<double>(std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN());
+				//std::cout << "Sampling outside uv-plane (" << x << "," << y << ")\n";
+			}
+		}
+		else {
 			sample = 0.0;
 			double
 				xExact = uInLambda * _pixelSizeX * _width,
@@ -465,20 +514,6 @@ void WStackingGridder::SampleDataSample(std::complex<double>& value, double uInL
 				//std::cout << "Sampling outside uv-plane (" << x << "," << y << ")\n";
 			}
 		}
-		else {
-			int
-				x = int(round(uInLambda * _pixelSizeX * _width)),
-				y = int(round(vInLambda * _pixelSizeY * _height));
-			if(x > -int(_width)/2 && y > -int(_height)/2 && x <= int(_width)/2 && y <= int(_height)/2)
-			{
-				if(x < 0) x += _width;
-				if(y < 0) y += _height;
-				sample = uvData[x + y*_width];
-			} else {
-				sample = std::complex<double>(std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN());
-				//std::cout << "Sampling outside uv-plane (" << x << "," << y << ")\n";
-			}
-		}
 		if(isConjugated)
 			value = sample;
 		else
@@ -524,7 +559,7 @@ void WStackingGridder::finalizeImage(double multiplicationFactor, std::vector<do
 		}
 	}
 	
-	if(_gridMode == KaiserBessel)
+	if(_gridMode != NearestNeighbourGridding)
 		correctImageForKernel<false>(dataArray[0]);
 }
 
@@ -586,7 +621,7 @@ void WStackingGridder::initializePrediction(const double* image, std::vector<dou
 			++inPtr;
 		}
 	}
-	if(_gridMode == KaiserBessel)
+	if(_gridMode != NearestNeighbourGridding)
 	{
 		correctImageForKernel<false>(dataArray[0]);
 	}

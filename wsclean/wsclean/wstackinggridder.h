@@ -88,13 +88,23 @@ class WStackingGridder
 		enum GridModeEnum {
 			
 			/** Simple method that places/samples a visibility on the nearest uv-cell. */
-			NearestNeighbour,
+			NearestNeighbourGridding,
 			
-			/** Interpolate with a Kaiser-Bessel kernel. This attenuates aliasing somewhat.
+			/** Interpolate with a Kaiser-Bessel kernel. This attenuates aliasing. The
+			 * Kaiser-Bessel window is very similar to the prolate spheroidal kernel,
+			 * which is considered the optimal gridding window.
 			 * When this mode is selected, the kernel size and oversampling factor can be
 			 * specified. This is the recommended and default mode.
 			 */
-			KaiserBessel
+			KaiserBesselKernel,
+			
+			/** Interpolate with a rectangular window. This will give the sharpest
+			 * transition at the edge of the image, so will maximally attenuate objects
+			 * just past to the edge. However, objects further from the edge will not be
+			 * as much attenuated compared to the KB window, which has much deeper
+			 * sidelobes further out.
+			 */
+			RectangularKernel
 		};
 		
 		/** Construct a new gridder with given settings.
@@ -458,7 +468,14 @@ class WStackingGridder
 		 * Set the kernel function and its interpolation method used for gridding.
 		 * @param mode The new gridding mode.
 		 */
-		void SetGridMode(enum GridModeEnum mode) { _gridMode = mode; }
+		void SetGridMode(enum GridModeEnum mode) {
+			if(mode != _gridMode)
+			{
+				_gridMode = mode;
+				if(_gridMode != NearestNeighbourGridding)
+					makeKernels();
+			}
+		}
 		
 		/**
 		 * Whether the image produced by inversion or used by prediction is complex.
@@ -540,6 +557,8 @@ class WStackingGridder
 			return _layeredUVData[layerIndex];
 		}
 		
+		void GetKaiserBesselKernel(double* kernel, size_t n, bool multiplyWithSinc);
+		
 		size_t Width() const { return _width; }
 		size_t Height() const { return _height; }
 		double PixelSizeX() const { return _pixelSizeX; }
@@ -564,7 +583,19 @@ class WStackingGridder
 		void initializePrediction(const double *image, std::vector<double*>& dataArray);
 		
 		void makeKernels();
-		void makeKernel(std::vector<double> &kernel, double alpha, size_t overSamplingFactor);
+		/**
+		 * Make the Kaiser Bessel windowed sinc functions.
+		 * Alpha is a parameter of the Kaiser Bessel window function. Values of alpha correspond with the following functions:
+		 * -   0 ; the rectangular window
+		 * -   5 ; similar to the Hamming window
+		 * -   6 ; similar to the Hann window
+		 * - 8.6 ; similar to the Blackmann window
+		 * -  14 ; similar to prolate spheroidal
+		 */
+		void makeKaiserBesselKernel(std::vector<double> &kernel, double alpha, size_t overSamplingFactor, bool withSinc=true);
+		
+		void makeRectangularKernel(std::vector<double> &kernel, size_t overSamplingFactor);
+		
 		double bessel0(double x, double precision);
 		template<bool Inverse>
 		void correctImageForKernel(double *image) const;

@@ -129,9 +129,9 @@ void print_help()
 		"   Perform inversion at the Nyquist resolution and upscale the image to the requested image size afterwards.\n"
 		"   This speeds up inversion considerably, but makes aliasing slightly worse. This effect is\n"
 		"   in most cases <1%. Default: on.\n"
-		"-gridmode <nn or kb>\n"
+		"-gridmode <\"nn\", \"kb\" or \"rect\">\n"
 		"   Kernel and mode used for gridding: kb = Kaiser-Bessel (default with 7 pixels), nn = nearest\n"
-		"   neighbour (no kernel). Default: kb.\n"
+		"   neighbour (no kernel), rect = rectangular window. Default: kb.\n"
 		"-gkernelsize <size>\n"
 		"   Gridding antialiasing kernel size. Default: 7.\n"
 		"-oversampling <factor>\n"
@@ -470,9 +470,11 @@ int main(int argc, char *argv[])
 			std::string gridModeStr = argv[argi];
 			boost::to_lower(gridModeStr);
 			if(gridModeStr == "kb" || gridModeStr == "kaiserbessel" || gridModeStr == "kaiser-bessel")
-				wsclean.SetGridMode(WStackingGridder::KaiserBessel);
+				wsclean.SetGridMode(WStackingGridder::KaiserBesselKernel);
+			else if(gridModeStr == "rect")
+				wsclean.SetGridMode(WStackingGridder::RectangularKernel);
 			else if(gridModeStr == "nn" || gridModeStr == "nearestneighbour")
-				wsclean.SetGridMode(WStackingGridder::NearestNeighbour);
+				wsclean.SetGridMode(WStackingGridder::NearestNeighbourGridding);
 			else
 				throw std::runtime_error("Invalid gridding mode: should be either kb (Kaiser-Bessel) or nn (NearestNeighbour)");
 		}

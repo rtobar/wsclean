@@ -52,7 +52,7 @@ class WSMSGridder : public InversionAlgorithm
 		enum WStackingGridder::GridModeEnum GridMode() const { return _gridMode; }
 		void SetGridMode(WStackingGridder::GridModeEnum gridMode) { _gridMode = gridMode; }
 		
-		virtual bool HasGriddingCorrectionImage() const { return _gridMode == WStackingGridder::KaiserBessel; }
+		virtual bool HasGriddingCorrectionImage() const { return _gridMode != WStackingGridder::NearestNeighbourGridding; }
 		virtual void GetGriddingCorrectionImage(double *image) const { _gridder->GetGriddingCorrectionImage(image); }
 		
 		size_t ActualInversionWidth() const { return _actualInversionWidth; }

@@ -63,7 +63,7 @@ WSClean::WSClean() :
 	_subtractModel(false),
 	_modelUpdateRequired(true),
 	_mfsWeighting(false),
-	_gridMode(WStackingGridder::KaiserBessel),
+	_gridMode(WStackingGridder::KaiserBesselKernel),
 	_filenames(),
 	_commandLine(),
 	_inversionWatch(false), _predictingWatch(false), _deconvolutionWatch(false),
