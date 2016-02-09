@@ -14,6 +14,11 @@
 class FitsWriter : protected FitsIOChecker
 {
 	public:
+	enum Unit {
+		JanskyPerBeam,
+		Kelvin,
+		MilliKelvin
+	};
 		FitsWriter() :
 			_width(0), _height(0),
 			_phaseCentreRA(0.0), _phaseCentreDec(0.0), _pixelSizeX(0.0), _pixelSizeY(0.0),
@@ -23,6 +28,7 @@ class FitsWriter : protected FitsIOChecker
 			_hasBeam(false),
 			_beamMajorAxisRad(0.0), _beamMinorAxisRad(0.0), _beamPositionAngle(0.0),
 			_polarization(Polarization::StokesI),
+			_unit(JanskyPerBeam),
 			_origin("AO/WSImager"), _originComment("Imager written by Andre Offringa"),
 			_multiFPtr(0)
 		{
@@ -116,6 +122,10 @@ class FitsWriter : protected FitsIOChecker
 		{
 			_polarization = polarization;
 		}
+		void SetUnit(Unit unit)
+		{
+			_unit = unit;
+		}
 		void SetOrigin(const std::string& origin, const std::string& comment)
 		{
 			_origin = origin;
@@ -194,6 +204,7 @@ class FitsWriter : protected FitsIOChecker
 		bool _hasBeam;
 		double _beamMajorAxisRad, _beamMinorAxisRad, _beamPositionAngle;
 		PolarizationEnum _polarization;
+		Unit _unit;
 		std::string _origin, _originComment;
 		std::vector<std::string> _history;
 		std::map<std::string, std::string> _extraStringKeywords;

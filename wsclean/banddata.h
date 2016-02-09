@@ -15,6 +15,9 @@
 class BandData
 {
 	public:
+		typedef std::reverse_iterator<double*> reverse_iterator;
+		typedef std::reverse_iterator<const double*> const_reverse_iterator;
+		
 		/**
 		 * Construct an empty instance.
 		 */
@@ -128,6 +131,18 @@ class BandData
 		const double* end() const
 		{ return _channelFrequencies+_channelCount; }
 		
+		std::reverse_iterator<double*> rbegin()
+		{ return std::reverse_iterator<double*>(end()); }
+		
+		std::reverse_iterator<double*> rend()
+		{ return std::reverse_iterator<double*>(begin()); }
+	
+		std::reverse_iterator<const double*> rbegin() const
+		{ return std::reverse_iterator<const double*>(end()); }
+		
+		std::reverse_iterator<const double*> rend() const
+		{ return std::reverse_iterator<const double*>(begin()); }
+	
 		/**
 		 * Assign new frequencies to this instance.
 		 * @param channelCount Number of channels.

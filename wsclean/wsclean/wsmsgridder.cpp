@@ -589,6 +589,8 @@ void WSMSGridder::predictWriteThread(ao::lane<PredictionWorkItem>* predictionWor
 
 void WSMSGridder::Invert()
 {
+	if(MeasurementSetCount() == 0)
+		throw std::runtime_error("Something is wrong during inversion: no measurement sets given to inversion algorithm");
 	MSData* msDataVector = new MSData[MeasurementSetCount()];
 	_hasFrequencies = false;
 	for(size_t i=0; i!=MeasurementSetCount(); ++i)

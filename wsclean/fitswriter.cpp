@@ -30,7 +30,20 @@ void FitsWriter::writeHeaders(fitsfile*& fptr, const std::string& filename, size
 	float zero = 0, one = 1, equinox = 2000.0;
 	fits_write_key(fptr, TFLOAT, "BSCALE", (void*) &one, "", &status); checkStatus(status, filename);
 	fits_write_key(fptr, TFLOAT, "BZERO", (void*) &zero, "", &status); checkStatus(status, filename);
-	fits_write_key(fptr, TSTRING, "BUNIT", (void*) "JY/BEAM", "Units are in Jansky per beam", &status); checkStatus(status, filename);
+	
+	switch(_unit)
+	{
+		default:
+		case JanskyPerBeam:
+			fits_write_key(fptr, TSTRING, "BUNIT", (void*) "JY/BEAM", "Units are in Jansky per beam", &status); checkStatus(status, filename);
+			break;
+		case Kelvin:
+			fits_write_key(fptr, TSTRING, "BUNIT", (void*) "K", "Units are in Kelvin", &status); checkStatus(status, filename);
+			break;
+		case MilliKelvin:
+			fits_write_key(fptr, TSTRING, "BUNIT", (void*) "mK", "Units are in milli Kelvin", &status); checkStatus(status, filename);
+			break;
+	}
 	
 	if(_hasBeam)
 	{

@@ -749,19 +749,38 @@ void WSClean::RunPredict()
 bool WSClean::selectChannels(MSSelection& selection, size_t msIndex, size_t dataDescId, const ImagingTableEntry& entry)
 {
 	const BandData& band = _msBands[msIndex][dataDescId];
-	double lastCh = band.ChannelFrequency(band.ChannelCount()-1);
-	if(band.ChannelCount()!=0 && entry.lowestFrequency <= lastCh && entry.highestFrequency >= band.ChannelFrequency(0))
+	double firstCh = band.ChannelFrequency(0), lastCh = band.ChannelFrequency(band.ChannelCount()-1);
+	// Some mses have decreasing (i.e. reversed) channel frequencies in them
+	bool isReversed = false;
+	if(firstCh > lastCh) {
+		std::swap(firstCh, lastCh);
+		isReversed = true;
+	}
+	if(band.ChannelCount()!=0 && entry.lowestFrequency <= lastCh && entry.highestFrequency >= firstCh)
 	{
-		const double* lowPtr =
-			std::lower_bound(band.begin(), band.end(), entry.lowestFrequency);
-		const double* highPtr =
-			std::lower_bound(lowPtr, band.end(), entry.highestFrequency);
-		if(highPtr == band.end())
-			--highPtr;
-		size_t
-			newStart = lowPtr - band.begin(),
+		size_t newStart, newEnd;
+		if(isReversed)
+		{
+			BandData::const_reverse_iterator lowPtr, highPtr;
+			lowPtr = std::lower_bound(band.rbegin(), band.rend(), entry.lowestFrequency);
+			highPtr = std::lower_bound(lowPtr, band.rend(), entry.highestFrequency);
+			
+			if(highPtr == band.rend())
+				--highPtr;
+			newStart = band.ChannelCount() - 1 - (lowPtr - band.rbegin());
+			newEnd = band.ChannelCount() - (highPtr - band.rbegin());
+		}
+		else {
+			const double *lowPtr, *highPtr;
+			lowPtr = std::lower_bound(band.begin(), band.end(), entry.lowestFrequency);
+			highPtr = std::lower_bound(lowPtr, band.end(), entry.highestFrequency);
+			
+			if(highPtr == band.end())
+				--highPtr;
+			newStart = lowPtr - band.begin();
 			newEnd = highPtr - band.begin() + 1;
-
+		}
+			
 		selection.SetChannelRange(newStart, newEnd);
 		return true;
 	}

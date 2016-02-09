@@ -286,6 +286,14 @@ PartitionedMS::Handle PartitionedMS::Partition(const string& msPath, const std::
 	size_t channelParts = channels.size();
 	casacore::MeasurementSet ms(msPath);
 	
+	if(channelParts != 1)
+	{
+		Logger::Debug << "Partitioning in " << channels.size() << " channels:";
+		for(size_t i=0; i!=channels.size(); ++i)
+			Logger::Debug << ' ' << channels[i].dataDescId << ':' << channels[i].start << '-' << channels[i].end;
+	}
+	Logger::Debug << '\n';
+	
 	// We need to enumerate the data desc ids, because each one needs a separate
 	// meta file because they can have different uvws and other info
 	std::map<size_t,size_t> selectedDataDescIds;

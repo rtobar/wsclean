@@ -34,6 +34,12 @@ FitsReader::FitsReader(const FitsReader& source) :
 	if(hduType != IMAGE_HDU) throw std::runtime_error("First HDU is not an image");
 }
 
+FitsReader::~FitsReader()
+{
+	int status = 0;
+	fits_close_file(_fitsPtr, &status);
+}
+
 FitsReader& FitsReader::operator=(const FitsReader& rhs)
 {
 	_filename = rhs._filename;
@@ -58,6 +64,9 @@ FitsReader& FitsReader::operator=(const FitsReader& rhs)
 	_history = rhs._history;
 	
 	int status = 0;
+	fits_close_file(_fitsPtr, &status);
+	checkStatus(status, _filename);
+	
 	fits_open_file(&_fitsPtr, _filename.c_str(), READONLY, &status);
 	checkStatus(status, _filename);
 	
@@ -307,12 +316,6 @@ void FitsReader::readHistory()
 			_history.push_back(&keyCard[8]);
 		}
 	}
-}
-
-FitsReader::~FitsReader()
-{
-	int status = 0;
-	fits_close_file(_fitsPtr, &status);
 }
 
 double FitsReader::ParseFitsDateToMJD(const char* valueStr)
