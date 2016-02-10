@@ -228,11 +228,25 @@ void processField(
 	double oldDec = phaseDirection.getAngle().getValue()[1];
 	double newRA = newDirection.getAngle().getValue()[0];
 	double newDec = newDirection.getAngle().getValue()[1];
+	double oldDl, oldDm, newDl, newDm;
+	ImageCoordinates::RaDecToLM(oldRA, oldDec, newRA, newDec, newDl, newDm);
+	if(fieldTable.keywordSet().isDefined("WSCLEAN_DL"))
+		oldDl = fieldTable.keywordSet().asDouble(RecordFieldId("WSCLEAN_DL"));
+	else
+		oldDl = 0.0;
+	if(fieldTable.keywordSet().isDefined("WSCLEAN_DM"))
+		oldDm = fieldTable.keywordSet().asDouble(RecordFieldId("WSCLEAN_DM"));
+	else
+		oldDm = 0.0;
+	bool oldIsShifted = (oldDl == 0.0 && oldDm == 0.0);
 	std::cout << "Processing field \"" << nameCol(fieldIndex) << "\": "
 		<< dirToString(phaseDirection) << " -> "
 		<< dirToString(newDirection) << " ("
-		<< ImageCoordinates::AngularDistance(oldRA, oldDec, newRA, newDec)*(180.0/M_PI) << " deg)\n";
-	bool isSameDirection = (dirToString(phaseDirection) == dirToString(newDirection));
+		<< ImageCoordinates::AngularDistance(oldRA, oldDec, newRA, newDec)*(180.0/M_PI) << " deg)\n"
+		<< "Denormal shifting: "
+		<< oldDl << ',' << oldDm << " -> " << newDl << ',' << newDm << '\n';
+	bool isSameDirection = (dirToString(phaseDirection) == dirToString(newDirection))
+		&& oldDl == newDl && oldDm == newDm;
 	if(isSameDirection && !force)
 	{
 		std::cout << "Phase centre did not change: skipping field.\n";
@@ -240,8 +254,6 @@ void processField(
 	else {
 		if(isSameDirection)
 			std::cout << "Phase centre not changed, but forcing update.\n";
-		double dl, dm;
-		ImageCoordinates::RaDecToLM(oldRA, oldDec, newRA, newDec, dl, dm);
 		
 		MDirection refDirection =
 			MDirection::Convert(newDirection,
@@ -306,7 +318,13 @@ void processField(
 					{
 						double u = newUVW.getVector()[0], v = newUVW.getVector()[1];
 						shiftFactor +=
-							-2.0*M_PI* (u*dl + v*dm);
+							-2.0*M_PI* (u*newDl + v*newDm);
+					}
+					if(oldIsShifted)
+					{
+						double u = oldUVW.getValue().getVector()[0], v = oldUVW.getValue().getVector()[1];
+						shiftFactor -=
+							-2.0*M_PI* (u*oldDl + v*oldDm);
 					}
 					
 					const BandData& thisBand = bandData[dataDescId];
@@ -340,8 +358,8 @@ void processField(
 		
 		if(shiftback)
 		{
-			fieldTable.rwKeywordSet().define(RecordFieldId("WSCLEAN_DL"), dl);
-			fieldTable.rwKeywordSet().define(RecordFieldId("WSCLEAN_DM"), dm);
+			fieldTable.rwKeywordSet().define(RecordFieldId("WSCLEAN_DL"), newDl);
+			fieldTable.rwKeywordSet().define(RecordFieldId("WSCLEAN_DM"), newDm);
 		}
 		else {
 			if(fieldTable.keywordSet().isDefined("WSCLEAN_DL"))
