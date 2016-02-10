@@ -243,7 +243,7 @@ void processField(
 		oldDm = fieldTable.keywordSet().asDouble(RecordFieldId("WSCLEAN_DM"));
 	else
 		oldDm = 0.0;
-	bool oldIsShifted = (oldDl == 0.0 && oldDm == 0.0);
+	bool oldIsShifted = (oldDl != 0.0 || oldDm != 0.0);
 	std::cout << "Processing field \"" << nameCol(fieldIndex) << "\": "
 		<< dirToString(phaseDirection) << " -> "
 		<< dirToString(newDirection) << " ("
