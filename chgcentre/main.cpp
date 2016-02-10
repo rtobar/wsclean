@@ -229,7 +229,12 @@ void processField(
 	double newRA = newDirection.getAngle().getValue()[0];
 	double newDec = newDirection.getAngle().getValue()[1];
 	double oldDl, oldDm, newDl, newDm;
-	ImageCoordinates::RaDecToLM(oldRA, oldDec, newRA, newDec, newDl, newDm);
+	if(shiftback)
+		ImageCoordinates::RaDecToLM(oldRA, oldDec, newRA, newDec, newDl, newDm);
+	else {
+		newDl = 0.0;
+		newDm = 0.0;
+	}
 	if(fieldTable.keywordSet().isDefined("WSCLEAN_DL"))
 		oldDl = fieldTable.keywordSet().asDouble(RecordFieldId("WSCLEAN_DL"));
 	else
