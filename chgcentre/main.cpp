@@ -442,7 +442,7 @@ void showChanges(
 }
 
 void rotateToGeoZenith(
-	MeasurementSet &set, int fieldIndex, MSField &fieldTable, bool onlyUVW)
+	MeasurementSet &set, int fieldIndex, MSField &fieldTable, bool onlyUVW, bool flipUVWSign)
 {
 	MultiBandData bandData(set.spectralWindow(), set.dataDescription());
 	ROScalarColumn<casacore::String> nameCol(fieldTable, fieldTable.columnName(MSFieldEnums::NAME));
@@ -532,6 +532,8 @@ void rotateToGeoZenith(
 
 			// Calculate the new UVW
 			MVuvw newUVW = uvws[antenna1].getValue() - uvws[antenna2].getValue();
+			if(flipUVWSign)
+				newUVW = -newUVW;
 			
 			// If one of the first results, output values for analyzing them.
 			if(row < 5)
@@ -672,7 +674,18 @@ int main(int argc, char **argv)
 			"The format of RA can either be 00h00m00.0s or 00:00:00.0\n"
 			"The format of Dec can either be 00d00m00.0s or 00.00.00.0\n\n"
 			"Example to rotate to HydA:\n"
-			"\tchgcentre myset.ms 09h18m05.8s -12d05m44s\n\n";
+			"\tchgcentre myset.ms 09h18m05.8s -12d05m44s\n\n"
+			"Some options:\n"
+			"-geozenith\n"
+			"\tWill calculate the RA,dec of zenith for each timestep, and moves there. This make the set non-standard.\n"
+			"-flipuvwsign\n"
+			"\tFlips the UVW sign. Necessary for LOFAR, for unknown reasons.\n"
+			"-minw\n"
+			"\tCalculate the direction that gives the minimum w-values for the array.\n"
+			"-zenith\n"
+			"\tShift to the average zenith value.\n"
+			"-only-uvw\n"
+			"\tOnly update UVW values, do not apply the phase shift.\n";
 	} else {
 		int argi=1;
 		bool
@@ -762,7 +775,7 @@ int main(int argc, char **argv)
 				if(show)
 					showChanges(*set, fieldIndex, fieldTable, newDirection, flipUVWSign);
 				else if(toGeozenith)
-					rotateToGeoZenith(*set, fieldIndex, fieldTable, onlyUVW);
+					rotateToGeoZenith(*set, fieldIndex, fieldTable, onlyUVW, flipUVWSign);
 				else
 					processField(*set, fieldIndex, fieldTable, newDirection, onlyUVW, shiftback, flipUVWSign, force);
 			}
