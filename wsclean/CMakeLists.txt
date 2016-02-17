@@ -14,11 +14,12 @@ else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -msse4.1") 
 endif(PORTABLE)
 
-find_library(CASA_MS_LIB casa_ms REQUIRED)
-find_library(CASA_TABLES_LIB casa_tables REQUIRED)
-find_library(CASA_CASA_LIB casa_casa REQUIRED)
-find_library(CASA_MEASURES_LIB casa_measures REQUIRED)
-find_library(CASA_FITS_LIB casa_fits REQUIRED)
+# Casacore has a separate CMake file in this directory
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMake)
+
+SET(CASACORE_MAKE_REQUIRED_EXTERNALS_OPTIONAL TRUE)
+find_package(Casacore REQUIRED COMPONENTS casa ms tables measures fits)
+
 find_library(FFTW3_LIB fftw3 REQUIRED)
 find_library(FFTW3_THREADS_LIB fftw3_threads REQUIRED)
 #Prevent accidentally finding old BoostConfig.cmake file from casapy
@@ -53,7 +54,7 @@ else()
   message("LOFAR beam library not found: LOFAR beam will not be available in WSClean. This is not an error, it means the 'lofar-dft' mode will be unavailable, which is not used often. Hence, this message can probably be ignored.")
 endif(LOFAR_STATION_RESPONSE_DIR AND LOFAR_STATION_RESPONSE_LIB)
 
-include_directories(${CASA_INCLUDE_DIR})
+include_directories(${CASACORE_INCLUDE_DIRS})
 include_directories(${Boost_INCLUDE_DIR})
 include_directories(${FITSIO_INCLUDE_DIR})
 include_directories(${FFTW3_INCLUDE_DIR})
@@ -124,10 +125,10 @@ add_library(wsclean-shared SHARED ${WSCLEANFILES})
 target_link_libraries(wsclean-shared)
 
 add_executable(wsclean wscleanmain.cpp)
-target_link_libraries(wsclean wsclean-lib ${CASA_LIBS} ${FFTW3_LIB} ${FFTW3_THREADS_LIB} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${FITSIO_LIB} ${GSL_LIB} ${GSL_CBLAS_LIB} ${PTHREAD_LIB} ${LBEAM_LIBS})
+target_link_libraries(wsclean wsclean-lib ${CASACORE_LIBRARIES} ${FFTW3_LIB} ${FFTW3_THREADS_LIB} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${FITSIO_LIB} ${GSL_LIB} ${GSL_CBLAS_LIB} ${PTHREAD_LIB} ${LBEAM_LIBS})
 
 add_executable(interfaceexample EXCLUDE_FROM_ALL interface/interfaceexample.c)
-target_link_libraries(interfaceexample wsclean-lib ${CASA_LIBS} ${FFTW3_LIB} ${FFTW3_THREADS_LIB} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${FITSIO_LIB} ${GSL_LIB} ${GSL_CBLAS_LIB} ${LBEAM_LIBS})
+target_link_libraries(interfaceexample wsclean-lib ${CASACORE_LIBRARIES} ${FFTW3_LIB} ${FFTW3_THREADS_LIB} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${FITSIO_LIB} ${GSL_LIB} ${GSL_CBLAS_LIB} ${LBEAM_LIBS})
 
 set_target_properties(wsclean-object PROPERTIES COMPILE_FLAGS "-std=c++0x")
 set_target_properties(wsclean PROPERTIES COMPILE_FLAGS "-std=c++0x")
