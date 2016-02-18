@@ -13,6 +13,17 @@ MultiScaleAlgorithm::MultiScaleAlgorithm(ImageBufferAllocator& allocator, double
 {
 }
 
+MultiScaleAlgorithm::~MultiScaleAlgorithm()
+{
+	std::cout << "Multi-scale cleaning summary:\n";
+	for(size_t scaleIndex=0; scaleIndex!=_scaleInfos.size(); ++scaleIndex)
+	{
+		const ScaleInfo& scaleEntry = _scaleInfos[scaleIndex];
+		std::cout << "- Scale " << round(scaleEntry.scale) << " px, nr of components cleaned: " << scaleEntry.nComponentsCleaned << '\n';
+	}
+}
+
+
 void MultiScaleAlgorithm::ExecuteMajorIteration(DynamicSet& dirtySet, DynamicSet& modelSet, const ao::uvector<const double*>& psfs, size_t width, size_t height, bool& reachedMajorThreshold)
 {
 	// Rough overview of the procedure:
@@ -22,7 +33,8 @@ void MultiScaleAlgorithm::ExecuteMajorIteration(DynamicSet& dirtySet, DynamicSet
 	// - Convolve individual images at fixed scale
 	// - Subminor loop:
 	//   - Measure individual peaks per individually convolved image
-	//   - Subtract PSF from individual & individually convolved images
+	//   - Subtract convolved PSF from individual images
+	//   - Subtract double convolved PSF from individually convolved images
 	//   - Find integrated peak at fixed scale
 	// - Convolve integrated image (all scales)
 	// - Find integrated peak & scale
@@ -125,6 +137,9 @@ void MultiScaleAlgorithm::ExecuteMajorIteration(DynamicSet& dirtySet, DynamicSet
 				
 				// Subtract double convolved PSFs from convolved images
 				tools->SubtractImage(individualConvolvedImages[imgIndex], doubleConvolvedPSFs[dirtySet.PSFIndex(imgIndex)].data(), _width, _height, _scaleInfos[scaleWithPeak].maxImageValueX, _scaleInfos[scaleWithPeak].maxImageValueY, componentGain);
+				// TODO this is incorrect, but why is the residual without Cotton-Schwab still OK ?
+				// Should test
+				//tools->SubtractImage(individualConvolvedImages[imgIndex], psf, _width, _height, _scaleInfos[scaleWithPeak].maxImageValueX, _scaleInfos[scaleWithPeak].maxImageValueY, componentGain);
 				
 				// Adjust model
 				addComponentToModel(modelSet[imgIndex], scaleWithPeak, componentValues[imgIndex]);
@@ -321,6 +336,8 @@ void MultiScaleAlgorithm::addComponentToModel(double* model, size_t scaleWithPea
 			+= componentGain;
 	else
 		MultiScaleTransforms::AddShapeComponent(model, _width, _height, _scaleInfos[scaleWithPeak].scale, _scaleInfos[scaleWithPeak].maxImageValueX, _scaleInfos[scaleWithPeak].maxImageValueY, componentGain);
+	
+	_scaleInfos[scaleWithPeak].nComponentsCleaned++;
 }
 
 double* MultiScaleAlgorithm::getConvolvedPSF(size_t psfIndex, size_t scaleIndex, const ao::uvector<const double*>& psfs, double* scratch,const std::unique_ptr<std::unique_ptr<ImageBufferAllocator::Ptr[]>[]>& convolvedPSFs)

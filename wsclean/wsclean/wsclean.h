@@ -12,10 +12,9 @@
 #include "../deconvolution/deconvolution.h"
 
 #include "cachedimageset.h"
-#include "wstackinggridder.h"
-#include "inversionalgorithm.h"
 #include "imagebufferallocator.h"
 #include "imagingtable.h"
+#include "wscleansettings.h"
 
 #include <set>
 
@@ -25,98 +24,15 @@ public:
 	WSClean();
 	~WSClean();
 	
-	Deconvolution& DeconvolutionInfo() { return _deconvolution; }
+	WSCleanSettings& Settings() { return _settings; }
+	const WSCleanSettings& Settings() const { return _settings; }
 	
-	void SetImageSize(size_t width, size_t height) { _untrimmedWidth = width; _untrimmedHeight = height; }
-	void SetTrimmedImageSize(size_t width, size_t height) { _trimWidth = width; _trimHeight = height; }
-	void SetPixelScale(double pixelScale) { _pixelScaleX = pixelScale; _pixelScaleY = pixelScale; }
-	void SetNWLayers(size_t nWLayers) { _nWLayers = nWLayers; }
-	void SetNWLayersForSize(size_t width, size_t height) { _nwWidth = width; _nwHeight = height; }
-	void SetColumnName(const std::string& columnName) { _columnName = columnName; }
-	void SetPolarizations(const std::set<PolarizationEnum>& polarizations) { _polarizations = polarizations; }
-	void SetMakePSF(bool makePSF) { _makePSF = makePSF; }
-	void SetPrefixName(const std::string& prefixName) { _prefixName = prefixName; }
-	void SetGridMode(WStackingGridder::GridModeEnum gridMode) { _gridMode = gridMode; }
-	//void SetSmallPSF(bool smallPSF) { _smallPSF = smallPSF; }
-	void SetSmallInversion(bool smallInversion) { _smallInversion = smallInversion; }
-	void SetIntervalSelection(size_t startTimestep, size_t endTimestep) {
-		_globalSelection.SetInterval(startTimestep, endTimestep);
-	}
-	void SetChannelSelection(size_t startChannel, size_t endChannel) {
-		_startChannel = startChannel;
-		_endChannel = endChannel;
-	}
-	void SetFieldSelection(size_t fieldId) {
-		_globalSelection.SetFieldId(fieldId);
-	}
-	void SetChannelsOut(size_t channelsOut) { _channelsOut = channelsOut; }
-	void SetIntervalCount(size_t intervalCount) { _intervalCount = intervalCount; }
-	void SetMFSWeighting(bool mfsWeighting) { _mfsWeighting = mfsWeighting; }
-	void SetWeightMode(enum WeightMode::WeightingEnum weighting) {
-		_weightMode.SetMode(WeightMode(weighting));
-	}
-	void SetBriggsWeighting(double robustness) {
-		_weightMode.SetMode(WeightMode::Briggs(robustness));
-	}
-	void SetSuperWeight(double superWeight) { _weightMode.SetSuperWeight(superWeight); }
-	void SetBeamSize(double major, double minor, double positionAngle) {
-		_manualBeamMajorSize = major;
-		_manualBeamMinorSize = minor;
-		_manualBeamPA = positionAngle;
-	}
-	void SetFittedBeam(bool fittedBeam) { _fittedBeam = fittedBeam; }
-	void SetTheoreticBeam(bool theoreticBeam) { _theoreticBeam = theoreticBeam; }
-	void SetCircularBeam(bool circularBeam) { _circularBeam = circularBeam; }
-	void SetAntialiasingKernelSize(size_t kernelSize) { _antialiasingKernelSize = kernelSize; }
-	void SetOversamplingFactor(size_t oversampling) { _overSamplingFactor = oversampling; }
-	void SetThreadCount(size_t threadCount) { _threadCount = threadCount; }
-	void SetTemporaryDirectory(const std::string& tempDir) { _temporaryDirectory = tempDir; }
-	void SetForceReorder(bool forceReorder) { _forceReorder = forceReorder; }
-	void SetForceNoReorder(bool forceNoReorder) { _forceNoReorder = forceNoReorder; }
-	void SetSubtractModel(bool subtractModel) { _subtractModel = subtractModel; }
-	void SetModelUpdateRequired(bool modelUpdateRequired) { _modelUpdateRequired = modelUpdateRequired; }
-	void SetMemFraction(double memFraction) { _memFraction = memFraction; }
-	void SetMemAbsLimit(double absMemLimit) { _absMemLimit = absMemLimit; }
-	void SetMinUVWInM(double minUVW) { _globalSelection.SetMinUVWInM(minUVW); }
-	void SetMaxUVWInM(double maxUVW) { _globalSelection.SetMaxUVWInM(maxUVW); }
-	void SetMinUVInLambda(double lambda) { _minUVInLambda = lambda; }
-	void SetMaxUVInLambda(double lambda) { _maxUVInLambda = lambda; }
-	void SetGaussianTaper(double beamSize) { _gaussianTaperBeamSize = beamSize; }
-	void SetTukeyTaper(double transitionSizeInLambda) { _tukeyTaperInLambda = transitionSizeInLambda; }
-	void SetTukeyInnerTaper(double transitionSizeInLambda) { _tukeyInnerTaperInLambda = transitionSizeInLambda; }
-	void SetEdgeTaper(double sizeInLambda) { _edgeTaperInLambda = sizeInLambda; }
-	void SetEdgeTukeyTaper(double sizeInLambda) { _edgeTukeyTaperInLambda = sizeInLambda; }
-	void SetWLimit(double wLimit) { _wLimit = wLimit; }
 	void SetCommandLine(const std::string& cmdLine) { _commandLine = cmdLine; }
-	void SetSaveWeights(bool saveWeights) { _isWeightImageSaved = saveWeights; }
-	void SetSaveUV(bool saveUV) { _isUVImageSaved = saveUV; }
-	void SetSaveGriddingImage(bool isGriddingImageSaved) { _isGriddingImageSaved = isGriddingImageSaved; }
-	void SetDFTPrediction(bool dftPrediction) { _dftPrediction = dftPrediction; }
-	void SetDFTWithBeam(bool applyBeam) { _dftWithBeam = applyBeam; }
-	void SetRankFilterLevel(double level) { _rankFilterLevel = level; }
-	void SetRankFilterSize(size_t nPixels) { _rankFilterSize = nPixels; }
-	void SetJoinPolarizations(bool joinPolarizations) { _joinedPolarizationCleaning = joinPolarizations; }
-	bool JoinPolarizations() const { return _joinedPolarizationCleaning; }
-	
-	void SetJoinChannels(bool joinChannels) { _joinedFrequencyCleaning = joinChannels; }
-	bool JoinChannels() const { return _joinedFrequencyCleaning; }
-	
-	void SetPredictChannels(size_t predictionChannels) { _predictionChannels = predictionChannels; }
-	
-	void AddInputMS(const std::string& msPath) { _filenames.push_back(msPath); }
 	
 	void RunClean();
 	
 	void RunPredict();
 	
-	void SetNormalizeForWeighting(bool normalizeForWeighting)
-	{
-		_normalizeForWeighting = normalizeForWeighting;
-	}
-	void SetVisibilityWeightingMode(enum InversionAlgorithm::VisibilityWeightingMode mode)
-	{
-		_visibilityWeightingMode = mode;
-	}
 private:
 	void runIndependentGroup(const ImagingTable& groupTable);
 	void predictGroup(const ImagingTable& imagingGroup);
@@ -178,10 +94,10 @@ private:
 	std::string getPSFPrefix(size_t channelIndex) const
 	{
 		std::ostringstream partPrefixNameStr;
-		partPrefixNameStr << _prefixName;
-		if(_intervalCount != 1)
+		partPrefixNameStr << _settings.prefixName;
+		if(_settings.intervalsOut != 1)
 			partPrefixNameStr << "-t" << fourDigitStr(_currentIntervalIndex);
-		if(_channelsOut != 1)
+		if(_settings.channelsOut != 1)
 			partPrefixNameStr << '-' << fourDigitStr(channelIndex);
 		return partPrefixNameStr.str();
 	}
@@ -189,12 +105,12 @@ private:
 	std::string getPrefix(PolarizationEnum polarization, size_t channelIndex, bool isImaginary) const
 	{
 		std::ostringstream partPrefixNameStr;
-		partPrefixNameStr << _prefixName;
-		if(_intervalCount != 1)
+		partPrefixNameStr << _settings.prefixName;
+		if(_settings.intervalsOut != 1)
 			partPrefixNameStr << "-t" << fourDigitStr(_currentIntervalIndex);
-		if(_channelsOut != 1)
+		if(_settings.channelsOut != 1)
 			partPrefixNameStr << '-' << fourDigitStr(channelIndex);
-		if(_polarizations.size() != 1)
+		if(_settings.polarizations.size() != 1)
 		{
 			partPrefixNameStr << '-' << Polarization::TypeToShortString(polarization);
 			if(isImaginary)
@@ -206,12 +122,12 @@ private:
 	std::string getMFSPrefix(PolarizationEnum polarization, bool isImaginary, bool isPSF) const
 	{
 		std::ostringstream partPrefixNameStr;
-		partPrefixNameStr << _prefixName;
-		if(_intervalCount != 1)
+		partPrefixNameStr << _settings.prefixName;
+		if(_settings.intervalsOut != 1)
 			partPrefixNameStr << "-t" << fourDigitStr(_currentIntervalIndex);
-		if(_channelsOut != 1)
+		if(_settings.channelsOut != 1)
 			partPrefixNameStr << "-MFS";
-		if(_polarizations.size() != 1 && !isPSF)
+		if(_settings.polarizations.size() != 1 && !isPSF)
 		{
 			partPrefixNameStr << '-' << Polarization::TypeToShortString(polarization);
 			if(isImaginary)
@@ -223,37 +139,14 @@ private:
 	bool preferReordering() const
 	{
 		return (
-			(_channelsOut != 1) ||
-			(_polarizations.size()>=4) ||
-			(_deconvolution.MGain() != 1.0) ||
-			_forceReorder
-		) && !_forceNoReorder;
+			(_settings.channelsOut != 1) ||
+			(_settings.polarizations.size()>=4) ||
+			(_settings.deconvolutionMGain != 1.0) ||
+			_settings.forceReorder
+		) && !_settings.forceNoReorder;
 	}
 	
-	size_t _untrimmedWidth, _untrimmedHeight;
-	size_t _trimWidth, _trimHeight;
-	size_t _nwWidth, _nwHeight;
-	size_t _channelsOut, _intervalCount;
-	double _pixelScaleX, _pixelScaleY;
-	double _manualBeamMajorSize, _manualBeamMinorSize, _manualBeamPA;
-	bool _fittedBeam, _theoreticBeam, _circularBeam;
-	double _memFraction, _absMemLimit, _minUVInLambda, _maxUVInLambda, _wLimit, _rankFilterLevel;
-	size_t _rankFilterSize;
-	double _gaussianTaperBeamSize, _tukeyTaperInLambda, _tukeyInnerTaperInLambda, _edgeTaperInLambda, _edgeTukeyTaperInLambda;
-	size_t _nWLayers, _antialiasingKernelSize, _overSamplingFactor, _threadCount;
-	size_t _startChannel, _endChannel;
-	bool _joinedPolarizationCleaning, _joinedFrequencyCleaning;
-	size_t _predictionChannels;
 	MSSelection _globalSelection;
-	std::string _columnName;
-	std::set<PolarizationEnum> _polarizations;
-	WeightMode _weightMode;
-	std::string _prefixName;
-	bool _smallInversion, _makePSF, _isWeightImageSaved, _isUVImageSaved, _isGriddingImageSaved, _dftPrediction, _dftWithBeam;
-	std::string _temporaryDirectory;
-	bool _forceReorder, _forceNoReorder, _subtractModel, _modelUpdateRequired, _mfsWeighting;
-	enum WStackingGridder::GridModeEnum _gridMode;
-	std::vector<std::string> _filenames;
 	std::string _commandLine;
 	std::vector<double> _inputChannelFrequencies;
 	
@@ -268,6 +161,8 @@ private:
 		double beamMaj, beamMin, beamPA;
 		double theoreticBeamSize;
 	};
+	WSCleanSettings _settings;
+	
 	std::vector<ChannelInfo> _infoPerChannel;
 	ChannelInfo _infoForMFS;
 	
@@ -282,8 +177,6 @@ private:
 	FitsWriter _fitsWriter;
 	std::vector<MSProvider*> _currentPolMSes;
 	std::vector<MultiBandData> _msBands;
-	bool _normalizeForWeighting;
-	enum InversionAlgorithm::VisibilityWeightingMode _visibilityWeightingMode;
 	Deconvolution _deconvolution;
 	ImagingTable _imagingTable;
 };

@@ -17,6 +17,7 @@ class MultiScaleAlgorithm : public UntypedDeconvolutionAlgorithm
 {
 public:
 	MultiScaleAlgorithm(class ImageBufferAllocator& allocator, double beamSize, double pixelScaleX, double pixelScaleY);
+	~MultiScaleAlgorithm();
 	
 	void SetCleanMask(const bool* cleanMask) { _cleanMask = cleanMask; }
 	
@@ -32,12 +33,22 @@ private:
 	
 	struct ScaleInfo
 	{
+		ScaleInfo() :
+			scale(0.0), psfPeak(0.0),
+			kernelPeak(0.0), factor(0.0),
+			gain(0.0), maxImageValue(0.0),
+			maxImageValueX(0), maxImageValueY(0),
+			isActive(false),
+			nComponentsCleaned(0)
+		{ }
+		
 		double scale;
 		double psfPeak, kernelPeak, factor, gain;
 		
 		double maxImageValue;
 		size_t maxImageValueX, maxImageValueY;
 		bool isActive;
+		size_t nComponentsCleaned;
 	};
 	std::vector<MultiScaleAlgorithm::ScaleInfo> _scaleInfos;
 

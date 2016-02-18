@@ -10,22 +10,9 @@
 
 #include "../casamaskreader.h"
 #include "../wsclean/imagingtable.h"
+#include "../wsclean/wscleansettings.h"
 
-Deconvolution::Deconvolution() :
-	_threshold(0.0), _gain(0.1), _mGain(1.0),
-	_nIter(0),
-	_allowNegative(true), 
-	_stopOnNegative(false),
-	_multiscale(false), _fastMultiscale(false),
-	_multiscaleThresholdBias(0.7), _multiscaleScaleBias(0.6),
-	_cleanBorderRatio(0.05),
-	_fitsMask(), _casaMask(),
-	_useMoreSane(false),
-	_useIUWT(false),
-	_moreSaneLocation(), _moreSaneArgs(),
-	_spectralFittingMode(NoSpectralFitting),
-	_spectralFittingTerms(0),
-	_requestedDeconvolutionChannelCount(0)
+Deconvolution::Deconvolution(const class WSCleanSettings& settings) : _settings(settings)
 {
 }
 
@@ -41,8 +28,8 @@ void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedM
 	
 	_imageAllocator->FreeUnused();
 	DynamicSet
-		residualSet(&groupTable, *_imageAllocator, _requestedDeconvolutionChannelCount, _imgWidth, _imgHeight),
-		modelSet(&groupTable, *_imageAllocator, _requestedDeconvolutionChannelCount, _imgWidth, _imgHeight);
+		residualSet(&groupTable, *_imageAllocator, _settings.deconvolutionChannelCount, _imgWidth, _imgHeight),
+		modelSet(&groupTable, *_imageAllocator, _settings.deconvolutionChannelCount, _imgWidth, _imgHeight);
 		
 	residualSet.LoadAndAverage(*_residualImages);
 	modelSet.LoadAndAverage(*_modelImages);
@@ -54,7 +41,7 @@ void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedM
 	for(size_t i=0; i!=psfVecs.size(); ++i)
 		psfs[i] = psfVecs[i].data();
 	
-	if(_useIUWT || _multiscale || _useMoreSane)
+	if(_settings.useIUWTDeconvolution || _settings.useMultiscale || _settings.useMoreSaneDeconvolution)
 	{
 		UntypedDeconvolutionAlgorithm& algorithm =
 			static_cast<UntypedDeconvolutionAlgorithm&>(*_cleanAlgorithm);
@@ -81,7 +68,7 @@ void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedM
 	
 	residualSet.AssignAndStore(*_residualImages);
 	
-	SpectralFitter fitter(_spectralFittingMode, _spectralFittingTerms);
+	SpectralFitter fitter(_settings.spectralFittingMode, _settings.spectralFittingTerms);
 	modelSet.InterpolateAndStore(*_modelImages, _cleanAlgorithm->Fitter());
 }
 
@@ -152,15 +139,15 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 			_polarizations.insert(firstSquaredGroup[p].polarization);
 	}
 	
-	if(_useMoreSane)
+	if(_settings.useMoreSaneDeconvolution)
 	{
-		_cleanAlgorithm.reset(new MoreSane(_moreSaneLocation, _moreSaneArgs, _moreSaneSigmaLevels, _prefixName, *_imageAllocator));
+		_cleanAlgorithm.reset(new MoreSane(_settings.moreSaneLocation, _settings.moreSaneArgs, _settings.moreSaneSigmaLevels, _settings.prefixName, *_imageAllocator));
 	}
-	else if(_useIUWT)
+	else if(_settings.useIUWTDeconvolution)
 	{
 		_cleanAlgorithm.reset(new IUWTDeconvolution());
 	}
-	else if(_multiscale)
+	else if(_settings.useMultiscale)
 	{
 		_cleanAlgorithm.reset(new MultiScaleAlgorithm(*_imageAllocator, beamSize, pixelScaleX, pixelScaleY));
 	}
@@ -175,7 +162,7 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 			
 		if(_summedCount != 1)
 		{
-			if(_fastMultiscale)
+			if(_settings.useFastMultiscale)
 			{
 				if(_squaredCount == 4)
 				{
@@ -198,7 +185,7 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 			}
 		}
 		else {
-			if(_fastMultiscale)
+			if(_settings.useFastMultiscale)
 			{
 				if(_squaredCount == 4)
 					_cleanAlgorithm.reset(new FastMultiScaleClean<deconvolution::PolarizedImageSet<4>>(beamSize, pixelScaleX, pixelScaleY));
@@ -217,41 +204,41 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 	else { // squaredCount == 1
 		if(_summedCount != 1)
 		{
-			if(_fastMultiscale)
+			if(_settings.useFastMultiscale)
 				_cleanAlgorithm.reset(new FastMultiScaleClean<deconvolution::MultiImageSet<deconvolution::SingleImageSet>>(beamSize, pixelScaleX, pixelScaleY));
 			else
 				_cleanAlgorithm.reset(new JoinedClean<deconvolution::MultiImageSet<deconvolution::SingleImageSet>>());
 		}
 		else {
-			if(_fastMultiscale)
+			if(_settings.useFastMultiscale)
 				_cleanAlgorithm.reset(new FastMultiScaleClean<deconvolution::SingleImageSet>(beamSize, pixelScaleX, pixelScaleY));
 			else
 				_cleanAlgorithm.reset(new SimpleClean());
 		}
 	}
 	
-	_cleanAlgorithm->SetMaxNIter(_nIter);
-	_cleanAlgorithm->SetThreshold(_threshold);
-	_cleanAlgorithm->SetGain(_gain);
-	_cleanAlgorithm->SetMGain(_mGain);
-	_cleanAlgorithm->SetCleanBorderRatio(_cleanBorderRatio);
-	_cleanAlgorithm->SetAllowNegativeComponents(_allowNegative);
-	_cleanAlgorithm->SetStopOnNegativeComponents(_stopOnNegative);
+	_cleanAlgorithm->SetMaxNIter(_settings.deconvolutionIterationCount);
+	_cleanAlgorithm->SetThreshold(_settings.deconvolutionThreshold);
+	_cleanAlgorithm->SetGain(_settings.deconvolutionGain);
+	_cleanAlgorithm->SetMGain(_settings.deconvolutionMGain);
+	_cleanAlgorithm->SetCleanBorderRatio(_settings.deconvolutionBorderRatio);
+	_cleanAlgorithm->SetAllowNegativeComponents(_settings.allowNegativeComponents);
+	_cleanAlgorithm->SetStopOnNegativeComponents(_settings.stopOnNegativeComponents);
 	_cleanAlgorithm->SetThreadCount(threadCount);
-	_cleanAlgorithm->SetMultiscaleScaleBias(_multiscaleScaleBias);
-	_cleanAlgorithm->SetMultiscaleThresholdBias(_multiscaleThresholdBias);
-	_cleanAlgorithm->SetSpectralFittingMode(_spectralFittingMode, _spectralFittingTerms);
+	_cleanAlgorithm->SetMultiscaleScaleBias(_settings.multiscaleDeconvolutionScaleBias);
+	_cleanAlgorithm->SetMultiscaleThresholdBias(_settings.multiscaleDeconvolutionThresholdBias);
+	_cleanAlgorithm->SetSpectralFittingMode(_settings.spectralFittingMode, _settings.spectralFittingTerms);
 	
 	ao::uvector<double> frequencies;
 	calculateDeconvolutionFrequencies(groupTable, frequencies);
 	_cleanAlgorithm->InitializeFrequencies(frequencies);
 	
-	if(!_fitsMask.empty())
+	if(!_settings.fitsDeconvolutionMask.empty())
 	{
 		if(_cleanMask.empty())
 		{
-			Logger::Info << "Reading mask '" << _fitsMask << "'...\n";
-			FitsReader maskReader(_fitsMask);
+			Logger::Info << "Reading mask '" << _settings.fitsDeconvolutionMask << "'...\n";
+			FitsReader maskReader(_settings.fitsDeconvolutionMask);
 			if(maskReader.ImageWidth() != _imgWidth || maskReader.ImageHeight() != _imgHeight)
 				throw std::runtime_error("Specified Fits file mask did not have same dimensions as output image!");
 			ao::uvector<float> maskData(_imgWidth*_imgHeight);
@@ -262,13 +249,13 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 		}
 		_cleanAlgorithm->SetCleanMask(_cleanMask.data());
 	}
-	else if(!_casaMask.empty())
+	else if(!_settings.casaDeconvolutionMask.empty())
 	{
 		if(_cleanMask.empty())
 		{
-			Logger::Info << "Reading CASA mask '" << _casaMask << "'...\n";
+			Logger::Info << "Reading CASA mask '" << _settings.casaDeconvolutionMask << "'...\n";
 			_cleanMask.assign(_imgWidth*_imgHeight, false);
-			CasaMaskReader maskReader(_casaMask);
+			CasaMaskReader maskReader(_settings.casaDeconvolutionMask);
 			if(maskReader.Width() != _imgWidth || maskReader.Height() != _imgHeight)
 				throw std::runtime_error("Specified CASA mask did not have same dimensions as output image!");
 			maskReader.Read(_cleanMask.data());
@@ -279,7 +266,7 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 
 void Deconvolution::calculateDeconvolutionFrequencies(const ImagingTable& groupTable, ao::uvector<double>& frequencies)
 {
-	size_t deconvolutionChannels = _requestedDeconvolutionChannelCount;
+	size_t deconvolutionChannels = _settings.deconvolutionChannelCount;
 	if(deconvolutionChannels == 0) deconvolutionChannels = _summedCount;
 	frequencies.assign(deconvolutionChannels, 0.0);
 	ao::uvector<size_t> weights(deconvolutionChannels, 0);

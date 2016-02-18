@@ -136,8 +136,10 @@ void print_help()
 		"   Gridding antialiasing kernel size. Default: 7.\n"
 		"-oversampling <factor>\n"
 		"   Oversampling factor used during gridding. Default: 63.\n"
-		"-makepsf\n"
+		"-make-psf\n"
 		"   Always make the psf, even when no cleaning is performed.\n"
+		"-make-psf-only\n"
+		"   Only make the psf, no images are made.\n"
 		"-savegridding\n"
 		"   Save the gridding correction image. This shows the effect of the antialiasing filter. Default: not saved.\n"
 		"-dft-prediction\n"
@@ -288,6 +290,7 @@ int main(int argc, char *argv[])
 	}
 	
 	WSClean wsclean;
+	WSCleanSettings& settings = wsclean.Settings();;
 	int argi = 1;
 	bool mfsWeighting = false, noMFSWeighting = false, predictionMode = false;
 	while(argi < argc && argv[argi][0] == '-')
@@ -309,15 +312,15 @@ int main(int argc, char *argv[])
 		else if(param == "tempdir")
 		{
 			++argi;
-			wsclean.SetTemporaryDirectory(argv[argi]);
+			settings.temporaryDirectory = argv[argi];
 		}
 		else if(param == "saveweights")
 		{
-			wsclean.SetSaveWeights(true);
+			settings.isWeightImageSaved = true;
 		}
 		else if(param == "saveuv")
 		{
-			wsclean.SetSaveUV(true);
+			settings.isUVImageSaved = true;
 		}
 		else if(param == "predict")
 		{
@@ -326,11 +329,11 @@ int main(int argc, char *argv[])
 		else if(param == "predict-channels")
 		{
 			++argi;
-			wsclean.SetPredictChannels(atoi(argv[argi]));
+			settings.predictionChannels = atoi(argv[argi]);
 		}
 		else if(param == "subtract-model")
 		{
-			wsclean.SetSubtractModel(true);
+			settings.subtractModel = true;
 		}
 		else if(param == "size")
 		{
@@ -339,130 +342,125 @@ int main(int argc, char *argv[])
 				height = atoi(argv[argi+2]);
 			if(width != height)
 				throw std::runtime_error("width != height : Can't handle non-square images yet");
-			wsclean.SetImageSize(width, height);
+			settings.untrimmedImageWidth = width;
+			settings.untrimmedImageHeight = height;
 			argi += 2;
 		}
 		else if(param == "trim")
 		{
-			size_t
-				width = atoi(argv[argi+1]),
-				height = atoi(argv[argi+2]);
-			wsclean.SetTrimmedImageSize(width, height);
+			settings.trimmedImageWidth = atoi(argv[argi+1]);
+			settings.trimmedImageHeight = atoi(argv[argi+2]);
 			argi += 2;
 		}
 		else if(param == "scale")
 		{
 			++argi;
-			wsclean.SetPixelScale(Angle::Parse(argv[argi], "scale parameter", Angle::Degrees));
+			settings.pixelScaleX = Angle::Parse(argv[argi], "scale parameter", Angle::Degrees);
+			settings.pixelScaleY = settings.pixelScaleX;
 		}
 		else if(param == "nwlayers")
 		{
 			++argi;
-			wsclean.SetNWLayers(atoi(argv[argi]));
+			settings.nWLayers = atoi(argv[argi]);
 		}
 		else if(param == "nwlayers-for-size")
 		{
-			size_t
-				width = atoi(argv[argi+1]),
-				height = atoi(argv[argi+2]);
-			wsclean.SetNWLayersForSize(width, height);
+			settings.widthForNWCalculation = atoi(argv[argi+1]);
+			settings.heightForNWCalculation = atoi(argv[argi+2]);
 			argi += 2;
 		}
 		else if(param == "gain")
 		{
 			++argi;
-			wsclean.DeconvolutionInfo().SetGain(atof(argv[argi]));
+			settings.deconvolutionGain = atof(argv[argi]);
 		}
 		else if(param == "mgain")
 		{
 			++argi;
-			wsclean.DeconvolutionInfo().SetMGain(atof(argv[argi]));
+			settings.deconvolutionMGain = atof(argv[argi]);
 		}
 		else if(param == "niter")
 		{
 			++argi;
-			wsclean.DeconvolutionInfo().SetNIter(atoi(argv[argi]));
+			settings.deconvolutionIterationCount = atoi(argv[argi]);
 		}
 		else if(param == "threshold")
 		{
 			++argi;
-			wsclean.DeconvolutionInfo().SetThreshold(atof(argv[argi]));
+			settings.deconvolutionThreshold = atof(argv[argi]);
 		}
 		else if(param == "datacolumn")
 		{
 			++argi;
-			wsclean.SetColumnName(argv[argi]);
+			settings.dataColumnName = argv[argi];
 		}
 		else if(param == "pol")
 		{
 			++argi;
-			wsclean.SetPolarizations(Polarization::ParseList(argv[argi]));
+			settings.polarizations = Polarization::ParseList(argv[argi]);
 		}
 		else if(param == "negative")
 		{
-			wsclean.DeconvolutionInfo().SetAllowNegativeComponents(true);
+			settings.allowNegativeComponents = true;
 		}
 		else if(param == "nonegative")
 		{
-			wsclean.DeconvolutionInfo().SetAllowNegativeComponents(false);
+			settings.allowNegativeComponents = false;
 		}
 		else if(param == "stopnegative")
 		{
-			wsclean.DeconvolutionInfo().SetStopOnNegativeComponents(true);
+			settings.stopOnNegativeComponents = true;
 		}
 		else if(param == "iuwt")
 		{
-			wsclean.DeconvolutionInfo().SetUseIUWT(true);
+			settings.useIUWTDeconvolution = true;
 			// Currently (WSClean 1.9, 2015-08-19) IUWT deconvolution
 			// seems not to work when allowing negative components. The algorithm
 			// becomes unstable. Hence, turn negative components off.
-			wsclean.DeconvolutionInfo().SetAllowNegativeComponents(false);
+			settings.allowNegativeComponents = false;
 		}
 		else if(param == "moresane-ext")
 		{
 			++argi;
-			wsclean.DeconvolutionInfo().SetUseMoreSane(true);
-			wsclean.DeconvolutionInfo().SetMoreSaneLocation(argv[argi]);
+			settings.useMoreSaneDeconvolution = true;
+			settings.moreSaneLocation = argv[argi];
 		}
 		else if(param == "moresane-arg")
 		{
 			++argi;
-			wsclean.DeconvolutionInfo().SetMoreSaneArgs(argv[argi]);
+			settings.moreSaneArgs = argv[argi];
 		}
 		else if(param == "moresane-sl")
 		{
 			++argi;
 			std::vector<std::string> slevels;
 			boost::split(slevels, argv[argi], boost::is_any_of(","));
-			wsclean.DeconvolutionInfo().SetMoreSaneSigmaLevels(slevels);
+			settings.moreSaneSigmaLevels = slevels;
 		}
-		else if(param == "makepsf")
+		else if(param == "make-psf")
 		{
-			wsclean.SetMakePSF(true);
+			settings.makePSF = true;
+		}
+		else if(param == "make-psf-only")
+		{
+			settings.makePSFOnly = true;
 		}
 		else if(param == "savegridding")
 		{
-			wsclean.SetSaveGriddingImage(true);
+			settings.isGriddingImageSaved = true;
 		}
 		else if(param == "dft-prediction")
 		{
-			wsclean.SetDFTPrediction(true);
+			settings.dftPrediction = true;
 		}
 		else if(param == "dft-with-beam")
 		{
-			wsclean.SetDFTWithBeam(true);
-		}
-		else if(param == "cleanareas")
-		{
-			throw std::runtime_error("Clean areas is not supported ATM");
-			//++argi;
-			//wsclean.SetCleanAreasFilename(argv[argi]);
+			settings.dftWithBeam = true;
 		}
 		else if(param == "name")
 		{
 			++argi;
-			wsclean.SetPrefixName(argv[argi]);
-			wsclean.DeconvolutionInfo().SetPrefixName(argv[argi]);
+			settings.prefixName = argv[argi];
 		}
 		else if(param == "gridmode")
 		{
@@ -470,49 +468,51 @@ int main(int argc, char *argv[])
 			std::string gridModeStr = argv[argi];
 			boost::to_lower(gridModeStr);
 			if(gridModeStr == "kb" || gridModeStr == "kaiserbessel" || gridModeStr == "kaiser-bessel")
-				wsclean.SetGridMode(WStackingGridder::KaiserBesselKernel);
+				settings.gridMode = WStackingGridder::KaiserBesselKernel;
 			else if(gridModeStr == "rect")
-				wsclean.SetGridMode(WStackingGridder::RectangularKernel);
+				settings.gridMode = WStackingGridder::RectangularKernel;
 			else if(gridModeStr == "nn" || gridModeStr == "nearestneighbour")
-				wsclean.SetGridMode(WStackingGridder::NearestNeighbourGridding);
+				settings.gridMode = WStackingGridder::NearestNeighbourGridding;
 			else
 				throw std::runtime_error("Invalid gridding mode: should be either kb (Kaiser-Bessel) or nn (NearestNeighbour)");
 		}
 		else if(param == "smallinversion")
 		{
-			wsclean.SetSmallInversion(true);
+			settings.smallInversion = true;
 		}
 		else if(param == "nosmallinversion")
 		{
-			wsclean.SetSmallInversion(false);
+			settings.smallInversion = false;
 		}
 		else if(param == "interval")
 		{
-			wsclean.SetIntervalSelection(atoi(argv[argi+1]), atoi(argv[argi+2]));
+			settings.startTimestep = atoi(argv[argi+1]);
+			settings.endTimestep = atoi(argv[argi+2]);
 			argi += 2;
 		}
 		else if(param == "intervalsout")
 		{
 			++argi;
-			wsclean.SetIntervalCount(atoi(argv[argi]));
+			settings.intervalsOut = atoi(argv[argi]);
 		}
 		else if(param == "channelrange")
 		{
-			wsclean.SetChannelSelection(atoi(argv[argi+1]), atoi(argv[argi+2]));
+			settings.startChannel = atoi(argv[argi+1]);
+			settings.endChannel = atoi(argv[argi+2]);
 			argi += 2;
 		}
 		else if(param == "channelsout")
 		{
 			++argi;
-			wsclean.SetChannelsOut(atoi(argv[argi]));
+			settings.channelsOut = atoi(argv[argi]);
 		}
 		else if(param == "joinpolarizations")
 		{
-			wsclean.SetJoinPolarizations(true);
+			settings.joinedPolarizationCleaning = true;
 		}
 		else if(param == "joinchannels")
 		{
-			wsclean.SetJoinChannels(true);
+			settings.joinedFrequencyCleaning = true;
 		}
 		else if(param == "mfsweighting")
 		{
@@ -522,70 +522,70 @@ int main(int argc, char *argv[])
 		{
 			++argi;
 			double taperBeamSize = Angle::Parse(argv[argi], "Gaussian taper", Angle::Arcseconds);
-			wsclean.SetGaussianTaper(taperBeamSize);
+			settings.gaussianTaperBeamSize = taperBeamSize;
 		}
 		else if(param == "taper-edge")
 		{
 			++argi;
-			wsclean.SetEdgeTaper(atof(argv[argi]));
+			settings.edgeTaperInLambda = atof(argv[argi]);
 		}
 		else if(param == "taper-edge-tukey")
 		{
 			++argi;
-			wsclean.SetEdgeTukeyTaper(atof(argv[argi]));
+			settings.edgeTukeyTaperInLambda = atof(argv[argi]);
 		}
 		else if(param == "taper-tukey")
 		{
 			++argi;
-			wsclean.SetTukeyTaper(atof(argv[argi]));
+			settings.tukeyTaperInLambda = atof(argv[argi]);
 		}
 		else if(param == "taper-inner-tukey")
 		{
 			++argi;
-			wsclean.SetTukeyInnerTaper(atof(argv[argi]));
+			settings.tukeyInnerTaperInLambda = atof(argv[argi]);
 		}
 		else if(param == "multiscale")
 		{
-			wsclean.DeconvolutionInfo().SetMultiscale(true);
+			settings.useMultiscale = true;
 		}
 		else if(param == "fast-multiscale")
 		{
-			wsclean.DeconvolutionInfo().SetFastMultiscale(true);
+			settings.useFastMultiscale = true;
 		}
 		else if(param == "multiscale-threshold-bias")
 		{
 			++argi;
-			wsclean.DeconvolutionInfo().SetMultiscaleThresholdBias(atof(argv[argi]));
+			settings.multiscaleDeconvolutionThresholdBias = atof(argv[argi]);
 		}
 		else if(param == "multiscale-scale-bias")
 		{
 			++argi;
-			wsclean.DeconvolutionInfo().SetMultiscaleScaleBias(atof(argv[argi]));
+			settings.multiscaleDeconvolutionScaleBias = atof(argv[argi]);
 		}
 		else if(param == "weighting-rank-filter")
 		{
 			++argi;
-			wsclean.SetRankFilterLevel(atof(argv[argi]));
+			settings.rankFilterLevel = atof(argv[argi]);
 		}
 		else if(param == "weighting-rank-filter-size")
 		{
 			++argi;
-			wsclean.SetRankFilterSize(atoi(argv[argi]));
+			settings.rankFilterSize = atoi(argv[argi]);
 		}
 		else if(param == "cleanborder")
 		{
 			++argi;
-			wsclean.DeconvolutionInfo().SetCleanBorderRatio(atof(argv[argi])*0.01);
+			settings.deconvolutionBorderRatio = atof(argv[argi])*0.01;
 		}
 		else if(param == "fitsmask")
 		{
 			++argi;
-			wsclean.DeconvolutionInfo().SetFitsMask(argv[argi]);
+			settings.fitsDeconvolutionMask = argv[argi];
 		}
 		else if(param == "casamask")
 		{
 			++argi;
-			wsclean.DeconvolutionInfo().SetCASAMask(argv[argi]);
+			settings.casaDeconvolutionMask = argv[argi];
 		}
 		else if(param == "nomfsweighting")
 		{
@@ -593,55 +593,59 @@ int main(int argc, char *argv[])
 		}
 		else if(param == "joinchannels")
 		{
-			wsclean.SetJoinChannels(true);
+			settings.joinedFrequencyCleaning = true;
 		}
 		else if(param == "fit-spectral-pol")
 		{
 			++argi;
-			wsclean.DeconvolutionInfo().SetFitSpectralPol(atoi(argv[argi]));
+			settings.spectralFittingMode = PolynomialSpectralFitting;
+			settings.spectralFittingTerms = atoi(argv[argi]);
 		}
 		else if(param == "fit-spectral-log-pol")
 		{
 			++argi;
-			wsclean.DeconvolutionInfo().SetFitSpectralLogPol(atoi(argv[argi]));
+			settings.spectralFittingMode = LogPolynomialSpectralFitting;
+			settings.spectralFittingTerms = atoi(argv[argi]);
 		}
 		else if(param == "deconvolution-channels")
 		{
 			++argi;
-			wsclean.DeconvolutionInfo().SetDeconvolutionChannels(atoi(argv[argi]));
+			settings.deconvolutionChannelCount = atoi(argv[argi]);
 		}
 		else if(param == "field")
 		{
 			++argi;
-			wsclean.SetFieldSelection(atoi(argv[argi]));
+			settings.fieldId = atoi(argv[argi]);
 		}
 		else if(param == "weight")
 		{
 			++argi;
 			std::string weightArg = argv[argi];
 			if(weightArg == "natural")
-				wsclean.SetWeightMode(WeightMode::NaturalWeighted);
+				settings.weightMode = WeightMode::NaturalWeighted;
 			else if(weightArg == "mwa")
-				wsclean.SetWeightMode(WeightMode::DistanceWeighted);
+				settings.weightMode = WeightMode::DistanceWeighted;
 			else if(weightArg == "uniform")
-				wsclean.SetWeightMode(WeightMode::UniformWeighted);
+				settings.weightMode = WeightMode::UniformWeighted;
 			else if(weightArg == "briggs")
 			{
 				++argi;
-				wsclean.SetBriggsWeighting(atof(argv[argi]));
+				settings.weightMode = WeightMode::Briggs(atof(argv[argi]));
 			}
 			else throw std::runtime_error("Unknown weighting mode specified");
 		}
 		else if(param == "superweight")
 		{
 			++argi;
-			wsclean.SetSuperWeight(atof(argv[argi]));
+			settings.weightMode.SetSuperWeight(atof(argv[argi]));
 		}
 		else if(param == "beamsize")
 		{
 			++argi;
 			double beam = Angle::Parse(argv[argi], "beam size", Angle::Arcseconds);
-			wsclean.SetBeamSize(beam, beam, 0.0);
+			settings.manualBeamMajorSize = beam;
+			settings.manualBeamMinorSize = beam;
+			settings.manualBeamPA = 0.0;
 		}
 		else if(param == "beamshape")
 		{
@@ -649,101 +653,103 @@ int main(int argc, char *argv[])
 			double beamMin = Angle::Parse(argv[argi+2], "beam shape, minor axis", Angle::Arcseconds);
 			double beamPA = Angle::Parse(argv[argi+3], "beam shape, position angle", Angle::Degrees);
 			argi+=3;
-			wsclean.SetBeamSize(beamMaj, beamMin, beamPA);
+			settings.manualBeamMajorSize = beamMaj;
+			settings.manualBeamMinorSize = beamMin;
+			settings.manualBeamPA = beamPA;
 		}
 		else if(param == "fitbeam")
 		{
-			wsclean.SetFittedBeam(true);
+			settings.fittedBeam = true;
 		}
 		else if(param == "nofitbeam")
 		{
-			wsclean.SetFittedBeam(false);
+			settings.fittedBeam = false;
 		}
 		else if(param == "theoreticbeam")
 		{
-			wsclean.SetTheoreticBeam(true);
-			wsclean.SetFittedBeam(false);
+			settings.theoreticBeam = true;
+			settings.fittedBeam = false;
 		}
 		else if(param == "circularbeam")
 		{
-			wsclean.SetCircularBeam(true);
+			settings.circularBeam = true;
 		}
 		else if(param == "ellipticalbeam")
 		{
-			wsclean.SetCircularBeam(false);
+			settings.circularBeam = false;
 		}
 		else if(param == "gkernelsize")
 		{
 			++argi;
-			wsclean.SetAntialiasingKernelSize(atoi(argv[argi]));
+			settings.antialiasingKernelSize = atoi(argv[argi]);
 		}
 		else if(param == "oversampling")
 		{
 			++argi;
-			wsclean.SetOversamplingFactor(atoi(argv[argi]));
+			settings.overSamplingFactor = atoi(argv[argi]);
 		}
 		else if(param == "reorder")
 		{
-			wsclean.SetForceReorder(true);
-			wsclean.SetForceNoReorder(false);
+			settings.forceReorder = true;
+			settings.forceNoReorder = false;
 		}
 		else if(param == "no-reorder")
 		{
-			wsclean.SetForceNoReorder(true);
-			wsclean.SetForceReorder(false);
+			settings.forceNoReorder = true;
+			settings.forceReorder = false;
 		}
 		else if(param == "update-model-required")
 		{
-			wsclean.SetModelUpdateRequired(true);
+			settings.modelUpdateRequired = true;
 		}
 		else if(param == "no-update-model-required")
 		{
-			wsclean.SetModelUpdateRequired(false);
+			settings.modelUpdateRequired = false;
 		}
 		else if(param == "j")
 		{
 			++argi;
-			wsclean.SetThreadCount(atoi(argv[argi]));
+			settings.threadCount = atoi(argv[argi]);
 		}
 		else if(param == "mem")
 		{
 			++argi;
-			wsclean.SetMemFraction(atof(argv[argi]) / 100.0);
+			settings.memFraction = atof(argv[argi]) / 100.0;
 		}
 		else if(param == "absmem")
 		{
 			++argi;
-			wsclean.SetMemAbsLimit(atof(argv[argi]));
+			settings.absMemLimit = atof(argv[argi]);
 		}
 		else if(param == "maxuvw-m")
 		{
 			++argi;
-			wsclean.SetMaxUVWInM(atof(argv[argi]));
+			settings.maxUVWInMeters = atof(argv[argi]);
 		}
 		else if(param == "minuvw-m")
 		{
 			++argi;
-			wsclean.SetMinUVWInM(atof(argv[argi]));
+			settings.minUVWInMeters = atof(argv[argi]);
 		}
 		else if(param == "maxuv-l")
 		{
 			++argi;
-			wsclean.SetMaxUVInLambda(atof(argv[argi]));
+			settings.maxUVInLambda = atof(argv[argi]);
 		}
 		else if(param == "minuv-l")
 		{
 			++argi;
-			wsclean.SetMinUVInLambda(atof(argv[argi]));
+			settings.minUVInLambda = atof(argv[argi]);
 		}
 		else if(param == "maxw")
 		{
 			// This was to test the optimization suggested in Tasse et al., 2013, Appendix C.
 			++argi;
-			wsclean.SetWLimit(atof(argv[argi]));
+			settings.wLimit = atof(argv[argi]);
 		}
 		else if(param == "no-normalize-for-weighting")
 		{
-			wsclean.SetNormalizeForWeighting(false);
+			settings.normalizeForWeighting = false;
 		}
 		else if(param == "visibility-weighting-mode")
 		{
@@ -751,11 +757,11 @@ int main(int argc, char *argv[])
 			std::string modeStr = argv[argi];
 			boost::to_lower(modeStr);
 			if(modeStr == "normal")
-				wsclean.SetVisibilityWeightingMode(InversionAlgorithm::NormalVisibilityWeighting);
+				settings.visibilityWeightingMode = InversionAlgorithm::NormalVisibilityWeighting;
 			else if(modeStr == "squared")
-				wsclean.SetVisibilityWeightingMode(InversionAlgorithm::SquaredVisibilityWeighting);
+				settings.visibilityWeightingMode = InversionAlgorithm::SquaredVisibilityWeighting;
 			else if(modeStr == "unit")
-				wsclean.SetVisibilityWeightingMode(InversionAlgorithm::UnitVisibilityWeighting);
+				settings.visibilityWeightingMode = InversionAlgorithm::UnitVisibilityWeighting;
 			else
 				throw std::runtime_error("Unknown weighting mode: " + modeStr);
 		}
@@ -775,16 +781,18 @@ int main(int argc, char *argv[])
 	// and possibly set to quiet.
 	print_header();
 	
-	wsclean.SetMFSWeighting((wsclean.JoinChannels() && !noMFSWeighting) || mfsWeighting);
+	settings.mfsWeighting = (settings.joinedFrequencyCleaning && !noMFSWeighting) || mfsWeighting;
 	
 	for(int i=argi; i != argc; ++i)
-		wsclean.AddInputMS(argv[i]);
+		settings.filenames.push_back(argv[i]);
 	
 	std::ostringstream commandLineStr;
 	commandLineStr << "wsclean";
 	for(int i=1; i!=argc; ++i)
 		commandLineStr << ' ' << argv[i];
 	wsclean.SetCommandLine(commandLineStr.str());
+	
+	settings.Validate();
 	
 	if(predictionMode)
 		wsclean.RunPredict();

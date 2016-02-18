@@ -99,7 +99,7 @@ class WSMSGridder : public InversionAlgorithm
 				MultiBandData bandData;
 				size_t startChannel, endChannel;
 				size_t matchingRows, totalRowsProcessed;
-				double minW, maxW;
+				double minW, maxW, maxBaseline;
 				size_t rowStart, rowEnd;
 			
 				MultiBandData SelectedBand() const { return MultiBandData(bandData, startChannel, endChannel); }
@@ -110,6 +110,7 @@ class WSMSGridder : public InversionAlgorithm
 		};
 		
 		void initializeMeasurementSet(size_t msIndex, MSData &msData);
+		void calculateMetaData(const MSData* msDataVector);
 		void gridMeasurementSet(MSData &msData);
 		void countSamplesPerLayer(MSData &msData);
 
@@ -139,6 +140,7 @@ class WSMSGridder : public InversionAlgorithm
 		std::unique_ptr<boost::thread_group> _threadGroup;
 		double _phaseCentreRA, _phaseCentreDec, _phaseCentreDL, _phaseCentreDM;
 		bool _denormalPhaseCentre, _hasFrequencies;
+		double _maxW, _minW;
 		double _freqHigh, _freqLow;
 		double _bandStart, _bandEnd;
 		double _beamSize;

@@ -150,7 +150,7 @@ void WSMSGridder::initializeMeasurementSet(size_t msIndex, WSMSGridder::MSData& 
 	Logger::Info.Flush();
 	msData.maxW = 0.0;
 	msData.minW = 1e100;
-	double maxBaseline = 0.0;
+	msData.maxBaseline = 0.0;
 	std::vector<float> weightArray(selectedBand.MaxChannels());
 	msProvider.Reset();
 	while(msProvider.CurrentRowAvailable())
@@ -163,7 +163,7 @@ void WSMSGridder::initializeMeasurementSet(size_t msIndex, WSMSGridder::MSData& 
 		double wLo = fabs(wInM / curBand.LongestWavelength());
 		double baselineInM = sqrt(uInM*uInM + vInM*vInM + wInM*wInM);
 		double halfWidth = 0.5*ImageWidth(), halfHeight = 0.5*ImageHeight();
-		if(wHi > msData.maxW || wLo < msData.minW || baselineInM / curBand.SmallestWavelength() > maxBaseline)
+		if(wHi > msData.maxW || wLo < msData.minW || baselineInM / curBand.SmallestWavelength() > msData.maxBaseline)
 		{
 			msProvider.ReadWeights(weightArray.data());
 			const float* weightPtr = weightArray.data();
@@ -185,7 +185,7 @@ void WSMSGridder::initializeMeasurementSet(size_t msIndex, WSMSGridder::MSData& 
 						{
 							msData.maxW = std::max(msData.maxW, fabs(wInL));
 							msData.minW = std::min(msData.minW, fabs(wInL));
-							maxBaseline = std::max(maxBaseline, baselineInM / wavelength);
+							msData.maxBaseline = std::max(msData.maxBaseline, baselineInM / wavelength);
 						}
 					}
 				}
@@ -195,16 +195,43 @@ void WSMSGridder::initializeMeasurementSet(size_t msIndex, WSMSGridder::MSData& 
 		
 		msProvider.NextRow();
 	}
+	
 	if(msData.minW == 1e100)
 	{
 		msData.minW = 0.0;
 		msData.maxW = 0.0;
 	}
+	
+	Logger::Info << "DONE (w=[" << msData.minW << ":" << msData.maxW << "] lambdas, maxuvw=" << msData.maxBaseline << " lambda)\n";
+}
+
+void WSMSGridder::calculateMetaData(const MSData* msDataVector)
+{
+	_maxW = 0.0;
+	_minW = std::numeric_limits<double>::max();
+	double maxBaseline = 0.0;
+	
+	for(size_t i=0; i!=MeasurementSetCount(); ++i)
+	{
+		const MSData& msData = msDataVector[i];
+		
+		maxBaseline = std::max(maxBaseline, msData.maxBaseline);
+		_maxW = std::max(_maxW, msData.maxW);
+		_minW = std::min(_minW, msData.minW);
+	}
+	if(_minW > _maxW)
+	{
+		_minW = _maxW;
+		Logger::Error << "*** Error! ***\n"
+			"*** Calculating maximum and minimum w values failed! Make sure the data selection and scale settings are correct!\n"
+			"***\n";
+	}
+	
 	_beamSize = 1.0 / maxBaseline;
-	Logger::Info << "DONE (w=[" << msData.minW << ":" << msData.maxW << "] lambdas, maxuvw=" << maxBaseline << " lambda, beam=" << Angle::ToNiceString(_beamSize) << ")\n";
+	Logger::Info << "Theoretic beam = " << Angle::ToNiceString(_beamSize) << "\n";
 	if(HasWLimit()) {
-		msData.maxW *= (1.0 - WLimit());
-		if(msData.maxW < msData.minW) msData.maxW = msData.minW;
+		_maxW *= (1.0 - WLimit());
+		if(_maxW < _minW) _maxW = _minW;
 	}
 
 	if(_trimWidth == 0 || _trimHeight ==  0)
@@ -251,12 +278,12 @@ void WSMSGridder::initializeMeasurementSet(size_t msIndex, WSMSGridder::MSData& 
 			maxL = wWidth * PixelSizeX() * 0.5 + fabs(_phaseCentreDL),
 			maxM = wHeight * PixelSizeY() * 0.5 + fabs(_phaseCentreDM),
 			lmSq = maxL * maxL + maxM * maxM;
-		double cMinW = IsComplex() ? -msData.maxW : msData.minW;
+		double cMinW = IsComplex() ? -_maxW : _minW;
 		double radiansForAllLayers;
 		if(lmSq < 1.0)
-			radiansForAllLayers = 2 * M_PI * (msData.maxW - cMinW) * (1.0 - sqrt(1.0 - lmSq));
+			radiansForAllLayers = 2 * M_PI * (_maxW - cMinW) * (1.0 - sqrt(1.0 - lmSq));
 		else
-			radiansForAllLayers = 2 * M_PI * (msData.maxW - cMinW);
+			radiansForAllLayers = 2 * M_PI * (_maxW - cMinW);
 		size_t suggestedGridSize = size_t(ceil(radiansForAllLayers));
 		if(suggestedGridSize == 0) suggestedGridSize = 1;
 		if(suggestedGridSize < _cpuCount)
@@ -592,17 +619,12 @@ void WSMSGridder::Invert()
 	if(MeasurementSetCount() == 0)
 		throw std::runtime_error("Something is wrong during inversion: no measurement sets given to inversion algorithm");
 	MSData* msDataVector = new MSData[MeasurementSetCount()];
+	
 	_hasFrequencies = false;
 	for(size_t i=0; i!=MeasurementSetCount(); ++i)
 		initializeMeasurementSet(i, msDataVector[i]);
 	
-	double minW = msDataVector[0].minW;
-	double maxW = msDataVector[0].maxW;
-	for(size_t i=1; i!=MeasurementSetCount(); ++i)
-	{
-		if(msDataVector[i].minW < minW) minW = msDataVector[i].minW;
-		if(msDataVector[i].maxW > maxW) maxW = msDataVector[i].maxW;
-	}
+	calculateMetaData(msDataVector);
 	
 	_gridder = std::unique_ptr<WStackingGridder>(new WStackingGridder(_actualInversionWidth, _actualInversionHeight, _actualPixelSizeX, _actualPixelSizeY, _cpuCount, _imageBufferAllocator, AntialiasingKernelSize(), OverSamplingFactor()));
 	_gridder->SetGridMode(_gridMode);
@@ -610,7 +632,7 @@ void WSMSGridder::Invert()
 		_gridder->SetDenormalPhaseCentre(_phaseCentreDL, _phaseCentreDM);
 	_gridder->SetIsComplex(IsComplex());
 	//_imager->SetImageConjugatePart(Polarization() == Polarization::YX && IsComplex());
-	_gridder->PrepareWLayers(WGridSize(), double(_memSize)*(7.0/10.0), minW, maxW);
+	_gridder->PrepareWLayers(WGridSize(), double(_memSize)*(7.0/10.0), _minW, _maxW);
 	
 	if(Verbose() && Logger::IsVerbose())
 	{
@@ -725,17 +747,12 @@ void WSMSGridder::Predict(double* real, double* imaginary)
 		throw std::runtime_error("Imaginary specified in non-complex prediction");
 	
 	MSData* msDataVector = new MSData[MeasurementSetCount()];
+	
 	_hasFrequencies = false;
 	for(size_t i=0; i!=MeasurementSetCount(); ++i)
 		initializeMeasurementSet(i, msDataVector[i]);
 	
-	double minW = msDataVector[0].minW;
-	double maxW = msDataVector[0].maxW;
-	for(size_t i=1; i!=MeasurementSetCount(); ++i)
-	{
-		if(msDataVector[i].minW < minW) minW = msDataVector[i].minW;
-		if(msDataVector[i].maxW > maxW) maxW = msDataVector[i].maxW;
-	}
+	calculateMetaData(msDataVector);
 	
 	_gridder = std::unique_ptr<WStackingGridder>(new WStackingGridder(_actualInversionWidth, _actualInversionHeight, _actualPixelSizeX, _actualPixelSizeY, _cpuCount, _imageBufferAllocator, AntialiasingKernelSize(), OverSamplingFactor()));
 	_gridder->SetGridMode(_gridMode);
@@ -743,7 +760,7 @@ void WSMSGridder::Predict(double* real, double* imaginary)
 		_gridder->SetDenormalPhaseCentre(_phaseCentreDL, _phaseCentreDM);
 	_gridder->SetIsComplex(IsComplex());
 	//_imager->SetImageConjugatePart(Polarization() == Polarization::YX && IsComplex());
-	_gridder->PrepareWLayers(WGridSize(), double(_memSize)*(7.0/10.0), minW, maxW);
+	_gridder->PrepareWLayers(WGridSize(), double(_memSize)*(7.0/10.0), _minW, _maxW);
 	
 	if(Verbose())
 	{
