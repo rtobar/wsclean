@@ -16,7 +16,7 @@ public:
 	
 	struct PeakData
 	{
-		double value;
+		double value, rms;
 		size_t x, y;
 	};
 	
@@ -28,13 +28,21 @@ public:
 	// This one is for transform of different scales
 	void MultiScaleTransform(class MultiScaleTransforms* msTransforms, class ImageBufferAllocator* allocator, const ao::uvector<double*>& images, ao::uvector<double> scales);
 	
-	void FindMultiScalePeak(class MultiScaleTransforms* msTransforms, class ImageBufferAllocator* allocator, const double* image, const ao::uvector<double>& scales, std::vector<PeakData>& results, bool allowNegativeComponents, const bool* mask, double borderRatio);
+	void FindMultiScalePeak(class MultiScaleTransforms* msTransforms, class ImageBufferAllocator* allocator, const double* image, const ao::uvector<double>& scales, std::vector<PeakData>& results, bool allowNegativeComponents, const bool* mask, double borderRatio, bool calculateRMS);
+	
+	static double RMS(const double* image, size_t n)
+	{
+		double result = 0.0;
+		for(size_t i=0; i!=n; ++i)
+			result += image[i] * image[i];
+		return sqrt(result/double(n));
+	}
 	
 private:
 	struct ThreadResult {
 	};
 	struct FindMultiScalePeakResult : public ThreadResult {
-		double value;
+		double value, rms;
 		size_t x, y;
 	};
 	
@@ -76,6 +84,7 @@ private:
 		bool allowNegativeComponents;
 		const bool* mask;
 		double borderRatio;
+		bool calculateRMS;
 	};
 	
 	std::vector<ao::lane<ThreadTask*>*> _taskLanes;

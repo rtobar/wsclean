@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
 		double borderRatio = 0.05;
 		
 		MultiScaleAlgorithm algorithm(allocator, beamScale, gain, allowNegativeComponents, borderRatio);
-		algorithm.Run(image.data(), model.data(), psf.data(), width, height);
+		algorithm.ExecuteMajorIteration(image.data(), model.data(), psf.data(), width, height);
 		
 		FitsWriter writer(imgReader);
 		writer.Write("result.fits", image.data());

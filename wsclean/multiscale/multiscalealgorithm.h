@@ -28,24 +28,24 @@ private:
 	class ImageBufferAllocator& _allocator;
 	size_t _width, _height;
 	double _beamSizeInPixels;
-	bool _verbose;
 	ThreadedDeconvolutionTools* _tools;
 	
 	struct ScaleInfo
 	{
 		ScaleInfo() :
 			scale(0.0), psfPeak(0.0),
-			kernelPeak(0.0), factor(0.0),
+			kernelPeak(0.0), biasFactor(0.0),
 			gain(0.0), maxImageValue(0.0),
+			rms(0.0),
 			maxImageValueX(0), maxImageValueY(0),
 			isActive(false),
 			nComponentsCleaned(0)
 		{ }
 		
 		double scale;
-		double psfPeak, kernelPeak, factor, gain;
+		double psfPeak, kernelPeak, biasFactor, gain;
 		
-		double maxImageValue;
+		double maxImageValue, rms;
 		size_t maxImageValueX, maxImageValueY;
 		bool isActive;
 		size_t nComponentsCleaned;
@@ -54,7 +54,7 @@ private:
 
 	void initializeScaleInfo();
 	void convolvePSFs(std::unique_ptr<ImageBufferAllocator::Ptr[]>& convolvedPSFs, const double* psf, double* tmp, bool isIntegrated);
-	void findActiveScaleConvolvedMaxima(const DynamicSet& imageSet, double* integratedScratch);
+	void findActiveScaleConvolvedMaxima(const DynamicSet& imageSet, double* integratedScratch, bool reportRMS);
 	void findSingleScaleMaximum(const double* convolvedImage, size_t scaleIndex);
 	void sortScalesOnMaxima(size_t& scaleWithPeak);
 	void activateScales(size_t scaleWithLastPeak);
