@@ -1,5 +1,5 @@
 //
-// This file was written by André Offringa and is published 2012-2015
+// This file was written by André Offringa and is published
 // under the GPL 3 license. 
 //
 
@@ -10,7 +10,11 @@
 #include "../multibanddata.h"
 #endif
 
-#include <boost/thread/mutex.hpp>
+// Forward declare boost::mutex to avoid header inclusion
+namespace boost
+{
+	class mutex;
+}
 
 #include <cmath>
 #include <cstring>
@@ -127,6 +131,10 @@ class WStackingGridder
 		 */
 		WStackingGridder(size_t width, size_t height, double pixelSizeX, double pixelSizeY, size_t fftThreadCount, ImageBufferAllocator* allocator, size_t kernelSize = 7, size_t overSamplingFactor = 63);
 		
+		WStackingGridder(const WStackingGridder&) = delete;
+		
+		WStackingGridder& operator=(const WStackingGridder&) = delete;
+		
 		/** De-allocate imagebuffers with the allocator and perform other clean-up. */
 		~WStackingGridder();
 		
@@ -164,7 +172,7 @@ class WStackingGridder
 #ifndef AVOID_CASACORE
 		/**
 		 * Initialize the inversion/prediction stage with a given band. This is
-		 * required for calling methods that take a dataDescId, so @ref AddData() and
+		 * required for calling methods that take a dataDescId, specifically @ref AddData() and
 		 * @ref SampleData(). This call can be avoided
 		 * by using the @ref AddDataSample() and @ref SampleDataSample methods instead.
 		 * @param bandData The information about the bands. A MultiBandData links a
@@ -557,12 +565,47 @@ class WStackingGridder
 			return _layeredUVData[layerIndex];
 		}
 		
+		/**
+		 * Acquire a Kaiser-Bessel kernel. This is mostly a debugging/example function.
+		 * @param kernel Array of size @p n
+		 * @param n Size of kernel
+		 * @param multiplyWithSinc True to multiply the kernel with the sinc function, as
+		 * is the case during gridding.
+		 */
 		void GetKaiserBesselKernel(double* kernel, size_t n, bool multiplyWithSinc);
 		
+		/**
+		 * Get width of image as specified during construction. This is the full width, before
+		 * any trimming has been applied.
+		 * @returns Width in pixels of image being gridded.
+		 */
 		size_t Width() const { return _width; }
+		
+		/**
+		 * Get height of image as specified during construction. This is the full height, before
+		 * any trimming has been applied.
+		 * @returns Height in pixels of image being gridded.
+		 */
 		size_t Height() const { return _height; }
+		
+		/**
+		 * Get angular width of single pixel in radians. The full image has a width of
+		 * @ref Width() * PixelSizeX(), assuming small angle approximation.
+		 * @returns Width of a single pixel in radians.
+		 */
 		double PixelSizeX() const { return _pixelSizeX; }
+		
+		/**
+		 * Get angular height of single pixel in radians. The full image has a height of
+		 * @ref Height() * PixelSizeX(), assuming small angle approximation.
+		 * @returns Height of a single pixel in radians.
+		 */
 		double PixelSizeY() const { return _pixelSizeY; }
+		
+		/**
+		 * The @ref ImageBufferAllocator of this gridder.
+		 * @returns The image buffer allocator.
+		 */
 		ImageBufferAllocator* Allocator() const { return _imageBufferAllocator; }
 	private:
 		size_t layerRangeStart(size_t layerRangeIndex) const
@@ -600,8 +643,10 @@ class WStackingGridder
 		template<bool Inverse>
 		void correctImageForKernel(double *image) const;
 		
-		size_t _width, _height, _nWLayers, _nPasses, _curLayerRangeIndex;
-		double _minW, _maxW, _pixelSizeX, _pixelSizeY, _phaseCentreDL, _phaseCentreDM;
+		const size_t _width, _height;
+		const double _pixelSizeX, _pixelSizeY;
+		size_t _nWLayers, _nPasses, _curLayerRangeIndex;
+		double _minW, _maxW, _phaseCentreDL, _phaseCentreDM;
 		bool _isComplex, _imageConjugatePart;
 #ifndef AVOID_CASACORE
 		MultiBandData _bandData;

@@ -340,8 +340,6 @@ int main(int argc, char *argv[])
 			size_t
 				width = atoi(argv[argi+1]),
 				height = atoi(argv[argi+2]);
-			if(width != height)
-				throw std::runtime_error("width != height : Can't handle non-square images yet");
 			settings.untrimmedImageWidth = width;
 			settings.untrimmedImageHeight = height;
 			argi += 2;
