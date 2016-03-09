@@ -99,7 +99,7 @@ class WSMSGridder : public InversionAlgorithm
 				MultiBandData bandData;
 				size_t startChannel, endChannel;
 				size_t matchingRows, totalRowsProcessed;
-				double minW, maxW, maxBaseline;
+				double minW, maxW, maxBaselineUVW;
 				size_t rowStart, rowEnd;
 			
 				MultiBandData SelectedBand() const { return MultiBandData(bandData, startChannel, endChannel); }

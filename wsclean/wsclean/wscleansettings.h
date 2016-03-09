@@ -54,11 +54,13 @@ public:
 	bool allowNegativeComponents, stopOnNegativeComponents;
 	bool useMultiscale, useFastMultiscale;
 	double multiscaleDeconvolutionThresholdBias, multiscaleDeconvolutionScaleBias;
+	bool multiscaleNormalizeResponse;
+	ao::uvector<double> multiscaleScaleList;
 	double deconvolutionBorderRatio;
 	std::string fitsDeconvolutionMask, casaDeconvolutionMask;
 	bool useMoreSaneDeconvolution, useIUWTDeconvolution;
 	std::string moreSaneLocation, moreSaneArgs;
-	std::vector<std::string> moreSaneSigmaLevels;
+	ao::uvector<double> moreSaneSigmaLevels;
 	enum SpectralFittingMode spectralFittingMode;
 	size_t spectralFittingTerms;
 	/**
@@ -135,6 +137,8 @@ inline WSCleanSettings::WSCleanSettings() :
 	useFastMultiscale(false),
 	multiscaleDeconvolutionThresholdBias(0.7),
 	multiscaleDeconvolutionScaleBias(0.6),
+	multiscaleNormalizeResponse(false),
+	multiscaleScaleList(),
 	deconvolutionBorderRatio(0.05),
 	fitsDeconvolutionMask(),
 	casaDeconvolutionMask(),

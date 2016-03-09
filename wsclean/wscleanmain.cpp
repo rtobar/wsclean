@@ -2,6 +2,7 @@
 #include "wsclean/wsclean.h"
 #include "wsclean/logger.h"
 #include "wscversion.h"
+#include "numberlist.h"
 
 #include <boost/algorithm/string.hpp>
 
@@ -219,6 +220,10 @@ void print_help()
 		"-multiscale-scale-bias\n"
 		"   Parameter to prevent cleaning small scales in the large-scale iterations. A higher\n"
 		"   bias will give more focus to larger scales. Default: 0.6\n"
+		"-multiscale-scales <comma-separated list of sizes in pixels>\n"
+		"   Sets a list of scales to use in multi-scale cleaning. If unset, WSClean will select the delta\n"
+		"   (zero) scale, scales starting at four times the synthesized PSF, and increase by a factor of\n"
+		"   two until the maximum scale is reached. Example: -multiscale-scales 0,5,12.5\n"
 		"-iuwt\n"
 		"   Use the IUWT deconvolution algorithm.\n"
 		"-moresane-ext <location>\n"
@@ -431,9 +436,7 @@ int main(int argc, char *argv[])
 		else if(param == "moresane-sl")
 		{
 			++argi;
-			std::vector<std::string> slevels;
-			boost::split(slevels, argv[argi], boost::is_any_of(","));
-			settings.moreSaneSigmaLevels = slevels;
+			NumberList::ParseDoubleList(argv[argi], settings.moreSaneSigmaLevels);
 		}
 		else if(param == "make-psf")
 		{
@@ -559,6 +562,16 @@ int main(int argc, char *argv[])
 		{
 			++argi;
 			settings.multiscaleDeconvolutionScaleBias = atof(argv[argi]);
+		}
+		else if(param == "multiscale-normalize-response")
+		{
+			++argi;
+			settings.multiscaleNormalizeResponse = true;
+		}
+		else if(param == "multiscale-scales")
+		{
+			++argi;
+			NumberList::ParseDoubleList(argv[argi], settings.multiscaleScaleList);
 		}
 		else if(param == "weighting-rank-filter")
 		{

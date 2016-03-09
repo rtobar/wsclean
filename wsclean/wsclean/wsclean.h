@@ -64,6 +64,7 @@ private:
 	void addPolarizationsToImagingTable(size_t& joinedGroupIndex, size_t& squaredGroupIndex, size_t outChannelIndex, const ImagingTableEntry& templateEntry);
 	class ImageWeightCache* createWeightCache();
 	
+	void multiplyImage(double factor, double* image);
 	void imagePSF(size_t currentChannelIndex);
 	void imageGridding();
 	void imageMainFirst(PolarizationEnum polarization, size_t channelIndex);
@@ -154,12 +155,13 @@ private:
 		ChannelInfo() :
 			weight(0.0),
 			bandStart(0.0), bandEnd(0.0),
-			beamMaj(0.0), beamMin(0.0), beamPA(0.0)
+			beamMaj(0.0), beamMin(0.0), beamPA(0.0),
+			psfNormalizationFactor(1.0)
 		{ }
 		double weight;
 		double bandStart, bandEnd;
 		double beamMaj, beamMin, beamPA;
-		double theoreticBeamSize;
+		double theoreticBeamSize, psfNormalizationFactor;
 	};
 	WSCleanSettings _settings;
 	

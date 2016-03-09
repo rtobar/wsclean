@@ -150,7 +150,7 @@ void WSMSGridder::initializeMeasurementSet(size_t msIndex, WSMSGridder::MSData& 
 	Logger::Info.Flush();
 	msData.maxW = 0.0;
 	msData.minW = 1e100;
-	msData.maxBaseline = 0.0;
+	msData.maxBaselineUVW = 0.0;
 	std::vector<float> weightArray(selectedBand.MaxChannels());
 	msProvider.Reset();
 	while(msProvider.CurrentRowAvailable())
@@ -163,7 +163,7 @@ void WSMSGridder::initializeMeasurementSet(size_t msIndex, WSMSGridder::MSData& 
 		double wLo = fabs(wInM / curBand.LongestWavelength());
 		double baselineInM = sqrt(uInM*uInM + vInM*vInM + wInM*wInM);
 		double halfWidth = 0.5*ImageWidth(), halfHeight = 0.5*ImageHeight();
-		if(wHi > msData.maxW || wLo < msData.minW || baselineInM / curBand.SmallestWavelength() > msData.maxBaseline)
+		if(wHi > msData.maxW || wLo < msData.minW || baselineInM / curBand.SmallestWavelength() > msData.maxBaselineUVW)
 		{
 			msProvider.ReadWeights(weightArray.data());
 			const float* weightPtr = weightArray.data();
@@ -185,7 +185,7 @@ void WSMSGridder::initializeMeasurementSet(size_t msIndex, WSMSGridder::MSData& 
 						{
 							msData.maxW = std::max(msData.maxW, fabs(wInL));
 							msData.minW = std::min(msData.minW, fabs(wInL));
-							msData.maxBaseline = std::max(msData.maxBaseline, baselineInM / wavelength);
+							msData.maxBaselineUVW = std::max(msData.maxBaselineUVW, baselineInM / wavelength);
 						}
 					}
 				}
@@ -202,7 +202,7 @@ void WSMSGridder::initializeMeasurementSet(size_t msIndex, WSMSGridder::MSData& 
 		msData.maxW = 0.0;
 	}
 	
-	Logger::Info << "DONE (w=[" << msData.minW << ":" << msData.maxW << "] lambdas, maxuvw=" << msData.maxBaseline << " lambda)\n";
+	Logger::Info << "DONE (w=[" << msData.minW << ":" << msData.maxW << "] lambdas, maxuvw=" << msData.maxBaselineUVW << " lambda)\n";
 }
 
 void WSMSGridder::calculateMetaData(const MSData* msDataVector)
@@ -215,7 +215,7 @@ void WSMSGridder::calculateMetaData(const MSData* msDataVector)
 	{
 		const MSData& msData = msDataVector[i];
 		
-		maxBaseline = std::max(maxBaseline, msData.maxBaseline);
+		maxBaseline = std::max(maxBaseline, msData.maxBaselineUVW);
 		_maxW = std::max(_maxW, msData.maxW);
 		_minW = std::min(_minW, msData.minW);
 	}
@@ -314,7 +314,8 @@ void WSMSGridder::calculateMetaData(const MSData* msDataVector)
 
 void WSMSGridder::countSamplesPerLayer(MSData& msData)
 {
-	std::vector<size_t> sampleCount(WGridSize());
+	ao::uvector<size_t> sampleCount(WGridSize(), 0);
+	size_t total = 0;
 	msData.matchingRows = 0;
 	msData.msProvider->Reset();
 	while(msData.msProvider->CurrentRowAvailable())
@@ -328,17 +329,20 @@ void WSMSGridder::countSamplesPerLayer(MSData& msData)
 			double w = wInM / bandData.ChannelWavelength(ch);
 			size_t wLayerIndex = _gridder->WToLayer(w);
 			if(wLayerIndex < WGridSize())
+			{
 				++sampleCount[wLayerIndex];
+				++total;
+			}
 		}
 		++msData.matchingRows;
 		msData.msProvider->NextRow();
 	}
 	Logger::Debug << "Visibility count per layer: ";
-	for(std::vector<size_t>::const_iterator i=sampleCount.begin(); i!=sampleCount.end(); ++i)
+	for(ao::uvector<size_t>::const_iterator i=sampleCount.begin(); i!=sampleCount.end(); ++i)
 	{
 		Logger::Debug << *i << ' ';
 	}
-	Logger::Debug << '\n';
+	Logger::Debug << "\nTotal nr. of visibilities to be gridded: " << total << '\n';
 }
 
 void WSMSGridder::gridMeasurementSet(MSData &msData)
@@ -408,7 +412,19 @@ void WSMSGridder::gridMeasurementSet(MSData &msData)
 					modelIter++;
 				}
 			}
+			
 			msData.msProvider->ReadWeights(weightBuffer.data());
+			
+			// Any visibilities that are not gridded in this pass
+			// should not contribute to the weight sum, so set these
+			// to have zero weight.
+			for(size_t ch=0; ch!=curBand.ChannelCount(); ++ch)
+			{
+				double w = newItem.w / curBand.ChannelWavelength(ch);
+				if(!_gridder->IsInLayerRange(w))
+					weightBuffer[ch] = 0.0;
+			}
+			
 			switch(VisibilityWeightingMode())
 			{
 				case NormalVisibilityWeighting:
@@ -471,7 +487,6 @@ void WSMSGridder::gridMeasurementSet(MSData &msData)
 				sampleData.vInLambda = newItem.v / wavelength;
 				sampleData.wInLambda = newItem.w / wavelength;
 				size_t cpu = _gridder->WToLayer(sampleData.wInLambda) % _cpuCount;
-				//Logger::Info << cpu << ' ' << lanes[cpu].size() << '\n';
 				bufferedLanes[cpu].write(sampleData);
 			}
 			
@@ -692,7 +707,7 @@ void WSMSGridder::Invert()
 		_gridder->FinalizeImage(1.0/_totalWeight, false);
 	else {
 		Logger::Info << "Not dividing by normalization factor of " << _totalWeight << ".\n";
-		_gridder->FinalizeImage(1.0, true);
+		_gridder->FinalizeImage(2.0, true);
 	}
 	
 	if(ImageWidth()!=_actualInversionWidth || ImageHeight()!=_actualInversionHeight)

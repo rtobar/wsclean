@@ -21,6 +21,8 @@ public:
 	
 	void SetCleanMask(const bool* cleanMask) { _cleanMask = cleanMask; }
 	
+	void SetManualScaleList(const ao::uvector<double>& scaleList) { _manualScaleList = scaleList; }
+	
 	//void PerformMajorIteration(size_t& iterCounter, size_t nIter, DynamicSet& modelSet, DynamicSet& dirtySet, const ao::uvector<const double*>& psfs, bool& reachedMajorThreshold);
 	
 	virtual void ExecuteMajorIteration(DynamicSet& dataImage, DynamicSet& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedMajorThreshold);	
@@ -51,6 +53,7 @@ private:
 		size_t nComponentsCleaned;
 	};
 	std::vector<MultiScaleAlgorithm::ScaleInfo> _scaleInfos;
+	ao::uvector<double> _manualScaleList;
 
 	void initializeScaleInfo();
 	void convolvePSFs(std::unique_ptr<ImageBufferAllocator::Ptr[]>& convolvedPSFs, const double* psf, double* tmp, bool isIntegrated);

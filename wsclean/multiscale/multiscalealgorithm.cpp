@@ -168,20 +168,33 @@ void MultiScaleAlgorithm::initializeScaleInfo()
 {
 	if(_scaleInfos.empty())
 	{
-		size_t scaleIndex = 0;
-		double scale = _beamSizeInPixels * 2.0;
-		while(scale < std::min(_width, _height)*0.5)
+		if(_manualScaleList.empty())
 		{
-			_scaleInfos.push_back(ScaleInfo());
-			ScaleInfo& newEntry = _scaleInfos.back();
-			if(scaleIndex == 0)
-				newEntry.scale = 0.0;
-			else
-				newEntry.scale = scale;
-			newEntry.kernelPeak = MultiScaleTransforms::KernelPeakValue(scale);
-			
-			scale *= 2.0;
-			++scaleIndex;
+			size_t scaleIndex = 0;
+			double scale = _beamSizeInPixels * 2.0;
+			while(scale < std::min(_width, _height)*0.5)
+			{
+				_scaleInfos.push_back(ScaleInfo());
+				ScaleInfo& newEntry = _scaleInfos.back();
+				if(scaleIndex == 0)
+					newEntry.scale = 0.0;
+				else
+					newEntry.scale = scale;
+				newEntry.kernelPeak = MultiScaleTransforms::KernelPeakValue(scale);
+				
+				scale *= 2.0;
+				++scaleIndex;
+			}
+		}
+		else {
+			std::sort(_manualScaleList.begin(), _manualScaleList.end());
+			for(size_t scaleIndex = 0; scaleIndex != _manualScaleList.size(); ++scaleIndex)
+			{
+				_scaleInfos.push_back(ScaleInfo());
+				ScaleInfo& newEntry = _scaleInfos.back();
+				newEntry.scale = _manualScaleList[scaleIndex];
+				newEntry.kernelPeak = MultiScaleTransforms::KernelPeakValue(newEntry.scale);
+			}
 		}
 	}
 }
@@ -192,6 +205,7 @@ void MultiScaleAlgorithm::convolvePSFs(std::unique_ptr<ImageBufferAllocator::Ptr
 	convolvedPSFs.reset(new ImageBufferAllocator::Ptr[_scaleInfos.size()]);
 	if(isIntegrated)
 		Logger::Info << "Scale info:\n";
+	const double firstAutoScaleSize = _beamSizeInPixels * 2.0;
 	for(size_t scaleIndex=0; scaleIndex!=_scaleInfos.size(); ++scaleIndex)
 	{
 		ScaleInfo& scaleEntry = _scaleInfos[scaleIndex];
@@ -209,7 +223,13 @@ void MultiScaleAlgorithm::convolvePSFs(std::unique_ptr<ImageBufferAllocator::Ptr
 			//scaleEntry.biasFactor = std::max(1.0,
 			//	scaleEntry.psfPeak * scaleInfos[0].kernelPeak /
 			//	(scaleEntry.kernelPeak * scaleInfos[0].psfPeak));
-			scaleEntry.biasFactor = pow(_multiscaleScaleBias, -double(scaleIndex));
+			double responseNormalization = _multiscaleNormalizeResponse ? scaleEntry.psfPeak : 1.0;
+			double expTerm;
+			if(scaleEntry.scale == 0.0 || _scaleInfos.size() < 2)
+				expTerm = 0.0;
+			else
+				expTerm = log2(scaleEntry.scale / firstAutoScaleSize);
+			scaleEntry.biasFactor = pow(_multiscaleScaleBias, -double(expTerm)) * 1.0 / responseNormalization;
 			
 			// I tried this, but wasn't perfect:
 			// _gain * _scaleInfos[0].kernelPeak / scaleEntry.kernelPeak;
@@ -217,13 +237,13 @@ void MultiScaleAlgorithm::convolvePSFs(std::unique_ptr<ImageBufferAllocator::Ptr
 			
 			scaleEntry.isActive = true;
 			
-			if(scaleIndex == 0)
+			if(scaleEntry.scale == 0.0)
 				memcpy(convolvedPSFs[scaleIndex].data(), psf, _width*_height*sizeof(double));
 			
-			Logger::Info << "- Scale " << round(scaleEntry.scale) << ", bias factor=" << round(scaleEntry.biasFactor*10.0)/10.0 << ", response=" << scaleEntry.psfPeak << ", gain=" << scaleEntry.gain << ", kernel peak=" << scaleEntry.kernelPeak << '\n';
+			Logger::Info << "- Scale " << round(scaleEntry.scale) << ", bias factor=" << round(scaleEntry.biasFactor*10.0)/10.0 << ", psfpeak=" << scaleEntry.psfPeak << ", gain=" << scaleEntry.gain << ", kernel peak=" << scaleEntry.kernelPeak << '\n';
 		}
 		else {
-			if(scaleIndex != 0)
+			if(scaleEntry.scale != 0.0)
 				msTransforms.Transform(convolvedPSFs[scaleIndex].data(), tmp, scaleEntry.scale);
 		}
 	}
@@ -242,7 +262,7 @@ void MultiScaleAlgorithm::findActiveScaleConvolvedMaxima(const DynamicSet& image
 		ScaleInfo& scaleEntry = _scaleInfos[scaleIndex];
 		if(scaleEntry.isActive)
 		{
-			if(scaleIndex == 0)
+			if(scaleEntry.scale == 0)
 			{
 				// Don't convolve scale 0: this is the delta function scale
 				findSingleScaleMaximum(integratedScratch, scaleIndex);
@@ -273,7 +293,7 @@ void MultiScaleAlgorithm::findActiveScaleConvolvedMaxima(const DynamicSet& image
 		for(size_t scaleIndex=0; scaleIndex!=_scaleInfos.size(); ++scaleIndex)
 		{
 			ScaleInfo& scaleEntry = _scaleInfos[scaleIndex];
-			double rmsBias = _scaleInfos[0].rms / scaleEntry.rms;
+			//double rmsBias = _scaleInfos[0].rms / scaleEntry.rms;
 			if(scaleIndex != 0)
 				Logger::Info << ", ";
 			Logger::Info << round(scaleEntry.scale) << ": " << scaleEntry.rms << " Jy";
@@ -344,7 +364,7 @@ void MultiScaleAlgorithm::measureComponentValues(ao::uvector<double>& componentV
 void MultiScaleAlgorithm::addComponentToModel(double* model, size_t scaleWithPeak, double componentValue)
 {
 	double componentGain = componentValue * _scaleInfos[scaleWithPeak].gain;
-	if(scaleWithPeak == 0)
+	if(_scaleInfos[scaleWithPeak].scale == 0.0)
 		model[_scaleInfos[scaleWithPeak].maxImageValueX + _width*_scaleInfos[scaleWithPeak].maxImageValueY]
 			+= componentGain;
 	else

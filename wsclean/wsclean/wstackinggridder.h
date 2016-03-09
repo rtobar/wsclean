@@ -263,7 +263,7 @@ class WStackingGridder
 			if(l1 >= rangeStart && l1 < rangeEnd)
 				return true;
 			size_t l2 = WToLayer(wEnd);
-			return ((l2 >= rangeStart && l2 < rangeEnd) // lMax is within the range
+			return ((l2 >= rangeStart && l2 < rangeEnd) // l2 is within the range
 			  || (l1 < rangeStart && l2 >= rangeEnd)  // l1 is before, l2 is after range
 				|| (l2 < rangeStart && l1 >= rangeEnd) // l2 is before, l1 is after range
 			);

@@ -125,6 +125,13 @@ void WSClean::updateCleanParameters(FitsWriter& writer, size_t minorIterationNr,
 	writer.SetExtraKeyword("WSCMAJOR", majorIterationNr);
 }
 
+void WSClean::multiplyImage(double factor, double* image)
+{
+	size_t nPix = _settings.trimmedImageWidth * _settings.trimmedImageHeight;
+	for(size_t i=0; i!=nPix; ++i)
+		image[i] *= factor;
+}
+
 void WSClean::imagePSF(size_t currentChannelIndex)
 {
 	Logger::Info.Flush();
@@ -133,6 +140,12 @@ void WSClean::imagePSF(size_t currentChannelIndex)
 	_inversionAlgorithm->SetDoImagePSF(true);
 	_inversionAlgorithm->SetVerbose(_isFirstInversion);
 	_inversionAlgorithm->Invert();
+	
+	size_t centralIndex = _settings.trimmedImageWidth/2 + (_settings.trimmedImageHeight/2) * _settings.trimmedImageWidth;
+	const double normFactor = 1.0/_inversionAlgorithm->ImageRealResult()[centralIndex];
+	_infoPerChannel[currentChannelIndex].psfNormalizationFactor = normFactor;
+	multiplyImage(normFactor, _inversionAlgorithm->ImageRealResult());
+	Logger::Debug << "Normalized PSF by factor of " << normFactor << ".\n";
 		
 	DeconvolutionAlgorithm::RemoveNaNsInPSF(_inversionAlgorithm->ImageRealResult(), _settings.trimmedImageWidth, _settings.trimmedImageHeight);
 	initFitsWriter(_fitsWriter);
@@ -199,9 +212,13 @@ void WSClean::imageMainFirst(PolarizationEnum polarization, size_t joinedChannel
 	_inversionWatch.Pause();
 	_inversionAlgorithm->SetVerbose(false);
 	
+	multiplyImage(_infoPerChannel[joinedChannelIndex].psfNormalizationFactor, _inversionAlgorithm->ImageRealResult());
 	storeAndCombineXYandYX(_residualImages, polarization, joinedChannelIndex, false, _inversionAlgorithm->ImageRealResult());
 	if(Polarization::IsComplex(polarization))
+	{
+		multiplyImage(_infoPerChannel[joinedChannelIndex].psfNormalizationFactor, _inversionAlgorithm->ImageImaginaryResult());
 		storeAndCombineXYandYX(_residualImages, polarization, joinedChannelIndex, true, _inversionAlgorithm->ImageImaginaryResult());
+	}
 }
 
 void WSClean::imageMainNonFirst(PolarizationEnum polarization, size_t joinedChannelIndex)
@@ -213,9 +230,13 @@ void WSClean::imageMainNonFirst(PolarizationEnum polarization, size_t joinedChan
 	_inversionAlgorithm->Invert();
 	_inversionWatch.Pause();
 	
+	multiplyImage(_infoPerChannel[joinedChannelIndex].psfNormalizationFactor, _inversionAlgorithm->ImageRealResult());
 	storeAndCombineXYandYX(_residualImages, polarization, joinedChannelIndex, false, _inversionAlgorithm->ImageRealResult());
 	if(Polarization::IsComplex(polarization))
+	{
+		multiplyImage(_infoPerChannel[joinedChannelIndex].psfNormalizationFactor, _inversionAlgorithm->ImageImaginaryResult());
 		storeAndCombineXYandYX(_residualImages, polarization, joinedChannelIndex, true, _inversionAlgorithm->ImageImaginaryResult());
+	}
 }
 
 void WSClean::storeAndCombineXYandYX(CachedImageSet& dest, PolarizationEnum polarization, size_t joinedChannelIndex, bool isImaginary, const double* image)

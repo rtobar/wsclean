@@ -19,6 +19,7 @@ DeconvolutionAlgorithm::DeconvolutionAlgorithm() :
 	_threadCount(sysconf(_SC_NPROCESSORS_ONLN)),
 	_allowNegativeComponents(true),
 	_stopOnNegativeComponent(false),
+	_multiscaleNormalizeResponse(false),
 	_cleanMask(0),
 	_spectralFitter(NoSpectralFitting, 0)
 {
