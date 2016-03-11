@@ -108,6 +108,7 @@ add_library(wsclean-object OBJECT
   deconvolution/deconvolution.cpp deconvolution/deconvolutionalgorithm.cpp deconvolution/dynamicset.cpp deconvolution/fastmultiscaleclean.cpp deconvolution/joinedclean.cpp deconvolution/moresane.cpp deconvolution/simpleclean.cpp deconvolution/spectralfitter.cpp
   interface/wscleaninterface.cpp
   iuwt/imageanalysis.cpp iuwt/iuwtdecomposition.cpp iuwt/iuwtdeconvolutionalgorithm.cpp iuwt/iuwtmask.cpp
+  lofar/lbeamimagemaker.cpp
   model/model.cpp
   msproviders/contiguousms.cpp msproviders/msprovider.cpp msproviders/partitionedms.cpp
   multiscale/multiscalealgorithm.cpp multiscale/multiscaletransforms.cpp multiscale/threadeddeconvolutiontools.cpp
