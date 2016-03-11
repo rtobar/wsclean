@@ -10,6 +10,7 @@ ContiguousMS::ContiguousMS(const string& msPath, const std::string& dataColumnNa
 	_isModelColumnPrepared(false),
 	_selection(selection),
 	_polOut(polOut),
+	_msPath(msPath),
 	_ms(msPath),
 	_antenna1Column(_ms, casacore::MS::columnName(casacore::MSMainEnums::ANTENNA1)),
 	_antenna2Column(_ms, casacore::MS::columnName(casacore::MSMainEnums::ANTENNA2)),
@@ -17,6 +18,7 @@ ContiguousMS::ContiguousMS(const string& msPath, const std::string& dataColumnNa
 	_dataDescIdColumn(_ms, casacore::MS::columnName(casacore::MSMainEnums::DATA_DESC_ID)),
 	_timeColumn(_ms, casacore::MS::columnName(casacore::MSMainEnums::TIME)),
 	_uvwColumn(_ms, casacore::MS::columnName(casacore::MSMainEnums::UVW)),
+	_dataColumnName(dataColumnName),
 	_dataColumn(_ms, dataColumnName),
 	_flagColumn(_ms, casacore::MS::columnName(casacore::MSMainEnums::FLAG))
 {
@@ -57,6 +59,7 @@ ContiguousMS::ContiguousMS(const string& msPath, const std::string& dataColumnNa
 void ContiguousMS::Reset()
 {
 	_row = _startRow - 1;
+	_rowId = size_t(-1);
 	_time = 0.0;
 	if(_selection.HasInterval())
 		_timestep = _selection.IntervalStart()-1;
@@ -108,6 +111,7 @@ void ContiguousMS::NextRow()
 	_isWeightRead = false;
 	_isModelRead = false;
 	
+	++_rowId;
 	int fieldId, a1, a2, dataDescId;
 	casacore::Vector<double> uvw;
 	do {
@@ -257,4 +261,15 @@ void ContiguousMS::MakeMSRowToRowIdMapping(std::vector<size_t>& msToId, const MS
 	msToId.resize(nRow);
 	for(size_t i=0; i!=nRow; ++i)
 		msToId[i] = i;
+}
+
+void ContiguousMS::MakeIdToMSRowMapping(vector<size_t>& idToMSRow, const MSSelection& selection)
+{
+	idToMSRow.clear();
+	ContiguousMS iterator(_msPath, _dataColumnName, _selection, _polOut, _dataDescId, false);
+	while(iterator.CurrentRowAvailable())
+	{
+		idToMSRow.push_back(iterator._row);
+		iterator.NextRow();
+	}
 }

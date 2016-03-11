@@ -12,6 +12,13 @@ namespace casacore {
 }
 class MSSelection;
 
+/**
+ * The abstract MSProvider class is the base class for classes that read and write the visibilities.
+ * An MSProvider knows which rows are selected and doesn't read or write to unselected rows. 
+ * It provides the visibilities weighted with the visibility weight and converts the visibilities
+ * to a requested polarization.
+ * Currently, the @ref ContiguousMS and @ref PartitionedMS classes implement the MSProvider interface.
+ */
 class MSProvider
 {
 public:
@@ -43,7 +50,12 @@ public:
 	
 	virtual double StartTime() = 0;
 	
+	/**
+	 * This function should become deprecated.
+	 */
 	virtual void MakeMSRowToRowIdMapping(std::vector<size_t>& msToId, const MSSelection& selection) = 0;
+	
+	virtual void MakeIdToMSRowMapping(std::vector<size_t>& idToMSRow, const MSSelection& selection) = 0;
 	
 	static std::vector<PolarizationEnum> GetMSPolarizations(casacore::MeasurementSet& ms);
 protected:

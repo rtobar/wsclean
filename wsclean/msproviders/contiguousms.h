@@ -12,43 +12,49 @@
 
 #include <memory>
 
-class ContiguousMS : public MSProvider
+class ContiguousMS final : public MSProvider
 {
 public:
 	ContiguousMS(const string& msPath, const std::string& dataColumnName, MSSelection selection, PolarizationEnum polOut, size_t dataDescIndex, bool includeModel);
 	
-	virtual casacore::MeasurementSet &MS() { return _ms; }
+	ContiguousMS(const ContiguousMS&) = delete;
 	
-	virtual size_t RowId() const { return _row; }
+	ContiguousMS& operator=(const ContiguousMS&) = delete;
 	
-	virtual bool CurrentRowAvailable();
+	virtual casacore::MeasurementSet &MS() override { return _ms; }
 	
-	virtual void NextRow();
+	virtual size_t RowId() const override { return _rowId; }
 	
-	virtual void Reset();
+	virtual bool CurrentRowAvailable() override;
 	
-	virtual void ReadMeta(double& u, double& v, double& w, size_t& dataDescId);
+	virtual void NextRow() override;
 	
-	virtual void ReadData(std::complex<float>* buffer);
+	virtual void Reset() override;
 	
-	virtual void ReadModel(std::complex<float>* buffer);
+	virtual void ReadMeta(double& u, double& v, double& w, size_t& dataDescId) override;
 	
-	virtual void WriteModel(size_t rowId, std::complex<float>* buffer);
+	virtual void ReadData(std::complex<float>* buffer) override;
 	
-	virtual void ReadWeights(float* buffer);
+	virtual void ReadModel(std::complex<float>* buffer) override;
 	
-	virtual void ReadWeights(std::complex<float>* buffer);
+	virtual void WriteModel(size_t rowId, std::complex<float>* buffer) override;
 	
-	virtual void ReopenRW()
+	virtual void ReadWeights(float* buffer) override;
+	
+	virtual void ReadWeights(std::complex<float>* buffer) override;
+	
+	virtual void ReopenRW() override
 	{
 		_ms.reopenRW();
 	}
 	
-	virtual double StartTime();
+	virtual double StartTime() override;
 	
-	virtual void MakeMSRowToRowIdMapping(std::vector<size_t>& msToId, const MSSelection& selection);
+	virtual void MakeMSRowToRowIdMapping(std::vector<size_t>& msToId, const MSSelection& selection) override;
+	
+	virtual void MakeIdToMSRowMapping(std::vector<size_t>& idToMSRow, const MSSelection& selection) override;
 private:
-	size_t _row;
+	size_t _row, _rowId;
 	size_t _timestep;
 	double _time;
 	int _dataDescId;
@@ -58,6 +64,7 @@ private:
 	std::vector<PolarizationEnum> _inputPolarizations;
 	MSSelection _selection;
 	PolarizationEnum _polOut;
+	std::string _msPath;
 	casacore::MeasurementSet _ms;
 	MultiBandData _bandData;
 	bool _msHasWeights;
@@ -66,6 +73,7 @@ private:
 	casacore::ROScalarColumn<double> _timeColumn;
 	casacore::ROArrayColumn<double> _uvwColumn;
 	std::unique_ptr<casacore::ROArrayColumn<float>> _weightColumn;
+	std::string _dataColumnName;
 	casacore::ROArrayColumn<casacore::Complex> _dataColumn;
 	casacore::ROArrayColumn<bool> _flagColumn;
 	std::unique_ptr<casacore::ArrayColumn<casacore::Complex>> _modelColumn;

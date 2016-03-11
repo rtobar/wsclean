@@ -16,7 +16,7 @@ public:
 	{
 		size_t bandIndex;
 		size_t partIndex;
-		size_t channelRangeStart, channelRangeEnd;
+		//size_t channelRangeStart, channelRangeEnd;
 	};
 	
 	struct MSInfo

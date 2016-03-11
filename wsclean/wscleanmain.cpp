@@ -55,6 +55,11 @@ void print_help()
 		"-saveuv\n"
 		"   Save the gridded uv plane, i.e., the FFT of the residual image. The UV plane is complex, hence\n"
 		"   two images will be output: <prefix>-uv-real.fits and <prefix>-uv-imag.fits.\n"
+		"-apply-primary-beam\n"
+		"   Calculate and apply the primary beam and save images for the Jones components, with weighting identical to the\n"
+		"   weighting as used by the imager. Only available for LOFAR.\n"
+		"-reuse-primary-beam\n"
+		"   If a primary beam image exists on disk, reuse those images (not implemented yet).\n"
 		"-update-model-required (default), and\n"
 		"-no-update-model-required\n"
 		"   These two options specify wether the model data column is required to\n"
@@ -401,6 +406,14 @@ int main(int argc, char *argv[])
 		{
 			++argi;
 			settings.polarizations = Polarization::ParseList(argv[argi]);
+		}
+		else if(param == "apply-primary-beam")
+		{
+			settings.applyPrimaryBeam = true;
+		}
+		else if(param == "reuse-primary-beam")
+		{
+			settings.reusePrimaryBeam = true;
 		}
 		else if(param == "negative")
 		{

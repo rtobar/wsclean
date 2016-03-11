@@ -35,6 +35,7 @@ public:
 	
 private:
 	void runIndependentGroup(const ImagingTable& groupTable);
+	void saveRestoredImagesForGroup(const ImagingTableEntry& tableEntry);
 	void predictGroup(const ImagingTable& imagingGroup);
 	
 	void runFirstInversion(const ImagingTableEntry& entry);
@@ -49,11 +50,11 @@ private:
 	//void copyDoubleKeywordIfExists(FitsReader& reader, FitsWriter& writer, const char* keywordName);
 	void setCleanParameters(class FitsWriter& writer);
 	void updateCleanParameters(class FitsWriter& writer, size_t minorIterationNr, size_t majorIterationNr);
-	void initializeWeightTapers();
 	void initializeImageWeights(const ImagingTableEntry& entry);
 	void initializeMFSImageWeights();
-	MSProvider* initializeMSProvider(const ImagingTableEntry& entry, const MSSelection& selection, size_t filenameIndex, size_t bandIndex);
+	MSProvider* initializeMSProvider(const ImagingTableEntry& entry, const MSSelection& selection, size_t filenameIndex, size_t dataDescId);
 	void initializeCurMSProviders(const ImagingTableEntry& entry);
+	void initializeMSProvidersForPB(const ImagingTableEntry& entry, class PrimaryBeam& pb);
 	void clearCurMSProviders();
 	void storeAndCombineXYandYX(CachedImageSet& dest, PolarizationEnum polarization, size_t joinedChannelIndex, bool isImaginary, const double* image);
 	bool selectChannels(MSSelection& selection, size_t msIndex, size_t bandIndex, const ImagingTableEntry& entry);
@@ -82,60 +83,7 @@ private:
 	void fitBeamSize(double& bMaj, double& bMin, double& bPA, const double* image, double beamEstimate);
 	void determineBeamSize(double& bMaj, double& bMin, double& bPA, const double* image, double theoreticBeam);
 	
-	std::string fourDigitStr(size_t val) const
-	{
-		std::ostringstream str;
-		if(val < 1000) str << '0';
-		if(val < 100) str << '0';
-		if(val < 10) str << '0';
-		str << val;
-		return str.str();
-	}
-	
-	std::string getPSFPrefix(size_t channelIndex) const
-	{
-		std::ostringstream partPrefixNameStr;
-		partPrefixNameStr << _settings.prefixName;
-		if(_settings.intervalsOut != 1)
-			partPrefixNameStr << "-t" << fourDigitStr(_currentIntervalIndex);
-		if(_settings.channelsOut != 1)
-			partPrefixNameStr << '-' << fourDigitStr(channelIndex);
-		return partPrefixNameStr.str();
-	}
-	
-	std::string getPrefix(PolarizationEnum polarization, size_t channelIndex, bool isImaginary) const
-	{
-		std::ostringstream partPrefixNameStr;
-		partPrefixNameStr << _settings.prefixName;
-		if(_settings.intervalsOut != 1)
-			partPrefixNameStr << "-t" << fourDigitStr(_currentIntervalIndex);
-		if(_settings.channelsOut != 1)
-			partPrefixNameStr << '-' << fourDigitStr(channelIndex);
-		if(_settings.polarizations.size() != 1)
-		{
-			partPrefixNameStr << '-' << Polarization::TypeToShortString(polarization);
-			if(isImaginary)
-				partPrefixNameStr << 'i';
-		}
-		return partPrefixNameStr.str();
-	}
-	
-	std::string getMFSPrefix(PolarizationEnum polarization, bool isImaginary, bool isPSF) const
-	{
-		std::ostringstream partPrefixNameStr;
-		partPrefixNameStr << _settings.prefixName;
-		if(_settings.intervalsOut != 1)
-			partPrefixNameStr << "-t" << fourDigitStr(_currentIntervalIndex);
-		if(_settings.channelsOut != 1)
-			partPrefixNameStr << "-MFS";
-		if(_settings.polarizations.size() != 1 && !isPSF)
-		{
-			partPrefixNameStr << '-' << Polarization::TypeToShortString(polarization);
-			if(isImaginary)
-				partPrefixNameStr << 'i';
-		}
-		return partPrefixNameStr.str();
-	}
+	void makeBeam();
 	
 	bool preferReordering() const
 	{

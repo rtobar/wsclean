@@ -38,8 +38,7 @@ PartitionedMS::PartitionedMS(const Handle& handle, size_t partIndex, Polarizatio
 	std::vector<char> msPath(_metaHeader.filenameLength+1, char(0));
 	_metaFile.read(msPath.data(), _metaHeader.filenameLength);
 	Logger::Info << "Opening reordered part " << partIndex << " spw " << dataDescId << " for " << msPath.data() << '\n';
-	_ms = casacore::MeasurementSet(msPath.data());
-	
+	_msPath = msPath.data();
 	std::string partPrefix = getPartPrefix(msPath.data(), partIndex, polarization, dataDescId, handle._data->_temporaryDirectory);
 	
 	_dataFile.open(partPrefix+".tmp", std::ios::in);
@@ -722,16 +721,23 @@ void PartitionedMS::Handle::decrease()
 	}
 }
 
+void PartitionedMS::openMS()
+{
+	if(_ms == 0)
+		_ms.reset(new casacore::MeasurementSet(_msPath.data()));
+}
+
 void PartitionedMS::MakeMSRowToRowIdMapping(std::vector<size_t>& msToId, const MSSelection& selection)
 {
-	const size_t nRow = _ms.nrow();
-	casacore::ROArrayColumn<double> uvwColumn(_ms, casacore::MS::columnName(casacore::MSMainEnums::UVW));
-	casacore::ROScalarColumn<int> antenna1Column(_ms, casacore::MS::columnName(casacore::MSMainEnums::ANTENNA1));
-	casacore::ROScalarColumn<int> antenna2Column(_ms, casacore::MS::columnName(casacore::MSMainEnums::ANTENNA2));
-	casacore::ROScalarColumn<int> fieldIdColumn(_ms, casacore::MS::columnName(casacore::MSMainEnums::FIELD_ID));
-	casacore::ROScalarColumn<double> timeColumn(_ms, casacore::MS::columnName(casacore::MSMainEnums::TIME));
+	openMS();
+	const size_t nRow = _ms->nrow();
+	casacore::ROArrayColumn<double> uvwColumn(*_ms, casacore::MS::columnName(casacore::MSMainEnums::UVW));
+	casacore::ROScalarColumn<int> antenna1Column(*_ms, casacore::MS::columnName(casacore::MSMainEnums::ANTENNA1));
+	casacore::ROScalarColumn<int> antenna2Column(*_ms, casacore::MS::columnName(casacore::MSMainEnums::ANTENNA2));
+	casacore::ROScalarColumn<int> fieldIdColumn(*_ms, casacore::MS::columnName(casacore::MSMainEnums::FIELD_ID));
+	casacore::ROScalarColumn<double> timeColumn(*_ms, casacore::MS::columnName(casacore::MSMainEnums::TIME));
 	size_t startRow, endRow;
-	getRowRange(_ms, selection, startRow, endRow);
+	getRowRange(*_ms, selection, startRow, endRow);
 	
 	msToId.assign(startRow, 0);
 	size_t currentRowId = 0;
@@ -754,6 +760,35 @@ void PartitionedMS::MakeMSRowToRowIdMapping(std::vector<size_t>& msToId, const M
 	}
 	for(size_t i=0; i!=nRow-endRow; ++i)
 		msToId.push_back(0);
+}
+
+void PartitionedMS::MakeIdToMSRowMapping(vector<size_t>& idToMSRow, const MSSelection& selection)
+{
+	openMS();
+	casacore::ROArrayColumn<double> uvwColumn(*_ms, casacore::MS::columnName(casacore::MSMainEnums::UVW));
+	casacore::ROScalarColumn<int> antenna1Column(*_ms, casacore::MS::columnName(casacore::MSMainEnums::ANTENNA1));
+	casacore::ROScalarColumn<int> antenna2Column(*_ms, casacore::MS::columnName(casacore::MSMainEnums::ANTENNA2));
+	casacore::ROScalarColumn<int> fieldIdColumn(*_ms, casacore::MS::columnName(casacore::MSMainEnums::FIELD_ID));
+	casacore::ROScalarColumn<double> timeColumn(*_ms, casacore::MS::columnName(casacore::MSMainEnums::TIME));
+	size_t startRow, endRow;
+	getRowRange(*_ms, selection, startRow, endRow);
+	
+	size_t timestep = selection.HasInterval() ? selection.IntervalStart() : 0;
+	double time = timeColumn(startRow);
+	for(size_t row=startRow; row!=endRow; ++row)
+	{
+		const int
+			a1 = antenna1Column(row), a2 = antenna2Column(row),
+			fieldId = fieldIdColumn(row);
+		casacore::Vector<double> uvw = uvwColumn(row);
+		if(time != timeColumn(row))
+		{
+			++timestep;
+			time = timeColumn(row);
+		}
+		if(selection.IsSelected(fieldId, timestep, a1, a2, uvw))
+			idToMSRow.push_back(row);
+	}
 }
 
 void PartitionedMS::getDataDescIdMap(std::map<size_t, size_t>& dataDescIds, const vector<PartitionedMS::ChannelRange>& channels)

@@ -61,6 +61,11 @@ public:
 		return *_imageWeights;
 	}
 	
+	const ImageWeights& Weights() const
+	{
+		return *_imageWeights;
+	}
+	
 	void InitializeWeightTapers()
 	{
 		if(_rankFilterLevel >= 1.0)
