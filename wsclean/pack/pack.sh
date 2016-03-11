@@ -17,7 +17,7 @@ else
 		mkdir /tmp/wsclean/wsclean
 		mkdir /tmp/wsclean/wsclean/examples
 		cd ..
-		cp -v CMakeLists.txt Doxyfile.in angle.h areaset.* banddata.* buffered_lane.* casamaskreader.* dftpredictionalgorithm.* fftconvolver.* fftresampler.* fftwmultithreadenabler.* fitsiochecker.* fitsreader.* fitswriter.* gaussianfitter.h imagecoordinates.* imageoperations.* imageweights.* lane.* multibanddata.* nlplfitter.* matrix2x2.* modelrenderer.* msselection.* polarizationenum.* polynomialfitter.* progressbar.* radeccoord.* stopwatch.* threadpool.* uvector.* weightmode.* wscleanmain.cpp wscversion.h /tmp/wsclean/
+		cp -v CMakeLists.txt Doxyfile.in angle.h areaset.* banddata.* buffered_lane.* casamaskreader.* dftpredictionalgorithm.* fftconvolver.* fftresampler.* fftwmultithreadenabler.* fitsiochecker.* fitsreader.* fitswriter.* gaussianfitter.h imagecoordinates.* imageoperations.* imageweights.* lane.* multibanddata.* nlplfitter.* numberlist.* matrix2x2.* modelrenderer.* msselection.* polarizationenum.* polynomialfitter.* progressbar.* radeccoord.* stopwatch.* threadpool.* uvector.* weightmode.* wscleanmain.cpp wscversion.h /tmp/wsclean/
 		cp -v aocommon/lane.h aocommon/lane_03.h aocommon/lane_11.h aocommon/uvector.h aocommon/uvector_03.h /tmp/wsclean/aocommon/
 		cp -v CMake/*.cmake /tmp/wsclean/CMake/
 		cp -v deconvolution/*.{h,cpp} /tmp/wsclean/deconvolution/
@@ -35,9 +35,20 @@ else
 		rm -rf /tmp/wsclean-${VERSION}
 		tar -xjvf ${WORKDIR}/wsclean-${VERSION}.tar.bz2
 		cd /tmp/wsclean-${VERSION}
+
+		echo Building WITHOUT LOFAR lib
 		mkdir build
 		cd build
 		cmake ../
 		make -j 4
 		cat ../wscversion.h
+		cd ..
+
+		echo Building WITH LOFAR lib
+		rm build -rf
+		mkdir build
+		cd build
+		cmake ../ -DCMAKE_PREFIX_PATH="/home/anoko/Software/LOFAR-install"
+		make -j 4
+		cd ..
 fi

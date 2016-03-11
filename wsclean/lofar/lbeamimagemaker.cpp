@@ -149,7 +149,7 @@ void LBeamImageMaker::makeBeamForMS(std::vector<ImageBufferAllocator::Ptr>& beam
 	size_t timestepCount = timestepIds.size();
 	timestepIds.push_back(idToMSRow.size());
 	
-	casacore::MEpoch midTime(casacore::MVEpoch(0.5 * (timeColumn(0).getValue().get() + timeColumn(ms.nrow()-1).getValue().get())), timeColumn(0).getRef());
+	casacore::MEpoch midTime(casacore::MVEpoch(0.5 * (timeColumn(idToMSRow[0]).getValue().get() + timeColumn(idToMSRow.back()).getValue().get())), timeColumn(idToMSRow[0]).getRef());
 	casacore::MeasFrame midFrame(arrayPos, midTime);
 	const casacore::MDirection::Ref hadecRef(casacore::MDirection::HADEC, midFrame);
 	const casacore::MDirection::Ref azelgeoRef(casacore::MDirection::AZELGEO, midFrame);
