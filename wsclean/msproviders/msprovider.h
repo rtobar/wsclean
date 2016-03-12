@@ -5,6 +5,8 @@
 
 #include <casacore/casa/Arrays/Array.h>
 
+#include <casacore/tables/Tables/ArrayColumn.h>
+
 #include <complex>
 
 namespace casacore {
@@ -80,6 +82,25 @@ protected:
 	}
 	
 	static void initializeModelColumn(casacore::MeasurementSet& ms);
+	
+	/**
+	 * Make an arraycolumn object for the weight spectrum column if it exists and is valid.
+	 * The weight spectrum column is an optional column, the weight column should be used if it doesn't exist.
+	 * Moreover, some measurement sets have an empty or invalid sized weight spectrum column; this method
+	 * only returns true if the column can be used.
+	 */
+	static bool openWeightSpectrumColumn(casacore::MeasurementSet& ms, std::unique_ptr<casacore::ROArrayColumn<float>>& weightColumn, const casacore::IPosition& dataColumnShape);
+	
+	static void expandScalarWeights(const casa::Array<float>& weightScalarArray, casa::Array<float>& weightSpectrumArray)
+	{
+		casacore::Array<float>::const_contiter src = weightScalarArray.cbegin();
+		for(casacore::Array<float>::contiter i=weightSpectrumArray.cbegin(); i!=weightSpectrumArray.cend(); ++i)
+		{
+			*i = *src;
+			++src;
+			if(src == weightScalarArray.cend()) src = weightScalarArray.cbegin();
+		}
+	}
 	
 	MSProvider() { }
 private:

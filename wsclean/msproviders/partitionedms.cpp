@@ -328,7 +328,8 @@ PartitionedMS::Handle PartitionedMS::Partition(const string& msPath, const std::
 	casacore::ROScalarColumn<double> timeColumn(ms, casacore::MS::columnName(casacore::MSMainEnums::TIME));
 	casacore::MEpoch::ROScalarColumn timeEpochColumn(ms, casacore::MS::columnName(casacore::MSMainEnums::TIME));
 	casacore::ROArrayColumn<double> uvwColumn(ms, casacore::MS::columnName(casacore::MSMainEnums::UVW));
-	std::unique_ptr<casacore::ROArrayColumn<float>> weightColumn;
+	std::unique_ptr<casacore::ROArrayColumn<float>> weightSpectrumColumn;
+	std::unique_ptr<casacore::ROArrayColumn<float>> weightScalarColumn;
 	casacore::ROArrayColumn<casacore::Complex> dataColumn(ms, dataColumnName);
 	casacore::ROArrayColumn<bool> flagColumn(ms, casacore::MS::columnName(casacore::MSMainEnums::FLAG));
 	casacore::ROScalarColumn<int> dataDescIdColumn(ms, ms.columnName(casacore::MSMainEnums::DATA_DESC_ID));
@@ -343,25 +344,13 @@ PartitionedMS::Handle PartitionedMS::Partition(const string& msPath, const std::
 	const size_t polarizationCount = shape[0];
 	size_t channelCount = shape[1];
 	
-	bool isWeightDefined;
-	if(ms.isColumn(casacore::MSMainEnums::WEIGHT_SPECTRUM))
-	{
-		weightColumn.reset(new casacore::ROArrayColumn<float>(ms, casacore::MS::columnName(casacore::MSMainEnums::WEIGHT_SPECTRUM)));
-		isWeightDefined = weightColumn->isDefined(0);
-	} else {
-		isWeightDefined = false;
-	}
-	bool msHasWeights = false;
-	casacore::Array<float> weightArray(shape);
-	if(isWeightDefined)
-	{
-		casacore::IPosition modelShape = weightColumn->shape(0);
-		msHasWeights = (modelShape == shape);
-	}
+	casacore::Array<float> weightScalarArray;
+	bool msHasWeights = openWeightSpectrumColumn(ms, weightSpectrumColumn, shape);
 	if(!msHasWeights)
 	{
-		weightArray.set(1);
-		Logger::Info << "WARNING: This measurement set has no or an invalid WEIGHT_SPECTRUM column; all visibilities are assumed to have equal weight.\n";
+		casacore::IPosition scalarShape(1, shape[0]);
+		weightScalarArray = casacore::Array<float>(scalarShape);
+		weightScalarColumn.reset(new casacore::ROArrayColumn<float>(ms, casacore::MS::columnName(casacore::MSMainEnums::WEIGHT)));
 	}
 	
 	size_t startRow, endRow;
@@ -420,6 +409,7 @@ PartitionedMS::Handle PartitionedMS::Partition(const string& msPath, const std::
 	std::vector<float> weightBuffer(polarizationCount * channelCount);
 	
 	casacore::Array<std::complex<float>> dataArray(shape), modelArray(shape);
+	casacore::Array<float> weightSpectrumArray(shape);
 	casacore::Array<bool> flagArray(shape);
 	ProgressBar progress1("Reordering");
 	for(size_t row=startRow; row!=endRow; ++row)
@@ -454,7 +444,11 @@ PartitionedMS::Handle PartitionedMS::Partition(const string& msPath, const std::
 			if(initialModelRequired)
 				modelColumn->get(row, modelArray);
 			if(msHasWeights)
-				weightColumn->get(row, weightArray);
+				weightSpectrumColumn->get(row, weightSpectrumArray);
+			else {
+				weightScalarColumn->get(row, weightScalarArray);
+				expandScalarWeights(weightScalarArray, weightSpectrumArray);
+			}
 			flagColumn.get(row, flagArray);
 			
 			fileIndex = 0;
@@ -469,14 +463,14 @@ PartitionedMS::Handle PartitionedMS::Partition(const string& msPath, const std::
 					for(std::set<PolarizationEnum>::const_iterator p=polsOut.begin(); p!=polsOut.end(); ++p)
 					{
 						PartitionFiles& f = files[fileIndex];
-						copyWeightedData(dataBuffer.data(), partStartCh, partEndCh, msPolarizations, dataArray, weightArray, flagArray, *p);
+						copyWeightedData(dataBuffer.data(), partStartCh, partEndCh, msPolarizations, dataArray, weightSpectrumArray, flagArray, *p);
 						f.data->write(reinterpret_cast<char*>(dataBuffer.data()), (partEndCh - partStartCh) * sizeof(std::complex<float>));
 						if(!f.data->good())
 							throw std::runtime_error("Error writing to temporary data file");
 						
 						if(initialModelRequired)
 						{
-							copyWeightedData(dataBuffer.data(), partStartCh, partEndCh, msPolarizations, modelArray, weightArray, flagArray, *p);
+							copyWeightedData(dataBuffer.data(), partStartCh, partEndCh, msPolarizations, modelArray, weightSpectrumArray, flagArray, *p);
 							f.model->write(reinterpret_cast<char*>(dataBuffer.data()), (partEndCh - partStartCh) * sizeof(std::complex<float>));
 							if(!f.model->good())
 								throw std::runtime_error("Error writing to temporary data file");
@@ -484,7 +478,7 @@ PartitionedMS::Handle PartitionedMS::Partition(const string& msPath, const std::
 						
 						if(includeWeights)
 						{
-							copyWeights(weightBuffer.data(), partStartCh, partEndCh, msPolarizations, dataArray, weightArray, flagArray, *p);
+							copyWeights(weightBuffer.data(), partStartCh, partEndCh, msPolarizations, dataArray, weightSpectrumArray, flagArray, *p);
 							f.weight->write(reinterpret_cast<char*>(weightBuffer.data()), (partEndCh - partStartCh) * sizeof(float));
 							if(!f.weight->good())
 								throw std::runtime_error("Error writing to temporary weights file");

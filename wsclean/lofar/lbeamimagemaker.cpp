@@ -150,6 +150,7 @@ void LBeamImageMaker::makeBeamForMS(std::vector<ImageBufferAllocator::Ptr>& beam
 	timestepIds.push_back(idToMSRow.size());
 	
 	casacore::MEpoch midTime(casacore::MVEpoch(0.5 * (timeColumn(idToMSRow[0]).getValue().get() + timeColumn(idToMSRow.back()).getValue().get())), timeColumn(idToMSRow[0]).getRef());
+	Logger::Debug << "Mid time for full selection: " << midTime << '\n';
 	casacore::MeasFrame midFrame(arrayPos, midTime);
 	const casacore::MDirection::Ref hadecRef(casacore::MDirection::HADEC, midFrame);
 	const casacore::MDirection::Ref azelgeoRef(casacore::MDirection::AZELGEO, midFrame);
@@ -168,6 +169,7 @@ void LBeamImageMaker::makeBeamForMS(std::vector<ImageBufferAllocator::Ptr>& beam
 		casacore::MEpoch firstTime = timeColumn(idToMSRow[intervalStartId]);
 		casacore::MEpoch lastTime = timeColumn(idToMSRow[intervalEndId-1]);
 		time = casacore::MEpoch(casacore::MVEpoch(0.5 * (firstTime.getValue().get() + lastTime.getValue().get())), firstTime.getRef());
+		Logger::Debug << "Mid time for this interval: " << time << '\n';
 		
 		casacore::MeasFrame frame(arrayPos, time);
 		const casacore::MDirection::Ref j2000Ref(casacore::MDirection::J2000, frame);

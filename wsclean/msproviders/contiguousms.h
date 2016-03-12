@@ -67,19 +67,20 @@ private:
 	std::string _msPath;
 	casacore::MeasurementSet _ms;
 	MultiBandData _bandData;
-	bool _msHasWeights;
+	bool _msHasWeightSpectrum;
 
 	casacore::ROScalarColumn<int> _antenna1Column, _antenna2Column, _fieldIdColumn, _dataDescIdColumn;
 	casacore::ROScalarColumn<double> _timeColumn;
 	casacore::ROArrayColumn<double> _uvwColumn;
-	std::unique_ptr<casacore::ROArrayColumn<float>> _weightColumn;
+	std::unique_ptr<casacore::ROArrayColumn<float>> _weightSpectrumColumn;
+	std::unique_ptr<casacore::ROArrayColumn<float>> _weightScalarColumn;
 	std::string _dataColumnName;
 	casacore::ROArrayColumn<casacore::Complex> _dataColumn;
 	casacore::ROArrayColumn<bool> _flagColumn;
 	std::unique_ptr<casacore::ArrayColumn<casacore::Complex>> _modelColumn;
 	
 	casacore::Array<std::complex<float>> _dataArray, _modelArray;
-	casacore::Array<float> _weightArray;
+	casacore::Array<float> _weightSpectrumArray, _weightScalarArray;
 	casacore::Array<bool> _flagArray;
 	
 	void prepareModelColumn();
@@ -104,8 +105,12 @@ private:
 		if(!_isWeightRead)
 		{
 			_flagColumn.get(_row, _flagArray);
-			if(_msHasWeights)
-				_weightColumn->get(_row, _weightArray);
+			if(_msHasWeightSpectrum)
+				_weightSpectrumColumn->get(_row, _weightSpectrumArray);
+			else {
+				_weightScalarColumn->get(_row, _weightScalarArray);
+				expandScalarWeights(_weightScalarArray, _weightSpectrumArray);
+			}
 			_isWeightRead = true;
 		}
 	}

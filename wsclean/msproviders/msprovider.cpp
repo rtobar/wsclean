@@ -577,7 +577,7 @@ void MSProvider::initializeModelColumn(casacore::MeasurementSet& ms)
 		}
 		if(!isDefined || !isSameShape)
 		{
-			Logger::Info << "WARNING: Your model column does not have the same shape as your data column: resetting MODEL column.\n";
+			Logger::Warn << "WARNING: Your model column does not have the same shape as your data column: resetting MODEL column.\n";
 			casacore::Array<casacore::Complex> zeroArray(dataShape);
 			for(casacore::Array<casacore::Complex>::contiter i=zeroArray.cbegin(); i!=zeroArray.cend(); ++i)
 				*i = std::complex<float>(0.0, 0.0);
@@ -619,4 +619,28 @@ vector<PolarizationEnum> MSProvider::GetMSPolarizations(casacore::MeasurementSet
 	for(casacore::Array<int>::const_contiter p=corrTypeVec.cbegin(); p!=corrTypeVec.cend(); ++p)
 		pols.push_back(Polarization::AipsIndexToEnum(*p));
 	return pols;
+}
+
+bool MSProvider::openWeightSpectrumColumn(casacore::MeasurementSet& ms, std::unique_ptr<casacore::ROArrayColumn<float>>& weightColumn, const casa::IPosition& dataColumnShape)
+{
+	bool isWeightDefined;
+	if(ms.isColumn(casacore::MSMainEnums::WEIGHT_SPECTRUM))
+	{
+		weightColumn.reset(new casacore::ROArrayColumn<float>(ms, casacore::MS::columnName(casacore::MSMainEnums::WEIGHT_SPECTRUM)));
+		isWeightDefined = weightColumn->isDefined(0);
+	} else {
+		isWeightDefined = false;
+	}
+	casacore::Array<float> weightArray(dataColumnShape);
+	if(isWeightDefined)
+	{
+		casacore::IPosition weightShape = weightColumn->shape(0);
+		isWeightDefined = (weightShape == dataColumnShape);
+	}
+	if(!isWeightDefined)
+	{
+		Logger::Warn << "WARNING: This measurement set has no or an invalid WEIGHT_SPECTRUM column; will use less informative WEIGHT column.\n";
+		weightColumn.reset();
+	}
+	return isWeightDefined;
 }
