@@ -1,6 +1,10 @@
 #include "logger.h"
 
+#include <boost/date_time/posix_time/posix_time.hpp>
+
 enum Logger::LoggerLevel Logger::_coutLevel = Logger::InfoLevel;
+
+bool Logger::_logTime = false;
 
 Logger::LogWriter<Logger::DebugLevel> Logger::Debug;
 
@@ -28,4 +32,14 @@ void Logger::SetVerbosity(VerbosityLevel verbosityLevel)
 			_coutLevel = DebugLevel;
 			break;
 	}
+}
+
+void Logger::outputTime(bool toStdErr)
+{
+	boost::posix_time::ptime t(boost::posix_time::microsec_clock::local_time());
+	std::string str = boost::posix_time::to_simple_string(t);
+	if(toStdErr)
+		std::cerr << str << ' ';
+	else
+		std::cout << str << ' ';
 }

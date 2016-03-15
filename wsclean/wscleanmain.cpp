@@ -67,6 +67,8 @@ void print_help()
 		"   the model data column.\n"
 		"-verbose (or -v)\n"
 		"   Increase verbosity of output.\n"
+		"-log-time\n"
+		"   Add date and time to each line in the output.\n"
 		"-quiet\n"
 		"   Do not output anything but errors.\n"
 		"\n"
@@ -318,6 +320,10 @@ int main(int argc, char *argv[])
 		else if(param == "v" || param == "verbose")
 		{
 			Logger::SetVerbosity(Logger::VerboseVerbosity);
+		}
+		else if(param == "log-time")
+		{
+			Logger::SetLogTime(true);
 		}
 		else if(param == "tempdir")
 		{

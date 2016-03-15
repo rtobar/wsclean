@@ -144,10 +144,13 @@ void WSClean::imagePSF(size_t currentChannelIndex)
 	_inversionAlgorithm->Invert();
 	
 	size_t centralIndex = _settings.trimmedImageWidth/2 + (_settings.trimmedImageHeight/2) * _settings.trimmedImageWidth;
-	const double normFactor = 1.0/_inversionAlgorithm->ImageRealResult()[centralIndex];
-	_infoPerChannel[currentChannelIndex].psfNormalizationFactor = normFactor;
-	multiplyImage(normFactor, _inversionAlgorithm->ImageRealResult());
-	Logger::Debug << "Normalized PSF by factor of " << normFactor << ".\n";
+	if(_settings.normalizeForWeighting)
+	{
+		const double normFactor = 1.0/_inversionAlgorithm->ImageRealResult()[centralIndex];
+		_infoPerChannel[currentChannelIndex].psfNormalizationFactor = normFactor;
+		multiplyImage(normFactor, _inversionAlgorithm->ImageRealResult());
+		Logger::Debug << "Normalized PSF by factor of " << normFactor << ".\n";
+	}
 		
 	DeconvolutionAlgorithm::RemoveNaNsInPSF(_inversionAlgorithm->ImageRealResult(), _settings.trimmedImageWidth, _settings.trimmedImageHeight);
 	initFitsWriter(_fitsWriter);

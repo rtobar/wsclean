@@ -706,7 +706,7 @@ void WSMSGridder::Invert()
 	if(NormalizeForWeighting())
 		_gridder->FinalizeImage(1.0/_totalWeight, false);
 	else {
-		Logger::Info << "Not dividing by normalization factor of " << _totalWeight << ".\n";
+		Logger::Info << "Not dividing by normalization factor of " << _totalWeight/2.0 << ".\n";
 		_gridder->FinalizeImage(2.0, true);
 	}
 	

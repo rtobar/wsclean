@@ -47,7 +47,7 @@ class WSMSGridder : public InversionAlgorithm
 		virtual bool HasDenormalPhaseCentre() const { return _denormalPhaseCentre; }
 		virtual double PhaseCentreDL() const { return _phaseCentreDL; }
 		virtual double PhaseCentreDM() const { return _phaseCentreDM; }
-		virtual double ImageWeight() const { return _totalWeight; }
+		virtual double ImageWeight() const { return _totalWeight/2; }
 		
 		enum WStackingGridder::GridModeEnum GridMode() const { return _gridMode; }
 		void SetGridMode(WStackingGridder::GridModeEnum gridMode) { _gridMode = gridMode; }
