@@ -51,7 +51,7 @@ if(LOFAR_STATION_RESPONSE_DIR AND LOFAR_STATION_RESPONSE_LIB)
 else()
   set(LBEAM_LIBS "")
   set(LBEAM_FILES lofar/lmspredicter.cpp)
-  message("LOFAR beam library not found: LOFAR beam will not be available in WSClean. This is not an error, it means the 'lofar-dft' mode will be unavailable, which is not used often. Hence, this message can probably be ignored.")
+  message("LOFAR beam library not found: LOFAR beam will not be available in WSClean. This is not an error, it means that LOFAR beam correction and the 'lofar-dft' mode will be unavailable.")
 endif(LOFAR_STATION_RESPONSE_DIR AND LOFAR_STATION_RESPONSE_LIB)
 
 include_directories(${CASACORE_INCLUDE_DIRS})
