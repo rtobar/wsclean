@@ -1,7 +1,7 @@
 #ifndef WS_MS_GRIDDER_H
 #define WS_MS_GRIDDER_H
 
-#include "inversionalgorithm.h"
+#include "msgridderbase.h"
 #include "wstackinggridder.h"
 
 #include "../lane.h"
@@ -20,7 +20,7 @@ namespace casacore {
 }
 class ImageBufferAllocator;
 
-class WSMSGridder : public InversionAlgorithm
+class WSMSGridder : public MSGridderBase
 {
 	public:
 		WSMSGridder(class ImageBufferAllocator* imageAllocator, size_t threadCount, double memFraction, double absMemLimit);
@@ -36,17 +36,7 @@ class WSMSGridder : public InversionAlgorithm
 				throw std::runtime_error("No imaginary result available for non-complex inversion");
 			return _gridder->ImaginaryImage();
 		}
-		virtual double PhaseCentreRA() const { return _phaseCentreRA; }
-		virtual double PhaseCentreDec() const { return _phaseCentreDec; }
-		virtual double HighestFrequencyChannel() const { return _freqHigh; }
-		virtual double LowestFrequencyChannel() const { return _freqLow; }
-		virtual double BandStart() const { return _bandStart; }
-		virtual double BandEnd() const { return _bandEnd; }
 		virtual double BeamSize() const { return _beamSize; }
-		virtual double StartTime() const { return _startTime; }
-		virtual bool HasDenormalPhaseCentre() const { return _denormalPhaseCentre; }
-		virtual double PhaseCentreDL() const { return _phaseCentreDL; }
-		virtual double PhaseCentreDM() const { return _phaseCentreDM; }
 		virtual double ImageWeight() const { return _totalWeight/2; }
 		
 		enum WStackingGridder::GridModeEnum GridMode() const { return _gridMode; }
@@ -110,7 +100,7 @@ class WSMSGridder : public InversionAlgorithm
 		};
 		
 		void initializeMeasurementSet(size_t msIndex, MSData &msData);
-		void calculateMetaData(const MSData* msDataVector);
+		void calculateOverallMetaData(const MSData* msDataVector);
 		void gridMeasurementSet(MSData &msData);
 		void countSamplesPerLayer(MSData &msData);
 
@@ -138,14 +128,9 @@ class WSMSGridder : public InversionAlgorithm
 		std::unique_ptr<ao::lane<InversionWorkItem>> _inversionWorkLane;
 		std::unique_ptr<ao::lane<InversionWorkSample>[]> _inversionCPULanes;
 		std::unique_ptr<boost::thread_group> _threadGroup;
-		double _phaseCentreRA, _phaseCentreDec, _phaseCentreDL, _phaseCentreDM;
-		bool _denormalPhaseCentre, _hasFrequencies;
 		double _maxW, _minW;
-		double _freqHigh, _freqLow;
-		double _bandStart, _bandEnd;
 		double _beamSize;
 		double _totalWeight;
-		double _startTime;
 		WStackingGridder::GridModeEnum _gridMode;
 		size_t _cpuCount, _laneBufferSize;
 		int64_t _memSize;

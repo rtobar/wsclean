@@ -3,7 +3,9 @@
 
 #include "wstackinggridder.h"
 #include "inversionalgorithm.h"
+
 #include "../msselection.h"
+#include "../system.h"
 
 #include "../deconvolution/deconvolutionalgorithm.h"
 
@@ -106,7 +108,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	tukeyTaperInLambda(0.0), tukeyInnerTaperInLambda(0.0),
 	edgeTaperInLambda(0.0), edgeTukeyTaperInLambda(0.0),
 	nWLayers(0), antialiasingKernelSize(7), overSamplingFactor(63),
-	threadCount(sysconf(_SC_NPROCESSORS_ONLN)),
+	threadCount(System::ProcessorCount()),
 	fieldId(0),
 	startTimestep(0), endTimestep(0),
 	startChannel(0), endChannel(0),

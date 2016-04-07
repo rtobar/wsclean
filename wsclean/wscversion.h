@@ -1,9 +1,9 @@
 #ifndef WSCLEAN_VERSION_H
 #define WSCLEAN_VERSION_H
 
-#define WSCLEAN_VERSION_STR  "1.11+ScalarWeights"
+#define WSCLEAN_VERSION_STR  "1.11+ScalWeights+Predict+Multipol"
 #define WSCLEAN_VERSION_MAJOR 1
 #define WSCLEAN_VERSION_MINOR 11
-#define WSCLEAN_VERSION_DATE "2016-03-12"
+#define WSCLEAN_VERSION_DATE "2016-04-07"
 
 #endif

@@ -13,14 +13,6 @@
 #include "../msproviders/msprovider.h"
 
 #include <casacore/ms/MeasurementSets/MeasurementSet.h>
-#include <casacore/measures/Measures/MDirection.h>
-#include <casacore/measures/Measures/MCDirection.h>
-#include <casacore/measures/Measures/MEpoch.h>
-#include <casacore/measures/Measures/MPosition.h>
-#include <casacore/measures/Measures/MCPosition.h>
-#include <casacore/measures/TableMeasures/ScalarMeasColumn.h>
-
-#include <casacore/tables/Tables/ArrColDesc.h>
 
 #include <iostream>
 #include <stdexcept>
@@ -32,15 +24,9 @@ WSMSGridder::MSData::~MSData()
 { }
 
 WSMSGridder::WSMSGridder(ImageBufferAllocator* imageAllocator, size_t threadCount, double memFraction, double absMemLimit) :
-	InversionAlgorithm(),
-	_phaseCentreRA(0.0), _phaseCentreDec(0.0),
-	_phaseCentreDL(0.0), _phaseCentreDM(0.0),
-	_denormalPhaseCentre(false), _hasFrequencies(false),
-	_freqHigh(0.0), _freqLow(0.0),
-	_bandStart(0.0), _bandEnd(0.0),
+	MSGridderBase(),
 	_beamSize(0.0),
 	_totalWeight(0.0),
-	_startTime(0.0),
 	_gridMode(WStackingGridder::KaiserBesselKernel),
 	_cpuCount(threadCount),
 	_laneBufferSize(std::max<size_t>(_cpuCount*2,1024)),
@@ -82,11 +68,6 @@ void WSMSGridder::initializeMeasurementSet(size_t msIndex, WSMSGridder::MSData& 
 	/**
 		* Read some meta data from the measurement set
 		*/
-	casacore::MSAntenna aTable = ms.antenna();
-	size_t antennaCount = aTable.nrow();
-	if(antennaCount == 0) throw std::runtime_error("No antennae in set");
-	casacore::MPosition::ROScalarColumn antPosColumn(aTable, aTable.columnName(casacore::MSAntennaEnums::POSITION));
-	casacore::MPosition ant1Pos = antPosColumn(0);
 	
 	msData.bandData = MultiBandData(ms.spectralWindow(), ms.dataDescription());
 	if(Selection(msIndex).HasChannelRange())
@@ -107,44 +88,12 @@ void WSMSGridder::initializeMeasurementSet(size_t msIndex, WSMSGridder::MSData& 
 		msData.startChannel = 0;
 		msData.endChannel = msData.bandData.FirstBand().ChannelCount();
 	}
-	casacore::MEpoch::ROScalarColumn timeColumn(ms, ms.columnName(casacore::MSMainEnums::TIME));
-	const MultiBandData selectedBand = msData.SelectedBand();
-	if(_hasFrequencies)
-	{
-		_freqLow = std::min(_freqLow, selectedBand.LowestFrequency());
-		_freqHigh = std::max(_freqHigh, selectedBand.HighestFrequency());
-		_bandStart = std::min(_bandStart, selectedBand.BandStart());
-		_bandEnd = std::max(_bandEnd, selectedBand.BandEnd());
-		_startTime = std::min(_startTime, msProvider.StartTime());
-	} else {
-		_freqLow = selectedBand.LowestFrequency();
-		_freqHigh = selectedBand.HighestFrequency();
-		_bandStart = selectedBand.BandStart();
-		_bandEnd = selectedBand.BandEnd();
-		_startTime = msProvider.StartTime();
-		_hasFrequencies = true;
-	}
 	
-	casacore::MSField fTable(ms.field());
-	casacore::MDirection::ROScalarColumn phaseDirColumn(fTable, fTable.columnName(casacore::MSFieldEnums::PHASE_DIR));
-	casacore::MDirection phaseDir = phaseDirColumn(Selection(msIndex).FieldId());
-	casacore::MEpoch curtime = timeColumn(0);
-	casacore::MeasFrame frame(ant1Pos, curtime);
-	casacore::MDirection::Ref j2000Ref(casacore::MDirection::J2000, frame);
-	casacore::MDirection j2000 = casacore::MDirection::Convert(phaseDir, j2000Ref)();
-	casacore::Vector<casacore::Double> j2000Val = j2000.getValue().get();
-	_phaseCentreRA = j2000Val[0];
-	_phaseCentreDec = j2000Val[1];
-	if(fTable.keywordSet().isDefined("WSCLEAN_DL"))
-		_phaseCentreDL = fTable.keywordSet().asDouble(casacore::RecordFieldId("WSCLEAN_DL"));
-	else _phaseCentreDL = 0.0;
-	if(fTable.keywordSet().isDefined("WSCLEAN_DM"))
-		_phaseCentreDM = fTable.keywordSet().asDouble(casacore::RecordFieldId("WSCLEAN_DM"));
-	else _phaseCentreDM = 0.0;
-
-	_denormalPhaseCentre = _phaseCentreDL != 0.0 || _phaseCentreDM != 0.0;
-	if(_denormalPhaseCentre)
-		Logger::Info << "Set has denormal phase centre: dl=" << _phaseCentreDL << ", dm=" << _phaseCentreDM << '\n';
+	const MultiBandData selectedBand = msData.SelectedBand();
+	
+	updateMetaDataForMS(selectedBand, msProvider.StartTime());
+	
+	initializePhaseCentre(ms, Selection(msIndex).FieldId());
 	
 	Logger::Info << "Determining min and max w & theoretical beam size... ";
 	Logger::Info.Flush();
@@ -205,7 +154,7 @@ void WSMSGridder::initializeMeasurementSet(size_t msIndex, WSMSGridder::MSData& 
 	Logger::Info << "DONE (w=[" << msData.minW << ":" << msData.maxW << "] lambdas, maxuvw=" << msData.maxBaselineUVW << " lambda)\n";
 }
 
-void WSMSGridder::calculateMetaData(const MSData* msDataVector)
+void WSMSGridder::calculateOverallMetaData(const MSData* msDataVector)
 {
 	_maxW = 0.0;
 	_minW = std::numeric_limits<double>::max();
@@ -275,8 +224,8 @@ void WSMSGridder::calculateMetaData(const MSData* msDataVector)
 			wWidth = _nwWidth; wHeight = _nwHeight;
 		}
 		double
-			maxL = wWidth * PixelSizeX() * 0.5 + fabs(_phaseCentreDL),
-			maxM = wHeight * PixelSizeY() * 0.5 + fabs(_phaseCentreDM),
+			maxL = wWidth * PixelSizeX() * 0.5 + fabs(PhaseCentreDL()),
+			maxM = wHeight * PixelSizeY() * 0.5 + fabs(PhaseCentreDM()),
 			lmSq = maxL * maxL + maxM * maxM;
 		double cMinW = IsComplex() ? -_maxW : _minW;
 		double radiansForAllLayers;
@@ -391,9 +340,9 @@ void WSMSGridder::gridMeasurementSet(MSData &msData)
 			if(DoImagePSF())
 			{
 				msData.msProvider->ReadWeights(newItem.data);
-				if(_denormalPhaseCentre)
+				if(HasDenormalPhaseCentre())
 				{
-					double lmsqrt = sqrt(1.0-_phaseCentreDL*_phaseCentreDL- _phaseCentreDM*_phaseCentreDM);
+					double lmsqrt = sqrt(1.0-PhaseCentreDL()*PhaseCentreDL()- PhaseCentreDM()*PhaseCentreDM());
 					double shiftFactor = 2.0*M_PI* (newItem.w * (lmsqrt-1.0));
 					rotateVisibilities(curBand, shiftFactor, newItem.data);
 				}
@@ -635,16 +584,17 @@ void WSMSGridder::Invert()
 		throw std::runtime_error("Something is wrong during inversion: no measurement sets given to inversion algorithm");
 	MSData* msDataVector = new MSData[MeasurementSetCount()];
 	
-	_hasFrequencies = false;
+	resetMetaData();
+	
 	for(size_t i=0; i!=MeasurementSetCount(); ++i)
 		initializeMeasurementSet(i, msDataVector[i]);
 	
-	calculateMetaData(msDataVector);
+	calculateOverallMetaData(msDataVector);
 	
 	_gridder = std::unique_ptr<WStackingGridder>(new WStackingGridder(_actualInversionWidth, _actualInversionHeight, _actualPixelSizeX, _actualPixelSizeY, _cpuCount, _imageBufferAllocator, AntialiasingKernelSize(), OverSamplingFactor()));
 	_gridder->SetGridMode(_gridMode);
-	if(_denormalPhaseCentre)
-		_gridder->SetDenormalPhaseCentre(_phaseCentreDL, _phaseCentreDM);
+	if(HasDenormalPhaseCentre())
+		_gridder->SetDenormalPhaseCentre(PhaseCentreDL(), PhaseCentreDM());
 	_gridder->SetIsComplex(IsComplex());
 	//_imager->SetImageConjugatePart(Polarization() == Polarization::YX && IsComplex());
 	_gridder->PrepareWLayers(WGridSize(), double(_memSize)*(7.0/10.0), _minW, _maxW);
@@ -763,16 +713,17 @@ void WSMSGridder::Predict(double* real, double* imaginary)
 	
 	MSData* msDataVector = new MSData[MeasurementSetCount()];
 	
-	_hasFrequencies = false;
+	resetMetaData();
+	
 	for(size_t i=0; i!=MeasurementSetCount(); ++i)
 		initializeMeasurementSet(i, msDataVector[i]);
 	
-	calculateMetaData(msDataVector);
+	calculateOverallMetaData(msDataVector);
 	
 	_gridder = std::unique_ptr<WStackingGridder>(new WStackingGridder(_actualInversionWidth, _actualInversionHeight, _actualPixelSizeX, _actualPixelSizeY, _cpuCount, _imageBufferAllocator, AntialiasingKernelSize(), OverSamplingFactor()));
 	_gridder->SetGridMode(_gridMode);
-	if(_denormalPhaseCentre)
-		_gridder->SetDenormalPhaseCentre(_phaseCentreDL, _phaseCentreDM);
+	if(HasDenormalPhaseCentre())
+		_gridder->SetDenormalPhaseCentre(PhaseCentreDL(), PhaseCentreDM());
 	_gridder->SetIsComplex(IsComplex());
 	//_imager->SetImageConjugatePart(Polarization() == Polarization::YX && IsComplex());
 	_gridder->PrepareWLayers(WGridSize(), double(_memSize)*(7.0/10.0), _minW, _maxW);

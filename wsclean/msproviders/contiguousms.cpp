@@ -40,7 +40,7 @@ ContiguousMS::ContiguousMS(const string& msPath, const std::string& dataColumnNa
 		_weightScalarColumn.reset(new casacore::ROArrayColumn<float>(_ms, casacore::MS::columnName(casacore::MSMainEnums::WEIGHT)));
 	}
 	
-	getRowRange(_ms, selection, _startRow, _endRow);
+	getRowRangeAndIDMap(_ms, selection, _startRow, _endRow, _idToMSRow);
 	Reset();
 }
 
@@ -190,7 +190,8 @@ void ContiguousMS::WriteModel(size_t rowId, std::complex<float>* buffer)
 	if(!_isModelColumnPrepared)
 		prepareModelColumn();
 	
-	size_t dataDescId = _dataDescIdColumn(rowId);
+	size_t msRowId = _idToMSRow[rowId];
+	size_t dataDescId = _dataDescIdColumn(msRowId);
 	size_t startChannel, endChannel;
 	if(_selection.HasChannelRange())
 	{
@@ -202,9 +203,9 @@ void ContiguousMS::WriteModel(size_t rowId, std::complex<float>* buffer)
 		endChannel = _bandData[dataDescId].ChannelCount();
 	}
 	
-	_modelColumn->get(rowId, _modelArray);
+	_modelColumn->get(msRowId, _modelArray);
 	reverseCopyData(_modelArray, startChannel, endChannel, _inputPolarizations, buffer, _polOut);
-	_modelColumn->put(rowId, _modelArray);
+	_modelColumn->put(msRowId, _modelArray);
 }
 
 void ContiguousMS::ReadWeights(std::complex<float>* buffer)
@@ -243,21 +244,15 @@ void ContiguousMS::ReadWeights(float* buffer)
 	copyWeights(buffer,  startChannel, endChannel, _inputPolarizations, _dataArray, _weightSpectrumArray, _flagArray, _polOut);
 }
 
-void ContiguousMS::MakeMSRowToRowIdMapping(std::vector<size_t>& msToId, const MSSelection&)
+void ContiguousMS::MakeMSRowToRowIdMapping(std::vector<size_t>& msRowToId)
 {
 	size_t nRow = _ms.nrow();
-	msToId.resize(nRow);
+	msRowToId.resize(nRow);
 	for(size_t i=0; i!=nRow; ++i)
-		msToId[i] = i;
+		msRowToId[i] = i;
 }
 
-void ContiguousMS::MakeIdToMSRowMapping(vector<size_t>& idToMSRow, const MSSelection& selection)
+void ContiguousMS::MakeIdToMSRowMapping(vector<size_t>& idToMSRow)
 {
-	idToMSRow.clear();
-	ContiguousMS iterator(_msPath, _dataColumnName, _selection, _polOut, _dataDescId, false);
-	while(iterator.CurrentRowAvailable())
-	{
-		idToMSRow.push_back(iterator._row);
-		iterator.NextRow();
-	}
+	idToMSRow = _idToMSRow;
 }

@@ -141,6 +141,29 @@ class RaDecCoord
 			return s.str();
 		}
 		
+		static std::string RAToString(long double ra, char delimiter)
+		{
+			const long double partsPerHour = 60.0L*60.0L*100.0L;
+			long double hrs = fmodl(ra * (12.0L / M_PIl), 24.0L);
+			hrs = roundl(hrs * partsPerHour)/partsPerHour;
+			std::stringstream s;
+			if(hrs < 0) {
+				hrs = -hrs;
+				s << '-';
+			}
+			hrs = (roundl(hrs*partsPerHour)+0.5) / partsPerHour;
+			int hrsInt = int(floorl(hrs)), minInt = int(floorl(fmodl(hrs,1.0L)*60.0L)),
+				secInt = int(floorl(fmodl(hrs*60.0L,1.0L)*(60.0L))),
+				subSecInt = int(floorl(fmodl(hrs*(60.0L*60.0L),1.0L)*(100.0L)));
+			s << (char) ((hrsInt/10)+'0') << (char) ((hrsInt%10)+'0') << delimiter
+				<< (char) ((minInt/10)+'0') << (char) ((minInt%10)+'0') << delimiter
+				<< (char) ((secInt/10)+'0') << (char) ((secInt%10)+'0');
+			s << '.' << (char) (subSecInt/10+'0');
+			if(subSecInt%10!=0)
+				s << (char) (subSecInt%10+'0');
+			return s.str();
+		}
+		
 		static void RAToHMS(long double ra, int& hrs, int& min, double& sec)
 		{
 			const long double partsPerHour = 60.0L*60.0L*100.0L;
@@ -185,6 +208,34 @@ class RaDecCoord
 					s << (char) (subSecInt%10+'0');
 			}
 			s << 's';
+			return s.str();
+		}
+		
+		static std::string DecToString(long double dec, char delimiter)
+		{
+			const long double partsPerDeg = 60.0L*60.0L*100.0L;
+			long double deg = dec * (180.0 / M_PI);
+			deg = round(deg * partsPerDeg)/partsPerDeg;
+			std::stringstream s;
+			if(deg < 0) {
+				deg = -deg;
+				s << '-';
+			}
+			deg = (round(deg*partsPerDeg)+0.5) / partsPerDeg;
+			int
+				degInt = int(floor(deg)),
+				minInt = int(floor(fmod(deg,1.0)*60.0)),
+				secInt = int(floor(fmod(deg,1.0/60.0)*(60.0*60.0))),
+				subSecInt = int(floor(fmod(deg,1.0/60.0/60.0)*(60.0*60.0*100.0)));
+			s << (char) ((degInt/10)+'0') << (char) ((degInt%10)+'0') << delimiter
+				<< (char) ((minInt/10)+'0') << (char) ((minInt%10)+'0') << delimiter
+				<< (char) ((secInt/10)+'0') << (char) ((secInt%10)+'0');
+			if(subSecInt!=0)
+			{
+				s << '.' << (char) (subSecInt/10+'0');
+				if(subSecInt%10!=0)
+					s << (char) (subSecInt%10+'0');
+			}
 			return s.str();
 		}
 		

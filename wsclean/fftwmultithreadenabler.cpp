@@ -1,13 +1,14 @@
 #include "fftwmultithreadenabler.h"
 
+#include "system.h"
+
 #include <iostream>
 
 #include <fftw3.h>
-#include <unistd.h>
 
 FFTWMultiThreadEnabler::FFTWMultiThreadEnabler(bool reportNrThreads)
 {
-	int threadCount = sysconf(_SC_NPROCESSORS_ONLN);
+	int threadCount = std::min(System::ProcessorCount(), 4u);
 	if(reportNrThreads)
 		std::cout << "Setting FFTW to use " << threadCount << " threads.\n";
 	fftw_init_threads();

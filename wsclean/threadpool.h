@@ -1,12 +1,13 @@
 #ifndef THREAD_POOL_H
 #define THREAD_POOL_H
 
+#include "system.h"
+
 #include <boost/thread/condition.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/function.hpp>
 
-#include <unistd.h>
 #include <queue>
 
 class ThreadPool
@@ -14,7 +15,7 @@ class ThreadPool
 public:
 	ThreadPool() : _activeThreads(0), _finish(false)
 	{
-		init_threads(sysconf(_SC_NPROCESSORS_ONLN));
+		init_threads(System::ProcessorCount());
 	}
 	
 	~ThreadPool()

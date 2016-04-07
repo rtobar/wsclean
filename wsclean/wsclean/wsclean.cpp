@@ -387,7 +387,7 @@ void WSClean::dftPredict(const ImagingTable& squaredGroup)
 			
 			Logger::Info << "Creating row mapping...\n";
 			std::vector<size_t> msToRowId;
-			msProviders[0]->MakeMSRowToRowIdMapping(msToRowId, _globalSelection);
+			msProviders[0]->MakeMSRowToRowIdMapping(msToRowId);
 			
 			ProgressBar progress("Predicting visibilities for " + msName);
 			BandData band(ms.spectralWindow());
@@ -473,14 +473,14 @@ void WSClean::initializeMFSImageWeights()
 			for(size_t msIndex=0; msIndex!=_settings.filenames.size(); ++msIndex)
 			{
 				const ImagingTableEntry::MSInfo& ms = entry.msData[msIndex];
-				for(size_t d=0; d!=_msBands[msIndex].DataDescCount(); ++d)
+				for(size_t dataDescId=0; dataDescId!=_msBands[msIndex].DataDescCount(); ++dataDescId)
 				{
 					MSSelection partSelection(_globalSelection);
-					partSelection.SetBandId(d);
-					bool hasSelection = selectChannels(partSelection, msIndex, d, subTable.Front());
+					partSelection.SetBandId(dataDescId);
+					bool hasSelection = selectChannels(partSelection, msIndex, dataDescId, subTable.Front());
 					if(hasSelection)
 					{
-						PartitionedMS msProvider(_partitionedMSHandles[msIndex], ms.bands[d].partIndex, entry.polarization, d);
+						PartitionedMS msProvider(_partitionedMSHandles[msIndex], ms.bands[dataDescId].partIndex, entry.polarization, dataDescId);
 						_imageWeightCache->Weights().Grid(msProvider, partSelection);
 					}
 				}
@@ -575,7 +575,7 @@ void WSClean::performReordering(bool isPredictMode)
 	for(size_t i=0; i != _settings.filenames.size(); ++i)
 	{
 		std::vector<PartitionedMS::ChannelRange> channels;
-		size_t nextIndex = 0;
+		std::map<PolarizationEnum, size_t> nextIndex;
 		for(size_t j=0; j!=_imagingTable.SquaredGroupCount(); ++j)
 		{
 			ImagingTable squaredGroup = _imagingTable.GetSquaredGroup(j);
@@ -583,26 +583,22 @@ void WSClean::performReordering(bool isPredictMode)
 			{
 				ImagingTableEntry& entry =
 					_imagingTable[squaredGroup[s].index];
-				if(entry.polarization == *_settings.polarizations.begin())
+				for(size_t d=0; d!=_msBands[i].DataDescCount(); ++d)
 				{
-					for(size_t d=0; d!=_msBands[i].DataDescCount(); ++d)
+					MSSelection selection(_globalSelection);
+					if(selectChannels(selection, i, d, entry))
 					{
-						MSSelection selection(_globalSelection);
-						if(selectChannels(selection, i, d, entry))
+						if(entry.polarization == *_settings.polarizations.begin())
 						{
 							PartitionedMS::ChannelRange r;
 							r.dataDescId = d;
 							r.start = selection.ChannelRangeStart();
 							r.end = selection.ChannelRangeEnd();
-							entry.msData[i].bands[d].partIndex = nextIndex;
-							++nextIndex;
 							channels.push_back(r);
 						}
+						entry.msData[i].bands[d].partIndex = nextIndex[entry.polarization];
+						++nextIndex[entry.polarization];
 					}
-				}
-				else {
-					for(size_t d=0; d!=_msBands[i].DataDescCount(); ++d)
-						entry.msData[i].bands[d].partIndex = nextIndex-1;
 				}
 			}
 		}

@@ -561,6 +561,55 @@ void MSProvider::getRowRange(casacore::MeasurementSet& ms, const MSSelection& se
 	}
 }
 
+void MSProvider::getRowRangeAndIDMap(casacore::MeasurementSet& ms, const MSSelection& selection, size_t& startRow, size_t& endRow, vector<size_t>& idToMSRow)
+{
+	if(!selection.HasInterval())
+	{
+		startRow = 0;
+		endRow = ms.nrow();
+	}
+	
+	Logger::Info << "Mapping measurement set rows... ";
+	Logger::Info.Flush();
+	casacore::ROArrayColumn<double> uvwColumn(ms, casacore::MS::columnName(casacore::MSMainEnums::UVW));
+	casacore::ROScalarColumn<int> antenna1Column(ms, casacore::MS::columnName(casacore::MSMainEnums::ANTENNA1));
+	casacore::ROScalarColumn<int> antenna2Column(ms, casacore::MS::columnName(casacore::MSMainEnums::ANTENNA2));
+	casacore::ROScalarColumn<int> fieldIdColumn(ms, casacore::MS::columnName(casacore::MSMainEnums::FIELD_ID));
+	casacore::ROScalarColumn<double> timeColumn(ms, casacore::MS::columnName(casacore::MSMainEnums::TIME));
+	double time = timeColumn(0);
+	size_t timestepIndex = 0;
+	bool timeStepSelected = !selection.HasInterval();
+	for(size_t row = 0; row!=ms.nrow(); ++row)
+	{
+		if(time != timeColumn(row))
+		{
+			++timestepIndex;
+			if(selection.HasInterval() && timestepIndex == selection.IntervalStart())
+			{
+				startRow = row;
+				timeStepSelected = true;
+			}
+			if(timestepIndex == selection.IntervalEnd())
+			{
+				if(selection.HasInterval())
+					endRow = row;
+				break;
+			}
+			time = timeColumn(row);
+		}
+		if(timeStepSelected)
+		{
+			const int
+				a1 = antenna1Column(row), a2 = antenna2Column(row),
+				fieldId = fieldIdColumn(row);
+			casacore::Vector<double> uvw = uvwColumn(row);
+			if(selection.IsSelected(fieldId, timestepIndex, a1, a2, uvw))
+				idToMSRow.push_back(row);
+		}
+	}
+	Logger::Info << "DONE (" << startRow << '-' << endRow << ")\n";
+}
+
 void MSProvider::initializeModelColumn(casacore::MeasurementSet& ms)
 {
 	casacore::ROArrayColumn<casacore::Complex> dataColumn(ms, casacore::MS::columnName(casacore::MSMainEnums::DATA));

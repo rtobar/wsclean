@@ -100,8 +100,3 @@ void Model::Save(std::ostream& stream) const
 		stream << i->ToString();
 	}
 }
-
-void Model::SortOnBrightness()
-{
-	std::sort(_sources.rbegin(), _sources.rend());
-}

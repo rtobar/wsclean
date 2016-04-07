@@ -21,38 +21,38 @@ public:
 	
 	ContiguousMS& operator=(const ContiguousMS&) = delete;
 	
-	virtual casacore::MeasurementSet &MS() override { return _ms; }
+	virtual casacore::MeasurementSet &MS() override final { return _ms; }
 	
-	virtual size_t RowId() const override { return _rowId; }
+	virtual size_t RowId() const override final { return _rowId; }
 	
-	virtual bool CurrentRowAvailable() override;
+	virtual bool CurrentRowAvailable() override final;
 	
-	virtual void NextRow() override;
+	virtual void NextRow() override final;
 	
-	virtual void Reset() override;
+	virtual void Reset() override final;
 	
-	virtual void ReadMeta(double& u, double& v, double& w, size_t& dataDescId) override;
+	virtual void ReadMeta(double& u, double& v, double& w, size_t& dataDescId) override final;
 	
-	virtual void ReadData(std::complex<float>* buffer) override;
+	virtual void ReadData(std::complex<float>* buffer) override final;
 	
-	virtual void ReadModel(std::complex<float>* buffer) override;
+	virtual void ReadModel(std::complex<float>* buffer) override final;
 	
-	virtual void WriteModel(size_t rowId, std::complex<float>* buffer) override;
+	virtual void WriteModel(size_t rowId, std::complex<float>* buffer) override final;
 	
-	virtual void ReadWeights(float* buffer) override;
+	virtual void ReadWeights(float* buffer) override final;
 	
-	virtual void ReadWeights(std::complex<float>* buffer) override;
+	virtual void ReadWeights(std::complex<float>* buffer) override final;
 	
-	virtual void ReopenRW() override
+	virtual void ReopenRW() override final
 	{
 		_ms.reopenRW();
 	}
 	
-	virtual double StartTime() override;
+	virtual double StartTime() override final;
 	
-	virtual void MakeMSRowToRowIdMapping(std::vector<size_t>& msToId, const MSSelection& selection) override;
+	virtual void MakeMSRowToRowIdMapping(std::vector<size_t>& msToId) override final;
 	
-	virtual void MakeIdToMSRowMapping(std::vector<size_t>& idToMSRow, const MSSelection& selection) override;
+	virtual void MakeIdToMSRowMapping(std::vector<size_t>& idToMSRow) override final;
 private:
 	size_t _row, _rowId;
 	size_t _timestep;
@@ -61,6 +61,7 @@ private:
 	bool _isMetaRead, _isDataRead, _isModelRead, _isWeightRead;
 	bool _isModelColumnPrepared;
 	size_t _startRow, _endRow;
+	vector<size_t> _idToMSRow;
 	std::vector<PolarizationEnum> _inputPolarizations;
 	MSSelection _selection;
 	PolarizationEnum _polOut;

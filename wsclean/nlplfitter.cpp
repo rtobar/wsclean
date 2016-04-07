@@ -373,7 +373,7 @@ void NonLinearPowerLawFitter::Fit(ao::uvector<double>& terms, size_t nTerms)
 	if(nTerms == 0)
 		return;
 	
-	double a, b;
+	double a = 1.0, b = 0.0;
 	Fit(a, b);
 	bool isNegative = b < 0.0;
 	if(isNegative)
@@ -408,7 +408,7 @@ void NonLinearPowerLawFitter::FitStable(ao::uvector<double>& terms, size_t nTerm
 	if(nTerms == 0)
 		return;
 	
-	double a, b;
+	double a = 1.0, b = 0.0;
 	Fit(a, b);
 	
 	bool isNegative = b < 0.0;

@@ -128,7 +128,7 @@ void LBeamImageMaker::makeBeamForMS(std::vector<ImageBufferAllocator::Ptr>& beam
 	
 	Logger::Debug << "Counting timesteps...\n";
 	std::vector<size_t> idToMSRow;
-	msProvider.MakeIdToMSRowMapping(idToMSRow, selection);
+	msProvider.MakeIdToMSRowMapping(idToMSRow);
 	
 	casacore::MEpoch::ROScalarColumn timeColumn(ms, ms.columnName(casacore::MSMainEnums::TIME));
 	casacore::MEpoch time = timeColumn(idToMSRow[0]);

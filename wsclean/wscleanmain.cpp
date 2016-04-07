@@ -212,7 +212,7 @@ void print_help()
 		"   Perform cleaning by searching for peaks in the MFS image, but subtract components from individual channels.\n"
 		"   This will turn on mfsweighting by default. Default: off.\n"
 		"-multiscale\n"
-		"   Clean on different scales. This is a new experimental algorithm. Default: off.\n"
+		"   Clean on different scales. This is a new algorithm. Default: off.\n"
 		"   This parameter invokes the v1.9 multiscale algorithm, which is slower but more accurate\n"
 		"   compared to the older algorithm, and therefore the recommended one to use.\n"
 		"   The older algorithm is now invoked with -fast-multiscale.\n"

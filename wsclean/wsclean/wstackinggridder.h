@@ -112,7 +112,6 @@ class WStackingGridder
 		};
 		
 		/** Construct a new gridder with given settings.
-		 * Currently, the width and height should be set equally.
 		 * @param width The width of the image in pixels
 		 * @param height The height of the image in pixels.
 		 * @param pixelSizeX The angular width of a pixel in radians.
@@ -127,7 +126,6 @@ class WStackingGridder
 		 * @param overSamplingFactor The number of different horizontal and vertical kernels
 		 *   that are precalculated at different rational positions. Larger is more accurate
 		 *   but requires more memory and becomes slower, probably mainly due to cache misses.
-		 * @todo Fix width/height requirement.
 		 */
 		WStackingGridder(size_t width, size_t height, double pixelSizeX, double pixelSizeY, size_t fftThreadCount, ImageBufferAllocator* allocator, size_t kernelSize = 7, size_t overSamplingFactor = 63);
 		

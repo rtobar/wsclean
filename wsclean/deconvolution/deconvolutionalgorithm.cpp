@@ -1,11 +1,10 @@
 #include "deconvolutionalgorithm.h"
 
 #include "../imagecoordinates.h"
+#include "../system.h"
 
 #include "../model/modelsource.h"
 #include "../model/model.h"
-
-#include <unistd.h>
 
 DeconvolutionAlgorithm::DeconvolutionAlgorithm() :
 	_threshold(0.0),
@@ -16,7 +15,7 @@ DeconvolutionAlgorithm::DeconvolutionAlgorithm() :
 	_multiscaleScaleBias(0.6),
 	_maxIter(500),
 	_iterationNumber(0),
-	_threadCount(sysconf(_SC_NPROCESSORS_ONLN)),
+	_threadCount(System::ProcessorCount()),
 	_allowNegativeComponents(true),
 	_stopOnNegativeComponent(false),
 	_multiscaleNormalizeResponse(false),

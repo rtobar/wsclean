@@ -27,6 +27,7 @@
 // #define REDUNDANT_VALIDATION 1
 
 PartitionedMS::PartitionedMS(const Handle& handle, size_t partIndex, PolarizationEnum polarization, size_t dataDescId) :
+	_handle(handle),
 	_metaFile(getMetaFilename(handle._data->_msPath, handle._data->_temporaryDirectory, dataDescId)),
 	_modelFileMap(0),
 	_currentRow(0),
@@ -52,7 +53,7 @@ PartitionedMS::PartitionedMS(const Handle& handle, size_t partIndex, Polarizatio
 	{
 		_fd = open((partPrefix+"-m.tmp").c_str(), O_RDWR);
 		if(_fd == -1)
-			throw std::runtime_error("Error opening temporary data file");
+			throw std::runtime_error("Error opening temporary model data file");
 		size_t length = _partHeader.channelCount * _metaHeader.selectedRowCount * sizeof(std::complex<float>);
 		if(length == 0)
 			_modelFileMap = 0;
@@ -721,7 +722,7 @@ void PartitionedMS::openMS()
 		_ms.reset(new casacore::MeasurementSet(_msPath.data()));
 }
 
-void PartitionedMS::MakeMSRowToRowIdMapping(std::vector<size_t>& msToId, const MSSelection& selection)
+void PartitionedMS::MakeMSRowToRowIdMapping(std::vector<size_t>& msToId)
 {
 	openMS();
 	const size_t nRow = _ms->nrow();
@@ -731,6 +732,7 @@ void PartitionedMS::MakeMSRowToRowIdMapping(std::vector<size_t>& msToId, const M
 	casacore::ROScalarColumn<int> fieldIdColumn(*_ms, casacore::MS::columnName(casacore::MSMainEnums::FIELD_ID));
 	casacore::ROScalarColumn<double> timeColumn(*_ms, casacore::MS::columnName(casacore::MSMainEnums::TIME));
 	size_t startRow, endRow;
+	const MSSelection& selection = _handle._data->_selection;
 	getRowRange(*_ms, selection, startRow, endRow);
 	
 	msToId.assign(startRow, 0);
@@ -756,33 +758,12 @@ void PartitionedMS::MakeMSRowToRowIdMapping(std::vector<size_t>& msToId, const M
 		msToId.push_back(0);
 }
 
-void PartitionedMS::MakeIdToMSRowMapping(vector<size_t>& idToMSRow, const MSSelection& selection)
+void PartitionedMS::MakeIdToMSRowMapping(vector<size_t>& idToMSRow)
 {
 	openMS();
-	casacore::ROArrayColumn<double> uvwColumn(*_ms, casacore::MS::columnName(casacore::MSMainEnums::UVW));
-	casacore::ROScalarColumn<int> antenna1Column(*_ms, casacore::MS::columnName(casacore::MSMainEnums::ANTENNA1));
-	casacore::ROScalarColumn<int> antenna2Column(*_ms, casacore::MS::columnName(casacore::MSMainEnums::ANTENNA2));
-	casacore::ROScalarColumn<int> fieldIdColumn(*_ms, casacore::MS::columnName(casacore::MSMainEnums::FIELD_ID));
-	casacore::ROScalarColumn<double> timeColumn(*_ms, casacore::MS::columnName(casacore::MSMainEnums::TIME));
+	const MSSelection& selection = _handle._data->_selection;
 	size_t startRow, endRow;
-	getRowRange(*_ms, selection, startRow, endRow);
-	
-	size_t timestep = selection.HasInterval() ? selection.IntervalStart() : 0;
-	double time = timeColumn(startRow);
-	for(size_t row=startRow; row!=endRow; ++row)
-	{
-		const int
-			a1 = antenna1Column(row), a2 = antenna2Column(row),
-			fieldId = fieldIdColumn(row);
-		casacore::Vector<double> uvw = uvwColumn(row);
-		if(time != timeColumn(row))
-		{
-			++timestep;
-			time = timeColumn(row);
-		}
-		if(selection.IsSelected(fieldId, timestep, a1, a2, uvw))
-			idToMSRow.push_back(row);
-	}
+	getRowRangeAndIDMap(*_ms, selection, startRow, endRow, idToMSRow);
 }
 
 void PartitionedMS::getDataDescIdMap(std::map<size_t, size_t>& dataDescIds, const vector<PartitionedMS::ChannelRange>& channels)

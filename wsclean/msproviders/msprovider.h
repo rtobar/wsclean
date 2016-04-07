@@ -55,9 +55,10 @@ public:
 	/**
 	 * This function should become deprecated.
 	 */
-	virtual void MakeMSRowToRowIdMapping(std::vector<size_t>& msToId, const MSSelection& selection) = 0;
+	[[deprecated]]
+	virtual void MakeMSRowToRowIdMapping(std::vector<size_t>& msToId) = 0;
 	
-	virtual void MakeIdToMSRowMapping(std::vector<size_t>& idToMSRow, const MSSelection& selection) = 0;
+	virtual void MakeIdToMSRowMapping(std::vector<size_t>& idToMSRow) = 0;
 	
 	static std::vector<PolarizationEnum> GetMSPolarizations(casacore::MeasurementSet& ms);
 protected:
@@ -69,6 +70,8 @@ protected:
 	static void reverseCopyData(casacore::Array<std::complex<float>>& dest, size_t startChannel, size_t endChannel, const std::vector<PolarizationEnum>& polsDest, const std::complex<float>* source, PolarizationEnum polSource);
 	
 	static void getRowRange(casacore::MeasurementSet& ms, const MSSelection& selection, size_t& startRow, size_t& endRow);
+	
+	static void getRowRangeAndIDMap(casacore::MeasurementSet& ms, const MSSelection& selection, size_t& startRow, size_t& endRow, vector<size_t>& idToMSRow);
 	
 	static void copyRealToComplex(std::complex<float>* dest, const float* source, size_t n)
 	{
