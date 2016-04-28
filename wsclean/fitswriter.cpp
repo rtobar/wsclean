@@ -27,9 +27,9 @@ void FitsWriter::writeHeaders(fitsfile*& fptr, const std::string& filename, size
 	naxes[3] = nPol;
 	fits_create_img(fptr, bitPixInt, 4, naxes, &status);
 	checkStatus(status, filename);
-	float zero = 0, one = 1, equinox = 2000.0;
-	fits_write_key(fptr, TFLOAT, "BSCALE", (void*) &one, "", &status); checkStatus(status, filename);
-	fits_write_key(fptr, TFLOAT, "BZERO", (void*) &zero, "", &status); checkStatus(status, filename);
+	double zero = 0, one = 1, equinox = 2000.0;
+	fits_write_key(fptr, TDOUBLE, "BSCALE", (void*) &one, "", &status); checkStatus(status, filename);
+	fits_write_key(fptr, TDOUBLE, "BZERO", (void*) &zero, "", &status); checkStatus(status, filename);
 	
 	switch(_unit)
 	{
@@ -56,34 +56,34 @@ void FitsWriter::writeHeaders(fitsfile*& fptr, const std::string& filename, size
 		fits_write_key(fptr, TDOUBLE, "BPA", (void*) &posAngle, "", &status); checkStatus(status, filename);
 	}
 	
-	fits_write_key(fptr, TFLOAT, "EQUINOX", (void*) &equinox, "J2000", &status); checkStatus(status, filename);
+	fits_write_key(fptr, TDOUBLE, "EQUINOX", (void*) &equinox, "J2000", &status); checkStatus(status, filename);
 	fits_write_key(fptr, TSTRING, "BTYPE", (void*) "Intensity", "", &status); checkStatus(status, filename);
 	fits_write_key(fptr, TSTRING, "ORIGIN", (void*) _origin.c_str(), _originComment.c_str(), &status); checkStatus(status, filename);
-	float phaseCentreRADeg = (_phaseCentreRA/M_PI)*180.0, phaseCentreDecDeg = (_phaseCentreDec/M_PI)*180.0;
-	float
+	double phaseCentreRADeg = (_phaseCentreRA/M_PI)*180.0, phaseCentreDecDeg = (_phaseCentreDec/M_PI)*180.0;
+	double
 		centrePixelX = _pixelSizeX!=0.0 ? ((_width / 2.0)+1.0 + _phaseCentreDL/_pixelSizeX) : (_width / 2.0)+1.0,
 		centrePixelY = _pixelSizeY!=0.0 ? ((_height / 2.0)+1.0 - _phaseCentreDM/_pixelSizeY) : (_height / 2.0)+1.0,
 		stepXDeg = (-_pixelSizeX / M_PI)*180.0,
 		stepYDeg = ( _pixelSizeY / M_PI)*180.0;
 	fits_write_key(fptr, TSTRING, "CTYPE1", (void*) "RA---SIN", "Right ascension angle cosine", &status); checkStatus(status, filename);
-	fits_write_key(fptr, TFLOAT, "CRPIX1", (void*) &centrePixelX, "", &status); checkStatus(status, filename);
-	fits_write_key(fptr, TFLOAT, "CRVAL1", (void*) &phaseCentreRADeg, "", &status); checkStatus(status, filename);
-	fits_write_key(fptr, TFLOAT, "CDELT1", (void*) &stepXDeg, "", &status); checkStatus(status, filename);
+	fits_write_key(fptr, TDOUBLE, "CRPIX1", (void*) &centrePixelX, "", &status); checkStatus(status, filename);
+	fits_write_key(fptr, TDOUBLE, "CRVAL1", (void*) &phaseCentreRADeg, "", &status); checkStatus(status, filename);
+	fits_write_key(fptr, TDOUBLE, "CDELT1", (void*) &stepXDeg, "", &status); checkStatus(status, filename);
 	fits_write_key(fptr, TSTRING, "CUNIT1", (void*) "deg", "", &status); checkStatus(status, filename);
 	
 	fits_write_key(fptr, TSTRING, "CTYPE2", (void*) "DEC--SIN", "Declination angle cosine", &status); checkStatus(status, filename);
-	fits_write_key(fptr, TFLOAT, "CRPIX2", (void*) &centrePixelY, "", &status); checkStatus(status, filename);
-	fits_write_key(fptr, TFLOAT, "CRVAL2", (void*) &phaseCentreDecDeg, "", &status); checkStatus(status, filename);
-	fits_write_key(fptr, TFLOAT, "CDELT2", (void*) &stepYDeg, "", &status); checkStatus(status, filename);
+	fits_write_key(fptr, TDOUBLE, "CRPIX2", (void*) &centrePixelY, "", &status); checkStatus(status, filename);
+	fits_write_key(fptr, TDOUBLE, "CRVAL2", (void*) &phaseCentreDecDeg, "", &status); checkStatus(status, filename);
+	fits_write_key(fptr, TDOUBLE, "CDELT2", (void*) &stepYDeg, "", &status); checkStatus(status, filename);
 	fits_write_key(fptr, TSTRING, "CUNIT2", (void*) "deg", "", &status); checkStatus(status, filename);
 
 	fits_write_key(fptr, TSTRING, "CTYPE3", (void*) "FREQ", "Central frequency", &status); checkStatus(status, filename);
-	fits_write_key(fptr, TFLOAT, "CRPIX3", (void*) &one, "", &status); checkStatus(status, filename);
+	fits_write_key(fptr, TDOUBLE, "CRPIX3", (void*) &one, "", &status); checkStatus(status, filename);
 	fits_write_key(fptr, TDOUBLE, "CRVAL3", (void*) &_frequency, "", &status); checkStatus(status, filename);
 	fits_write_key(fptr, TDOUBLE, "CDELT3", (void*) &_bandwidth, "", &status); checkStatus(status, filename);
 	fits_write_key(fptr, TSTRING, "CUNIT3", (void*) "Hz", "", &status); checkStatus(status, filename);
 	
-	float pol;
+	double pol;
 	switch(_polarization)
 	{
 		case Polarization::StokesI: pol = 1.0; break;
@@ -100,9 +100,9 @@ void FitsWriter::writeHeaders(fitsfile*& fptr, const std::string& filename, size
 		case Polarization::YX: pol = -8.0; break;
 	}
 	fits_write_key(fptr, TSTRING, "CTYPE4", (void*) "STOKES", "", &status); checkStatus(status, filename);
-	fits_write_key(fptr, TFLOAT, "CRPIX4", (void*) &one, "", &status); checkStatus(status, filename);
-	fits_write_key(fptr, TFLOAT, "CRVAL4", (void*) &pol, "", &status); checkStatus(status, filename);
-	fits_write_key(fptr, TFLOAT, "CDELT4", (void*) &one, "", &status); checkStatus(status, filename);
+	fits_write_key(fptr, TDOUBLE, "CRPIX4", (void*) &one, "", &status); checkStatus(status, filename);
+	fits_write_key(fptr, TDOUBLE, "CRVAL4", (void*) &pol, "", &status); checkStatus(status, filename);
+	fits_write_key(fptr, TDOUBLE, "CDELT4", (void*) &one, "", &status); checkStatus(status, filename);
 	fits_write_key(fptr, TSTRING, "CUNIT4", (void*) "", "", &status); checkStatus(status, filename);
 	
 	// RESTFRQ ?

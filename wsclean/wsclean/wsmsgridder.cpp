@@ -27,12 +27,9 @@ WSMSGridder::WSMSGridder(ImageBufferAllocator* imageAllocator, size_t threadCoun
 	MSGridderBase(),
 	_beamSize(0.0),
 	_totalWeight(0.0),
-	_gridMode(WStackingGridder::KaiserBesselKernel),
 	_cpuCount(threadCount),
 	_laneBufferSize(std::max<size_t>(_cpuCount*2,1024)),
 	_imageBufferAllocator(imageAllocator),
-	_trimWidth(0), _trimHeight(0),
-	_nwWidth(0), _nwHeight(0),
 	_actualInversionWidth(0), _actualInversionHeight(0),
 	_actualPixelSizeX(0), _actualPixelSizeY(0)
 {
@@ -183,11 +180,8 @@ void WSMSGridder::calculateOverallMetaData(const MSData* msDataVector)
 		if(_maxW < _minW) _maxW = _minW;
 	}
 
-	if(_trimWidth == 0 || _trimHeight ==  0)
-	{
-		_trimWidth = ImageWidth();
-		_trimHeight = ImageHeight();
-	}
+	if(!HasTrimSize())
+		SetTrimSize(ImageWidth(), ImageHeight());
 	
 	_actualInversionWidth = ImageWidth();
 	_actualInversionHeight = ImageHeight();
@@ -217,11 +211,11 @@ void WSMSGridder::calculateOverallMetaData(const MSData* msDataVector)
 	if(Verbose() || !HasWGridSize())
 	{
 		size_t wWidth, wHeight;
-		if(_nwWidth==0 && _nwHeight==0) {
-			wWidth = _trimWidth; wHeight = _trimHeight;
+		if(HasNWSize()) {
+			wWidth = NWWidth(); wHeight = NWHeight();
 		}
 		else {
-			wWidth = _nwWidth; wHeight = _nwHeight;
+			wWidth = TrimWidth(); wHeight = TrimHeight();
 		}
 		double
 			maxL = wWidth * PixelSizeX() * 0.5 + fabs(PhaseCentreDL()),
@@ -592,7 +586,7 @@ void WSMSGridder::Invert()
 	calculateOverallMetaData(msDataVector);
 	
 	_gridder = std::unique_ptr<WStackingGridder>(new WStackingGridder(_actualInversionWidth, _actualInversionHeight, _actualPixelSizeX, _actualPixelSizeY, _cpuCount, _imageBufferAllocator, AntialiasingKernelSize(), OverSamplingFactor()));
-	_gridder->SetGridMode(_gridMode);
+	_gridder->SetGridMode(GridMode());
 	if(HasDenormalPhaseCentre())
 		_gridder->SetDenormalPhaseCentre(PhaseCentreDL(), PhaseCentreDM());
 	_gridder->SetIsComplex(IsComplex());
@@ -684,19 +678,19 @@ void WSMSGridder::Invert()
 		}
 	}
 	
-	if(_trimWidth != ImageWidth() || _trimHeight != ImageHeight())
+	if(TrimWidth() != ImageWidth() || TrimHeight() != ImageHeight())
 	{
-		Logger::Info << "Trimming " << ImageWidth() << " x " << ImageHeight() << " -> " << _trimWidth << " x " << _trimHeight << '\n';
+		Logger::Info << "Trimming " << ImageWidth() << " x " << ImageHeight() << " -> " << TrimWidth() << " x " << TrimHeight() << '\n';
 		// Perform trimming
 		
-		double *trimmed = _imageBufferAllocator->Allocate(_trimWidth * _trimHeight);
-		ImageOperations::Trim(trimmed, _trimWidth, _trimHeight, _gridder->RealImage(), ImageWidth(), ImageHeight());
+		double *trimmed = _imageBufferAllocator->Allocate(TrimWidth() * TrimHeight());
+		ImageOperations::Trim(trimmed, TrimWidth(), TrimHeight(), _gridder->RealImage(), ImageWidth(), ImageHeight());
 		_gridder->ReplaceRealImageBuffer(trimmed);
 		
 		if(IsComplex())
 		{
-			double *trimmedImag = _imageBufferAllocator->Allocate(_trimWidth * _trimHeight);
-			ImageOperations::Trim(trimmedImag, _trimWidth, _trimHeight, _gridder->ImaginaryImage(), ImageWidth(), ImageHeight());
+			double *trimmedImag = _imageBufferAllocator->Allocate(TrimWidth() * TrimHeight());
+			ImageOperations::Trim(trimmedImag, TrimWidth(), TrimHeight(), _gridder->ImaginaryImage(), ImageWidth(), ImageHeight());
 			_gridder->ReplaceImaginaryImageBuffer(trimmedImag);
 		}
 	}
@@ -721,7 +715,7 @@ void WSMSGridder::Predict(double* real, double* imaginary)
 	calculateOverallMetaData(msDataVector);
 	
 	_gridder = std::unique_ptr<WStackingGridder>(new WStackingGridder(_actualInversionWidth, _actualInversionHeight, _actualPixelSizeX, _actualPixelSizeY, _cpuCount, _imageBufferAllocator, AntialiasingKernelSize(), OverSamplingFactor()));
-	_gridder->SetGridMode(_gridMode);
+	_gridder->SetGridMode(GridMode());
 	if(HasDenormalPhaseCentre())
 		_gridder->SetDenormalPhaseCentre(PhaseCentreDL(), PhaseCentreDM());
 	_gridder->SetIsComplex(IsComplex());
@@ -735,20 +729,20 @@ void WSMSGridder::Predict(double* real, double* imaginary)
 	}
 	
 	ImageBufferAllocator::Ptr untrimmedReal, untrimmedImag;
-	if(_trimWidth != ImageWidth() || _trimHeight != ImageHeight())
+	if(TrimWidth() != ImageWidth() || TrimHeight() != ImageHeight())
 	{
-		Logger::Info << "Untrimming " << _trimWidth << " x " << _trimHeight << " -> " << ImageWidth() << " x " << ImageHeight() << '\n';
+		Logger::Info << "Untrimming " << TrimWidth() << " x " << TrimHeight() << " -> " << ImageWidth() << " x " << ImageHeight() << '\n';
 		// Undo trimming (i.e., extend with zeros)
-		// The input is of size _trimWidth x _trimHeight
+		// The input is of size TrimWidth() x TrimHeight()
 		// This will make the model image of size ImageWidth() x ImageHeight()
 		_imageBufferAllocator->Allocate(ImageWidth() * ImageHeight(), untrimmedReal);
-		ImageOperations::Untrim(untrimmedReal.data(), ImageWidth(), ImageHeight(), real, _trimWidth, _trimHeight);
+		ImageOperations::Untrim(untrimmedReal.data(), ImageWidth(), ImageHeight(), real, TrimWidth(), TrimHeight());
 		real = untrimmedReal.data();
 		
 		if(IsComplex())
 		{
 			_imageBufferAllocator->Allocate(ImageWidth() * ImageHeight(), untrimmedImag);
-			ImageOperations::Untrim(untrimmedImag.data(), ImageWidth(), ImageHeight(), imaginary, _trimWidth, _trimHeight);
+			ImageOperations::Untrim(untrimmedImag.data(), ImageWidth(), ImageHeight(), imaginary, TrimWidth(), TrimHeight());
 			imaginary = untrimmedImag.data();
 		}
 	}

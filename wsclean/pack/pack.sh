@@ -8,6 +8,7 @@ else
 		mkdir /tmp/wsclean/aocommon
 		mkdir /tmp/wsclean/CMake
 		mkdir /tmp/wsclean/deconvolution
+		mkdir /tmp/wsclean/idg
 		mkdir /tmp/wsclean/interface
 		mkdir /tmp/wsclean/iuwt
 		mkdir /tmp/wsclean/lofar
@@ -21,6 +22,7 @@ else
 		cp -v aocommon/lane.h aocommon/lane_03.h aocommon/lane_11.h aocommon/uvector.h aocommon/uvector_03.h /tmp/wsclean/aocommon/
 		cp -v CMake/*.cmake /tmp/wsclean/CMake/
 		cp -v deconvolution/*.{h,cpp} /tmp/wsclean/deconvolution/
+		cp -v idg/*.{h,cpp} /tmp/wsclean/idg/
 		cp -v interface/*.{c,h,cpp,py} /tmp/wsclean/interface/
 		cp -v iuwt/*.{h,cpp} /tmp/wsclean/iuwt/
 		cp -v lofar/*.{h,cpp} /tmp/wsclean/lofar/

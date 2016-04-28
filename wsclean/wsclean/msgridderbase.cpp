@@ -11,6 +11,7 @@
 #include <casacore/tables/Tables/ArrColDesc.h>
 
 MSGridderBase::MSGridderBase() :
+	MeasurementSetGridder(),
 	_hasFrequencies(false),
 	_freqHigh(0.0), _freqLow(0.0),
 	_bandStart(0.0), _bandEnd(0.0),

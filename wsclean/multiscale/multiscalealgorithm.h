@@ -41,7 +41,8 @@ private:
 			rms(0.0),
 			maxImageValueX(0), maxImageValueY(0),
 			isActive(false),
-			nComponentsCleaned(0)
+			nComponentsCleaned(0),
+			totalFluxCleaned(0.0)
 		{ }
 		
 		double scale;
@@ -51,6 +52,7 @@ private:
 		size_t maxImageValueX, maxImageValueY;
 		bool isActive;
 		size_t nComponentsCleaned;
+		double totalFluxCleaned;
 	};
 	std::vector<MultiScaleAlgorithm::ScaleInfo> _scaleInfos;
 	ao::uvector<double> _manualScaleList;

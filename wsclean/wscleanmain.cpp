@@ -60,6 +60,8 @@ void print_help()
 		"   weighting as used by the imager. Only available for LOFAR.\n"
 		"-reuse-primary-beam\n"
 		"   If a primary beam image exists on disk, reuse those images (not implemented yet).\n"
+		"-use-differential-lofar-beam\n"
+		"   Assume the visibilities have already been beam-corrected for the reference direction.\n"
 		"-update-model-required (default), and\n"
 		"-no-update-model-required\n"
 		"   These two options specify wether the model data column is required to\n"
@@ -421,6 +423,10 @@ int main(int argc, char *argv[])
 		{
 			settings.reusePrimaryBeam = true;
 		}
+		else if(param == "use-differential-lofar-beam")
+		{
+			settings.useDifferentialLofarBeam = true;
+		}
 		else if(param == "negative")
 		{
 			settings.allowNegativeComponents = true;
@@ -488,11 +494,11 @@ int main(int argc, char *argv[])
 			std::string gridModeStr = argv[argi];
 			boost::to_lower(gridModeStr);
 			if(gridModeStr == "kb" || gridModeStr == "kaiserbessel" || gridModeStr == "kaiser-bessel")
-				settings.gridMode = WStackingGridder::KaiserBesselKernel;
+				settings.gridMode = KaiserBesselKernel;
 			else if(gridModeStr == "rect")
-				settings.gridMode = WStackingGridder::RectangularKernel;
+				settings.gridMode = RectangularKernel;
 			else if(gridModeStr == "nn" || gridModeStr == "nearestneighbour")
-				settings.gridMode = WStackingGridder::NearestNeighbourGridding;
+				settings.gridMode = NearestNeighbourGridding;
 			else
 				throw std::runtime_error("Invalid gridding mode: should be either kb (Kaiser-Bessel) or nn (NearestNeighbour)");
 		}
@@ -787,11 +793,11 @@ int main(int argc, char *argv[])
 			std::string modeStr = argv[argi];
 			boost::to_lower(modeStr);
 			if(modeStr == "normal")
-				settings.visibilityWeightingMode = InversionAlgorithm::NormalVisibilityWeighting;
+				settings.visibilityWeightingMode = MeasurementSetGridder::NormalVisibilityWeighting;
 			else if(modeStr == "squared")
-				settings.visibilityWeightingMode = InversionAlgorithm::SquaredVisibilityWeighting;
+				settings.visibilityWeightingMode = MeasurementSetGridder::SquaredVisibilityWeighting;
 			else if(modeStr == "unit")
-				settings.visibilityWeightingMode = InversionAlgorithm::UnitVisibilityWeighting;
+				settings.visibilityWeightingMode = MeasurementSetGridder::UnitVisibilityWeighting;
 			else
 				throw std::runtime_error("Unknown weighting mode: " + modeStr);
 		}

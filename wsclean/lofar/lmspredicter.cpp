@@ -88,8 +88,8 @@ void LMSPredicter::ReadThreadFunc()
 	boost::asio::io_service::work work(_ioService);
 	if(!_useModelColumn)
 	{
-		if(_dftInput.ComponentCount() == 0)
-			actualThreadCount = 1;
+		//if(_dftInput.ComponentCount() == 0)
+		//	actualThreadCount = 1;
 		for(size_t i=0; i!=actualThreadCount; ++i)
 		{
 			//_workThreadGroup->add_thread(new boost::thread(&LMSPredicter::PredictThreadFunc, this));

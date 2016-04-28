@@ -39,23 +39,11 @@ class WSMSGridder : public MSGridderBase
 		virtual double BeamSize() const { return _beamSize; }
 		virtual double ImageWeight() const { return _totalWeight/2; }
 		
-		enum WStackingGridder::GridModeEnum GridMode() const { return _gridMode; }
-		void SetGridMode(WStackingGridder::GridModeEnum gridMode) { _gridMode = gridMode; }
-		
-		virtual bool HasGriddingCorrectionImage() const { return _gridMode != WStackingGridder::NearestNeighbourGridding; }
+		virtual bool HasGriddingCorrectionImage() const { return GridMode() != NearestNeighbourGridding; }
 		virtual void GetGriddingCorrectionImage(double *image) const { _gridder->GetGriddingCorrectionImage(image); }
 		
 		size_t ActualInversionWidth() const { return _actualInversionWidth; }
 		size_t ActualInversionHeight() const { return _actualInversionHeight; }
-		
-		void SetTrimSize(size_t trimWidth, size_t trimHeight) {
-			_trimWidth = trimWidth;
-			_trimHeight = trimHeight;
-		}
-		void SetNWSize(size_t nwWidth, size_t nwHeight) {
-			_nwWidth = nwWidth;
-			_nwHeight = nwHeight;
-		}
 		
 		virtual void FreeImagingData()
 		{
@@ -131,12 +119,9 @@ class WSMSGridder : public MSGridderBase
 		double _maxW, _minW;
 		double _beamSize;
 		double _totalWeight;
-		WStackingGridder::GridModeEnum _gridMode;
 		size_t _cpuCount, _laneBufferSize;
 		int64_t _memSize;
 		ImageBufferAllocator* _imageBufferAllocator;
-		size_t _trimWidth, _trimHeight;
-		size_t _nwWidth, _nwHeight;
 		size_t _actualInversionWidth, _actualInversionHeight;
 		double _actualPixelSizeX, _actualPixelSizeY;
 };

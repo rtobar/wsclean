@@ -563,11 +563,8 @@ void MSProvider::getRowRange(casacore::MeasurementSet& ms, const MSSelection& se
 
 void MSProvider::getRowRangeAndIDMap(casacore::MeasurementSet& ms, const MSSelection& selection, size_t& startRow, size_t& endRow, vector<size_t>& idToMSRow)
 {
-	if(!selection.HasInterval())
-	{
-		startRow = 0;
-		endRow = ms.nrow();
-	}
+	startRow = 0;
+	endRow = ms.nrow();
 	
 	Logger::Info << "Mapping measurement set rows... ";
 	Logger::Info.Flush();
@@ -578,7 +575,7 @@ void MSProvider::getRowRangeAndIDMap(casacore::MeasurementSet& ms, const MSSelec
 	casacore::ROScalarColumn<double> timeColumn(ms, casacore::MS::columnName(casacore::MSMainEnums::TIME));
 	double time = timeColumn(0);
 	size_t timestepIndex = 0;
-	bool timeStepSelected = !selection.HasInterval();
+	bool timeStepSelected = !selection.HasInterval() || timestepIndex == selection.IntervalStart();
 	for(size_t row = 0; row!=ms.nrow(); ++row)
 	{
 		if(time != timeColumn(row))

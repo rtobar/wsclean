@@ -9,6 +9,7 @@
 #include "../wsclean/imagebufferallocator.h"
 
 #include <casacore/ms/MeasurementSets/MeasurementSet.h>
+#include <casacore/measures/Measures/MDirection.h>
 
 #ifdef HAVE_LOFAR_BEAM
 #include <StationResponse/Station.h>
@@ -19,7 +20,8 @@ class LBeamImageMaker
 public:
 	LBeamImageMaker(const class ImagingTableEntry* tableEntry, class ImageBufferAllocator* allocator) :
 	_tableEntry(tableEntry), _allocator(allocator),
-	_undersample(8), _secondsBeforeBeamUpdate(1800)
+	_undersample(8), _secondsBeforeBeamUpdate(1800),
+	_useDifferentialBeam(false)
 	{
 	}
 	
@@ -46,6 +48,10 @@ public:
 	}
 	
 	void Make(std::vector<ImageBufferAllocator::Ptr>& beamImages);
+	
+	void SetUseDifferentialBeam(bool useDifferentialBeam) {
+		_useDifferentialBeam = useDifferentialBeam;
+	}
 	
 private:
 #ifdef HAVE_LOFAR_BEAM
@@ -75,7 +81,7 @@ private:
 	
 	void makeBeamForMS(std::vector<ImageBufferAllocator::Ptr>& beamImages, MSProvider& msProvider, const ImagingTableEntry::MSInfo& msInfo, const MSSelection& selection);
 
-	void makeBeamSnapshot(const std::vector<LOFAR::StationResponse::Station::Ptr>& stations, const ao::uvector<double>& weights, const WeightMatrix& baselineWeights, double** imgPtr, double time, double frequency, double subbandFrequency, const casacore::MeasFrame& frame, const casacore::MDirection& delayDir, const casacore::MDirection& tileBeamDir);
+	void makeBeamSnapshot(const std::vector<LOFAR::StationResponse::Station::Ptr>& stations, const ao::uvector<double>& weights, const WeightMatrix& baselineWeights, double** imgPtr, double time, double frequency, double subbandFrequency, const casacore::MeasFrame& frame);
 	
 	void calculateStationWeights(const class ImageWeights& imageWeights, double& totalWeight, ao::uvector<double>& weights, WeightMatrix& baselineWeights, MSProvider& msProvider, const ImagingTableEntry::MSInfo& msInfo, const MSSelection& selection, const std::vector<size_t>& idToMSRow, size_t intervalStartIdIndex, size_t intervalEndIdIndex);
 	
@@ -101,6 +107,8 @@ private:
 	size_t _undersample, _secondsBeforeBeamUpdate;
 	double _pixelSizeX, _pixelSizeY, _phaseCentreRA, _phaseCentreDec, _phaseCentreDL, _phaseCentreDM;
 	double _sPixelSizeX, _sPixelSizeY, _totalWeightSum;
+ 	bool _useDifferentialBeam;
+	casacore::MDirection _delayDir, _referenceDir, _tileBeamDir;
 };
 
 #endif

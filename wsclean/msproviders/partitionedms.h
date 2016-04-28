@@ -94,21 +94,21 @@ public:
 	private:
 		struct HandleData
 		{
-			HandleData(const std::string& msPath, const string& dataColumnName, const std::string& temporaryDirectory, const std::vector<ChannelRange>& channels, bool modelUpdateRequired, const std::set<PolarizationEnum>& polarizations, const MSSelection& selection) :
-			_msPath(msPath), _dataColumnName(dataColumnName), _temporaryDirectory(temporaryDirectory), _channels(channels), _modelUpdateRequired(modelUpdateRequired),
+			HandleData(const std::string& msPath, const string& dataColumnName, const std::string& temporaryDirectory, const std::vector<ChannelRange>& channels, bool initialModelRequired, bool modelUpdateRequired, const std::set<PolarizationEnum>& polarizations, const MSSelection& selection) :
+			_msPath(msPath), _dataColumnName(dataColumnName), _temporaryDirectory(temporaryDirectory), _channels(channels), _initialModelRequired(initialModelRequired), _modelUpdateRequired(modelUpdateRequired),
 			_polarizations(polarizations), _selection(selection), _referenceCount(1) { }
 			
 			std::string _msPath, _dataColumnName, _temporaryDirectory;
 			std::vector<ChannelRange> _channels;
-			bool _modelUpdateRequired;
+			bool _initialModelRequired, _modelUpdateRequired;
 			std::set<PolarizationEnum> _polarizations;
 			MSSelection _selection;
 			size_t _referenceCount;
 		} *_data;
 		
 		void decrease();
-		Handle(const std::string& msPath, const string& dataColumnName, const std::string& temporaryDirectory, const std::vector<ChannelRange>& channels, bool modelUpdateRequired, const std::set<PolarizationEnum>& polarizations, const MSSelection& selection) :
-			_data(new HandleData(msPath, dataColumnName, temporaryDirectory, channels, modelUpdateRequired, polarizations, selection))
+		Handle(const std::string& msPath, const string& dataColumnName, const std::string& temporaryDirectory, const std::vector<ChannelRange>& channels, bool initialModelRequired, bool modelUpdateRequired, const std::set<PolarizationEnum>& polarizations, const MSSelection& selection) :
+			_data(new HandleData(msPath, dataColumnName, temporaryDirectory, channels, initialModelRequired, modelUpdateRequired, polarizations, selection))
 		{
 		}
 	};

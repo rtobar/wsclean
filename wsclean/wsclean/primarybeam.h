@@ -138,6 +138,7 @@ private:
 		LBeamImageMaker lbeam(&entry, &allocator);
 		for(std::vector<std::pair<MSProvider*, MSSelection>>::const_iterator i=_msProviders.begin(); i!=_msProviders.end(); ++i)
 			lbeam.AddMS(i->first, &i->second);
+		lbeam.SetUseDifferentialBeam(_settings.useDifferentialLofarBeam);
 		lbeam.SetImageDetails(_settings.trimmedImageWidth, _settings.trimmedImageHeight, _settings.pixelScaleX, _settings.pixelScaleY, _phaseCentreRA, _phaseCentreDec, _phaseCentreDL, _phaseCentreDM);
 		lbeam.SetImageWeight(imageWeightCache);
 		lbeam.Make(_beamImages);

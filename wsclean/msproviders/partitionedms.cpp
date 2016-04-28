@@ -541,7 +541,7 @@ PartitionedMS::Handle PartitionedMS::Partition(const string& msPath, const std::
 	}
 	progress2.reset();
 	
-	return Handle(msPath, dataColumnName, temporaryDirectory, channels, modelUpdateRequired, polsOut, selection);
+	return Handle(msPath, dataColumnName, temporaryDirectory, channels, initialModelRequired, modelUpdateRequired, polsOut, selection);
 }
 
 void PartitionedMS::unpartition(const PartitionedMS::Handle& handle)
@@ -689,7 +689,7 @@ void PartitionedMS::Handle::decrease()
 	--(_data->_referenceCount);
 	if(_data->_referenceCount == 0)
 	{
-		if(_data->_modelUpdateRequired)
+		if(_data->_modelUpdateRequired && !_data->_initialModelRequired)
 			PartitionedMS::unpartition(*this);
 		
 		Logger::Info << "Cleaning up temporary files...\n";

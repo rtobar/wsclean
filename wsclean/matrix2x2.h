@@ -288,6 +288,10 @@ public:
 		_values[0] = m00; _values[1] = m01;
 		_values[2] = m10; _values[3] = m11;
 	}
+	MC2x2(std::complex<double> m00, std::complex<double> m01, std::complex<double> m10, std::complex<double> m11) {
+		_values[0] = m00; _values[1] = m01;
+		_values[2] = m10; _values[3] = m11;
+	}
 	MC2x2& operator=(const MC2x2& source)
 	{
 		Matrix2x2::Assign(_values, source._values);
@@ -320,6 +324,14 @@ public:
 	{
 		return MC2x2(1.0, 0.0, 0.0, 1.0);
 	}
+	static MC2x2 NaN()
+	{
+		return MC2x2(
+			std::complex<double>(std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN()),
+			std::complex<double>(std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN()),
+			std::complex<double>(std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN()),
+			std::complex<double>(std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN()));
+	}
 	std::complex<double>* Data() { return _values; }
 	const std::complex<double>* Data() const { return _values; }
 	MC2x2 Multiply(const MC2x2& rhs) const
@@ -345,6 +357,10 @@ public:
 		MC2x2 dest;
 		Matrix2x2::HermATimesHermB(dest._values, _values, rhs._values);
 		return dest;
+	}
+	void AddWithFactorAndAssign(const MC2x2& rhs, double factor)
+	{
+		Matrix2x2::MultiplyAdd(_values, rhs._values, factor);
 	}
 	bool Invert()
 	{

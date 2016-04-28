@@ -40,14 +40,14 @@ public:
 		_edgeTukeyTaperInLambda = edgeTukeyTaperInLambda;
 	}
 	
-	void Update(InversionAlgorithm& inversion, size_t outChannelIndex, size_t outIntervalIndex)
+	void Update(MeasurementSetGridder& gridder, size_t outChannelIndex, size_t outIntervalIndex)
 	{
 		if(outChannelIndex != _currentWeightChannel || outIntervalIndex != _currentWeightInterval)
 		{
 			_currentWeightChannel = outChannelIndex;
 			_currentWeightInterval = outIntervalIndex;
 			
-			recalculateWeights(inversion);
+			recalculateWeights(gridder);
 		}
 	}
 	
@@ -91,15 +91,15 @@ public:
 	}
 
 private:
-	void recalculateWeights(InversionAlgorithm& inversion)
+	void recalculateWeights(MeasurementSetGridder& gridder)
 	{
 		Logger::Info << "Precalculating weights for " << _weightMode.ToString() << " weighting... ";
 		Logger::Info.Flush();
 		ResetWeights();
-		for(size_t i=0; i!=inversion.MeasurementSetCount(); ++i)
+		for(size_t i=0; i!=gridder.MeasurementSetCount(); ++i)
 		{
-			_imageWeights->Grid(inversion.MeasurementSet(i), inversion.Selection(i));
-			if(inversion.MeasurementSetCount() > 1)
+			_imageWeights->Grid(gridder.MeasurementSet(i), gridder.Selection(i));
+			if(gridder.MeasurementSetCount() > 1)
 				(Logger::Info << i << ' ').Flush();
 		}
 		_imageWeights->FinishGridding();

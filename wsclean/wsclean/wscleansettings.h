@@ -45,9 +45,9 @@ public:
 	std::string temporaryDirectory;
 	bool forceReorder, forceNoReorder, subtractModel, modelUpdateRequired, mfsWeighting;
 	bool normalizeForWeighting;
-	bool applyPrimaryBeam, reusePrimaryBeam;
-	enum WStackingGridder::GridModeEnum gridMode;
-	enum InversionAlgorithm::VisibilityWeightingMode visibilityWeightingMode;
+	bool applyPrimaryBeam, reusePrimaryBeam, useDifferentialLofarBeam;
+	enum GridModeEnum gridMode;
+	enum MeasurementSetGridder::VisibilityWeightingMode visibilityWeightingMode;
 	
 	/** @{
 	 * These settings all relate to the deconvolution.
@@ -128,8 +128,9 @@ inline WSCleanSettings::WSCleanSettings() :
 	mfsWeighting(false),
 	normalizeForWeighting(true),
 	applyPrimaryBeam(false), reusePrimaryBeam(false),
-	gridMode(WStackingGridder::KaiserBesselKernel),
-	visibilityWeightingMode(InversionAlgorithm::NormalVisibilityWeighting),
+	useDifferentialLofarBeam(false),
+	gridMode(KaiserBesselKernel),
+	visibilityWeightingMode(MeasurementSetGridder::NormalVisibilityWeighting),
 // Deconvolution default settings:
 	deconvolutionThreshold(0.0),
 	deconvolutionGain(0.1),
