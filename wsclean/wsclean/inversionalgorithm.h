@@ -181,8 +181,8 @@ class MeasurementSetGridder
 		virtual void Predict(double* image) = 0;
 		virtual void Predict(double* real, double* imaginary) = 0;
 		
-		virtual double *ImageRealResult() const = 0;
-		virtual double *ImageImaginaryResult() const = 0;
+		virtual double *ImageRealResult() = 0;
+		virtual double *ImageImaginaryResult() = 0;
 		virtual double PhaseCentreRA() const = 0;
 		virtual double PhaseCentreDec() const = 0;
 		virtual bool HasDenormalPhaseCentre() const { return false; }

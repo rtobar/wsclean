@@ -50,6 +50,7 @@ void MoreSane::ExecuteMajorIteration(double* dataImage, double* modelImage, cons
 		commandLine << " -sl " << _moresaneSigmaLevels[std::min(_iterationNumber,_moresaneSigmaLevels.size()-1)] << " ";
 	}
 	
+	// TODO should use Application::Run().
 	Logger::Info << "Running: " << commandLine.str() << '\n';
 	int pid = vfork();
 	switch (pid) {

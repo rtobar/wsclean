@@ -45,7 +45,7 @@ public:
 	std::string temporaryDirectory;
 	bool forceReorder, forceNoReorder, subtractModel, modelUpdateRequired, mfsWeighting;
 	bool normalizeForWeighting;
-	bool applyPrimaryBeam, reusePrimaryBeam, useDifferentialLofarBeam;
+	bool applyPrimaryBeam, reusePrimaryBeam, useDifferentialLofarBeam, useIDG;
 	enum GridModeEnum gridMode;
 	enum MeasurementSetGridder::VisibilityWeightingMode visibilityWeightingMode;
 	
@@ -129,6 +129,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	normalizeForWeighting(true),
 	applyPrimaryBeam(false), reusePrimaryBeam(false),
 	useDifferentialLofarBeam(false),
+	useIDG(false),
 	gridMode(KaiserBesselKernel),
 	visibilityWeightingMode(MeasurementSetGridder::NormalVisibilityWeighting),
 // Deconvolution default settings:

@@ -1,7 +1,7 @@
 #include "fitswriter.h"
 #include "fitsreader.h"
 
-#include "uvector.h"
+#include "aocommon/uvector.h"
 
 #include <stdexcept>
 #include <sstream>
@@ -98,6 +98,8 @@ void FitsWriter::writeHeaders(fitsfile*& fptr, const std::string& filename, size
 		case Polarization::YY: pol = -6.0; break; //yup, this is really the right value
 		case Polarization::XY: pol = -7.0; break;
 		case Polarization::YX: pol = -8.0; break;
+		case Polarization::Instrumental:
+			throw std::runtime_error("Incorrect polarization given to fits writer");
 	}
 	fits_write_key(fptr, TSTRING, "CTYPE4", (void*) "STOKES", "", &status); checkStatus(status, filename);
 	fits_write_key(fptr, TDOUBLE, "CRPIX4", (void*) &one, "", &status); checkStatus(status, filename);

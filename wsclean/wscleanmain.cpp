@@ -76,7 +76,7 @@ void print_help()
 		"\n"
 		"  ** WEIGHTING OPTIONS **\n"
 		"-weight <weightmode>\n"
-		"   Weightmode can be: natural, mwa, uniform, briggs. Default: uniform. When using Briggs' weighting,\n"
+		"   Weightmode can be: natural, uniform, briggs. Default: uniform. When using Briggs' weighting,\n"
 		"   add the robustness parameter, like: \"-weight briggs 0.5\".\n"
 		"-superweight <factor>\n"
 		"   Increase the weight gridding box size, similar to Casa's superuniform weighting scheme. Default: 1.0\n"
@@ -659,8 +659,6 @@ int main(int argc, char *argv[])
 			std::string weightArg = argv[argi];
 			if(weightArg == "natural")
 				settings.weightMode = WeightMode::NaturalWeighted;
-			else if(weightArg == "mwa")
-				settings.weightMode = WeightMode::DistanceWeighted;
 			else if(weightArg == "uniform")
 				settings.weightMode = WeightMode::UniformWeighted;
 			else if(weightArg == "briggs")
@@ -800,6 +798,10 @@ int main(int argc, char *argv[])
 				settings.visibilityWeightingMode = MeasurementSetGridder::UnitVisibilityWeighting;
 			else
 				throw std::runtime_error("Unknown weighting mode: " + modeStr);
+		}
+		else if(param == "use-idg")
+		{
+			settings.useIDG = true;
 		}
 		else {
 			throw std::runtime_error("Unknown parameter: " + param);

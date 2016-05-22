@@ -11,4 +11,15 @@ void WSCleanSettings::Validate()
 		s << "Bad anti-aliasing kernel size given of " << antialiasingKernelSize << ". The kernel size has to be odd.";
 		throw std::runtime_error(s.str());
 	}
+	
+	if(useIDG)
+	{
+		bool stokesIOnly = polarizations.size()==1 && *polarizations.begin() == Polarization::StokesI;
+		bool allStokes = Polarization::HasFullStokesPolarization(polarizations) &&
+			polarizations.size() == 4;
+		if(!allStokes && !stokesIOnly)
+		{
+			throw std::runtime_error("When using IDG, it is only possible to either image Stokes I or to image all 4 Stokes polarizations: use -pol i or -pol iquv");
+		}
+	}
 }
