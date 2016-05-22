@@ -1332,15 +1332,20 @@ void WSClean::makeImagingTable()
 	{
 		casacore::MeasurementSet ms(_settings.filenames[i]);
 		_msBands[i] = MultiBandData(ms.spectralWindow(), ms.dataDescription());
-		for(size_t d=0; d!=_msBands[i].DataDescCount(); ++d)
+		std::set<size_t> dataDescIds = _msBands[i].GetUsedDataDescIds(ms);
+		if(dataDescIds.size() != _msBands[i].DataDescCount())
 		{
-			for(size_t ch=0; ch!=_msBands[i][d].ChannelCount(); ++ch)
+			Logger::Debug << dataDescIds.size() << "/" << _msBands[i].DataDescCount() << " spws are used of " << _settings.filenames[i] << '\n';
+		}
+		for(const size_t dataDescId : dataDescIds)
+		{
+			for(size_t ch=0; ch!=_msBands[i][dataDescId].ChannelCount(); ++ch)
 			{
-				double f = _msBands[i][d].ChannelFrequency(ch);
+				double f = _msBands[i][dataDescId].ChannelFrequency(ch);
 				channelSet.insert(f);
 			}
-			if(_msBands[i][d].BandEnd() > highestFreq)
-				highestFreq = _msBands[i][d].BandEnd();
+			if(_msBands[i][dataDescId].BandEnd() > highestFreq)
+				highestFreq = _msBands[i][dataDescId].BandEnd();
 		}
 	}
 	if(channelSet.size() < _settings.channelsOut)
