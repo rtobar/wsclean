@@ -16,11 +16,6 @@ class ImageWeights
 	public:
 		ImageWeights(const WeightMode& weightMode, size_t imageWidth, size_t imageHeight, double pixelScaleX, double pixelScaleY, double superWeight=1.0);
 		
-		double GetInverseTaperedWeight(double u, double v) const
-		{
-			return sqrt(u*u + v*v);
-		}
-		
 		double GetWeight(double u, double v) const
 		{
 			return sampleGridValue(u, v);

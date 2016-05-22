@@ -28,6 +28,8 @@
 
 #include "../deconvolution/deconvolutionalgorithm.h"
 #include "../deconvolution/dynamicset.h"
+#include "../application.h"
+#include "../ndppp.h"
 
 #include <iostream>
 #include <memory>
@@ -93,18 +95,21 @@ void WSClean::initFitsWriter(FitsWriter& writer)
 		writer.SetExtraKeyword("WSCTIMEE", _globalSelection.IntervalEnd());
 	}
 	writer.SetExtraKeyword("WSCFIELD", _globalSelection.FieldId());
+	
+	writer.SetExtraKeyword("WSCNVIS", _gridder->GriddedVisibilityCount());
+	writer.SetExtraKeyword("WSCENVIS", _gridder->EffectiveGriddedVisibilityCount());
 }
 
 void WSClean::copyWSCleanKeywords(FitsReader& reader, FitsWriter& writer)
 {
 	const size_t
-		N_STRKEYWORDS=2, N_DBLKEYWORDS=17;
+		N_STRKEYWORDS=2, N_DBLKEYWORDS=19;
 	const char* strKeywords[N_STRKEYWORDS] =
 		{ "WSCDATAC", "WSCWEIGH" };
 	const char* dblKeywords[N_DBLKEYWORDS] =
 		{ "WSCIMGWG", "WSCNWLAY", "WSCGKRNL", "WSCCHANS", "WSCCHANE", "WSCTIMES", "WSCTIMEE", "WSCFIELD",
 			"WSCNITER", "WSCTHRES", "WSCGAIN", "WSCMGAIN", "WSCNEGCM", "WSCNEGST", "WSCSMPSF",
-			"WSCMINOR", "WSCMAJOR"
+			"WSCMINOR", "WSCMAJOR", "WSCNVIS", "WSCENVIS"
 		};
 	for(size_t i=0; i!=N_STRKEYWORDS; ++i)
 		writer.CopyStringKeywordIfExists(reader, strKeywords[i]);
@@ -147,7 +152,11 @@ void WSClean::imagePSF(size_t currentChannelIndex)
 	size_t centralIndex = _settings.trimmedImageWidth/2 + (_settings.trimmedImageHeight/2) * _settings.trimmedImageWidth;
 	if(_settings.normalizeForWeighting)
 	{
-		const double normFactor = 1.0/_gridder->ImageRealResult()[centralIndex];
+		double normFactor;
+		if(_gridder->ImageRealResult()[centralIndex] != 0.0)
+			normFactor = 1.0/_gridder->ImageRealResult()[centralIndex];
+		else
+			normFactor = 0.0;
 		_infoPerChannel[currentChannelIndex].psfNormalizationFactor = normFactor;
 		multiplyImage(normFactor, _gridder->ImageRealResult());
 		Logger::Debug << "Normalized PSF by factor of " << normFactor << ".\n";
@@ -313,48 +322,39 @@ void WSClean::dftPredict(const ImagingTable& squaredGroup)
 	Logger::Info.Flush();
 	Logger::Info << " == Predicting visibilities ==\n";
 	const size_t size = _settings.trimmedImageWidth*_settings.trimmedImageHeight;
-	double
-		*modelImageReal = _imageAllocator.Allocate(size),
-		*modelImageImaginary = 0;
+	std::vector<ImageBufferAllocator::Ptr> modelImages(squaredGroup.EntryCount());
 		
-	std::unique_ptr<DFTPredictionImage> image(new DFTPredictionImage(_settings.trimmedImageWidth, _settings.trimmedImageHeight, _imageAllocator));
-		
+	// Get the model images. Only I or IQUV is supported.
 	for(size_t i=0; i!=squaredGroup.EntryCount(); ++i)
 	{
+		_imageAllocator.Allocate(size, modelImages[i]);
 		const ImagingTableEntry& entry = squaredGroup[i];
-		if(entry.polarization == Polarization::YX)
-		{
-			_modelImages.Load(modelImageReal, Polarization::XY, entry.outputChannelIndex, false);
-			modelImageImaginary = _imageAllocator.Allocate(size);
-			_modelImages.Load(modelImageImaginary, Polarization::XY, entry.outputChannelIndex, true);
-			for(size_t i=0; i!=size; ++i)
-				modelImageImaginary[i] = -modelImageImaginary[i];
-			image->Add(entry.polarization, modelImageReal, modelImageImaginary);
-			_imageAllocator.Free(modelImageReal);
-		}
-		else {
-			_modelImages.Load(modelImageReal, entry.polarization, entry.outputChannelIndex, false);
-			if(Polarization::IsComplex(entry.polarization))
-			{
-				modelImageImaginary = _imageAllocator.Allocate(size);
-				_modelImages.Load(modelImageImaginary, entry.polarization, entry.outputChannelIndex, true);
-				image->Add(entry.polarization, modelImageReal, modelImageImaginary);
-				_imageAllocator.Free(modelImageReal);
-			}
-			else {
-				image->Add(entry.polarization, modelImageReal);
-			}
-		}
+		_modelImages.Load(modelImages[i].data(), entry.polarization, entry.outputChannelIndex, false);
 	}
-	_imageAllocator.Free(modelImageReal);
 	
-	casacore::MeasurementSet firstMS(_settings.filenames.front());
-	BandData firstBand(firstMS.spectralWindow());
-	DFTPredictionInput input;
-	image->FindComponents(input, _gridder->PhaseCentreRA(), _gridder->PhaseCentreDec(), _settings.pixelScaleX, _settings.pixelScaleY, _gridder->PhaseCentreDL(), _gridder->PhaseCentreDM(), firstBand.ChannelCount());
-	// Free the input model images
-	image.reset();
-	Logger::Info << "Number of components to be predicted: " << input.ComponentCount() << '\n';
+	std::vector<double*> imagePtrs(modelImages.size());
+	for(size_t i=0; i!=modelImages.size(); ++i)
+		imagePtrs[i] = modelImages[i].data();
+	
+	if(_settings.dftWithBeam)
+	{
+		Logger::Info << "Converting model to absolute values...\n";
+		ImageFilename imageName = ImageFilename(squaredGroup.Front().outputChannelIndex, _currentIntervalIndex);
+		_primaryBeam->CorrectImages(imageName, imagePtrs, _imageAllocator);
+	}
+	
+	Logger::Info << "Creating model...\n";
+	Model model;
+	if(Polarization::HasFullStokesPolarization(_settings.polarizations))
+		DeconvolutionAlgorithm::GetModelFromIQUVImage(model, const_cast<const double**>(imagePtrs.data()), _settings.trimmedImageWidth, _settings.trimmedImageHeight, _gridder->PhaseCentreRA(), _gridder->PhaseCentreDec(), _settings.pixelScaleX, _settings.pixelScaleY, _gridder->PhaseCentreDL(), _gridder->PhaseCentreDM(), 0.0, squaredGroup.Front().CentralFrequency());
+	else if(_settings.polarizations.size()==1 && *_settings.polarizations.begin()==Polarization::StokesI)
+		DeconvolutionAlgorithm::GetModelFromImage(model, modelImages[0].data(), _settings.trimmedImageWidth, _settings.trimmedImageHeight, _gridder->PhaseCentreRA(), _gridder->PhaseCentreDec(), _settings.pixelScaleX, _settings.pixelScaleY, _gridder->PhaseCentreDL(), _gridder->PhaseCentreDM(), 0.0, squaredGroup.Front().CentralFrequency());
+	else throw std::runtime_error("Can't perform DFT for this set of polarizations: either image only I or IQUV.");
+	
+	NDPPP::SaveSkyModel("wsclean-prediction-skymodel.txt", model);
+	NDPPP::ConvertSkyModelToSourceDB("wsclean-prediction.sourcedb", "wsclean-prediction-skymodel.txt");
+	
+	Logger::Info << "Number of components to be predicted: " << model.SourceCount() << '\n';
 	
 	_predictingWatch.Start();
 	
@@ -364,86 +364,10 @@ void WSClean::dftPredict(const ImagingTable& squaredGroup)
 		{
 			const std::string& msName = _settings.filenames[filenameIndex];
 			
-			std::vector<MSProvider*> msProviders(squaredGroup.EntryCount());
 			MSSelection selection(_globalSelection);
 			if(!selectChannels(selection, filenameIndex, d, squaredGroup.Front()))
 				continue;
-			for(size_t i=0; i!=squaredGroup.EntryCount(); ++i)
-			{
-				const ImagingTableEntry& entry = squaredGroup[i];
-				msProviders[i] = initializeMSProvider(entry, selection, filenameIndex, d);
-			}
-			casacore::MeasurementSet ms(msName);
-			
-			size_t nRow = ms.nrow();
-			LMSPredicter predicter(ms, _settings.threadCount);
-			predicter.SetApplyBeam(_settings.dftWithBeam);
-			predicter.Input() = input;
-			
-			if(_settings.dftWithBeam)
-			{
-				Logger::Info << "Converting model to absolute values...\n";
-				predicter.Input().ConvertApparentToAbsolute(ms);
-			}
-			
-			Logger::Info << "Creating row mapping...\n";
-			std::vector<size_t> msToRowId;
-			msProviders[0]->MakeMSRowToRowIdMapping(msToRowId);
-			
-			ProgressBar progress("Predicting visibilities for " + msName);
-			BandData band(ms.spectralWindow());
-			predicter.Start();
-			LMSPredicter::RowData row;
-			ao::uvector<std::complex<float>> buffer[4];
-			for(size_t p=0; p!=_settings.polarizations.size(); ++p)
-				buffer[p].assign(band.ChannelCount(), std::complex<float>(0.0));
-			
-			while(predicter.GetNextRow(row))
-			{
-				// Write to MS provider(s)
-				size_t polIndex = 0;
-				for(std::set<PolarizationEnum>::iterator pol=_settings.polarizations.begin(); pol!=_settings.polarizations.end(); ++pol)
-				{
-					for(size_t ch=0; ch!=band.ChannelCount(); ++ch)
-					{
-						switch(*pol)
-						{
-							case Polarization::XX:
-								buffer[polIndex][ch] = row.modelData[ch][0];
-								break;
-							case Polarization::XY:
-								buffer[polIndex][ch] = row.modelData[ch][1];
-								break;
-							case Polarization::YX:
-								buffer[polIndex][ch] = row.modelData[ch][2];
-								break;
-							case Polarization::YY:
-								buffer[polIndex][ch] = row.modelData[ch][3];
-								break;
-							case Polarization::StokesI:
-								buffer[polIndex][ch] =
-									(row.modelData[ch][0] +
-									row.modelData[ch][3])*0.5;
-								break;
-							default:
-								throw std::runtime_error("Can't predict for this polarization at the moment");
-						}
-					}
-					++polIndex;
-				}
-				
-				boost::mutex::scoped_lock lock(predicter.IOMutex());
-				for(size_t polIndex=0; polIndex!=_settings.polarizations.size(); ++polIndex)
-				{
-					msProviders[polIndex]->WriteModel(msToRowId[row.rowIndex], buffer[polIndex].data());
-				}
-				lock.unlock();
-					
-				predicter.FinishRow(row);
-				progress.SetProgress(row.rowIndex+1, nRow);
-			}
-			for(std::vector<MSProvider*>::iterator provider=msProviders.begin(); provider!=msProviders.end(); ++provider)
-				delete *provider;
+			NDPPP::Predict(msName, _settings.dftWithBeam);
 		}
 	}
 	
@@ -650,11 +574,19 @@ void WSClean::RunClean()
 		if(_settings.mfsWeighting)
 			initializeMFSImageWeights();
 		
+		if(_settings.useIDG)
+			_gridder.reset(new IdgMsGridder());
+		else
+			_gridder.reset(new WSMSGridder(&_imageAllocator, _settings.threadCount, _settings.memFraction, _settings.absMemLimit));
+		
 		for(size_t groupIndex=0; groupIndex!=_imagingTable.IndependentGroupCount(); ++groupIndex)
 		{
 			runIndependentGroup(_imagingTable.GetIndependentGroup(groupIndex));
 		}
-		
+
+		// Needs to be destructed before image allocator, or image allocator will report error caused by leaked memory
+		_gridder.reset();
+	
 		if(_settings.channelsOut > 1)
 		{
 			for(std::set<PolarizationEnum>::const_iterator pol=_settings.polarizations.begin(); pol!=_settings.polarizations.end(); ++pol)
@@ -788,9 +720,6 @@ bool WSClean::selectChannels(MSSelection& selection, size_t msIndex, size_t data
 
 void WSClean::runIndependentGroup(const ImagingTable& groupTable)
 {
-	_gridder.reset(new WSMSGridder(&_imageAllocator, _settings.threadCount, _settings.memFraction, _settings.absMemLimit));
-	//_gridder.reset(new IdgMsGridder());
-	
 	_modelImages.Initialize(_fitsWriter, _settings.polarizations.size(), _settings.channelsOut, _settings.prefixName + "-model", _imageAllocator);
 	_residualImages.Initialize(_fitsWriter, _settings.polarizations.size(), _settings.channelsOut, _settings.prefixName + "-residual", _imageAllocator);
 	if(groupTable.Front().polarization == *_settings.polarizations.begin())
@@ -881,9 +810,6 @@ void WSClean::runIndependentGroup(const ImagingTable& groupTable)
 	Logger::Info << "Inversion: " << _inversionWatch.ToString() << ", prediction: " << _predictingWatch.ToString() << ", deconvolution: " << _deconvolutionWatch.ToString() << '\n';
 	
 	_settings.prefixName = rootPrefix;
-	
-	// Needs to be destructed before image allocator, or image allocator will report error caused by leaked memory
-	_gridder.reset();
 }
 
 void WSClean::saveRestoredImagesForGroup(const ImagingTableEntry& tableEntry)
@@ -960,14 +886,11 @@ void WSClean::saveRestoredImagesForGroup(const ImagingTableEntry& tableEntry)
 		_imageAllocator.Free(restoredImage);
 		
 		if(curPol == *_settings.polarizations.rbegin() && _settings.applyPrimaryBeam)
-		{
-			PrimaryBeam pb(_settings);
-			initializeMSProvidersForPB(tableEntry, pb);
-			initializeImageWeights(tableEntry);
-			pb.SetPhaseCentre(_fitsWriter.RA(), _fitsWriter.Dec(), _fitsWriter.PhaseCentreDL(), _fitsWriter.PhaseCentreDM());
+		{	
 			ImageFilename imageName = ImageFilename(currentChannelIndex, _currentIntervalIndex);
-			pb.MakeImage(imageName, tableEntry, currentChannelIndex, _imageWeightCache.get(), _imageAllocator);
-			clearCurMSProviders();
+			initFitsWriter(_fitsWriter);
+			_primaryBeam->CorrectImages(_fitsWriter, imageName, "image", _imageAllocator);
+			_primaryBeam.reset();
 		}
 	}
 }
@@ -1014,7 +937,10 @@ void WSClean::writeModelImages(const ImagingTable& groupTable)
 
 void WSClean::predictGroup(const ImagingTable& imagingGroup)
 {
-	_gridder.reset(new WSMSGridder(&_imageAllocator, _settings.threadCount, _settings.memFraction, _settings.absMemLimit));
+	if(_settings.useIDG)
+		_gridder.reset(new IdgMsGridder());
+	else
+		_gridder.reset(new WSMSGridder(&_imageAllocator, _settings.threadCount, _settings.memFraction, _settings.absMemLimit));
 	
 	_modelImages.Initialize(_fitsWriter, _settings.polarizations.size(), 1, _settings.prefixName + "-model", _imageAllocator);
 	
@@ -1122,10 +1048,23 @@ void WSClean::runFirstInversion(const ImagingTableEntry& entry)
 	const bool firstBeforePSF = _isFirstInversion;
 
 	bool isFirstPol = entry.polarization == *_settings.polarizations.begin();
+	bool isLastPol = entry.polarization == *_settings.polarizations.rbegin();
 	bool doMakePSF = _settings.deconvolutionIterationCount > 0 || _settings.makePSF || _settings.makePSFOnly;
 	if(doMakePSF && isFirstPol)
 		imagePSF(entry.outputChannelIndex);
 	
+	if(isLastPol && (_settings.applyPrimaryBeam || _settings.dftWithBeam))
+	{
+		_primaryBeam.reset(new PrimaryBeam(_settings));
+		initializeMSProvidersForPB(entry, *_primaryBeam);
+		// we don't have to call initializeImageWeights(entry), because they're still set ok.
+		_primaryBeam->SetPhaseCentre(_fitsWriter.RA(), _fitsWriter.Dec(), _fitsWriter.PhaseCentreDL(), _fitsWriter.PhaseCentreDM());
+		ImageFilename imageName = ImageFilename(entry.outputChannelIndex, _currentIntervalIndex);
+		_primaryBeam->MakeBeamImages(imageName, entry, _imageWeightCache.get(), _imageAllocator);
+		clearCurMSProviders();
+		initializeCurMSProviders(entry);
+	}
+		
 	if(!_settings.makePSFOnly)
 	{
 		initFitsWriter(_fitsWriter);
@@ -1393,15 +1332,20 @@ void WSClean::makeImagingTable()
 	{
 		casacore::MeasurementSet ms(_settings.filenames[i]);
 		_msBands[i] = MultiBandData(ms.spectralWindow(), ms.dataDescription());
-		for(size_t d=0; d!=_msBands[i].DataDescCount(); ++d)
+		std::set<size_t> dataDescIds = _msBands[i].GetUsedDataDescIds(ms);
+		if(dataDescIds.size() != _msBands[i].DataDescCount())
 		{
-			for(size_t ch=0; ch!=_msBands[i][d].ChannelCount(); ++ch)
+			Logger::Debug << dataDescIds.size() << "/" << _msBands[i].DataDescCount() << " spws are used of " << _settings.filenames[i] << '\n';
+		}
+		for(const size_t dataDescId : dataDescIds)
+		{
+			for(size_t ch=0; ch!=_msBands[i][dataDescId].ChannelCount(); ++ch)
 			{
-				double f = _msBands[i][d].ChannelFrequency(ch);
+				double f = _msBands[i][dataDescId].ChannelFrequency(ch);
 				channelSet.insert(f);
 			}
-			if(_msBands[i][d].BandEnd() > highestFreq)
-				highestFreq = _msBands[i][d].BandEnd();
+			if(_msBands[i][dataDescId].BandEnd() > highestFreq)
+				highestFreq = _msBands[i][dataDescId].BandEnd();
 		}
 	}
 	if(channelSet.size() < _settings.channelsOut)

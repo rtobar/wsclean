@@ -52,6 +52,8 @@ public:
 	
 	static void GetModelFromImage(class Model &model, const double* image, size_t width, size_t height, double phaseCentreRA, double phaseCentreDec, double pixelSizeX, double pixelSizeY, double phaseCentreDL, double phaseCentreDM, double spectralIndex, double refFreq, 
 																PolarizationEnum polarization = Polarization::StokesI);
+	
+	static void GetModelFromIQUVImage(Model &model, const double* images[4], size_t width, size_t height, double phaseCentreRA, double phaseCentreDec, double pixelSizeX, double pixelSizeY, double phaseCentreDL, double phaseCentreDM, double spectralIndex, double refFreq);
 
 	static void RemoveNaNsInPSF(double* psf, size_t width, size_t height);
 	

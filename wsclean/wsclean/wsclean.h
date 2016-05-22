@@ -116,8 +116,9 @@ private:
 	std::vector<ChannelInfo> _infoPerChannel;
 	ChannelInfo _infoForMFS;
 	
-	std::unique_ptr<class MeasurementSetGridder> _gridder;
+	std::unique_ptr<class MSGridderBase> _gridder;
 	std::unique_ptr<class ImageWeightCache> _imageWeightCache;
+	std::unique_ptr<class PrimaryBeam> _primaryBeam;
 	ImageBufferAllocator _imageAllocator;
 	Stopwatch _inversionWatch, _predictingWatch, _deconvolutionWatch;
 	bool _isFirstInversion, _doReorder;

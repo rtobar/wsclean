@@ -18,7 +18,23 @@ void MSProvider::copyWeightedData(std::complex<float>* dest, size_t startChannel
 	const size_t selectedChannelCount = endChannel - startChannel;
 		
 	size_t polIndex;
-	if(Polarization::TypeToIndex(polOut, polsIn, polIndex)) {
+	if(polOut == Polarization::Instrumental)
+	{
+		for(size_t ch=0; ch!=selectedChannelCount*polsIn.size(); ++ch)
+		{
+			if(!*flagPtr && std::isfinite(inPtr->real()) && std::isfinite(inPtr->imag()))
+			{
+				dest[ch] = *inPtr * (*weightPtr);
+			}
+			else {
+				dest[ch] = 0;
+			}
+			weightPtr++;
+			inPtr++;
+			flagPtr++;
+		}
+	}
+	else if(Polarization::TypeToIndex(polOut, polsIn, polIndex)) {
 		inPtr += polIndex;
 		weightPtr += polIndex;
 		flagPtr += polIndex;
@@ -296,7 +312,20 @@ void MSProvider::copyWeights(NumType* dest, size_t startChannel, size_t endChann
 	const size_t selectedChannelCount = endChannel - startChannel;
 		
 	size_t polIndex;
-	if(Polarization::TypeToIndex(polOut, polsIn, polIndex)) {
+	if(polOut == Polarization::Instrumental)
+	{
+		for(size_t ch=0; ch!=selectedChannelCount * polsIn.size(); ++ch)
+		{
+			if(!*flagPtr && std::isfinite(inPtr->real()) && std::isfinite(inPtr->imag()))
+				dest[ch] = *weightPtr;
+			else
+				dest[ch] = 0;
+			inPtr++;
+			weightPtr++;
+			flagPtr++;
+		}
+	}
+	else if(Polarization::TypeToIndex(polOut, polsIn, polIndex)) {
 		inPtr += polIndex;
 		weightPtr += polIndex;
 		flagPtr += polIndex;
@@ -389,7 +418,18 @@ void MSProvider::reverseCopyData(casacore::Array<std::complex<float>>& dest, siz
 	casacore::Array<std::complex<float>>::contiter dataIter = dest.cbegin() + startChannel * polCount;
 	
 	size_t polIndex;
-	if(Polarization::TypeToIndex(polSource, polsDest, polIndex)) {
+	if(polSource == Polarization::Instrumental)
+	{
+		for(size_t chp=0; chp!=selectedChannelCount * polsDest.size(); ++chp)
+		{
+			if(std::isfinite(source[chp].real()))
+			{
+				*dataIter = source[chp];
+			}
+			dataIter += polCount;
+		}
+	}
+	else if(Polarization::TypeToIndex(polSource, polsDest, polIndex)) {
 		for(size_t ch=0; ch!=selectedChannelCount; ++ch)
 		{
 			if(std::isfinite(source[ch].real()))
