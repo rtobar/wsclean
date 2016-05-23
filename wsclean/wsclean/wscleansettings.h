@@ -55,7 +55,7 @@ public:
 	double deconvolutionThreshold, deconvolutionGain, deconvolutionMGain;
 	size_t deconvolutionIterationCount;
 	bool allowNegativeComponents, stopOnNegativeComponents;
-	bool useMultiscale, useFastMultiscale;
+	bool useMultiscale, useFastMultiscale, squaredJoins, forceDynamicJoin;
 	double multiscaleDeconvolutionThresholdBias, multiscaleDeconvolutionScaleBias;
 	bool multiscaleNormalizeResponse;
 	ao::uvector<double> multiscaleScaleList;
@@ -141,6 +141,8 @@ inline WSCleanSettings::WSCleanSettings() :
 	stopOnNegativeComponents(false),
 	useMultiscale(false),
 	useFastMultiscale(false),
+	squaredJoins(false),
+	forceDynamicJoin(false),
 	multiscaleDeconvolutionThresholdBias(0.7),
 	multiscaleDeconvolutionScaleBias(0.6),
 	multiscaleNormalizeResponse(false),

@@ -267,6 +267,12 @@ void print_help()
 		"   Decrease the number of channels as specified by -channelsout to the given number for\n"
 		"   deconvolution. Only possible in combination with one of the -fit-spectral options.\n"
 		"   Proper residuals/restored images will only be returned when mgain < 1.\n"
+		"-squared-joining\n"
+		"   Use with -joinchannels to perform peak finding in the sum of squared values over\n"
+		"   channels, instead of the normal sum. This is useful for imaging QU polarizations\n"
+		"   with non-zero rotation measures, for which the normal sum is insensitive.\n"
+		"-force-dynamic-join\n"
+		"   Use alternative joined clean algorithm (feature for testing).\n"
 		"\n"
 		"  ** RESTORATION OPTIONS **\n"
 		"-beamsize <arcsec>\n"
@@ -647,6 +653,14 @@ int main(int argc, char *argv[])
 		{
 			++argi;
 			settings.deconvolutionChannelCount = atoi(argv[argi]);
+		}
+		else if(param == "squared-joining")
+		{
+			settings.squaredJoins = true;
+		}
+		else if(param == "force-dynamic-join")
+		{
+			settings.forceDynamicJoin = true;
 		}
 		else if(param == "field")
 		{

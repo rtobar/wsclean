@@ -948,7 +948,7 @@ void IUWTDeconvolutionAlgorithm::PerformMajorIteration(size_t& iterCounter, size
 		measureRMSPerScale(psf.data(), convolvedPSF.data(), scratch.data(), maxScale, _psfResponse);
 	}
 	
-	DynamicSet structureModel(&modelSet.Table(), dirtySet.Allocator(), modelSet.ChannelsInDeconvolution(), _width, _height);
+	DynamicSet structureModel(&modelSet.Table(), dirtySet.Allocator(), modelSet.ChannelsInDeconvolution(), modelSet.SquareJoinedChannels(), _width, _height);
 	
 	std::unique_ptr<IUWTDecomposition> iuwt(new IUWTDecomposition(curEndScale, _width, _height));
 	

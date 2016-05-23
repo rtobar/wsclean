@@ -5,6 +5,7 @@
 #include "moresane.h"
 #include "fastmultiscaleclean.h"
 #include "iuwtdeconvolution.h"
+#include "dynamicjoinedclean.h"
 
 #include "../multiscale/multiscalealgorithm.h"
 
@@ -28,8 +29,8 @@ void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedM
 	
 	_imageAllocator->FreeUnused();
 	DynamicSet
-		residualSet(&groupTable, *_imageAllocator, _settings.deconvolutionChannelCount, _imgWidth, _imgHeight),
-		modelSet(&groupTable, *_imageAllocator, _settings.deconvolutionChannelCount, _imgWidth, _imgHeight);
+		residualSet(&groupTable, *_imageAllocator, _settings.deconvolutionChannelCount, _settings.squaredJoins, _imgWidth, _imgHeight),
+		modelSet(&groupTable, *_imageAllocator, _settings.deconvolutionChannelCount, _settings.squaredJoins, _imgWidth, _imgHeight);
 		
 	residualSet.LoadAndAverage(*_residualImages);
 	modelSet.LoadAndAverage(*_modelImages);
@@ -41,7 +42,7 @@ void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedM
 	for(size_t i=0; i!=psfVecs.size(); ++i)
 		psfs[i] = psfVecs[i].data();
 	
-	if(_settings.useIUWTDeconvolution || _settings.useMultiscale || _settings.useMoreSaneDeconvolution)
+	if(_settings.useIUWTDeconvolution || _settings.useMultiscale || _settings.useMoreSaneDeconvolution || _settings.forceDynamicJoin || _settings.squaredJoins)
 	{
 		UntypedDeconvolutionAlgorithm& algorithm =
 			static_cast<UntypedDeconvolutionAlgorithm&>(*_cleanAlgorithm);
@@ -151,6 +152,10 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 	{
 		_cleanAlgorithm.reset(new MultiScaleAlgorithm(*_imageAllocator, beamSize, pixelScaleX, pixelScaleY));
 		static_cast<MultiScaleAlgorithm*>(_cleanAlgorithm.get())->SetManualScaleList(_settings.multiscaleScaleList);
+	}
+	else if(_settings.forceDynamicJoin || _settings.squaredJoins)
+	{
+		_cleanAlgorithm.reset(new DynamicJoinedClean(*_imageAllocator));
 	}
 	else if(_squaredCount != 1)
 	{

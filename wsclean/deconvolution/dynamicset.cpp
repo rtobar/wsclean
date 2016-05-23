@@ -172,7 +172,7 @@ void DynamicSet::directStore(CachedImageSet& imageSet)
 	}
 }
 
-void DynamicSet::GetSquareIntegrated(double* dest, double* scratch) const
+void DynamicSet::getSquareIntegratedWithNormalChannels(double* dest, double* scratch) const
 {
 	for(size_t sqIndex = 0; sqIndex!=_channelsInDeconvolution; ++sqIndex)
 	{
@@ -211,7 +211,33 @@ void DynamicSet::GetSquareIntegrated(double* dest, double* scratch) const
 		assign(dest, 0.0);
 }
 
-void DynamicSet::GetLinearIntegrated(double* dest) const
+void DynamicSet::getSquareIntegratedWithSquaredChannels(double* dest) const
+{
+	size_t addIndex = 0;
+	for(size_t sqIndex = 0; sqIndex!=_channelsInDeconvolution; ++sqIndex)
+	{
+		ImagingTable subTable = _imagingTable.GetSquaredGroup(sqIndex);
+		for(size_t eIndex = 0; eIndex!=subTable.EntryCount(); ++eIndex)
+		{
+			const ImagingTableEntry& entry = subTable[eIndex];
+			size_t imageIndex = _tableIndexToImageIndex.find(entry.index)->second;
+			if(addIndex == 0)
+			{
+				assign(dest, _images[imageIndex]);
+				square(dest);
+			} else
+				addSquared(dest, _images[imageIndex]);
+			++addIndex;
+		}
+	}
+	if(_channelsInDeconvolution > 0)
+		multiply(dest, 1.0/double(_channelsInDeconvolution));
+	else
+		assign(dest, 0.0);
+	squareRoot(dest);
+}
+
+void DynamicSet::getLinearIntegratedWithNormalChannels(double* dest) const
 {
 	size_t addIndex = 0;
 	for(size_t sqIndex = 0; sqIndex!=_channelsInDeconvolution; ++sqIndex)

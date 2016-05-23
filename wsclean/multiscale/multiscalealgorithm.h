@@ -25,7 +25,7 @@ public:
 	
 	//void PerformMajorIteration(size_t& iterCounter, size_t nIter, DynamicSet& modelSet, DynamicSet& dirtySet, const ao::uvector<const double*>& psfs, bool& reachedMajorThreshold);
 	
-	virtual void ExecuteMajorIteration(DynamicSet& dataImage, DynamicSet& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedMajorThreshold);	
+	virtual void ExecuteMajorIteration(DynamicSet& dataImage, DynamicSet& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedMajorThreshold) override final;
 private:
 	class ImageBufferAllocator& _allocator;
 	size_t _width, _height;
