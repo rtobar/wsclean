@@ -21,36 +21,36 @@ public:
 	
 	ContiguousMS& operator=(const ContiguousMS&) = delete;
 	
-	virtual casacore::MeasurementSet &MS() override final { return _ms; }
+	virtual casacore::MeasurementSet &MS()   { return _ms; }
 	
-	virtual size_t RowId() const override final { return _rowId; }
+	virtual size_t RowId() const   { return _rowId; }
 	
-	virtual bool CurrentRowAvailable() override final;
+	virtual bool CurrentRowAvailable()  ;
 	
-	virtual void NextRow() override final;
+	virtual void NextRow()  ;
 	
-	virtual void Reset() override final;
+	virtual void Reset()  ;
 	
-	virtual void ReadMeta(double& u, double& v, double& w, size_t& dataDescId) override final;
+	virtual void ReadMeta(double& u, double& v, double& w, size_t& dataDescId)  ;
 	
-	virtual void ReadData(std::complex<float>* buffer) override final;
+	virtual void ReadData(std::complex<float>* buffer)  ;
 	
-	virtual void ReadModel(std::complex<float>* buffer) override final;
+	virtual void ReadModel(std::complex<float>* buffer)  ;
 	
-	virtual void WriteModel(size_t rowId, std::complex<float>* buffer) override final;
+	virtual void WriteModel(size_t rowId, std::complex<float>* buffer)  ;
 	
-	virtual void ReadWeights(float* buffer) override final;
+	virtual void ReadWeights(float* buffer)  ;
 	
-	virtual void ReadWeights(std::complex<float>* buffer) override final;
+	virtual void ReadWeights(std::complex<float>* buffer)  ;
 	
-	virtual void ReopenRW() override final
+	virtual void ReopenRW()  
 	{
 		_ms.reopenRW();
 	}
 	
-	virtual double StartTime() override final;
+	virtual double StartTime()  ;
 	
-	virtual void MakeIdToMSRowMapping(std::vector<size_t>& idToMSRow) override final;
+	virtual void MakeIdToMSRowMapping(std::vector<size_t>& idToMSRow)  ;
 private:
 	size_t _row, _rowId;
 	size_t _timestep;

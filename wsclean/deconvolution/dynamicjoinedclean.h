@@ -16,7 +16,7 @@ class DynamicJoinedClean : public UntypedDeconvolutionAlgorithm
 public:
 	DynamicJoinedClean(class ImageBufferAllocator& allocator);
 	
-	virtual void ExecuteMajorIteration(DynamicSet& dirtySet, DynamicSet& modelSet, const ao::uvector<const double*>& psfs, size_t width, size_t height, bool& reachedMajorThreshold) final override;
+	virtual void ExecuteMajorIteration(DynamicSet& dirtySet, DynamicSet& modelSet, const ao::uvector<const double*>& psfs, size_t width, size_t height, bool& reachedMajorThreshold);
 	
 private:
 	size_t _width, _height;

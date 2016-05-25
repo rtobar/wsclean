@@ -12,21 +12,21 @@ public:
 	
 	virtual ~UnavailableGridder() { doThrow(); }
 	
-	virtual void Invert() final override { doThrow(); }
+	virtual void Invert() { doThrow(); }
 	
-	virtual void Predict(double* real) final override { doThrow(); }
+	virtual void Predict(double* real) { doThrow(); }
 	
-	virtual void Predict(double* real, double* imaginary) final override { doThrow(); }
+	virtual void Predict(double* real, double* imaginary) { doThrow(); }
 	
-	virtual double* ImageRealResult() final override { doThrow(); }
+	virtual double* ImageRealResult() { doThrow(); }
 	
-	virtual double* ImageImaginaryResult() final override { doThrow(); }
+	virtual double* ImageImaginaryResult() { doThrow(); }
 	
-	virtual double BeamSize() const final override { doThrow(); }
+	virtual double BeamSize() const { doThrow(); }
 	
-	virtual void GetGriddingCorrectionImage(double* image) const final override { doThrow(); }
+	virtual void GetGriddingCorrectionImage(double* image) const { doThrow(); }
 	
-	virtual bool HasGriddingCorrectionImage() const final override { doThrow(); }
+	virtual bool HasGriddingCorrectionImage() const { doThrow(); }
 	
 private:
 	virtual size_t getSuggestedWGridSize() const { doThrow(); }

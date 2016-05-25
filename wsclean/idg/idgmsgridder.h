@@ -19,24 +19,24 @@ public:
 	
 	virtual ~IdgMsGridder();
 	
-	virtual void Invert() final override;
+	virtual void Invert();
 	
-	virtual void Predict(double* real) final override;
+	virtual void Predict(double* real);
 	
-	virtual void Predict(double* real, double* imaginary) final override;
+	virtual void Predict(double* real, double* imaginary);
 	
-	virtual double* ImageRealResult() final override;
+	virtual double* ImageRealResult();
 	
-	virtual double* ImageImaginaryResult() final override;
+	virtual double* ImageImaginaryResult();
 	
-	virtual double BeamSize() const final override { return 0.0; }
+	virtual double BeamSize() const { return 0.0; }
 	
-	virtual void GetGriddingCorrectionImage(double* image) const final override;
+	virtual void GetGriddingCorrectionImage(double* image) const;
 	
-	virtual bool HasGriddingCorrectionImage() const final override;
+	virtual bool HasGriddingCorrectionImage() const;
 	
 private:
-	virtual size_t getSuggestedWGridSize() const override final {
+	virtual size_t getSuggestedWGridSize() const   {
 		return 1; // TODO
 	}
 		

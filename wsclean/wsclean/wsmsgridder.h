@@ -25,24 +25,24 @@ class WSMSGridder : public MSGridderBase
 	public:
 		WSMSGridder(class ImageBufferAllocator* imageAllocator, size_t threadCount, double memFraction, double absMemLimit);
 	
-		virtual void Invert() final override;
+		virtual void Invert();
 		
-		virtual void Predict(double* image) final override { Predict(image, 0); }
-		virtual void Predict(double* real, double* imaginary) final override;
+		virtual void Predict(double* image) { Predict(image, 0); }
+		virtual void Predict(double* real, double* imaginary);
 		
-		virtual double *ImageRealResult() final override { return _gridder->RealImage(); }
-		virtual double *ImageImaginaryResult() final override {
+		virtual double *ImageRealResult() { return _gridder->RealImage(); }
+		virtual double *ImageImaginaryResult() {
 			if(!IsComplex())
 				throw std::runtime_error("No imaginary result available for non-complex inversion");
 			return _gridder->ImaginaryImage();
 		}
-		virtual double BeamSize() const final override { return _beamSize; }
+		virtual double BeamSize() const { return _beamSize; }
 		
-		virtual bool HasGriddingCorrectionImage() const final override { return GridMode() != NearestNeighbourGridding; }
-		virtual void GetGriddingCorrectionImage(double *image) const final override { _gridder->GetGriddingCorrectionImage(image); }
+		virtual bool HasGriddingCorrectionImage() const { return GridMode() != NearestNeighbourGridding; }
+		virtual void GetGriddingCorrectionImage(double *image) const { _gridder->GetGriddingCorrectionImage(image); }
 		
-		virtual size_t ActualInversionWidth() const final override { return _actualInversionWidth; }
-		virtual size_t ActualInversionHeight() const final override { return _actualInversionHeight; }
+		virtual size_t ActualInversionWidth() const { return _actualInversionWidth; }
+		virtual size_t ActualInversionHeight() const { return _actualInversionHeight; }
 		
 		virtual void FreeImagingData()
 		{
@@ -64,7 +64,7 @@ class WSMSGridder : public MSGridderBase
 		
 		void gridMeasurementSet(MSData &msData);
 		void countSamplesPerLayer(MSData &msData);
-		virtual size_t getSuggestedWGridSize() const override final;
+		virtual size_t getSuggestedWGridSize() const  ;
 
 		void predictMeasurementSet(MSData &msData);
 

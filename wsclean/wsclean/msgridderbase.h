@@ -9,17 +9,17 @@ class MSGridderBase : public MeasurementSetGridder
 public:
 	MSGridderBase();
 	
-	virtual double HighestFrequencyChannel() const override final { return _freqHigh; }
-	virtual double LowestFrequencyChannel() const override final { return _freqLow; }
-	virtual double BandStart() const override final { return _bandStart; }
-	virtual double BandEnd() const override final { return _bandEnd; }
-	virtual double StartTime() const override final { return _startTime; }
-	virtual double PhaseCentreRA() const override final { return _phaseCentreRA; }
-	virtual double PhaseCentreDec() const override final { return _phaseCentreDec; }
-	virtual double PhaseCentreDL() const override final { return _phaseCentreDL; }
-	virtual double PhaseCentreDM() const override final { return _phaseCentreDM; }
-	virtual bool HasDenormalPhaseCentre() const override final { return _denormalPhaseCentre; }
-	virtual double ImageWeight() const override final { return _totalWeight/2; }
+	virtual double HighestFrequencyChannel() const   { return _freqHigh; }
+	virtual double LowestFrequencyChannel() const   { return _freqLow; }
+	virtual double BandStart() const   { return _bandStart; }
+	virtual double BandEnd() const   { return _bandEnd; }
+	virtual double StartTime() const   { return _startTime; }
+	virtual double PhaseCentreRA() const   { return _phaseCentreRA; }
+	virtual double PhaseCentreDec() const   { return _phaseCentreDec; }
+	virtual double PhaseCentreDL() const   { return _phaseCentreDL; }
+	virtual double PhaseCentreDM() const   { return _phaseCentreDM; }
+	virtual bool HasDenormalPhaseCentre() const   { return _denormalPhaseCentre; }
+	virtual double ImageWeight() const   { return _totalWeight/2; }
 	
 	size_t GriddedVisibilityCount() const { return _griddedVisibilityCount; }
 	double MaxGriddedWeight() const { return _maxGriddedWeight; }
