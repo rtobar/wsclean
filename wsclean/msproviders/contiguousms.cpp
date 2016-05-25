@@ -244,14 +244,6 @@ void ContiguousMS::ReadWeights(float* buffer)
 	copyWeights(buffer,  startChannel, endChannel, _inputPolarizations, _dataArray, _weightSpectrumArray, _flagArray, _polOut);
 }
 
-void ContiguousMS::MakeMSRowToRowIdMapping(std::vector<size_t>& msRowToId)
-{
-	size_t nRow = _ms.nrow();
-	msRowToId.resize(nRow);
-	for(size_t i=0; i!=nRow; ++i)
-		msRowToId[i] = i;
-}
-
 void ContiguousMS::MakeIdToMSRowMapping(vector<size_t>& idToMSRow)
 {
 	idToMSRow = _idToMSRow;

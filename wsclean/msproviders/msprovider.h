@@ -52,12 +52,6 @@ public:
 	
 	virtual double StartTime() = 0;
 	
-	/**
-	 * This function should become deprecated.
-	 */
-	[[deprecated]]
-	virtual void MakeMSRowToRowIdMapping(std::vector<size_t>& msToId) = 0;
-	
 	virtual void MakeIdToMSRowMapping(std::vector<size_t>& idToMSRow) = 0;
 	
 	static std::vector<PolarizationEnum> GetMSPolarizations(casacore::MeasurementSet& ms);

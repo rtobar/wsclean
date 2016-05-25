@@ -69,8 +69,6 @@ public:
 	
 	static Handle Partition(const string& msPath, const std::vector<ChannelRange>& channels, class MSSelection& selection, const string& dataColumnName, bool includeWeights, bool includeModel, bool initialModelRequired, bool modelUpdateRequired, const std::set<PolarizationEnum>& polsOut, const std::string& temporaryDirectory);
 	
-	virtual void MakeMSRowToRowIdMapping(std::vector<size_t>& msToId) override final;
-	
 	virtual void MakeIdToMSRowMapping(std::vector<size_t>& idToMSRow) override final;
 	
 	class Handle {

@@ -50,8 +50,6 @@ public:
 	
 	virtual double StartTime() override final;
 	
-	virtual void MakeMSRowToRowIdMapping(std::vector<size_t>& msToId) override final;
-	
 	virtual void MakeIdToMSRowMapping(std::vector<size_t>& idToMSRow) override final;
 private:
 	size_t _row, _rowId;
