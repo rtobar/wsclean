@@ -36,7 +36,7 @@ public:
 	
 	PartitionedMS(const Handle& handle, size_t partIndex, PolarizationEnum polarization, size_t bandIndex);
 	
-	virtual ~PartitionedMS() override;
+	virtual ~PartitionedMS();
 	
 	PartitionedMS(const PartitionedMS&) = delete;
 	PartitionedMS& operator=(const PartitionedMS&) = delete;

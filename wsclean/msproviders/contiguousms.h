@@ -12,7 +12,7 @@
 
 #include <memory>
 
-class ContiguousMS final : public MSProvider
+class ContiguousMS : public MSProvider
 {
 public:
 	ContiguousMS(const string& msPath, const std::string& dataColumnName, MSSelection selection, PolarizationEnum polOut, size_t dataDescIndex, bool includeModel);

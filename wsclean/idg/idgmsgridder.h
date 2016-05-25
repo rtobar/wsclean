@@ -77,7 +77,7 @@ private:
 
 #include "../wsclean/unavailablegridder.h"
 
-using IdgMsGridder=UnavailableGridder;
+#define IdgMsGridder UnavailableGridder
 
 #endif // HAVE IDG
 
