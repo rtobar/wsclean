@@ -1,7 +1,7 @@
 #include "fitswriter.h"
 #include "fitsreader.h"
 
-#include "aocommon/uvector.h"
+#include "uvector.h"
 
 #include <stdexcept>
 #include <sstream>
