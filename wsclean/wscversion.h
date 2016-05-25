@@ -1,9 +1,9 @@
 #ifndef WSCLEAN_VERSION_H
 #define WSCLEAN_VERSION_H
 
-#define WSCLEAN_VERSION_STR  "1.11+various"
+#define WSCLEAN_VERSION_STR  "1.11+various+compilerfixes"
 #define WSCLEAN_VERSION_MAJOR 1
 #define WSCLEAN_VERSION_MINOR 11
-#define WSCLEAN_VERSION_DATE "2016-05-23"
+#define WSCLEAN_VERSION_DATE "2016-05-25"
 
 #endif
