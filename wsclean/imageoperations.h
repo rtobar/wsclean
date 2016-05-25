@@ -7,7 +7,7 @@ public:
 	// Cut-off the borders of an image.
 	// @param outWidth Should be <= inWidth.
 	// @param outHeight Should be <= inHeight.
-	static void Trim(double* output, size_t outWidth, size_t outHeight, double* input, size_t inWidth, size_t inHeight)
+	static void Trim(double* output, size_t outWidth, size_t outHeight, const double* input, size_t inWidth, size_t inHeight)
 	{
 		size_t startX = (inWidth - outWidth) / 2;
 		size_t startY = (inHeight - outHeight) / 2;
@@ -18,10 +18,19 @@ public:
 		}
 	}
 	
+	static void TrimBox(bool* output, size_t x1, size_t y1, size_t boxWidth, size_t boxHeight, const bool* input, size_t inWidth, size_t inHeight)
+	{
+		size_t endY = y1 + boxHeight;
+		for(size_t y=y1; y!=endY; ++y)
+		{
+			memcpy(&output[(y-y1)*boxWidth], &input[y*inWidth + x1], boxWidth*sizeof(bool));
+		}
+	}
+	
 	// Extend an image with zeros, complement of Trim.
 	// @param outWidth Should be >= inWidth.
 	// @param outHeight Should be >= inHeight.
-	static void Untrim(double* output, size_t outWidth, size_t outHeight, double* input, size_t inWidth, size_t inHeight)
+	static void Untrim(double* output, size_t outWidth, size_t outHeight, const double* input, size_t inWidth, size_t inHeight)
 	{
 		size_t startX = (outWidth - inWidth) / 2;
 		size_t endX = (outWidth + inWidth) / 2;

@@ -11,10 +11,11 @@
 class DynamicSet
 {
 public:
-	DynamicSet(const ImagingTable* table, ImageBufferAllocator& allocator, size_t requestedChannelsInDeconvolution) :
+	DynamicSet(const ImagingTable* table, ImageBufferAllocator& allocator, size_t requestedChannelsInDeconvolution, bool squareJoinedChannels) :
 		_images(),
 		_imageSize(0),
 		_channelsInDeconvolution((requestedChannelsInDeconvolution==0) ? table->SquaredGroupCount() : requestedChannelsInDeconvolution),
+		_squareJoinedChannels(squareJoinedChannels),
 		_imagingTable(*table),
 		_imageIndexToPSFIndex(),
 		_allocator(allocator)
@@ -27,10 +28,11 @@ public:
 		initializeIndices();
 	}
 	
-	DynamicSet(const ImagingTable* table, ImageBufferAllocator& allocator, size_t requestedChannelsInDeconvolution, size_t width, size_t height) :
+	DynamicSet(const ImagingTable* table, ImageBufferAllocator& allocator, size_t requestedChannelsInDeconvolution, bool squareJoinedChannels, size_t width, size_t height) :
 		_images(),
 		_imageSize(width*height),
 		_channelsInDeconvolution((requestedChannelsInDeconvolution==0) ? table->SquaredGroupCount() : requestedChannelsInDeconvolution),
+		_squareJoinedChannels(squareJoinedChannels),
 		_imagingTable(*table),
 		_imageIndexToPSFIndex(),
 		_allocator(allocator)
@@ -103,7 +105,7 @@ public:
 	
 	/**
 	 * This function will calculate the integration over all images, squaring
-	 * images that are in the same square-imageg group. For example, with
+	 * images that are in the same square-image group. For example, with
 	 * a squared group of [I, Q, ..] and another group [I2, Q2, ...], this
 	 * will calculate:
 	 * 
@@ -114,12 +116,26 @@ public:
 	 * If the 'squared groups' are of size 1, the average of the groups will be
 	 * returned (i.e., without square-rooting the square).
 	 * 
-	 * This implies that the sum will have normal flux values.
+	 * If the squared joining option is set in the provided wsclean settings, the
+	 * behaviour of this method changes. In that case, it will return the square
+	 * root of the average squared value:
+	 * 
+	 *       I^2 + Q^2 + ..  +  I2^2 + Q2^2 ..  + ..
+	 * sqrt( --------------------------------------- )
+	 *            1          +        1         + ..
+	 * 
+	 * These formulae are such that the values will have normal flux values.
 	 * @param dest Pre-allocated output array that will be filled with the
 	 * integrated image.
 	 * @param scratch Pre-allocated scratch space, same size as image.
 	 */
-	void GetSquareIntegrated(double* dest, double* scratch) const;
+	void GetSquareIntegrated(double* dest, double* scratch) const
+	{
+		if(_squareJoinedChannels)
+			getSquareIntegratedWithSquaredChannels(dest);
+		else
+			getSquareIntegratedWithNormalChannels(dest, scratch);
+	}
 	
 	/**
 	 * This function will calculate the 'linear' integration over all images.
@@ -130,8 +146,14 @@ public:
 	 * @param dest Pre-allocated output array that will be filled with the average
 	 * values.
 	 */
-	void GetLinearIntegrated(double* dest) const;
-	
+	void GetLinearIntegrated(double* dest) const
+	{
+		if(_squareJoinedChannels)
+			getSquareIntegratedWithSquaredChannels(dest);
+		else
+			getLinearIntegratedWithNormalChannels(dest);
+	}
+
 	void GetIntegratedPSF(double* dest, const ao::uvector<const double*>& psfs)
 	{
 		memcpy(dest, psfs[0], sizeof(double) * _imageSize);
@@ -171,7 +193,7 @@ public:
 	
 	DynamicSet* CreateTrimmed(size_t x1, size_t y1, size_t x2, size_t y2, size_t oldWidth) const
 	{
-		std::unique_ptr<DynamicSet> p(new DynamicSet(&_imagingTable, _allocator, _channelsInDeconvolution, x2-x1, y2-y1));
+		std::unique_ptr<DynamicSet> p(new DynamicSet(&_imagingTable, _allocator, _channelsInDeconvolution, _squareJoinedChannels, x2-x1, y2-y1));
 		for(size_t i=0; i!=_images.size(); ++i)
 		{
 			copySmallerPart(_images[i], p->_images[i], x1, y1, x2, y2, oldWidth);
@@ -202,6 +224,10 @@ public:
 	void Set(size_t index, const double* rhs)
 	{
 		assign(_images[index], rhs);
+	}
+	
+	bool SquareJoinedChannels() const {
+		return _squareJoinedChannels; 
 	}
 private:
 	void assign(double* lhs, const double* rhs) const
@@ -294,8 +320,15 @@ private:
 	
 	void directStore(class CachedImageSet& imageSet);
 	
+	void getSquareIntegratedWithNormalChannels(double* dest, double* scratch) const;
+	
+	void getSquareIntegratedWithSquaredChannels(double* dest) const;
+	
+	void getLinearIntegratedWithNormalChannels(double* dest) const;
+	
 	ao::uvector<double*> _images;
 	size_t _imageSize, _channelsInDeconvolution;
+	bool _squareJoinedChannels;
 	const ImagingTable& _imagingTable;
 	std::map<size_t, size_t> _tableIndexToImageIndex;
 	ao::uvector<size_t> _imageIndexToPSFIndex;

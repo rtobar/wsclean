@@ -8,6 +8,7 @@
 #include <fstream>
 
 #include <boost/thread/thread.hpp>
+#include <boost/thread/mutex.hpp>
 
 WStackingGridder::WStackingGridder(size_t width, size_t height, double pixelSizeX, double pixelSizeY, size_t fftThreadCount, ImageBufferAllocator* allocator, size_t kernelSize, size_t overSamplingFactor) :
 	_width(width),
@@ -139,7 +140,7 @@ void WStackingGridder::fftToImageThreadFunction(boost::mutex *mutex, std::stack<
 	
 	boost::mutex::scoped_lock lock(*mutex);
 	fftw_plan plan =
-		fftw_plan_dft_2d(_width, _height,
+		fftw_plan_dft_2d(_height, _width,
 			reinterpret_cast<fftw_complex*>(fftwIn), reinterpret_cast<fftw_complex*>(fftwOut),
 			FFTW_BACKWARD, FFTW_ESTIMATE);
 		
@@ -181,7 +182,7 @@ void WStackingGridder::fftToUVThreadFunction(boost::mutex *mutex, std::stack<siz
 	
 	boost::mutex::scoped_lock lock(*mutex);
 	fftw_plan plan =
-		fftw_plan_dft_2d(_width, _height,
+		fftw_plan_dft_2d(_height, _width,
 			reinterpret_cast<fftw_complex*>(fftwIn), reinterpret_cast<fftw_complex*>(fftwOut),
 			FFTW_FORWARD, FFTW_ESTIMATE);
 		
@@ -566,24 +567,41 @@ void WStackingGridder::finalizeImage(double multiplicationFactor, std::vector<do
 template<bool Inverse>
 void WStackingGridder::correctImageForKernel(double *image) const
 {
-	const size_t n = _width * _overSamplingFactor;
-	double
-		*fftwIn = reinterpret_cast<double*>(fftw_malloc(n/2 * sizeof(double))),
-		*fftwOut = reinterpret_cast<double*>(fftw_malloc(n/2 * sizeof(double)));
+	const size_t nX = _width * _overSamplingFactor, nY = _height * _overSamplingFactor;
 	
-	fftw_plan plan = fftw_plan_r2r_1d(n/2, fftwIn, fftwOut, FFTW_REDFT01, FFTW_ESTIMATE);
-	memset(fftwIn, 0, n/2 * sizeof(double));
-	memcpy(fftwIn, &_1dKernel[_kernelSize*_overSamplingFactor/2], (_kernelSize*_overSamplingFactor/2+1) * sizeof(double));
-	fftw_execute(plan);
-	fftw_free(fftwIn);
+	double
+		*fftwInX = reinterpret_cast<double*>(fftw_malloc(nX/2 * sizeof(double))),
+		*fftwOutX = reinterpret_cast<double*>(fftw_malloc(nX/2 * sizeof(double)));
+	double
+		*fftwOutY;
+	fftw_plan planX = fftw_plan_r2r_1d(nX/2, fftwInX, fftwOutX, FFTW_REDFT01, FFTW_ESTIMATE);
+	memset(fftwInX, 0, nX/2 * sizeof(double));
+	memcpy(fftwInX, &_1dKernel[_kernelSize*_overSamplingFactor/2], (_kernelSize*_overSamplingFactor/2+1) * sizeof(double));
+	fftw_execute(planX);
+	fftw_free(fftwInX);
+	fftw_destroy_plan(planX);
+	if(_width == _height)
+	{
+		fftwOutY = fftwOutX;
+	}
+	else {
+		double *fftwInY = reinterpret_cast<double*>(fftw_malloc(nY/2 * sizeof(double)));
+		fftwOutY = reinterpret_cast<double*>(fftw_malloc(nY/2 * sizeof(double)));
+		fftw_plan planY = fftw_plan_r2r_1d(nY/2, fftwInY, fftwOutY, FFTW_REDFT01, FFTW_ESTIMATE);
+		memset(fftwInY, 0, nY/2 * sizeof(double));
+		memcpy(fftwInY, &_1dKernel[_kernelSize*_overSamplingFactor/2], (_kernelSize*_overSamplingFactor/2+1) * sizeof(double));
+		fftw_execute(planY);
+		fftw_free(fftwInY);
+		fftw_destroy_plan(planY);
+	}
 	
 	double normFactor = 1.0 / (_overSamplingFactor * _overSamplingFactor);
 	for(size_t y=0; y!=_height; ++y)
 	{
 		for(size_t x=0; x!=_width; ++x)
 		{
-			double xVal = (x>=_width/2) ? fftwOut[x-_width/2] : fftwOut[_width/2-x];
-			double yVal = (y>=_height/2) ? fftwOut[y-_height/2] : fftwOut[_height/2-y];
+			double xVal = (x>=_width/2) ? fftwOutX[x-_width/2] : fftwOutX[_width/2-x];
+			double yVal = (y>=_height/2) ? fftwOutY[y-_height/2] : fftwOutY[_height/2-y];
 			if(Inverse)
 				*image *= xVal * yVal * normFactor;
 			else
@@ -592,8 +610,11 @@ void WStackingGridder::correctImageForKernel(double *image) const
 		}
 	}
 	
-	fftw_destroy_plan(plan);
-	fftw_free(fftwOut);
+	fftw_free(fftwOutX);
+	if(_width != _height)
+	{
+		fftw_free(fftwOutY);
+	}
 }
 
 void WStackingGridder::GetGriddingCorrectionImage(double *image) const

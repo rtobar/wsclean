@@ -13,7 +13,7 @@ template<typename ImageSetType>
 class JoinedClean : public TypedDeconvolutionAlgorithm<ImageSetType>
 {
 public:
-	virtual void ExecuteMajorIteration(ImageSetType& dataImage, ImageSetType& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedStopGain);
+	virtual void ExecuteMajorIteration(ImageSetType& dataImage, ImageSetType& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedStopGain) override final;
 	
 private:
 	size_t _width, _height;

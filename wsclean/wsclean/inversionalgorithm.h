@@ -1,5 +1,7 @@
-#ifndef INVERSION_ALGORITHM_H
-#define INVERSION_ALGORITHM_H
+#ifndef MEASUREMENT_SET_GRIDDER_H
+#define MEASUREMENT_SET_GRIDDER_H
+
+#include "gridmodeenum.h"
 
 #include "../polarizationenum.h"
 #include "../msselection.h"
@@ -9,7 +11,7 @@
 #include <string>
 #include <vector>
 
-class InversionAlgorithm
+class MeasurementSetGridder
 {
 	public:
 		/**
@@ -24,9 +26,11 @@ class InversionAlgorithm
 			UnitVisibilityWeighting
 		};
 		
-		InversionAlgorithm() :
+		MeasurementSetGridder() :
 			_imageWidth(0),
 			_imageHeight(0),
+			_trimWidth(0), _trimHeight(0),
+			_nwWidth(0), _nwHeight(0),
 			_pixelSizeX((1.0 / 60.0) * M_PI / 180.0),
 			_pixelSizeY((1.0 / 60.0) * M_PI / 180.0),
 			_wGridSize(0),
@@ -45,10 +49,11 @@ class InversionAlgorithm
 			_antialiasingKernelSize(7),
 			_overSamplingFactor(63),
 			_normalizeForWeighting(true),
-			_visibilityWeightingMode(NormalVisibilityWeighting)
+			_visibilityWeightingMode(NormalVisibilityWeighting),
+			_gridMode(KaiserBesselKernel)
 		{
 		}
-		virtual ~InversionAlgorithm()
+		virtual ~MeasurementSetGridder()
 		{
 		}
 		
@@ -176,8 +181,8 @@ class InversionAlgorithm
 		virtual void Predict(double* image) = 0;
 		virtual void Predict(double* real, double* imaginary) = 0;
 		
-		virtual double *ImageRealResult() const = 0;
-		virtual double *ImageImaginaryResult() const = 0;
+		virtual double *ImageRealResult() = 0;
+		virtual double *ImageImaginaryResult() = 0;
 		virtual double PhaseCentreRA() const = 0;
 		virtual double PhaseCentreDec() const = 0;
 		virtual bool HasDenormalPhaseCentre() const { return false; }
@@ -203,8 +208,32 @@ class InversionAlgorithm
 		
 		virtual size_t ActualInversionWidth() const { return _imageWidth; }
 		virtual size_t ActualInversionHeight() const { return _imageHeight; }
+		
+		enum GridModeEnum GridMode() const { return _gridMode; }
+		void SetGridMode(GridModeEnum gridMode) { _gridMode = gridMode; }
+		
+		size_t TrimWidth() const { return _trimWidth; }
+		size_t TrimHeight() const { return _trimHeight; }
+		bool HasTrimSize() const {
+			return _trimWidth != 0 || _trimHeight != 0;
+		}
+		void SetTrimSize(size_t trimWidth, size_t trimHeight) {
+			_trimWidth = trimWidth;
+			_trimHeight = trimHeight;
+		}
+		bool HasNWSize() const {
+			return _nwWidth!=0 || _nwHeight!=0;
+		}
+		size_t NWWidth() const { return _nwWidth; }
+		size_t NWHeight() const { return _nwHeight; }
+		void SetNWSize(size_t nwWidth, size_t nwHeight) {
+			_nwWidth = nwWidth;
+			_nwHeight = nwHeight;
+		}
 	private:
 		size_t _imageWidth, _imageHeight;
+		size_t _trimWidth, _trimHeight;
+		size_t _nwWidth, _nwHeight;
 		double _pixelSizeX, _pixelSizeY;
 		size_t _wGridSize;
 		std::vector<MSProvider*> _measurementSets;
@@ -220,6 +249,7 @@ class InversionAlgorithm
 		size_t _antialiasingKernelSize, _overSamplingFactor;
 		bool _normalizeForWeighting;
 		enum VisibilityWeightingMode _visibilityWeightingMode;
+		GridModeEnum _gridMode;
 };
 
 #endif

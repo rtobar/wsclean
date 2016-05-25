@@ -52,6 +52,8 @@ public:
 	
 	static void GetModelFromImage(class Model &model, const double* image, size_t width, size_t height, double phaseCentreRA, double phaseCentreDec, double pixelSizeX, double pixelSizeY, double phaseCentreDL, double phaseCentreDM, double spectralIndex, double refFreq, 
 																PolarizationEnum polarization = Polarization::StokesI);
+	
+	static void GetModelFromIQUVImage(Model &model, const double* images[4], size_t width, size_t height, double phaseCentreRA, double phaseCentreDec, double pixelSizeX, double pixelSizeY, double phaseCentreDL, double phaseCentreDM, double spectralIndex, double refFreq);
 
 	static void RemoveNaNsInPSF(double* psf, size_t width, size_t height);
 	
@@ -79,6 +81,10 @@ public:
 	{
 		_multiscaleScaleBias = bias;
 	}
+	void SetMultiscaleNormalizeResponse(bool normResponse)
+	{
+		_multiscaleNormalizeResponse = normResponse;
+	}
 	void SetSpectralFittingMode(SpectralFittingMode mode, size_t nTerms)
 	{
 		_spectralFitter.SetMode(mode, nTerms);
@@ -98,7 +104,7 @@ protected:
 	double _threshold, _gain, _mGain, _cleanBorderRatio;
 	double _multiscaleThresholdBias, _multiscaleScaleBias;
 	size_t _maxIter, _iterationNumber, _threadCount;
-	bool _allowNegativeComponents, _stopOnNegativeComponent;
+	bool _allowNegativeComponents, _stopOnNegativeComponent, _multiscaleNormalizeResponse;
 	const bool* _cleanMask;
 	
 	SpectralFitter _spectralFitter;

@@ -29,19 +29,7 @@ class MultiBandData
 		 * @param spwTable The spectral window table of a measurement set.
 		 * @param dataDescTable The data description table of a measurement set.
 		 */
-		MultiBandData(casacore::MSSpectralWindow& spwTable, casacore::MSDataDescription& dataDescTable) :
-		_dataDescToBand(dataDescTable.nrow()),
-		_bandData(spwTable.nrow())
-		{
-			for(size_t spw=0; spw!=_bandData.size(); ++spw)
-			{
-				_bandData[spw] = BandData(spwTable, spw);
-			}
-			
-			casacore::ROScalarColumn<int> spwColumn(	dataDescTable, casacore::MSDataDescription::columnName(casacore::MSDataDescriptionEnums::SPECTRAL_WINDOW_ID));
-			for(size_t id=0; id!=_dataDescToBand.size(); ++id)
-				_dataDescToBand[id] = spwColumn(id);
-		}
+		MultiBandData(casacore::MSSpectralWindow& spwTable, casacore::MSDataDescription& dataDescTable);
 		
 		/**
 		 * Construct a MultiBandData from another instance but only select a part of each
@@ -50,13 +38,7 @@ class MultiBandData
 		 * @param startChannel Start of channel range to initialize this instance with.
 		 * @param endChannel End of channel range (exclusive) to initialize this instance with.
 		 */
-		MultiBandData(const MultiBandData& source, size_t startChannel, size_t endChannel) :
-			_dataDescToBand(source._dataDescToBand)
-		{
-			_bandData.resize(source.BandCount());
-			for(size_t spw=0; spw!=source.BandCount(); ++spw)
-				_bandData[spw] = BandData(source._bandData[spw], startChannel, endChannel);
-		}
+		MultiBandData(const MultiBandData& source, size_t startChannel, size_t endChannel);
 		
 		/**
 		 * Index operator to retrieve a band data given a dataDescID.
@@ -175,6 +157,8 @@ class MultiBandData
 			}
 			return maxChannels;
 		}
+		
+		std::set<size_t> GetUsedDataDescIds(casa::MeasurementSet& mainTable) const;
 		
 	private:
 		std::vector<size_t> _dataDescToBand;

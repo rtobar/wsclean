@@ -5,6 +5,8 @@
 
 #include <casacore/casa/Arrays/Array.h>
 
+#include <casacore/tables/Tables/ArrayColumn.h>
+
 #include <complex>
 
 namespace casacore {
@@ -12,6 +14,13 @@ namespace casacore {
 }
 class MSSelection;
 
+/**
+ * The abstract MSProvider class is the base class for classes that read and write the visibilities.
+ * An MSProvider knows which rows are selected and doesn't read or write to unselected rows. 
+ * It provides the visibilities weighted with the visibility weight and converts the visibilities
+ * to a requested polarization.
+ * Currently, the @ref ContiguousMS and @ref PartitionedMS classes implement the MSProvider interface.
+ */
 class MSProvider
 {
 public:
@@ -43,7 +52,13 @@ public:
 	
 	virtual double StartTime() = 0;
 	
-	virtual void MakeMSRowToRowIdMapping(std::vector<size_t>& msToId, const MSSelection& selection) = 0;
+	/**
+	 * This function should become deprecated.
+	 */
+	[[deprecated]]
+	virtual void MakeMSRowToRowIdMapping(std::vector<size_t>& msToId) = 0;
+	
+	virtual void MakeIdToMSRowMapping(std::vector<size_t>& idToMSRow) = 0;
 	
 	static std::vector<PolarizationEnum> GetMSPolarizations(casacore::MeasurementSet& ms);
 protected:
@@ -55,6 +70,8 @@ protected:
 	static void reverseCopyData(casacore::Array<std::complex<float>>& dest, size_t startChannel, size_t endChannel, const std::vector<PolarizationEnum>& polsDest, const std::complex<float>* source, PolarizationEnum polSource);
 	
 	static void getRowRange(casacore::MeasurementSet& ms, const MSSelection& selection, size_t& startRow, size_t& endRow);
+	
+	static void getRowRangeAndIDMap(casacore::MeasurementSet& ms, const MSSelection& selection, size_t& startRow, size_t& endRow, vector<size_t>& idToMSRow);
 	
 	static void copyRealToComplex(std::complex<float>* dest, const float* source, size_t n)
 	{
@@ -68,6 +85,25 @@ protected:
 	}
 	
 	static void initializeModelColumn(casacore::MeasurementSet& ms);
+	
+	/**
+	 * Make an arraycolumn object for the weight spectrum column if it exists and is valid.
+	 * The weight spectrum column is an optional column, the weight column should be used if it doesn't exist.
+	 * Moreover, some measurement sets have an empty or invalid sized weight spectrum column; this method
+	 * only returns true if the column can be used.
+	 */
+	static bool openWeightSpectrumColumn(casacore::MeasurementSet& ms, std::unique_ptr<casacore::ROArrayColumn<float>>& weightColumn, const casacore::IPosition& dataColumnShape);
+	
+	static void expandScalarWeights(const casa::Array<float>& weightScalarArray, casa::Array<float>& weightSpectrumArray)
+	{
+		casacore::Array<float>::const_contiter src = weightScalarArray.cbegin();
+		for(casacore::Array<float>::contiter i=weightSpectrumArray.cbegin(); i!=weightSpectrumArray.cend(); ++i)
+		{
+			*i = *src;
+			++src;
+			if(src == weightScalarArray.cend()) src = weightScalarArray.cbegin();
+		}
+	}
 	
 	MSProvider() { }
 private:

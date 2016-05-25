@@ -210,6 +210,7 @@ void FitsReader::initialize()
 	_phaseCentreDec = 0.0;
 	ReadDoubleKeyIfExists("CRVAL2", _phaseCentreDec);
 	_phaseCentreDec *= M_PI / 180.0;
+	_pixelSizeY = 0.0;
 	ReadDoubleKeyIfExists("CDELT2", _pixelSizeY);
 	_pixelSizeY *= M_PI / 180.0;
 	if(ReadStringKeyIfExists("CUNIT2", tmp) && tmp != "deg")

@@ -17,33 +17,49 @@ class MultiScaleAlgorithm : public UntypedDeconvolutionAlgorithm
 {
 public:
 	MultiScaleAlgorithm(class ImageBufferAllocator& allocator, double beamSize, double pixelScaleX, double pixelScaleY);
+	~MultiScaleAlgorithm();
 	
 	void SetCleanMask(const bool* cleanMask) { _cleanMask = cleanMask; }
 	
+	void SetManualScaleList(const ao::uvector<double>& scaleList) { _manualScaleList = scaleList; }
+	
 	//void PerformMajorIteration(size_t& iterCounter, size_t nIter, DynamicSet& modelSet, DynamicSet& dirtySet, const ao::uvector<const double*>& psfs, bool& reachedMajorThreshold);
 	
-	virtual void ExecuteMajorIteration(DynamicSet& dataImage, DynamicSet& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedMajorThreshold);	
+	virtual void ExecuteMajorIteration(DynamicSet& dataImage, DynamicSet& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedMajorThreshold) override final;
 private:
 	class ImageBufferAllocator& _allocator;
 	size_t _width, _height;
 	double _beamSizeInPixels;
-	bool _verbose;
 	ThreadedDeconvolutionTools* _tools;
 	
 	struct ScaleInfo
 	{
-		double scale;
-		double psfPeak, kernelPeak, factor, gain;
+		ScaleInfo() :
+			scale(0.0), psfPeak(0.0),
+			kernelPeak(0.0), biasFactor(0.0),
+			gain(0.0), maxImageValue(0.0),
+			rms(0.0),
+			maxImageValueX(0), maxImageValueY(0),
+			isActive(false),
+			nComponentsCleaned(0),
+			totalFluxCleaned(0.0)
+		{ }
 		
-		double maxImageValue;
+		double scale;
+		double psfPeak, kernelPeak, biasFactor, gain;
+		
+		double maxImageValue, rms;
 		size_t maxImageValueX, maxImageValueY;
 		bool isActive;
+		size_t nComponentsCleaned;
+		double totalFluxCleaned;
 	};
 	std::vector<MultiScaleAlgorithm::ScaleInfo> _scaleInfos;
+	ao::uvector<double> _manualScaleList;
 
 	void initializeScaleInfo();
 	void convolvePSFs(std::unique_ptr<ImageBufferAllocator::Ptr[]>& convolvedPSFs, const double* psf, double* tmp, bool isIntegrated);
-	void findActiveScaleConvolvedMaxima(const DynamicSet& imageSet, double* integratedScratch);
+	void findActiveScaleConvolvedMaxima(const DynamicSet& imageSet, double* integratedScratch, bool reportRMS);
 	void findSingleScaleMaximum(const double* convolvedImage, size_t scaleIndex);
 	void sortScalesOnMaxima(size_t& scaleWithPeak);
 	void activateScales(size_t scaleWithLastPeak);

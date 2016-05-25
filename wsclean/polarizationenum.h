@@ -40,7 +40,14 @@ public:
 		RR,
 		RL,
 		LR,
-		LL
+		LL,
+		/**
+		 * Instrumental is a special value representing that four polarizations are
+		 * stored, and these are the 'raw' measurement set polarizations. It is used
+		 * as a special value that e.g. can be passed to a MSProvider, which would mean
+		 * all values are gridded at once, as required for an a-term correcting gridder.
+		 */
+		Instrumental
 	};
 	
 	static size_t TypeToIndex(enum PolarizationEnum polarization, size_t polCountInSet)

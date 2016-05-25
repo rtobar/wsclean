@@ -10,6 +10,7 @@ ContiguousMS::ContiguousMS(const string& msPath, const std::string& dataColumnNa
 	_isModelColumnPrepared(false),
 	_selection(selection),
 	_polOut(polOut),
+	_msPath(msPath),
 	_ms(msPath),
 	_antenna1Column(_ms, casacore::MS::columnName(casacore::MSMainEnums::ANTENNA1)),
 	_antenna2Column(_ms, casacore::MS::columnName(casacore::MSMainEnums::ANTENNA2)),
@@ -17,6 +18,7 @@ ContiguousMS::ContiguousMS(const string& msPath, const std::string& dataColumnNa
 	_dataDescIdColumn(_ms, casacore::MS::columnName(casacore::MSMainEnums::DATA_DESC_ID)),
 	_timeColumn(_ms, casacore::MS::columnName(casacore::MSMainEnums::TIME)),
 	_uvwColumn(_ms, casacore::MS::columnName(casacore::MSMainEnums::UVW)),
+	_dataColumnName(dataColumnName),
 	_dataColumn(_ms, dataColumnName),
 	_flagColumn(_ms, casacore::MS::columnName(casacore::MSMainEnums::FLAG))
 {
@@ -26,37 +28,26 @@ ContiguousMS::ContiguousMS(const string& msPath, const std::string& dataColumnNa
  
 	const casacore::IPosition shape(_dataColumn.shape(0));
 	_dataArray = casacore::Array<std::complex<float>>(shape);
-	_weightArray = casacore::Array<float>(shape);
+	_weightSpectrumArray = casacore::Array<float>(shape);
 	_flagArray = casacore::Array<bool>(shape);
 	_bandData = MultiBandData(_ms.spectralWindow(), _ms.dataDescription());
 	
-	bool isWeightDefined;
-	if(_ms.isColumn(casacore::MSMainEnums::WEIGHT_SPECTRUM))
+	_msHasWeightSpectrum = openWeightSpectrumColumn(_ms, _weightSpectrumColumn, shape);
+	if(!_msHasWeightSpectrum)
 	{
-		_weightColumn.reset(new casacore::ROArrayColumn<float>(_ms, casacore::MS::columnName(casacore::MSMainEnums::WEIGHT_SPECTRUM)));
-		isWeightDefined = _weightColumn->isDefined(0);
-	} else {
-		isWeightDefined = false;
-	}
-	_msHasWeights = false;
-	if(isWeightDefined)
-	{
-		casacore::IPosition modelShape = _weightColumn->shape(0);
-		_msHasWeights = (modelShape == shape);
-	}
-	if(!_msHasWeights)
-	{
-		_weightArray.set(1);
-		Logger::Info << "WARNING: This measurement set has no or an invalid WEIGHT_SPECTRUM column; all visibilities are assumed to have equal weight.\n";
+		casacore::IPosition scalarShape(1, shape[0]);
+		_weightScalarArray = casacore::Array<float>(scalarShape);
+		_weightScalarColumn.reset(new casacore::ROArrayColumn<float>(_ms, casacore::MS::columnName(casacore::MSMainEnums::WEIGHT)));
 	}
 	
-	getRowRange(_ms, selection, _startRow, _endRow);
+	getRowRangeAndIDMap(_ms, selection, _startRow, _endRow, _idToMSRow);
 	Reset();
 }
 
 void ContiguousMS::Reset()
 {
 	_row = _startRow - 1;
+	_rowId = size_t(-1);
 	_time = 0.0;
 	if(_selection.HasInterval())
 		_timestep = _selection.IntervalStart()-1;
@@ -108,6 +99,7 @@ void ContiguousMS::NextRow()
 	_isWeightRead = false;
 	_isModelRead = false;
 	
+	++_rowId;
 	int fieldId, a1, a2, dataDescId;
 	casacore::Vector<double> uvw;
 	do {
@@ -159,7 +151,7 @@ void ContiguousMS::ReadData(std::complex<float>* buffer)
 		startChannel = 0;
 		endChannel = _bandData[_dataDescId].ChannelCount();
 	}
-	copyWeightedData(buffer,  startChannel, endChannel, _inputPolarizations, _dataArray, _weightArray, _flagArray, _polOut);
+	copyWeightedData(buffer,  startChannel, endChannel, _inputPolarizations, _dataArray, _weightSpectrumArray, _flagArray, _polOut);
 }
 
 void ContiguousMS::prepareModelColumn()
@@ -190,7 +182,7 @@ void ContiguousMS::ReadModel(std::complex<float>* buffer)
 		startChannel = 0;
 		endChannel = _bandData[_dataDescId].ChannelCount();
 	}
-	copyWeightedData(buffer,  startChannel, endChannel, _inputPolarizations, _modelArray, _weightArray, _flagArray, _polOut);
+	copyWeightedData(buffer,  startChannel, endChannel, _inputPolarizations, _modelArray, _weightSpectrumArray, _flagArray, _polOut);
 }
 
 void ContiguousMS::WriteModel(size_t rowId, std::complex<float>* buffer)
@@ -198,7 +190,8 @@ void ContiguousMS::WriteModel(size_t rowId, std::complex<float>* buffer)
 	if(!_isModelColumnPrepared)
 		prepareModelColumn();
 	
-	size_t dataDescId = _dataDescIdColumn(rowId);
+	size_t msRowId = _idToMSRow[rowId];
+	size_t dataDescId = _dataDescIdColumn(msRowId);
 	size_t startChannel, endChannel;
 	if(_selection.HasChannelRange())
 	{
@@ -210,9 +203,9 @@ void ContiguousMS::WriteModel(size_t rowId, std::complex<float>* buffer)
 		endChannel = _bandData[dataDescId].ChannelCount();
 	}
 	
-	_modelColumn->get(rowId, _modelArray);
+	_modelColumn->get(msRowId, _modelArray);
 	reverseCopyData(_modelArray, startChannel, endChannel, _inputPolarizations, buffer, _polOut);
-	_modelColumn->put(rowId, _modelArray);
+	_modelColumn->put(msRowId, _modelArray);
 }
 
 void ContiguousMS::ReadWeights(std::complex<float>* buffer)
@@ -230,7 +223,7 @@ void ContiguousMS::ReadWeights(std::complex<float>* buffer)
 		startChannel = 0;
 		endChannel = _bandData[_dataDescId].ChannelCount();
 	}
-	copyWeights(buffer,  startChannel, endChannel, _inputPolarizations, _dataArray, _weightArray, _flagArray, _polOut);
+	copyWeights(buffer,  startChannel, endChannel, _inputPolarizations, _dataArray, _weightSpectrumArray, _flagArray, _polOut);
 }
 
 void ContiguousMS::ReadWeights(float* buffer)
@@ -248,13 +241,18 @@ void ContiguousMS::ReadWeights(float* buffer)
 		startChannel = 0;
 		endChannel = _bandData[_dataDescId].ChannelCount();
 	}
-	copyWeights(buffer,  startChannel, endChannel, _inputPolarizations, _dataArray, _weightArray, _flagArray, _polOut);
+	copyWeights(buffer,  startChannel, endChannel, _inputPolarizations, _dataArray, _weightSpectrumArray, _flagArray, _polOut);
 }
 
-void ContiguousMS::MakeMSRowToRowIdMapping(std::vector<size_t>& msToId, const MSSelection&)
+void ContiguousMS::MakeMSRowToRowIdMapping(std::vector<size_t>& msRowToId)
 {
 	size_t nRow = _ms.nrow();
-	msToId.resize(nRow);
+	msRowToId.resize(nRow);
 	for(size_t i=0; i!=nRow; ++i)
-		msToId[i] = i;
+		msRowToId[i] = i;
+}
+
+void ContiguousMS::MakeIdToMSRowMapping(vector<size_t>& idToMSRow)
+{
+	idToMSRow = _idToMSRow;
 }

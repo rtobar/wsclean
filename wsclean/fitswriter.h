@@ -34,7 +34,7 @@ class FitsWriter : protected FitsIOChecker
 		{
 		}
 		
-		FitsWriter(const class FitsReader& reader) :
+		explicit FitsWriter(const class FitsReader& reader) :
 			_width(0), _height(0),
 			_phaseCentreRA(0.0), _phaseCentreDec(0.0), _pixelSizeX(0.0), _pixelSizeY(0.0),
 			_phaseCentreDL(0.0), _phaseCentreDM(0.0),

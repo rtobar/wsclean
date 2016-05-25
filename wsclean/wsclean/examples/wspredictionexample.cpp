@@ -4,14 +4,13 @@
 #include "../wstackinggridder.h"
 
 #include "../../fftwmultithreadenabler.h"
-
-#include <unistd.h>
+#include "../../system.h"
 
 int main(int argc, char* argv[])
 {
 	size_t width = 4000, height = 4000;
 	double pixelScale = 1.0/60.0*(M_PI/180.0);          // one arcmin in radians
-	size_t threadCount = sysconf(_SC_NPROCESSORS_ONLN); // number of CPUs in system
+	size_t threadCount = System::ProcessorCount(); // number of CPUs in system
 	
 	// Calculate available memory
 	long int pageCount = sysconf(_SC_PHYS_PAGES), pageSize = sysconf(_SC_PAGE_SIZE);

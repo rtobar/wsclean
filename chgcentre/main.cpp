@@ -685,7 +685,11 @@ int main(int argc, char **argv)
 			"-zenith\n"
 			"\tShift to the average zenith value.\n"
 			"-only-uvw\n"
-			"\tOnly update UVW values, do not apply the phase shift.\n";
+			"\tOnly update UVW values, do not apply the phase shift.\n"
+			"-shiftback\n"
+			"\tAfter changing the phase centre, project the visibilities back to the old phase centre. This is useful\n"
+			"\tin WSClean for imaging with minimum w-values in a different projection.\n"
+			"\n";
 	} else {
 		int argi=1;
 		bool

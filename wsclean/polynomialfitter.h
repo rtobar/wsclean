@@ -6,6 +6,8 @@
 class PolynomialFitter
 {
 public:
+	void Clear() { _dataPoints.clear(); }
+	
 	void AddDataPoint(double x, double y)
 	{
 		_dataPoints.push_back(std::make_pair(x, y));

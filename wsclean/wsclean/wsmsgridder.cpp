@@ -2,53 +2,24 @@
 
 #include "imagebufferallocator.h"
 #include "logger.h"
-#include "smallinversionoptimization.h"
 
 #include "../imageweights.h"
 #include "../buffered_lane.h"
 #include "../fftresampler.h"
 #include "../imageoperations.h"
-#include "../angle.h"
 
 #include "../msproviders/msprovider.h"
 
 #include <casacore/ms/MeasurementSets/MeasurementSet.h>
-#include <casacore/measures/Measures/MDirection.h>
-#include <casacore/measures/Measures/MCDirection.h>
-#include <casacore/measures/Measures/MEpoch.h>
-#include <casacore/measures/Measures/MPosition.h>
-#include <casacore/measures/Measures/MCPosition.h>
-#include <casacore/measures/TableMeasures/ScalarMeasColumn.h>
-
-#include <casacore/tables/Tables/ArrColDesc.h>
 
 #include <iostream>
 #include <stdexcept>
 
-WSMSGridder::MSData::MSData() : matchingRows(0), totalRowsProcessed(0)
-{ }
-
-WSMSGridder::MSData::~MSData()
-{ }
-
 WSMSGridder::WSMSGridder(ImageBufferAllocator* imageAllocator, size_t threadCount, double memFraction, double absMemLimit) :
-	InversionAlgorithm(),
-	_phaseCentreRA(0.0), _phaseCentreDec(0.0),
-	_phaseCentreDL(0.0), _phaseCentreDM(0.0),
-	_denormalPhaseCentre(false), _hasFrequencies(false),
-	_freqHigh(0.0), _freqLow(0.0),
-	_bandStart(0.0), _bandEnd(0.0),
-	_beamSize(0.0),
-	_totalWeight(0.0),
-	_startTime(0.0),
-	_gridMode(WStackingGridder::KaiserBesselKernel),
+	MSGridderBase(),
 	_cpuCount(threadCount),
 	_laneBufferSize(std::max<size_t>(_cpuCount*2,1024)),
-	_imageBufferAllocator(imageAllocator),
-	_trimWidth(0), _trimHeight(0),
-	_nwWidth(0), _nwHeight(0),
-	_actualInversionWidth(0), _actualInversionHeight(0),
-	_actualPixelSizeX(0), _actualPixelSizeY(0)
+	_imageBufferAllocator(imageAllocator)
 {
 	long int pageCount = sysconf(_SC_PHYS_PAGES), pageSize = sysconf(_SC_PAGE_SIZE);
 	_memSize = (int64_t) pageCount * (int64_t) pageSize;
@@ -72,222 +43,10 @@ WSMSGridder::WSMSGridder(ImageBufferAllocator* imageAllocator, size_t threadCoun
 	}
 }
 		
-void WSMSGridder::initializeMeasurementSet(size_t msIndex, WSMSGridder::MSData& msData)
-{
-	MSProvider& msProvider = MeasurementSet(msIndex);
-	msData.msProvider = &msProvider;
-	casacore::MeasurementSet& ms(msProvider.MS());
-	if(ms.nrow() == 0) throw std::runtime_error("Table has no rows (no data)");
-	
-	/**
-		* Read some meta data from the measurement set
-		*/
-	casacore::MSAntenna aTable = ms.antenna();
-	size_t antennaCount = aTable.nrow();
-	if(antennaCount == 0) throw std::runtime_error("No antennae in set");
-	casacore::MPosition::ROScalarColumn antPosColumn(aTable, aTable.columnName(casacore::MSAntennaEnums::POSITION));
-	casacore::MPosition ant1Pos = antPosColumn(0);
-	
-	msData.bandData = MultiBandData(ms.spectralWindow(), ms.dataDescription());
-	if(Selection(msIndex).HasChannelRange())
-	{
-		msData.startChannel = Selection(msIndex).ChannelRangeStart();
-		msData.endChannel = Selection(msIndex).ChannelRangeEnd();
-		Logger::Info << "Selected channels: " << msData.startChannel << '-' << msData.endChannel << '\n';
-		const BandData& firstBand = msData.bandData.FirstBand();
-		if(msData.startChannel >= firstBand.ChannelCount() || msData.endChannel > firstBand.ChannelCount()
-			|| msData.startChannel == msData.endChannel)
-		{
-			std::ostringstream str;
-			str << "An invalid channel range was specified! Measurement set only has " << firstBand.ChannelCount() << " channels, requested imaging range is " << msData.startChannel << " -- " << msData.endChannel << '.';
-			throw std::runtime_error(str.str());
-		}
-	}
-	else {
-		msData.startChannel = 0;
-		msData.endChannel = msData.bandData.FirstBand().ChannelCount();
-	}
-	casacore::MEpoch::ROScalarColumn timeColumn(ms, ms.columnName(casacore::MSMainEnums::TIME));
-	const MultiBandData selectedBand = msData.SelectedBand();
-	if(_hasFrequencies)
-	{
-		_freqLow = std::min(_freqLow, selectedBand.LowestFrequency());
-		_freqHigh = std::max(_freqHigh, selectedBand.HighestFrequency());
-		_bandStart = std::min(_bandStart, selectedBand.BandStart());
-		_bandEnd = std::max(_bandEnd, selectedBand.BandEnd());
-		_startTime = std::min(_startTime, msProvider.StartTime());
-	} else {
-		_freqLow = selectedBand.LowestFrequency();
-		_freqHigh = selectedBand.HighestFrequency();
-		_bandStart = selectedBand.BandStart();
-		_bandEnd = selectedBand.BandEnd();
-		_startTime = msProvider.StartTime();
-		_hasFrequencies = true;
-	}
-	
-	casacore::MSField fTable(ms.field());
-	casacore::MDirection::ROScalarColumn phaseDirColumn(fTable, fTable.columnName(casacore::MSFieldEnums::PHASE_DIR));
-	casacore::MDirection phaseDir = phaseDirColumn(Selection(msIndex).FieldId());
-	casacore::MEpoch curtime = timeColumn(0);
-	casacore::MeasFrame frame(ant1Pos, curtime);
-	casacore::MDirection::Ref j2000Ref(casacore::MDirection::J2000, frame);
-	casacore::MDirection j2000 = casacore::MDirection::Convert(phaseDir, j2000Ref)();
-	casacore::Vector<casacore::Double> j2000Val = j2000.getValue().get();
-	_phaseCentreRA = j2000Val[0];
-	_phaseCentreDec = j2000Val[1];
-	if(fTable.keywordSet().isDefined("WSCLEAN_DL"))
-		_phaseCentreDL = fTable.keywordSet().asDouble(casacore::RecordFieldId("WSCLEAN_DL"));
-	else _phaseCentreDL = 0.0;
-	if(fTable.keywordSet().isDefined("WSCLEAN_DM"))
-		_phaseCentreDM = fTable.keywordSet().asDouble(casacore::RecordFieldId("WSCLEAN_DM"));
-	else _phaseCentreDM = 0.0;
-
-	_denormalPhaseCentre = _phaseCentreDL != 0.0 || _phaseCentreDM != 0.0;
-	if(_denormalPhaseCentre)
-		Logger::Info << "Set has denormal phase centre: dl=" << _phaseCentreDL << ", dm=" << _phaseCentreDM << '\n';
-	
-	Logger::Info << "Determining min and max w & theoretical beam size... ";
-	Logger::Info.Flush();
-	msData.maxW = 0.0;
-	msData.minW = 1e100;
-	double maxBaseline = 0.0;
-	std::vector<float> weightArray(selectedBand.MaxChannels());
-	msProvider.Reset();
-	while(msProvider.CurrentRowAvailable())
-	{
-		size_t dataDescId;
-		double uInM, vInM, wInM;
-		msProvider.ReadMeta(uInM, vInM, wInM, dataDescId);
-		const BandData& curBand = selectedBand[dataDescId];
-		double wHi = fabs(wInM / curBand.SmallestWavelength());
-		double wLo = fabs(wInM / curBand.LongestWavelength());
-		double baselineInM = sqrt(uInM*uInM + vInM*vInM + wInM*wInM);
-		double halfWidth = 0.5*ImageWidth(), halfHeight = 0.5*ImageHeight();
-		if(wHi > msData.maxW || wLo < msData.minW || baselineInM / curBand.SmallestWavelength() > maxBaseline)
-		{
-			msProvider.ReadWeights(weightArray.data());
-			const float* weightPtr = weightArray.data();
-			for(size_t ch=0; ch!=curBand.ChannelCount(); ++ch)
-			{
-				if(*weightPtr != 0.0)
-				{
-					const double wavelength = curBand.ChannelWavelength(ch);
-					double
-						uInL = uInM/wavelength, vInL = vInM/wavelength,
-						wInL = wInM/wavelength,
-						x = uInL * PixelSizeX() * ImageWidth(),
-						y = vInL * PixelSizeY() * ImageHeight(),
-						imagingWeight = this->PrecalculatedWeightInfo()->GetWeight(uInL, vInL);
-					if(imagingWeight != 0.0)
-					{
-						if(floor(x) > -halfWidth  && ceil(x) < halfWidth &&
-							floor(y) > -halfHeight && ceil(y) < halfHeight)
-						{
-							msData.maxW = std::max(msData.maxW, fabs(wInL));
-							msData.minW = std::min(msData.minW, fabs(wInL));
-							maxBaseline = std::max(maxBaseline, baselineInM / wavelength);
-						}
-					}
-				}
-				++weightPtr;
-			}
-		}
-		
-		msProvider.NextRow();
-	}
-	if(msData.minW == 1e100)
-	{
-		msData.minW = 0.0;
-		msData.maxW = 0.0;
-	}
-	_beamSize = 1.0 / maxBaseline;
-	Logger::Info << "DONE (w=[" << msData.minW << ":" << msData.maxW << "] lambdas, maxuvw=" << maxBaseline << " lambda, beam=" << Angle::ToNiceString(_beamSize) << ")\n";
-	if(HasWLimit()) {
-		msData.maxW *= (1.0 - WLimit());
-		if(msData.maxW < msData.minW) msData.maxW = msData.minW;
-	}
-
-	if(_trimWidth == 0 || _trimHeight ==  0)
-	{
-		_trimWidth = ImageWidth();
-		_trimHeight = ImageHeight();
-	}
-	
-	_actualInversionWidth = ImageWidth();
-	_actualInversionHeight = ImageHeight();
-	_actualPixelSizeX = PixelSizeX();
-	_actualPixelSizeY = PixelSizeY();
-	
-	if(SmallInversion())
-	{
-		size_t optWidth, optHeight, minWidth, minHeight;
-		SmallInversionOptimization::DetermineOptimalSize(_actualInversionWidth, _actualPixelSizeX, _beamSize, minWidth, optWidth);
-		SmallInversionOptimization::DetermineOptimalSize(_actualInversionHeight, _actualPixelSizeY, _beamSize, minHeight, optHeight);
-		if(optWidth < _actualInversionWidth || optHeight < _actualInversionHeight)
-		{
-			size_t newWidth = std::max(std::min(optWidth, _actualInversionWidth), size_t(32));
-			size_t newHeight = std::max(std::min(optHeight, _actualInversionHeight), size_t(32));
-			Logger::Info << "Minimal inversion size: " << minWidth << " x " << minHeight << ", using optimal: " << newWidth << " x " << newHeight << "\n";
-			_actualPixelSizeX = (double(_actualInversionWidth) * _actualPixelSizeX) / double(newWidth);
-			_actualPixelSizeY = (double(_actualInversionHeight) * _actualPixelSizeY) / double(newHeight);
-			_actualInversionWidth = newWidth;
-			_actualInversionHeight = newHeight;
-		}
-		else {
-			Logger::Info << "Small inversion enabled, but inversion resolution already smaller than beam size: not using optimization.\n";
-		}
-	}
-	
-	if(Verbose() || !HasWGridSize())
-	{
-		size_t wWidth, wHeight;
-		if(_nwWidth==0 && _nwHeight==0) {
-			wWidth = _trimWidth; wHeight = _trimHeight;
-		}
-		else {
-			wWidth = _nwWidth; wHeight = _nwHeight;
-		}
-		double
-			maxL = wWidth * PixelSizeX() * 0.5 + fabs(_phaseCentreDL),
-			maxM = wHeight * PixelSizeY() * 0.5 + fabs(_phaseCentreDM),
-			lmSq = maxL * maxL + maxM * maxM;
-		double cMinW = IsComplex() ? -msData.maxW : msData.minW;
-		double radiansForAllLayers;
-		if(lmSq < 1.0)
-			radiansForAllLayers = 2 * M_PI * (msData.maxW - cMinW) * (1.0 - sqrt(1.0 - lmSq));
-		else
-			radiansForAllLayers = 2 * M_PI * (msData.maxW - cMinW);
-		size_t suggestedGridSize = size_t(ceil(radiansForAllLayers));
-		if(suggestedGridSize == 0) suggestedGridSize = 1;
-		if(suggestedGridSize < _cpuCount)
-		{
-			// When nwlayers is lower than the nr of cores, we cannot parallellize well. 
-			// However, we don't want extra w-layers if we are low on mem, as that might slow down the process
-			double memoryRequired = double(_cpuCount) * double(sizeof(double))*double(_actualInversionWidth*_actualInversionHeight);
-			if(4.0 * memoryRequired < double(_memSize))
-			{
-				Logger::Info <<
-					"The theoretically suggested number of w-layers (" << suggestedGridSize << ") is less than the number of availables\n"
-					"cores (" << _cpuCount << "). Changing suggested number of w-layers to " << _cpuCount << ".\n";
-				suggestedGridSize = _cpuCount;
-			}
-			else {
-				Logger::Info <<
-					"The theoretically suggested number of w-layers (" << suggestedGridSize << ") is less than the number of availables\n"
-					"cores (" << _cpuCount << "), but there is not enough memory available to increase the number of w-layers.\n"
-					"Not all cores can be used efficiently.\n";
-			}
-		}
-		if(Verbose())
-			Logger::Info << "Suggested number of w-layers: " << ceil(suggestedGridSize) << '\n';
-		if(!HasWGridSize())
-			SetWGridSize(suggestedGridSize);
-	}
-}
-
 void WSMSGridder::countSamplesPerLayer(MSData& msData)
 {
-	std::vector<size_t> sampleCount(WGridSize());
+	ao::uvector<size_t> sampleCount(WGridSize(), 0);
+	size_t total = 0;
 	msData.matchingRows = 0;
 	msData.msProvider->Reset();
 	while(msData.msProvider->CurrentRowAvailable())
@@ -301,25 +60,74 @@ void WSMSGridder::countSamplesPerLayer(MSData& msData)
 			double w = wInM / bandData.ChannelWavelength(ch);
 			size_t wLayerIndex = _gridder->WToLayer(w);
 			if(wLayerIndex < WGridSize())
+			{
 				++sampleCount[wLayerIndex];
+				++total;
+			}
 		}
 		++msData.matchingRows;
 		msData.msProvider->NextRow();
 	}
 	Logger::Debug << "Visibility count per layer: ";
-	for(std::vector<size_t>::const_iterator i=sampleCount.begin(); i!=sampleCount.end(); ++i)
+	for(ao::uvector<size_t>::const_iterator i=sampleCount.begin(); i!=sampleCount.end(); ++i)
 	{
 		Logger::Debug << *i << ' ';
 	}
-	Logger::Debug << '\n';
+	Logger::Debug << "\nTotal nr. of visibilities to be gridded: " << total << '\n';
+}
+
+size_t WSMSGridder::getSuggestedWGridSize() const
+{
+	size_t wWidth, wHeight;
+	if(HasNWSize()) {
+		wWidth = NWWidth(); wHeight = NWHeight();
+	}
+	else {
+		wWidth = TrimWidth(); wHeight = TrimHeight();
+	}
+	double
+		maxL = wWidth * PixelSizeX() * 0.5 + fabs(PhaseCentreDL()),
+		maxM = wHeight * PixelSizeY() * 0.5 + fabs(PhaseCentreDM()),
+		lmSq = maxL * maxL + maxM * maxM;
+	double cMinW = IsComplex() ? -_maxW : _minW;
+	double radiansForAllLayers;
+	if(lmSq < 1.0)
+		radiansForAllLayers = 2 * M_PI * (_maxW - cMinW) * (1.0 - sqrt(1.0 - lmSq));
+	else
+		radiansForAllLayers = 2 * M_PI * (_maxW - cMinW);
+	size_t suggestedGridSize = size_t(ceil(radiansForAllLayers));
+	if(suggestedGridSize == 0) suggestedGridSize = 1;
+	if(suggestedGridSize < _cpuCount)
+	{
+		// When nwlayers is lower than the nr of cores, we cannot parallellize well. 
+		// However, we don't want extra w-layers if we are low on mem, as that might slow down the process
+		double memoryRequired = double(_cpuCount) * double(sizeof(double))*double(_actualInversionWidth*_actualInversionHeight);
+		if(4.0 * memoryRequired < double(_memSize))
+		{
+			Logger::Info <<
+				"The theoretically suggested number of w-layers (" << suggestedGridSize << ") is less than the number of availables\n"
+				"cores (" << _cpuCount << "). Changing suggested number of w-layers to " << _cpuCount << ".\n";
+			suggestedGridSize = _cpuCount;
+		}
+		else {
+			Logger::Info <<
+				"The theoretically suggested number of w-layers (" << suggestedGridSize << ") is less than the number of availables\n"
+				"cores (" << _cpuCount << "), but there is not enough memory available to increase the number of w-layers.\n"
+				"Not all cores can be used efficiently.\n";
+		}
+	}
+	if(Verbose())
+		Logger::Info << "Suggested number of w-layers: " << ceil(suggestedGridSize) << '\n';
+	return suggestedGridSize;
 }
 
 void WSMSGridder::gridMeasurementSet(MSData &msData)
 {
 	const MultiBandData selectedBand(msData.SelectedBand());
 	_gridder->PrepareBand(selectedBand);
-	std::vector<std::complex<float>> modelBuffer(selectedBand.MaxChannels());
-	std::vector<float> weightBuffer(selectedBand.MaxChannels());
+	ao::uvector<std::complex<float>> modelBuffer(selectedBand.MaxChannels());
+	ao::uvector<float> weightBuffer(selectedBand.MaxChannels());
+	ao::uvector<bool> isSelected(selectedBand.MaxChannels());
 	
 	// Samples of the same w-layer are collected in a buffer
 	// before they are written into the lane. This is done because writing
@@ -335,7 +143,7 @@ void WSMSGridder::gridMeasurementSet(MSData &msData)
 		bufferedLanes[i].reset(&_inversionCPULanes[i], bufferSize);
 	}
 	
-	InversionWorkItem newItem;
+	InversionRow newItem;
 	ao::uvector<std::complex<float>> newItemData(selectedBand.MaxChannels());
 	newItem.data = newItemData.data();
 			
@@ -352,99 +160,31 @@ void WSMSGridder::gridMeasurementSet(MSData &msData)
 			w2 = wInMeters / curBand.SmallestWavelength();
 		if(_gridder->IsInLayerRange(w1, w2))
 		{
-			newItem.u = uInMeters;
-			newItem.v = vInMeters;
-			newItem.w = wInMeters;
+			newItem.uvw[0] = uInMeters;
+			newItem.uvw[1] = vInMeters;
+			newItem.uvw[2] = wInMeters;
 			newItem.dataDescId = dataDescId;
 			
-			if(DoImagePSF())
+			// Any visibilities that are not gridded in this pass
+			// should not contribute to the weight sum, so set these
+			// to have zero weight.
+			for(size_t ch=0; ch!=curBand.ChannelCount(); ++ch)
 			{
-				msData.msProvider->ReadWeights(newItem.data);
-				if(_denormalPhaseCentre)
-				{
-					double lmsqrt = sqrt(1.0-_phaseCentreDL*_phaseCentreDL- _phaseCentreDM*_phaseCentreDM);
-					double shiftFactor = 2.0*M_PI* (newItem.w * (lmsqrt-1.0));
-					rotateVisibilities(curBand, shiftFactor, newItem.data);
-				}
+				double w = newItem.uvw[2] / curBand.ChannelWavelength(ch);
+				isSelected[ch] = _gridder->IsInLayerRange(w);
 			}
-			else {
-				msData.msProvider->ReadData(newItem.data);
-			}
-			
-			if(DoSubtractModel())
-			{
-				msData.msProvider->ReadModel(modelBuffer.data());
-				std::complex<float>* modelIter = modelBuffer.data();
-				for(std::complex<float>* iter = newItem.data; iter!=newItem.data+curBand.ChannelCount(); ++iter)
-				{
-					*iter -= *modelIter;
-					modelIter++;
-				}
-			}
-			msData.msProvider->ReadWeights(weightBuffer.data());
-			switch(VisibilityWeightingMode())
-			{
-				case NormalVisibilityWeighting:
-					// The MS provider has already preweighted the
-					// visibilities for their weight, so we do not
-					// have to do anything.
-					break;
-				case SquaredVisibilityWeighting:
-					for(size_t ch=0; ch!=curBand.ChannelCount(); ++ch)
-						newItem.data[ch] *= weightBuffer[ch];
-					break;
-				case UnitVisibilityWeighting:
-					for(size_t ch=0; ch!=curBand.ChannelCount(); ++ch)
-					{
-						if(weightBuffer[ch] == 0.0)
-							newItem.data[ch] = 0.0;
-						else
-							newItem.data[ch] /= weightBuffer[ch];
-					}
-					break;
-			}
-			switch(Weighting().Mode())
-			{
-				case WeightMode::UniformWeighted:
-				case WeightMode::BriggsWeighted:
-				case WeightMode::NaturalWeighted:
-				{
-					std::complex<float>* dataIter = newItem.data;
-					float* weightIter = weightBuffer.data();
-					for(size_t ch=0; ch!=curBand.ChannelCount(); ++ch)
-					{
-						double
-							u = newItem.u / curBand.ChannelWavelength(ch),
-							v = newItem.v / curBand.ChannelWavelength(ch),
-							weight = PrecalculatedWeightInfo()->GetWeight(u, v);
-						*dataIter *= weight;
-						_totalWeight += weight * *weightIter;
-						++dataIter;
-						++weightIter;
-					}
-				} break;
-				case WeightMode::DistanceWeighted:
-				{
-					float* weightIter = weightBuffer.data();
-					double mwaWeight = sqrt(newItem.u*newItem.u + newItem.v*newItem.v + newItem.w*newItem.w);
-					for(size_t ch=0; ch!=curBand.ChannelCount(); ++ch)
-					{
-						_totalWeight += *weightIter * mwaWeight;
-						++weightIter;
-					}
-				} break;
-			}
+	
+			readAndWeightVisibilities<1>(*msData.msProvider, newItem, curBand, weightBuffer.data(), modelBuffer.data(), isSelected.data());
 			
 			InversionWorkSample sampleData;
 			for(size_t ch=0; ch!=curBand.ChannelCount(); ++ch)
 			{
 				double wavelength = curBand.ChannelWavelength(ch);
 				sampleData.sample = newItem.data[ch];
-				sampleData.uInLambda = newItem.u / wavelength;
-				sampleData.vInLambda = newItem.v / wavelength;
-				sampleData.wInLambda = newItem.w / wavelength;
+				sampleData.uInLambda = newItem.uvw[0] / wavelength;
+				sampleData.vInLambda = newItem.uvw[1] / wavelength;
+				sampleData.wInLambda = newItem.uvw[2] / wavelength;
 				size_t cpu = _gridder->WToLayer(sampleData.wInLambda) % _cpuCount;
-				//Logger::Info << cpu << ' ' << lanes[cpu].size() << '\n';
 				bufferedLanes[cpu].write(sampleData);
 			}
 			
@@ -589,28 +329,16 @@ void WSMSGridder::predictWriteThread(ao::lane<PredictionWorkItem>* predictionWor
 
 void WSMSGridder::Invert()
 {
-	if(MeasurementSetCount() == 0)
-		throw std::runtime_error("Something is wrong during inversion: no measurement sets given to inversion algorithm");
-	MSData* msDataVector = new MSData[MeasurementSetCount()];
-	_hasFrequencies = false;
-	for(size_t i=0; i!=MeasurementSetCount(); ++i)
-		initializeMeasurementSet(i, msDataVector[i]);
-	
-	double minW = msDataVector[0].minW;
-	double maxW = msDataVector[0].maxW;
-	for(size_t i=1; i!=MeasurementSetCount(); ++i)
-	{
-		if(msDataVector[i].minW < minW) minW = msDataVector[i].minW;
-		if(msDataVector[i].maxW > maxW) maxW = msDataVector[i].maxW;
-	}
+	std::vector<MSData> msDataVector;
+	initializeMSDataVector(msDataVector, 1);
 	
 	_gridder = std::unique_ptr<WStackingGridder>(new WStackingGridder(_actualInversionWidth, _actualInversionHeight, _actualPixelSizeX, _actualPixelSizeY, _cpuCount, _imageBufferAllocator, AntialiasingKernelSize(), OverSamplingFactor()));
-	_gridder->SetGridMode(_gridMode);
-	if(_denormalPhaseCentre)
-		_gridder->SetDenormalPhaseCentre(_phaseCentreDL, _phaseCentreDM);
+	_gridder->SetGridMode(GridMode());
+	if(HasDenormalPhaseCentre())
+		_gridder->SetDenormalPhaseCentre(PhaseCentreDL(), PhaseCentreDM());
 	_gridder->SetIsComplex(IsComplex());
 	//_imager->SetImageConjugatePart(Polarization() == Polarization::YX && IsComplex());
-	_gridder->PrepareWLayers(WGridSize(), double(_memSize)*(7.0/10.0), minW, maxW);
+	_gridder->PrepareWLayers(WGridSize(), double(_memSize)*(7.0/10.0), _minW, _maxW);
 	
 	if(Verbose() && Logger::IsVerbose())
 	{
@@ -618,7 +346,7 @@ void WSMSGridder::Invert()
 			countSamplesPerLayer(msDataVector[i]);
 	}
 	
-	_totalWeight = 0.0;
+	resetVisibilityCounters();
 	for(size_t pass=0; pass!=_gridder->NPasses(); ++pass)
 	{
 		Logger::Info << "Gridding pass " << pass << "... ";
@@ -667,11 +395,12 @@ void WSMSGridder::Invert()
 	}
 	
 	if(NormalizeForWeighting())
-		_gridder->FinalizeImage(1.0/_totalWeight, false);
+		_gridder->FinalizeImage(1.0/totalWeight(), false);
 	else {
-		Logger::Info << "Not dividing by normalization factor of " << _totalWeight << ".\n";
-		_gridder->FinalizeImage(1.0, true);
+		Logger::Info << "Not dividing by normalization factor of " << totalWeight()/2.0 << ".\n";
+		_gridder->FinalizeImage(2.0, true);
 	}
+	Logger::Info << "Gridded visibility count: " << double(GriddedVisibilityCount()) << ", effective count after weighting: " << EffectiveGriddedVisibilityCount() << '\n';
 	
 	if(ImageWidth()!=_actualInversionWidth || ImageHeight()!=_actualInversionHeight)
 	{
@@ -697,24 +426,22 @@ void WSMSGridder::Invert()
 		}
 	}
 	
-	if(_trimWidth != ImageWidth() || _trimHeight != ImageHeight())
+	if(TrimWidth() != ImageWidth() || TrimHeight() != ImageHeight())
 	{
-		Logger::Info << "Trimming " << ImageWidth() << " x " << ImageHeight() << " -> " << _trimWidth << " x " << _trimHeight << '\n';
+		Logger::Info << "Trimming " << ImageWidth() << " x " << ImageHeight() << " -> " << TrimWidth() << " x " << TrimHeight() << '\n';
 		// Perform trimming
 		
-		double *trimmed = _imageBufferAllocator->Allocate(_trimWidth * _trimHeight);
-		ImageOperations::Trim(trimmed, _trimWidth, _trimHeight, _gridder->RealImage(), ImageWidth(), ImageHeight());
+		double *trimmed = _imageBufferAllocator->Allocate(TrimWidth() * TrimHeight());
+		ImageOperations::Trim(trimmed, TrimWidth(), TrimHeight(), _gridder->RealImage(), ImageWidth(), ImageHeight());
 		_gridder->ReplaceRealImageBuffer(trimmed);
 		
 		if(IsComplex())
 		{
-			double *trimmedImag = _imageBufferAllocator->Allocate(_trimWidth * _trimHeight);
-			ImageOperations::Trim(trimmedImag, _trimWidth, _trimHeight, _gridder->ImaginaryImage(), ImageWidth(), ImageHeight());
+			double *trimmedImag = _imageBufferAllocator->Allocate(TrimWidth() * TrimHeight());
+			ImageOperations::Trim(trimmedImag, TrimWidth(), TrimHeight(), _gridder->ImaginaryImage(), ImageWidth(), ImageHeight());
 			_gridder->ReplaceImaginaryImageBuffer(trimmedImag);
 		}
 	}
-	
-	delete[] msDataVector;
 }
 
 void WSMSGridder::Predict(double* real, double* imaginary)
@@ -724,26 +451,16 @@ void WSMSGridder::Predict(double* real, double* imaginary)
 	if(imaginary!=0 && !IsComplex())
 		throw std::runtime_error("Imaginary specified in non-complex prediction");
 	
-	MSData* msDataVector = new MSData[MeasurementSetCount()];
-	_hasFrequencies = false;
-	for(size_t i=0; i!=MeasurementSetCount(); ++i)
-		initializeMeasurementSet(i, msDataVector[i]);
-	
-	double minW = msDataVector[0].minW;
-	double maxW = msDataVector[0].maxW;
-	for(size_t i=1; i!=MeasurementSetCount(); ++i)
-	{
-		if(msDataVector[i].minW < minW) minW = msDataVector[i].minW;
-		if(msDataVector[i].maxW > maxW) maxW = msDataVector[i].maxW;
-	}
+	std::vector<MSData> msDataVector;
+	initializeMSDataVector(msDataVector, 1);
 	
 	_gridder = std::unique_ptr<WStackingGridder>(new WStackingGridder(_actualInversionWidth, _actualInversionHeight, _actualPixelSizeX, _actualPixelSizeY, _cpuCount, _imageBufferAllocator, AntialiasingKernelSize(), OverSamplingFactor()));
-	_gridder->SetGridMode(_gridMode);
-	if(_denormalPhaseCentre)
-		_gridder->SetDenormalPhaseCentre(_phaseCentreDL, _phaseCentreDM);
+	_gridder->SetGridMode(GridMode());
+	if(HasDenormalPhaseCentre())
+		_gridder->SetDenormalPhaseCentre(PhaseCentreDL(), PhaseCentreDM());
 	_gridder->SetIsComplex(IsComplex());
 	//_imager->SetImageConjugatePart(Polarization() == Polarization::YX && IsComplex());
-	_gridder->PrepareWLayers(WGridSize(), double(_memSize)*(7.0/10.0), minW, maxW);
+	_gridder->PrepareWLayers(WGridSize(), double(_memSize)*(7.0/10.0), _minW, _maxW);
 	
 	if(Verbose())
 	{
@@ -752,20 +469,20 @@ void WSMSGridder::Predict(double* real, double* imaginary)
 	}
 	
 	ImageBufferAllocator::Ptr untrimmedReal, untrimmedImag;
-	if(_trimWidth != ImageWidth() || _trimHeight != ImageHeight())
+	if(TrimWidth() != ImageWidth() || TrimHeight() != ImageHeight())
 	{
-		Logger::Info << "Untrimming " << _trimWidth << " x " << _trimHeight << " -> " << ImageWidth() << " x " << ImageHeight() << '\n';
+		Logger::Info << "Untrimming " << TrimWidth() << " x " << TrimHeight() << " -> " << ImageWidth() << " x " << ImageHeight() << '\n';
 		// Undo trimming (i.e., extend with zeros)
-		// The input is of size _trimWidth x _trimHeight
+		// The input is of size TrimWidth() x TrimHeight()
 		// This will make the model image of size ImageWidth() x ImageHeight()
 		_imageBufferAllocator->Allocate(ImageWidth() * ImageHeight(), untrimmedReal);
-		ImageOperations::Untrim(untrimmedReal.data(), ImageWidth(), ImageHeight(), real, _trimWidth, _trimHeight);
+		ImageOperations::Untrim(untrimmedReal.data(), ImageWidth(), ImageHeight(), real, TrimWidth(), TrimHeight());
 		real = untrimmedReal.data();
 		
 		if(IsComplex())
 		{
 			_imageBufferAllocator->Allocate(ImageWidth() * ImageHeight(), untrimmedImag);
-			ImageOperations::Untrim(untrimmedImag.data(), ImageWidth(), ImageHeight(), imaginary, _trimWidth, _trimHeight);
+			ImageOperations::Untrim(untrimmedImag.data(), ImageWidth(), ImageHeight(), imaginary, TrimWidth(), TrimHeight());
 			imaginary = untrimmedImag.data();
 		}
 	}
@@ -826,21 +543,4 @@ void WSMSGridder::Predict(double* real, double* imaginary)
 	if(totalMatchingRows != 0)
 		Logger::Info << " (overhead: " << std::max(0.0, round(totalRowsWritten * 100.0 / totalMatchingRows - 100.0)) << "%)";
 	Logger::Info << '\n';
-	delete[] msDataVector;
-}
-
-void WSMSGridder::rotateVisibilities(const BandData &bandData, double shiftFactor, std::complex<float>* dataIter)
-{
-	for(unsigned ch=0; ch!=bandData.ChannelCount(); ++ch)
-	{
-		const double wShiftRad = shiftFactor / bandData.ChannelWavelength(ch);
-		double rotSinD, rotCosD;
-		sincos(wShiftRad, &rotSinD, &rotCosD);
-		float rotSin = rotSinD, rotCos = rotCosD;
-		std::complex<float> v = *dataIter;
-		*dataIter = std::complex<float>(
-			v.real() * rotCos  -  v.imag() * rotSin,
-			v.real() * rotSin  +  v.imag() * rotCos);
-		++dataIter;
-	}
 }

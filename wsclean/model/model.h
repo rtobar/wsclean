@@ -153,8 +153,6 @@ class Model
 			return flux;
 		}
 		
-		void SortOnBrightness();
-		
 		void SetUnpolarized()
 		{
 			for(iterator sourcePtr = begin(); sourcePtr!=end(); ++sourcePtr)
@@ -193,6 +191,11 @@ class Model
 		
 		void Sort() {
 			std::sort(_sources.rbegin(), _sources.rend());
+		}
+		
+		template<class Compare>
+		void Sort(Compare comp) {
+			std::sort(_sources.rbegin(), _sources.rend(), comp);
 		}
 	private:
 		void read(const char* filename);

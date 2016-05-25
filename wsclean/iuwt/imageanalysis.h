@@ -33,11 +33,13 @@ public:
 		size_t x, y;
 	};
 
-	static void SelectStructures(const IUWTDecomposition& iuwt, IUWTMask& mask, const ao::uvector<double>& thresholds, size_t minScale, size_t endScale, double cleanBorder, size_t& areaSize);
+	static void SelectStructures(const IUWTDecomposition& iuwt, IUWTMask& mask, const ao::uvector<double>& thresholds, size_t minScale, size_t endScale, double cleanBorder, const bool* priorMask, size_t& areaSize);
 	
 	static bool IsHighestOnScale0(const IUWTDecomposition& iuwt, IUWTMask& markedMask, size_t& x, size_t& y, size_t endScale, double& highestScale0);
 	
 	static void Floodfill(const IUWTDecomposition& iuwt, IUWTMask& mask, const ao::uvector<double>& thresholds, size_t minScale, size_t endScale, const Component& component, double cleanBorder, size_t& areaSize);
+	
+	static void MaskedFloodfill(const IUWTDecomposition& iuwt, IUWTMask& mask, const ao::uvector<double>& thresholds, size_t minScale, size_t endScale, const Component& component, double cleanBorder, const bool* priorMask, size_t& areaSize);
 	
 	static void FloodFill2D(const double* image, bool* mask, double threshold, const Component2D& component, size_t width, size_t height, size_t& areaSize);
 	

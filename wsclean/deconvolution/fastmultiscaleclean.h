@@ -19,7 +19,7 @@ public:
 		_pixelSizeY(pixelSizeY)
 	{ }
 	
-	virtual void ExecuteMajorIteration(ImageSetType& dataImage, ImageSetType& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedStopGain);
+	virtual void ExecuteMajorIteration(ImageSetType& dataImage, ImageSetType& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedStopGain) override final;
 	
 	static void MakeShapeFunction(double scaleSizeInPixels, ao::uvector<double>& output, size_t& n)
 	{

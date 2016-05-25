@@ -155,7 +155,7 @@ ThreadedDeconvolutionTools::ThreadResult* ThreadedDeconvolutionTools::MultiScale
 	return 0;
 }
 
-void ThreadedDeconvolutionTools::FindMultiScalePeak(MultiScaleTransforms* msTransforms, ImageBufferAllocator* allocator, const double* image, const ao::uvector<double>& scales, std::vector<ThreadedDeconvolutionTools::PeakData>& results, bool allowNegativeComponents, const bool* mask, double borderRatio)
+void ThreadedDeconvolutionTools::FindMultiScalePeak(MultiScaleTransforms* msTransforms, ImageBufferAllocator* allocator, const double* image, const ao::uvector<double>& scales, std::vector<ThreadedDeconvolutionTools::PeakData>& results, bool allowNegativeComponents, const bool* mask, double borderRatio, bool calculateRMS)
 {
 	size_t imageIndex = 0;
 	size_t nextThread = 0;
@@ -186,6 +186,7 @@ void ThreadedDeconvolutionTools::FindMultiScalePeak(MultiScaleTransforms* msTran
 		task->allowNegativeComponents = allowNegativeComponents;
 		task->mask = mask;
 		task->borderRatio = borderRatio;
+		task->calculateRMS = calculateRMS;
 		_taskLanes[nextThread]->write(task);
 		
 		++nextThread;
@@ -198,6 +199,7 @@ void ThreadedDeconvolutionTools::FindMultiScalePeak(MultiScaleTransforms* msTran
 				results[resultIndex].value = static_cast<FindMultiScalePeakResult*>(result)->value;
 				results[resultIndex].x = static_cast<FindMultiScalePeakResult*>(result)->x;
 				results[resultIndex].y = static_cast<FindMultiScalePeakResult*>(result)->y;
+				results[resultIndex].rms = static_cast<FindMultiScalePeakResult*>(result)->rms;
 				delete result;
 				++resultIndex;
 			}
@@ -212,6 +214,7 @@ void ThreadedDeconvolutionTools::FindMultiScalePeak(MultiScaleTransforms* msTran
 		results[resultIndex].value = static_cast<FindMultiScalePeakResult*>(result)->value;
 		results[resultIndex].x = static_cast<FindMultiScalePeakResult*>(result)->x;
 		results[resultIndex].y = static_cast<FindMultiScalePeakResult*>(result)->y;
+		results[resultIndex].rms = static_cast<FindMultiScalePeakResult*>(result)->rms;
 		delete result;
 		++resultIndex;
 	}
@@ -222,6 +225,10 @@ ThreadedDeconvolutionTools::ThreadResult* ThreadedDeconvolutionTools::FindMultiS
 	msTransforms->Transform(image, scratch, scale);
 	size_t width = msTransforms->Width(), height = msTransforms->Height();
 	FindMultiScalePeakResult* result = new FindMultiScalePeakResult();
+	if(calculateRMS)
+		result->rms = RMS(image, width*height);
+	else
+		result->rms=-1.0;
 	if(mask == 0)
 		result->value = SimpleClean::FindPeak(image, width, height, result->x, result->y, allowNegativeComponents, 0, height, borderRatio);
 	else

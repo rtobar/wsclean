@@ -11,7 +11,7 @@
 class IUWTDeconvolutionAlgorithm
 {
 public:
-	IUWTDeconvolutionAlgorithm(size_t width, size_t height, double gain, double mGain, double cleanBorder, bool allowNegativeComponents, double thresholdLevel=4.0, double tolerance=0.75);
+	IUWTDeconvolutionAlgorithm(size_t width, size_t height, double gain, double mGain, double cleanBorder, bool allowNegativeComponents, const bool* mask, double absoluteThreshold, double thresholdSigmaLevel=4.0, double tolerance=0.75);
 	
 	void PerformMajorIteration(size_t& iterCounter, size_t nIter, class DynamicSet& modelSet, class DynamicSet& dirtySet, const ao::uvector<const double*>& psfs, bool& reachedMajorThreshold);
 	
@@ -45,7 +45,15 @@ private:
 		size_t convolvedArea;
 	};
 
-	double getMaxAbs(double cleanBorder, const ao::uvector<double>& data, size_t& x, size_t& y, size_t width, bool allowNegative);
+	double getMaxAbsWithoutMask(const ao::uvector<double>& data, size_t& x, size_t& y, size_t width);
+	double getMaxAbsWithMask(const ao::uvector<double>& data, size_t& x, size_t& y, size_t width);
+	double getMaxAbs(const ao::uvector<double>& data, size_t& x, size_t& y, size_t width)
+	{
+		if(_mask == 0)
+			return getMaxAbsWithoutMask(data, x, y, width);
+		else
+			return getMaxAbsWithMask(data, x, y, width);
+	}
 	
 	void measureRMSPerScale(const double* image, const double* convolvedImage, double* scratch, size_t endScale, std::vector<ScaleResponse>& psfResponse);
 	
@@ -85,7 +93,7 @@ private:
 	
 	bool runConjugateGradient(IUWTDecomposition& iuwt, const IUWTMask& mask, ao::uvector<double>& maskedDirty, ao::uvector<double>& structureModel, ao::uvector<double>& scratch, const ao::uvector<double>& psfKernel, size_t width, size_t height);
 	
-	bool fillAndDeconvolveStructure(IUWTDecomposition& iuwt, ao::uvector<double>& dirty, class DynamicSet& structureModelFull, ao::uvector<double>& scratch, const ao::uvector<double>& psf, const ao::uvector<double>& psfKernel, size_t curEndScale, size_t curMinScale, size_t width, size_t height, const ao::uvector<double>& thresholds, const ImageAnalysis::Component& maxComp, bool allowTrimming);
+	bool fillAndDeconvolveStructure(IUWTDecomposition& iuwt, ao::uvector<double>& dirty, class DynamicSet& structureModelFull, ao::uvector<double>& scratch, const ao::uvector<double>& psf, const ao::uvector<double>& psfKernel, size_t curEndScale, size_t curMinScale, size_t width, size_t height, const ao::uvector<double>& thresholds, const ImageAnalysis::Component& maxComp, bool allowTrimming, const bool* priorMask);
 	
 	bool findAndDeconvolveStructure(IUWTDecomposition& iuwt, ao::uvector<double>& dirty, const ao::uvector<double>& psf, const ao::uvector<double>& psfKernel, ao::uvector<double>& scratch, class DynamicSet& structureModelFull, size_t curEndScale, size_t curMinScale, double gain, std::vector<ValComponent>& maxComponents);
 	
@@ -109,7 +117,8 @@ private:
 	size_t _curBoxXStart, _curBoxXEnd;
 	size_t _curBoxYStart, _curBoxYEnd;
 	double _gain, _mGain, _cleanBorder;
-	double _thresholdLevel, _tolerance;
+	const bool* _mask;
+	double _absoluteThreshold, _thresholdSigmaLevel, _tolerance;
 	double _psfMaj, _psfMin, _psfPA, _psfVolume;
 	ao::uvector<double> _rmses;
 	FitsWriter _writer;

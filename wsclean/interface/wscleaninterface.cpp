@@ -261,6 +261,7 @@ void wsclean_operator_A(void* userData, DCOMPLEX* dataOut, const double* dataIn)
 	commandline.push_back("-predict");
 	commandline.push_back(wscUserData->msPath);
 	wsclean_main(commandline);
+	std::remove((filenameStr.str() + "-model.fits").c_str());
 	
 	// Read MODEL_DATA into dataOut
 	casacore::MeasurementSet ms(wscUserData->msPath);
@@ -357,6 +358,8 @@ void wsclean_operator_At(void* userData, double* dataOut, const DCOMPLEX* dataIn
 	// Read dirty image and store in dataOut
 	FitsReader reader(prefixName.str() + "-image.fits");
 	reader.Read(dataOut);
+	std::remove((prefixName.str() + "-image.fits").c_str());
+	std::remove((prefixName.str() + "-dirty.fits").c_str());
 	++(wscUserData->nAtCalls);
 	std::cout << "------ end of wsclean_operator_At()\n";
 }
