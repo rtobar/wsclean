@@ -50,6 +50,8 @@ void print_help()
 		"   Default: only reorder when in channel imaging mode.\n"
 		"-tempdir <directory>\n"
 		"   Set the temporary directory used when reordering files. Default: same directory as input measurement set.\n"
+		"-no-dirty\n"
+		"   Do not save the dirty image.\n"
 		"-saveweights\n"
 		"   Save the gridded weights in the a fits file named <image-prefix>-weights.fits.\n"
 		"-saveuv\n"
@@ -207,9 +209,9 @@ void print_help()
 		"   Cleaning gain for major iterations: Ratio of peak that will be subtracted in each major\n"
 		"   iteration. To use major iterations, 0.85 is a good value. Default: 1.0\n"
 		"-joinpolarizations\n"
-		"   Perform cleaning by searching for peaks in the sum of squares of the polarizations (either\n"
-		"   I^2+Q^2+U^2+V^2, XX^2+real(XY)^2+imag(XY)^2+YY^2, or XX^2+YY^2), but subtract components from\n"
-		"   individual channels. Only possible when imaging all Stokes or all linear parameters. Default: off.\n"
+		"   Perform cleaning by searching for peaks in the sum of squares of the polarizations, but\n"
+		"   subtract components from the individual images. Only possible when imaging two or four Stokes\n"
+		"   or linear parameters. Default: off.\n"
 		"-joinchannels\n"
 		"   Perform cleaning by searching for peaks in the MFS image, but subtract components from individual channels.\n"
 		"   This will turn on mfsweighting by default. Default: off.\n"
@@ -267,7 +269,7 @@ void print_help()
 		"   Decrease the number of channels as specified by -channelsout to the given number for\n"
 		"   deconvolution. Only possible in combination with one of the -fit-spectral options.\n"
 		"   Proper residuals/restored images will only be returned when mgain < 1.\n"
-		"-squared-joining\n"
+		"-squared-channel-joining\n"
 		"   Use with -joinchannels to perform peak finding in the sum of squared values over\n"
 		"   channels, instead of the normal sum. This is useful for imaging QU polarizations\n"
 		"   with non-zero rotation measures, for which the normal sum is insensitive.\n"
@@ -654,7 +656,7 @@ int main(int argc, char *argv[])
 			++argi;
 			settings.deconvolutionChannelCount = atoi(argv[argi]);
 		}
-		else if(param == "squared-joining")
+		else if(param == "squared-channel-joining")
 		{
 			settings.squaredJoins = true;
 		}
@@ -816,6 +818,10 @@ int main(int argc, char *argv[])
 		else if(param == "use-idg")
 		{
 			settings.useIDG = true;
+		}
+		else if(param == "no-dirty")
+		{
+			settings.isDirtySaved = false;
 		}
 		else {
 			throw std::runtime_error("Unknown parameter: " + param);

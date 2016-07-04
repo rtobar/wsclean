@@ -41,7 +41,7 @@ public:
 	std::set<PolarizationEnum> polarizations;
 	WeightMode weightMode;
 	std::string prefixName;
-	bool smallInversion, makePSF, makePSFOnly, isWeightImageSaved, isUVImageSaved, isGriddingImageSaved, dftPrediction, dftWithBeam;
+	bool smallInversion, makePSF, makePSFOnly, isWeightImageSaved, isUVImageSaved, isDirtySaved, isGriddingImageSaved, dftPrediction, dftWithBeam;
 	std::string temporaryDirectory;
 	bool forceReorder, forceNoReorder, subtractModel, modelUpdateRequired, mfsWeighting;
 	bool normalizeForWeighting;
@@ -119,7 +119,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	weightMode(WeightMode::UniformWeighted),
 	prefixName("wsclean"),
 	smallInversion(true), makePSF(false), makePSFOnly(false), isWeightImageSaved(false),
-	isUVImageSaved(false), isGriddingImageSaved(false),
+	isUVImageSaved(false), isDirtySaved(true), isGriddingImageSaved(false),
 	dftPrediction(false), dftWithBeam(false),
 	temporaryDirectory(),
 	forceReorder(false), forceNoReorder(false),

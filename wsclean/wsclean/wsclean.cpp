@@ -598,7 +598,8 @@ void WSClean::RunClean()
 				
 				if(!(*pol == Polarization::YX && _settings.polarizations.count(Polarization::XY)!=0) && !_settings.makePSFOnly)
 				{
-					makeMFSImage("dirty.fits", *pol, false);
+					if(_settings.isDirtySaved)
+						makeMFSImage("dirty.fits", *pol, false);
 					if(_settings.deconvolutionIterationCount == 0)
 						makeMFSImage("image.fits", *pol, false);
 					else 
@@ -609,7 +610,8 @@ void WSClean::RunClean()
 					}
 					if(Polarization::IsComplex(*pol))
 					{
-						makeMFSImage("dirty.fits", *pol, true);
+						if(_settings.isDirtySaved)
+							makeMFSImage("dirty.fits", *pol, true);
 						if(_settings.deconvolutionIterationCount == 0)
 								makeMFSImage("image.fits", *pol, true);
 						else
@@ -1125,16 +1127,19 @@ void WSClean::runFirstInversion(const ImagingTableEntry& entry)
 			PolarizationEnum savedPol = entry.polarization;
 			if(savedPol == Polarization::YX && _settings.polarizations.count(Polarization::XY)!=0)
 				savedPol = Polarization::XY;
-			double* dirtyImage = _imageAllocator.Allocate(_settings.trimmedImageWidth * _settings.trimmedImageHeight);
-			_residualImages.Load(dirtyImage, savedPol, entry.outputChannelIndex, false);
-			Logger::Info << "Writing dirty image...\n";
-			writeFits("dirty.fits", dirtyImage, savedPol, entry.outputChannelIndex, false);
-			if(Polarization::IsComplex(entry.polarization))
+			if(_settings.isDirtySaved)
 			{
-				_residualImages.Load(dirtyImage, savedPol, entry.outputChannelIndex, true);
-				writeFits("dirty.fits", dirtyImage, savedPol, entry.outputChannelIndex, true);
+				double* dirtyImage = _imageAllocator.Allocate(_settings.trimmedImageWidth * _settings.trimmedImageHeight);
+				_residualImages.Load(dirtyImage, savedPol, entry.outputChannelIndex, false);
+				Logger::Info << "Writing dirty image...\n";
+				writeFits("dirty.fits", dirtyImage, savedPol, entry.outputChannelIndex, false);
+				if(Polarization::IsComplex(entry.polarization))
+				{
+					_residualImages.Load(dirtyImage, savedPol, entry.outputChannelIndex, true);
+					writeFits("dirty.fits", dirtyImage, savedPol, entry.outputChannelIndex, true);
+				}
+				_imageAllocator.Free(dirtyImage);
 			}
-			_imageAllocator.Free(dirtyImage);
 		}
 	}
 	

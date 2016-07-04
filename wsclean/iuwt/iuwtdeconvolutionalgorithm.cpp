@@ -924,13 +924,14 @@ void IUWTDeconvolutionAlgorithm::PerformMajorIteration(size_t& iterCounter, size
 	ao::uvector<double> dirty(_width * _height);
 	dirtySet.GetLinearIntegrated(dirty.data());
 	ao::uvector<double> psf(psfs[0], psfs[0] + _width*_height);
-	for(size_t i=1; i!=psfs.size(); ++i)
+	dirtySet.GetIntegratedPSF(psf.data(), psfs);
+	/*for(size_t i=1; i!=psfs.size(); ++i)
 	{
 		for(size_t j=0; j!=psf.size(); ++j)
 			psf[j] += psfs[i][j];
 	}
 	for(size_t j=0; j!=psf.size(); ++j)
-		psf[j] /= double(psfs.size());
+		psf[j] /= double(psfs.size());*/
 	
 	int maxScale = IUWTDecomposition::EndScale(std::min(_width, _height));
 	int curEndScale = 2;
