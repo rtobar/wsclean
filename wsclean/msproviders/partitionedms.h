@@ -67,7 +67,7 @@ public:
 	
 	virtual double StartTime()   { return _metaHeader.startTime; }
 	
-	static Handle Partition(const string& msPath, const std::vector<ChannelRange>& channels, class MSSelection& selection, const string& dataColumnName, bool includeWeights, bool includeModel, bool initialModelRequired, bool modelUpdateRequired, const std::set<PolarizationEnum>& polsOut, const std::string& temporaryDirectory);
+	static Handle Partition(const string& msPath, const std::vector<ChannelRange>& channels, class MSSelection& selection, const string& dataColumnName, bool includeModel, bool initialModelRequired, const class WSCleanSettings& settings);
 	
 	virtual void MakeIdToMSRowMapping(std::vector<size_t>& idToMSRow)  ;
 	

@@ -530,7 +530,7 @@ void WSClean::performReordering(bool isPredictMode)
 		
 		bool useModel = _settings.deconvolutionMGain != 1.0 || isPredictMode || _settings.subtractModel;
 		bool initialModelRequired = _settings.subtractModel;
-		_partitionedMSHandles.push_back(PartitionedMS::Partition(_settings.filenames[i], channels, _globalSelection, _settings.dataColumnName, true, useModel, initialModelRequired, _settings.modelUpdateRequired, _settings.polarizations, _settings.temporaryDirectory));
+		_partitionedMSHandles.push_back(PartitionedMS::Partition(_settings.filenames[i], channels, _globalSelection, _settings.dataColumnName, useModel, initialModelRequired, _settings));
 	}
 }
 

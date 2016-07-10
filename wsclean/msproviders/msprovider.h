@@ -24,6 +24,9 @@ class MSSelection;
 class MSProvider
 {
 public:
+	friend class MSRowProvider;
+	friend class DirectMSRowProvider;
+
 	virtual ~MSProvider() { }
 	
 	virtual casacore::MeasurementSet &MS() = 0;

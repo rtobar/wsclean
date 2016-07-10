@@ -48,6 +48,7 @@ public:
 	bool applyPrimaryBeam, reusePrimaryBeam, useDifferentialLofarBeam, useIDG;
 	enum GridModeEnum gridMode;
 	enum MeasurementSetGridder::VisibilityWeightingMode visibilityWeightingMode;
+	double baselineDependentAveragingInWavelengths;
 	
 	/** @{
 	 * These settings all relate to the deconvolution.
@@ -132,6 +133,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	useIDG(false),
 	gridMode(KaiserBesselKernel),
 	visibilityWeightingMode(MeasurementSetGridder::NormalVisibilityWeighting),
+	baselineDependentAveragingInWavelengths(0.0),
 // Deconvolution default settings:
 	deconvolutionThreshold(0.0),
 	deconvolutionGain(0.1),

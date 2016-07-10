@@ -166,6 +166,9 @@ void print_help()
 		"-no-normalize-for-weighting\n"
 		"   Disable the normalization for the weights, which makes the PSF's peak one. See\n"
 		"   -visibility-weighting-mode. Only useful with natural weighting.\n"
+		"-baseline-averaging <size-in-wavelengths>\n"
+		"   Enable baseline-dependent averaging. The specified size is in number of wavelengths (i.e., uvw-units). One way\n"
+		"   to calculate this is with <baseline in nr. of lambdas> * 2pi * <acceptable integration in s> / (24*60*60).\n"
 		"\n"
 		"  ** DATA SELECTION OPTIONS **\n"
 		"-pol <list>\n"
@@ -800,6 +803,11 @@ int main(int argc, char *argv[])
 		else if(param == "no-normalize-for-weighting")
 		{
 			settings.normalizeForWeighting = false;
+		}
+		else if(param == "baseline-averaging")
+		{
+			++argi;
+			settings.baselineDependentAveragingInWavelengths = atof(argv[argi]);
 		}
 		else if(param == "visibility-weighting-mode")
 		{
