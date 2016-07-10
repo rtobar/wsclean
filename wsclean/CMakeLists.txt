@@ -63,7 +63,7 @@ include_directories(${GSL_INCLUDE_DIR})
 include(CheckCXXSourceCompiles)
 
 check_cxx_source_compiles(
-"#include \"${CMAKE_CURRENT_SOURCE_DIR}/aocommon/uvector.h\"
+"#include \"${CMAKE_CURRENT_SOURCE_DIR}/aocommon/uvector_11.h\"
 int main(int argc, char* argv[])
 {
 return 0;
@@ -110,7 +110,7 @@ add_library(wsclean-object OBJECT
   iuwt/imageanalysis.cpp iuwt/iuwtdecomposition.cpp iuwt/iuwtdeconvolutionalgorithm.cpp iuwt/iuwtmask.cpp
   lofar/lbeamimagemaker.cpp
   model/model.cpp
-  msproviders/contiguousms.cpp msproviders/msprovider.cpp msproviders/partitionedms.cpp
+  msproviders/averagingmsrowprovider.cpp msproviders/contiguousms.cpp msproviders/directmsrowprovider.cpp msproviders/msprovider.cpp msproviders/msrowprovider.cpp msproviders/partitionedms.cpp
   multiscale/multiscalealgorithm.cpp multiscale/multiscaletransforms.cpp multiscale/threadeddeconvolutiontools.cpp
   wsclean/imagingtable.cpp wsclean/logger.cpp wsclean/msgridderbase.cpp wsclean/wsclean.cpp wsclean/wscleansettings.cpp wsclean/wsmsgridder.cpp wsclean/wstackinggridder.cpp
 	${LBEAM_FILES})
