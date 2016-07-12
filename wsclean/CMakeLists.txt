@@ -63,7 +63,7 @@ include_directories(${GSL_INCLUDE_DIR})
 include(CheckCXXSourceCompiles)
 
 check_cxx_source_compiles(
-"#include \"${CMAKE_CURRENT_SOURCE_DIR}/aocommon/uvector.h\"
+"#include \"${CMAKE_CURRENT_SOURCE_DIR}/aocommon/uvector_11.h\"
 int main(int argc, char* argv[])
 {
 return 0;
