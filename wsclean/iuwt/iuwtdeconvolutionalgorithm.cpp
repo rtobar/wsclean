@@ -16,13 +16,14 @@
 
 #include <boost/numeric/conversion/bounds.hpp>
 
-IUWTDeconvolutionAlgorithm::IUWTDeconvolutionAlgorithm(size_t width, size_t height, double gain, double mGain, double cleanBorder, bool allowNegativeComponents, const bool* mask, double absoluteThreshold, double thresholdSigmaLevel, double tolerance) :
+IUWTDeconvolutionAlgorithm::IUWTDeconvolutionAlgorithm(size_t width, size_t height, double gain, double mGain, double cleanBorder, bool allowNegativeComponents, const bool* mask, double absoluteThreshold, double thresholdSigmaLevel, double tolerance, bool useSNRTest) :
 	_width(width), _height(height),
 	_gain(gain), _mGain(mGain), _cleanBorder(cleanBorder),
 	_mask(mask),
 	_absoluteThreshold(absoluteThreshold),
 	_thresholdSigmaLevel(thresholdSigmaLevel),
-	_tolerance(tolerance), _allowNegativeComponents(allowNegativeComponents)
+	_tolerance(tolerance), _allowNegativeComponents(allowNegativeComponents),
+	_useSNRTest(useSNRTest)
 { }
 
 void IUWTDeconvolutionAlgorithm::measureRMSPerScale(const double* image, const double* convolvedImage, double* scratch, size_t endScale, std::vector<ScaleResponse>& psfResponse)

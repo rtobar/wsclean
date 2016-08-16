@@ -91,6 +91,7 @@ private:
 			(_settings.channelsOut != 1) ||
 			(_settings.polarizations.size()>=4) ||
 			(_settings.deconvolutionMGain != 1.0) ||
+			(_settings.baselineDependentAveragingInWavelengths != 0.0) ||
 			_settings.forceReorder
 		) && !_settings.forceNoReorder;
 	}

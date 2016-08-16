@@ -134,7 +134,6 @@ void LBeamImageMaker::makeBeamForMS(std::vector<ImageBufferAllocator::Ptr>& beam
 	casacore::MEpoch endTime = timeColumn(idToMSRow.back());
 	double totalSeconds = endTime.get("s").getValue() - time.get("s").getValue();
 	size_t intervalCount = (totalSeconds + _secondsBeforeBeamUpdate - 1) / _secondsBeforeBeamUpdate;
-	Logger::Debug << "MS spans " << totalSeconds << " seconds, dividing in " << intervalCount << " intervals.\n";
 	std::vector<size_t> timestepIds(1, 0);
 	for(size_t id=0;id!=idToMSRow.size();++id)
 	{
@@ -144,9 +143,12 @@ void LBeamImageMaker::makeBeamForMS(std::vector<ImageBufferAllocator::Ptr>& beam
 			time = timeColumn(idToMSRow[id]);
 		}
 	}
-	
 	size_t timestepCount = timestepIds.size();
 	timestepIds.push_back(idToMSRow.size());
+	
+	if(intervalCount > timestepCount)
+		intervalCount = timestepCount;
+	Logger::Debug << "MS spans " << totalSeconds << " seconds, dividing in " << intervalCount << " intervals.\n";
 	
 	casacore::MEpoch midTime(casacore::MVEpoch(0.5 * (timeColumn(idToMSRow[0]).getValue().get() + timeColumn(idToMSRow.back()).getValue().get())), timeColumn(idToMSRow[0]).getRef());
 	Logger::Debug << "Mid time for full selection: " << midTime << '\n';

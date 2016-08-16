@@ -5,7 +5,8 @@
 
 #include "../wsclean/msgridderbase.h"
 
-#include "interface.h"
+//#include "interface.h"
+#include <idg.h>
 
 #include "../lane.h"
 #include "../uvector.h"
@@ -61,7 +62,7 @@ private:
 		size_t rowId;
 	};
 	
-	std::vector<HighLevelGridderInterface*> _interfaces;
+	std::vector<idg::GridderPlan*> _interfaces;
 	size_t _kernelSize;
 	ao::uvector<std::complex<double>> _grid;
 	ao::uvector<double> _image;

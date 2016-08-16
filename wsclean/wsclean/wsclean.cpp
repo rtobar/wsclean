@@ -530,7 +530,7 @@ void WSClean::performReordering(bool isPredictMode)
 		
 		bool useModel = _settings.deconvolutionMGain != 1.0 || isPredictMode || _settings.subtractModel;
 		bool initialModelRequired = _settings.subtractModel;
-		_partitionedMSHandles.push_back(PartitionedMS::Partition(_settings.filenames[i], channels, _globalSelection, _settings.dataColumnName, true, useModel, initialModelRequired, _settings.modelUpdateRequired, _settings.polarizations, _settings.temporaryDirectory));
+		_partitionedMSHandles.push_back(PartitionedMS::Partition(_settings.filenames[i], channels, _globalSelection, _settings.dataColumnName, useModel, initialModelRequired, _settings));
 	}
 }
 
@@ -692,6 +692,7 @@ bool WSClean::selectChannels(MSSelection& selection, size_t msIndex, size_t data
 		size_t newStart, newEnd;
 		if(isReversed)
 		{
+			Logger::Debug << "MS has reversed channel frequencies :-/\n";
 			BandData::const_reverse_iterator lowPtr, highPtr;
 			lowPtr = std::lower_bound(band.rbegin(), band.rend(), entry.lowestFrequency);
 			highPtr = std::lower_bound(lowPtr, band.rend(), entry.highestFrequency);

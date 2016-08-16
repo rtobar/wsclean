@@ -1,7 +1,8 @@
 #include "idgmsgridder.h"
 
-#include "interface.h"
-#include "dummygridder.h"
+//#include "interface.h"
+//#include "dummygridder.h"
+#include <idg.h>
 
 #include "../msproviders/msprovider.h"
 
@@ -41,10 +42,10 @@ void IdgMsGridder::Invert()
 			gridMeasurementSet(msDataVector[i]);
 		}
 		
-		HighLevelGridderInterface* iface = new DummyGridder(); // TODO
-		iface->set_grid(_grid.data());
-		iface->set_kernel(_kernelSize, _kernel.data());
-		iface->transform_grid_after_gridding();
+		idg::GridderPlan* plan = new idg::GridderPlan();
+		plan->set_grid(4, height, width, _grid.data());
+		//plan->set_kernel(_kernelSize, _kernel.data());
+		plan->transform_grid();
 	}
 	else if(_grid.empty()) {
 		throw std::runtime_error("IdgMsGridder::Invert() was called out of sequence");
@@ -65,18 +66,19 @@ void IdgMsGridder::constructGridders(const MultiBandData& selectedBands, size_t 
 	// A gridder per band is needed
 	_interfaces.resize(selectedBands.BandCount());
 	ao::uvector<std::complex<double>> aterm(nStations * 4 * _kernelSize * _kernelSize, 1.0); // TODO fill with sensible data
+	const size_t width = TrimWidth(), height = TrimHeight();
 	for(size_t i=0; i!=selectedBands.BandCount(); ++i)
 	{
 		ao::uvector<double> frequencyList(selectedBands[i].begin(), selectedBands[i].end());
-		HighLevelGridderInterface* iface = new DummyGridder(); // TODO
+		idg::GridderPlan* iface = new idg::GridderPlan(); // TODO
 		_interfaces[i] = iface;
-		iface->set_frequencies(frequencyList.data(), selectedBands[i].ChannelCount());
+		iface->set_frequencies(selectedBands[i].ChannelCount(), frequencyList.data());
 		iface->set_stations(nStations);
-		iface->set_grid(_grid.data());
-		iface->set_kernel(_kernelSize, _kernel.data());
+		iface->set_grid(4, height, width, _grid.data());
+		iface->set_spheroidal(_kernelSize, _kernelSize, _kernel.data());
 		
 		iface->start_w_layer(0.0); //TODO
-		iface->start_aterm(aterm.data());
+		iface->start_aterm(nStations, _kernelSize, _kernelSize, 4, aterm.data());
 	}
 }
 
@@ -136,7 +138,7 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 	_inversionLane.write_end();
 	gridThread.join();
 	
-	for(HighLevelGridderInterface* iface : _interfaces)
+	for(idg::GridderPlan* iface : _interfaces)
 	{
 		iface->finish_aterm();
 		iface->finish_w_layer();
@@ -150,8 +152,8 @@ void IdgMsGridder::gridThreadFunction()
 	IDGInversionRow row;
 	while(_inversionLane.read(row))
 	{
-		HighLevelGridderInterface* interface = _interfaces[row.dataDescId];
-		interface->grid_visibility(row.data, row.uvw, row.antenna1, row.antenna2, row.timeIndex);
+		idg::GridderPlan* interface = _interfaces[row.dataDescId];
+		interface->grid_visibilities(row.timeIndex, row.antenna1, row.antenna2, row.uvw, row.data);
 		delete[] row.data;
 	}
 }
@@ -174,10 +176,10 @@ void IdgMsGridder::Predict(double* real)
 		_grid.resize(width * height * 4);
 		
 		// use a temporary gridder to transform the grid
-		HighLevelGridderInterface* iface = new DummyGridder(); // TODO;
-		iface->set_grid(_grid.data());
-		iface->set_kernel(_kernelSize, _kernel.data());
-		iface->transform_grid_before_sampling();
+		idg::GridderPlan* iface = new idg::GridderPlan(); // TODO;
+		iface->set_grid(4, height, width, _grid.data());
+		iface->set_spheroidal(_kernelSize, _kernel.data());
+		iface->transform_grid();
 		
 		std::vector<MSData> msDataVector;
 		initializeMSDataVector(msDataVector, 4);
@@ -258,9 +260,9 @@ void IdgMsGridder::predictCalcThreadFunction()
 	IDGPredictionRow row;
 	while(_predictionCalcLane.read(row))
 	{
-		HighLevelGridderInterface* interface = _interfaces[row.dataDescId];
+		idg::DegridderPlan* interface = _interfaces[row.dataDescId];
 		bool isBufferFull;
-		interface->queue_visibility_sampling(row.uvw, row.antenna1, row.antenna2, row.timeIndex, row.rowId, isBufferFull);
+		interface->request_visibilities(row.timeIndex, row.antenna1, row.antenna2, row.uvw, row.rowId, isBufferFull);
 		if(isBufferFull)
 		{
 			// Get the band belonging to the gridder that is full
@@ -272,7 +274,7 @@ void IdgMsGridder::predictCalcThreadFunction()
 			{
 				IDGRowForWriting writeRow;
 				writeRow.data = new std::complex<float>[curBand.ChannelCount()*4];
-				interface->get_sampled_visibilities(i, writeRow.data, writeRow.rowId); 
+				interface->read_visibilities(i, writeRow.data, writeRow.rowId); 
 				_predictionWriteLane.write(writeRow);
 			}
 		}

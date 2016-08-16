@@ -146,7 +146,9 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 	}
 	else if(_settings.useIUWTDeconvolution)
 	{
-		_cleanAlgorithm.reset(new IUWTDeconvolution());
+		IUWTDeconvolution* method = new IUWTDeconvolution();
+		_cleanAlgorithm.reset(method);
+		method->SetUseSNRTest(_settings.iuwtSNRTest);
 	}
 	else if(_settings.useMultiscale)
 	{

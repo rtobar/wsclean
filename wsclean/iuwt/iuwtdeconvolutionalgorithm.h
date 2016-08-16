@@ -11,7 +11,7 @@
 class IUWTDeconvolutionAlgorithm
 {
 public:
-	IUWTDeconvolutionAlgorithm(size_t width, size_t height, double gain, double mGain, double cleanBorder, bool allowNegativeComponents, const bool* mask, double absoluteThreshold, double thresholdSigmaLevel=4.0, double tolerance=0.75);
+	IUWTDeconvolutionAlgorithm(size_t width, size_t height, double gain, double mGain, double cleanBorder, bool allowNegativeComponents, const bool* mask, double absoluteThreshold, double thresholdSigmaLevel=4.0, double tolerance=0.75, bool useSNRTest=true);
 	
 	void PerformMajorIteration(size_t& iterCounter, size_t nIter, class DynamicSet& modelSet, class DynamicSet& dirtySet, const ao::uvector<const double*>& psfs, bool& reachedMajorThreshold);
 	
@@ -123,7 +123,7 @@ private:
 	ao::uvector<double> _rmses;
 	FitsWriter _writer;
 	std::vector<ScaleResponse> _psfResponse;
-	bool _allowNegativeComponents;
+	bool _allowNegativeComponents, _useSNRTest;
 	class DynamicSet* _modelSet;
 	class DynamicSet* _dirtySet;
 	ao::uvector<const double*> _psfs;

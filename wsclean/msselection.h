@@ -30,6 +30,9 @@ public:
 	
 	size_t FieldId() const { return _fieldId; }
 	
+	double MinUVWInM() const { return _minUVWInM; }
+	double MaxUVWInM() const { return _maxUVWInM; }
+	
 	bool IsSelected(size_t fieldId, size_t timestep, size_t antenna1, size_t antenna2, const casacore::Vector<double>& uvw) const
 	{
 		if(HasMinUVWInM() || HasMaxUVWInM())

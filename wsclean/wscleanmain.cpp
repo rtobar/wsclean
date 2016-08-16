@@ -166,6 +166,9 @@ void print_help()
 		"-no-normalize-for-weighting\n"
 		"   Disable the normalization for the weights, which makes the PSF's peak one. See\n"
 		"   -visibility-weighting-mode. Only useful with natural weighting.\n"
+		"-baseline-averaging <size-in-wavelengths>\n"
+		"   Enable baseline-dependent averaging. The specified size is in number of wavelengths (i.e., uvw-units). One way\n"
+		"   to calculate this is with <baseline in nr. of lambdas> * 2pi * <acceptable integration in s> / (24*60*60).\n"
 		"\n"
 		"  ** DATA SELECTION OPTIONS **\n"
 		"-pol <list>\n"
@@ -237,6 +240,9 @@ void print_help()
 		"   two until the maximum scale is reached. Example: -multiscale-scales 0,5,12.5\n"
 		"-iuwt\n"
 		"   Use the IUWT deconvolution algorithm.\n"
+		"-iuwt-snr-test / -no-iuwt-snr-test\n"
+		"   Stop (/do not stop) IUWT when the SNR decreases. This might help limitting divergence, but can\n"
+		"   occasionally also stop the algorithm too early. Default: no SNR test.\n"
 		"-moresane-ext <location>\n"
 		"   Use the MoreSane deconvolution algorithm, installed at the specified location.\n"
 		"-moresane-arg <arguments>\n"
@@ -454,6 +460,14 @@ int main(int argc, char *argv[])
 			// seems not to work when allowing negative components. The algorithm
 			// becomes unstable. Hence, turn negative components off.
 			settings.allowNegativeComponents = false;
+		}
+		else if(param == "iuwt-snr-test")
+		{
+			settings.iuwtSNRTest = true;
+		}
+		else if(param == "no-iuwt-snr-test")
+		{
+			settings.iuwtSNRTest = false;
 		}
 		else if(param == "moresane-ext")
 		{
@@ -800,6 +814,11 @@ int main(int argc, char *argv[])
 		else if(param == "no-normalize-for-weighting")
 		{
 			settings.normalizeForWeighting = false;
+		}
+		else if(param == "baseline-averaging")
+		{
+			++argi;
+			settings.baselineDependentAveragingInWavelengths = atof(argv[argi]);
 		}
 		else if(param == "visibility-weighting-mode")
 		{

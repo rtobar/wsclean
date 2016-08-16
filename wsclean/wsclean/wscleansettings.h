@@ -48,6 +48,7 @@ public:
 	bool applyPrimaryBeam, reusePrimaryBeam, useDifferentialLofarBeam, useIDG;
 	enum GridModeEnum gridMode;
 	enum MeasurementSetGridder::VisibilityWeightingMode visibilityWeightingMode;
+	double baselineDependentAveragingInWavelengths;
 	
 	/** @{
 	 * These settings all relate to the deconvolution.
@@ -61,7 +62,7 @@ public:
 	ao::uvector<double> multiscaleScaleList;
 	double deconvolutionBorderRatio;
 	std::string fitsDeconvolutionMask, casaDeconvolutionMask;
-	bool useMoreSaneDeconvolution, useIUWTDeconvolution;
+	bool useMoreSaneDeconvolution, useIUWTDeconvolution, iuwtSNRTest;
 	std::string moreSaneLocation, moreSaneArgs;
 	ao::uvector<double> moreSaneSigmaLevels;
 	enum SpectralFittingMode spectralFittingMode;
@@ -132,6 +133,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	useIDG(false),
 	gridMode(KaiserBesselKernel),
 	visibilityWeightingMode(MeasurementSetGridder::NormalVisibilityWeighting),
+	baselineDependentAveragingInWavelengths(0.0),
 // Deconvolution default settings:
 	deconvolutionThreshold(0.0),
 	deconvolutionGain(0.1),
@@ -152,6 +154,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	casaDeconvolutionMask(),
 	useMoreSaneDeconvolution(false),
 	useIUWTDeconvolution(false),
+	iuwtSNRTest(false),
 	moreSaneLocation(),
 	moreSaneArgs(),
 	spectralFittingMode(NoSpectralFitting),

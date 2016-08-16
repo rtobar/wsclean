@@ -70,6 +70,7 @@ class BandData
 			_channelCount(endChannel - startChannel), _frequencyStep(source._frequencyStep)
 		{
 			if(_channelCount == 0) throw std::runtime_error("No channels in set");
+			if(endChannel < startChannel) throw std::runtime_error("Invalid band specification");
 			
 			_channelFrequencies = new double[_channelCount];
 			for(size_t index = 0; index != _channelCount; ++index)
