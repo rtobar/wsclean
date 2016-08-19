@@ -686,6 +686,7 @@ bool WSClean::selectChannels(MSSelection& selection, size_t msIndex, size_t data
 	if(firstCh > lastCh) {
 		std::swap(firstCh, lastCh);
 		isReversed = true;
+		Logger::Debug << "Warning: MS has reversed channel frequencies.\n";
 	}
 	if(band.ChannelCount()!=0 && entry.lowestFrequency <= lastCh && entry.highestFrequency >= firstCh)
 	{
@@ -698,8 +699,8 @@ bool WSClean::selectChannels(MSSelection& selection, size_t msIndex, size_t data
 			
 			if(highPtr == band.rend())
 				--highPtr;
-			newStart = band.ChannelCount() - 1 - (lowPtr - band.rbegin());
-			newEnd = band.ChannelCount() - (highPtr - band.rbegin());
+			newStart = band.ChannelCount() - 1 - (highPtr - band.rbegin());
+			newEnd = band.ChannelCount() - (lowPtr - band.rbegin());
 		}
 		else {
 			const double *lowPtr, *highPtr;
@@ -1413,8 +1414,8 @@ void WSClean::makeImagingTableEntry(const std::vector<double>& channels, size_t 
 	size_t
 		chLowIndex = startCh + outChannelIndex*width/_settings.channelsOut,
 		chHighIndex = startCh + (outChannelIndex+1)*width/_settings.channelsOut - 1;
-	entry.lowestFrequency = channels[chLowIndex];
-	entry.highestFrequency = channels[chHighIndex];
+	entry.lowestFrequency = std::min(channels[chLowIndex], channels[chHighIndex]);
+	entry.highestFrequency = std::max(channels[chLowIndex], channels[chHighIndex]);
 	// TODO this should include the channelwidth
 	entry.minBandFrequency = entry.lowestFrequency;
 	entry.maxBandFrequency = entry.highestFrequency;

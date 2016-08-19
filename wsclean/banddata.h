@@ -70,6 +70,7 @@ class BandData
 			_channelCount(endChannel - startChannel), _frequencyStep(source._frequencyStep)
 		{
 			if(_channelCount == 0) throw std::runtime_error("No channels in set");
+			if(endChannel < startChannel) throw std::runtime_error("Invalid band specification");
 			
 			_channelFrequencies = new double[_channelCount];
 			for(size_t index = 0; index != _channelCount; ++index)
@@ -270,8 +271,10 @@ class BandData
 			if(_channelCount == 0) throw std::runtime_error("No channels in set");
 			
 			casacore::ROArrayColumn<double> chanFreqCol(spwTable, casacore::MSSpectralWindow::columnName(casacore::MSSpectralWindowEnums::CHAN_FREQ));
-			casacore::Array<double> channelFrequencies;
+			casacore::ROArrayColumn<double> chanWidthCol(spwTable, casacore::MSSpectralWindow::columnName(casacore::MSSpectralWindowEnums::CHAN_WIDTH));
+			casacore::Array<double> channelFrequencies, channelWidths;
 			chanFreqCol.get(bandIndex, channelFrequencies, true);
+			chanWidthCol.get(bandIndex, channelWidths, true);
 			
 			_channelFrequencies = new double[_channelCount];
 			size_t index = 0;
@@ -281,10 +284,14 @@ class BandData
 				_channelFrequencies[index] = *i;
 				++index;
 			}
-		  if(_channelCount > 1)
-		    _frequencyStep = _channelFrequencies[1] - _channelFrequencies[0];
-		  else
-		    _frequencyStep = 0.0;
+			index = 0;
+			for(casacore::Array<double>::const_iterator i=channelWidths.begin();
+					i != channelWidths.end(); ++i)
+			{
+				_frequencyStep += *i;
+				++index;
+			}
+			_frequencyStep /= double(index);
 		}
 		
 		size_t _channelCount;

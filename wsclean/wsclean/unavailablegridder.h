@@ -18,22 +18,22 @@ public:
 	
 	virtual void Predict(double* real, double* imaginary) { doThrow(); }
 	
-	virtual double* ImageRealResult() { doThrow(); }
+	virtual double* ImageRealResult() { doThrow(); return 0; }
 	
-	virtual double* ImageImaginaryResult() { doThrow(); }
+	virtual double* ImageImaginaryResult() { doThrow(); return 0; }
 	
-	virtual double BeamSize() const { doThrow(); }
+	virtual double BeamSize() const { doThrow(); return 0.0; }
 	
 	virtual void GetGriddingCorrectionImage(double* image) const { doThrow(); }
 	
-	virtual bool HasGriddingCorrectionImage() const { doThrow(); }
+	virtual bool HasGriddingCorrectionImage() const { doThrow(); return false; }
 	
 private:
-	virtual size_t getSuggestedWGridSize() const { doThrow(); }
+	virtual size_t getSuggestedWGridSize() const { doThrow(); return 0; }
 	
 	void doThrow() const
 	{
-		throw std::runtime_error("This gridder is not available, because WSClean was not compiled to have this gridder. Use a different gridder or recompile WSClean and make sure the necessary prerequisites are present.");
+		throw std::runtime_error("This gridder is not available, because WSClean was not compiled to have this gridder. Use a different gridder or recompile WSClean and make sure the necessary prerequisites are satisfied.");
 	}
 };
 

@@ -62,7 +62,7 @@ public:
 	ao::uvector<double> multiscaleScaleList;
 	double deconvolutionBorderRatio;
 	std::string fitsDeconvolutionMask, casaDeconvolutionMask;
-	bool useMoreSaneDeconvolution, useIUWTDeconvolution;
+	bool useMoreSaneDeconvolution, useIUWTDeconvolution, iuwtSNRTest;
 	std::string moreSaneLocation, moreSaneArgs;
 	ao::uvector<double> moreSaneSigmaLevels;
 	enum SpectralFittingMode spectralFittingMode;
@@ -154,6 +154,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	casaDeconvolutionMask(),
 	useMoreSaneDeconvolution(false),
 	useIUWTDeconvolution(false),
+	iuwtSNRTest(false),
 	moreSaneLocation(),
 	moreSaneArgs(),
 	spectralFittingMode(NoSpectralFitting),

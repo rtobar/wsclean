@@ -30,4 +30,8 @@ void WSCleanSettings::Validate()
 		if(modelUpdateRequired)
 			throw std::runtime_error("Baseline dependent averaging can not update the model column (yet) -- you have to add -no-update-model-required.");
 	}
+	if(channelsOut == 0)
+	{
+		throw std::runtime_error("You have specified 0 output channels -- at least one output channel is required.");
+	}
 }

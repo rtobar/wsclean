@@ -240,6 +240,9 @@ void print_help()
 		"   two until the maximum scale is reached. Example: -multiscale-scales 0,5,12.5\n"
 		"-iuwt\n"
 		"   Use the IUWT deconvolution algorithm.\n"
+		"-iuwt-snr-test / -no-iuwt-snr-test\n"
+		"   Stop (/do not stop) IUWT when the SNR decreases. This might help limitting divergence, but can\n"
+		"   occasionally also stop the algorithm too early. Default: no SNR test.\n"
 		"-moresane-ext <location>\n"
 		"   Use the MoreSane deconvolution algorithm, installed at the specified location.\n"
 		"-moresane-arg <arguments>\n"
@@ -457,6 +460,14 @@ int main(int argc, char *argv[])
 			// seems not to work when allowing negative components. The algorithm
 			// becomes unstable. Hence, turn negative components off.
 			settings.allowNegativeComponents = false;
+		}
+		else if(param == "iuwt-snr-test")
+		{
+			settings.iuwtSNRTest = true;
+		}
+		else if(param == "no-iuwt-snr-test")
+		{
+			settings.iuwtSNRTest = false;
 		}
 		else if(param == "moresane-ext")
 		{
