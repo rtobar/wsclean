@@ -85,7 +85,7 @@ public:
 				polName.SetPolarization(p);
 				polName.SetIsImaginary(i%2 != 0);
 				writer.SetPolarization(p);
-				writer.SetFrequency(entry.CentralFrequency(), entry.maxBandFrequency - entry.minBandFrequency);
+				writer.SetFrequency(entry.CentralFrequency(), entry.bandEndFrequency - entry.bandStartFrequency);
 				writer.Write<double>(polName.GetBeamPrefix(_settings) + ".fits", _beamImages[i].data());
 			}
 		}

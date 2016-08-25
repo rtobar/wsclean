@@ -104,8 +104,8 @@ string ImagingTableEntry::ToString()
 	str << outputChannelIndex
 		<< "  " << joinedGroupIndex
 		<< "  " << squaredDeconvolutionIndex
-		<< "  " << round(lowestFrequency*1e-6)
-		<< "-" << round(highestFrequency*1e-6);
+		<< "  " << round(bandStartFrequency*1e-6)
+		<< "-" << round(bandEndFrequency*1e-6);
 	
 	return str.str();
 }

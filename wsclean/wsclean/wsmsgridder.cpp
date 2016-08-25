@@ -400,7 +400,10 @@ void WSMSGridder::Invert()
 		Logger::Info << "Not dividing by normalization factor of " << totalWeight()/2.0 << ".\n";
 		_gridder->FinalizeImage(2.0, true);
 	}
-	Logger::Info << "Gridded visibility count: " << double(GriddedVisibilityCount()) << ", effective count after weighting: " << EffectiveGriddedVisibilityCount() << '\n';
+	Logger::Info << "Gridded visibility count: " << double(GriddedVisibilityCount());
+	if(Weighting().IsNatural())
+		Logger::Info << ", effective count after weighting: " << EffectiveGriddedVisibilityCount();
+	Logger::Info << '\n';
 	
 	if(ImageWidth()!=_actualInversionWidth || ImageHeight()!=_actualInversionHeight)
 	{

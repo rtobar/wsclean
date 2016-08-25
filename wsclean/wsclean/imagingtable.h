@@ -31,7 +31,7 @@ public:
 	 * Note that mses might have overlapping frequencies.
 	 */
 	double lowestFrequency, highestFrequency;
-	double minBandFrequency, maxBandFrequency;
+	double bandStartFrequency, bandEndFrequency;
 	
 	PolarizationEnum polarization;
 	
@@ -69,7 +69,7 @@ public:
 	
 	double CentralFrequency() const
 	{
-		return 0.5 * (minBandFrequency + maxBandFrequency);
+		return 0.5 * (bandStartFrequency + bandEndFrequency);
 	}
 };
 

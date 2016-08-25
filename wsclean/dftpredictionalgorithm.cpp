@@ -37,6 +37,7 @@ void DFTPredictionImage::Add(PolarizationEnum polarization, const double* image)
 			break;
 		case Polarization::XY:
 		case Polarization::YX:
+		case Polarization::Instrumental:
 			throw std::runtime_error("Invalid call to Add()");
 		case Polarization::YY:
 			temp[3] = image[i];
@@ -93,6 +94,7 @@ void DFTPredictionImage::Add(PolarizationEnum polarization, const double* real, 
 		case Polarization::StokesV:
 		case Polarization::RR:
 		case Polarization::LL:
+		case Polarization::Instrumental:
 			throw std::runtime_error("Invalid call to Add()");
 		case Polarization::XY:
 			temp[1] = std::complex<double>(real[i], imaginary[i]);

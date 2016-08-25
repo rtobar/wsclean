@@ -8,6 +8,22 @@
 #include <casacore/tables/Tables/ArrayColumn.h>
 #include <casacore/tables/Tables/ScalarColumn.h>
 
+class OrderedChannel
+{
+public:
+	OrderedChannel(double frequency, double width) : _frequency(frequency), _width(width)
+	{ }
+	
+	bool operator<(const OrderedChannel& rhs) const { return _frequency < rhs._frequency; }
+	bool operator==(const OrderedChannel& rhs) const { return _frequency == rhs._frequency; }
+	
+	double Frequency() const { return _frequency; }
+	double Width() const { return _width; }
+	
+private:
+	double _frequency, _width;
+};
+
 /**
  * Contains information about a single band ("spectral window").
  * A band consists of a sequence of contiguous channels.
@@ -84,6 +100,7 @@ class BandData
 		 * @param channelCount Number of channels in the new instance.
 		 * @param frequencies Array of @p channelCount doubles containing the channel frequencies.
 		 */
+		/*
 		BandData(size_t channelCount, const double* frequencies) :
 			_channelCount(channelCount)
 		{
@@ -93,7 +110,7 @@ class BandData
 				_frequencyStep = _channelFrequencies[1] - _channelFrequencies[0];
 			else
 				_frequencyStep = 0.0;
-		}
+		}*/
 		
 		/** Destructor. */
 		~BandData()
@@ -168,6 +185,16 @@ class BandData
 		double ChannelFrequency(size_t channelIndex) const
 		{
 			return _channelFrequencies[channelIndex];
+		}
+		
+		double ChannelWidth(size_t channelIndex) const
+		{
+			return _frequencyStep;
+		}
+		
+		OrderedChannel Channel(size_t channelIndex) const
+		{
+			return OrderedChannel(_channelFrequencies[channelIndex], _frequencyStep);
 		}
 		
 		/** Get the wavelength in m of a specified channel.
@@ -284,6 +311,7 @@ class BandData
 				_channelFrequencies[index] = *i;
 				++index;
 			}
+			_frequencyStep = 0.0;
 			index = 0;
 			for(casacore::Array<double>::const_iterator i=channelWidths.begin();
 					i != channelWidths.end(); ++i)

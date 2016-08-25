@@ -57,15 +57,15 @@ void WSClean::initFitsWriter(FitsWriter& writer)
 		dec = _gridder->PhaseCentreDec(),
 		pixelScaleX = _gridder->PixelSizeX(),
 		pixelScaleY = _gridder->PixelSizeY(),
-		freqHigh = _gridder->HighestFrequencyChannel(),
-		freqLow = _gridder->LowestFrequencyChannel(),
-		freqCentre = (freqHigh + freqLow) * 0.5,
-		bandwidth = _gridder->BandEnd() - _gridder->BandStart(),
+	//	freqHigh = _gridder->HighestFrequencyChannel(),
+	//	freqLow = _gridder->LowestFrequencyChannel(),
+	//	freqCentre = (freqHigh + freqLow) * 0.5,
+	//	bandwidth = _gridder->BandEnd() - _gridder->BandStart(),
 		beamSize = _gridder->BeamSize(),
 		dateObs = _gridder->StartTime();
 		
 	writer.SetImageDimensions(_settings.trimmedImageWidth, _settings.trimmedImageHeight, ra, dec, pixelScaleX, pixelScaleY);
-	writer.SetFrequency(freqCentre, bandwidth);
+	//writer.SetFrequency(freqCentre, bandwidth);
 	writer.SetDate(dateObs);
 	writer.SetPolarization(_gridder->Polarization());
 	writer.SetOrigin("WSClean", "W-stacking imager written by Andre Offringa");
@@ -79,7 +79,11 @@ void WSClean::initFitsWriter(FitsWriter& writer)
 	if(_gridder->HasDenormalPhaseCentre())
 		writer.SetPhaseCentreShift(_gridder->PhaseCentreDL(), _gridder->PhaseCentreDM());
 	
+	/* This represents the weight of the image when averaging */
 	writer.SetExtraKeyword("WSCIMGWG", _gridder->ImageWeight());
+	/* This is the normalization factor that was applied. The factor is useful
+	 * to undo the normalization for e.g. conversion to Kelvins. */ 
+	writer.SetExtraKeyword("WSCNORMF", _gridder->NormalizationFactor());
 	writer.SetExtraKeyword("WSCNWLAY", _gridder->WGridSize());
 	writer.SetExtraKeyword("WSCDATAC", _gridder->DataColumnName());
 	writer.SetExtraKeyword("WSCWEIGH", _gridder->Weighting().ToString());
@@ -140,8 +144,9 @@ void WSClean::multiplyImage(double factor, double* image)
 		image[i] *= factor;
 }
 
-void WSClean::imagePSF(size_t currentChannelIndex)
+void WSClean::imagePSF(const ImagingTableEntry& entry)
 {
+	size_t channelIndex = entry.outputChannelIndex;
 	Logger::Info.Flush();
 	Logger::Info << " == Constructing PSF ==\n";
 	_inversionWatch.Start();
@@ -157,7 +162,7 @@ void WSClean::imagePSF(size_t currentChannelIndex)
 			normFactor = 1.0/_gridder->ImageRealResult()[centralIndex];
 		else
 			normFactor = 0.0;
-		_infoPerChannel[currentChannelIndex].psfNormalizationFactor = normFactor;
+		_infoPerChannel[channelIndex].psfNormalizationFactor = normFactor;
 		multiplyImage(normFactor, _gridder->ImageRealResult());
 		Logger::Debug << "Normalized PSF by factor of " << normFactor << ".\n";
 	}
@@ -165,34 +170,34 @@ void WSClean::imagePSF(size_t currentChannelIndex)
 	DeconvolutionAlgorithm::RemoveNaNsInPSF(_gridder->ImageRealResult(), _settings.trimmedImageWidth, _settings.trimmedImageHeight);
 	initFitsWriter(_fitsWriter);
 	_psfImages.SetFitsWriter(_fitsWriter);
-	_psfImages.Store(_gridder->ImageRealResult(), *_settings.polarizations.begin(), currentChannelIndex, false);
+	_psfImages.Store(_gridder->ImageRealResult(), *_settings.polarizations.begin(), channelIndex, false);
 	_inversionWatch.Pause();
 	
 	if(_settings.isUVImageSaved)
 	{
-		saveUVImage(_gridder->ImageRealResult(), *_settings.polarizations.begin(), currentChannelIndex, false, "uvpsf");
+		saveUVImage(_gridder->ImageRealResult(), *_settings.polarizations.begin(), entry, false, "uvpsf");
 	}
 	
 	_isFirstInversion = false;
 	
 	double bMaj, bMin, bPA;
 	determineBeamSize(bMaj, bMin, bPA, _gridder->ImageRealResult(), _gridder->BeamSize());
-	_infoPerChannel[currentChannelIndex].theoreticBeamSize = _gridder->BeamSize();
-	_infoPerChannel[currentChannelIndex].beamMaj = bMaj;
-	_infoPerChannel[currentChannelIndex].beamMin = bMin;
-	_infoPerChannel[currentChannelIndex].beamPA = bPA;
+	_infoPerChannel[channelIndex].theoreticBeamSize = _gridder->BeamSize();
+	_infoPerChannel[channelIndex].beamMaj = bMaj;
+	_infoPerChannel[channelIndex].beamMin = bMin;
+	_infoPerChannel[channelIndex].beamPA = bPA;
 		
-	if(std::isfinite(_infoPerChannel[currentChannelIndex].beamMaj))
+	if(std::isfinite(_infoPerChannel[channelIndex].beamMaj))
 	{
 		_fitsWriter.SetBeamInfo(
-			_infoPerChannel[currentChannelIndex].beamMaj,
-			_infoPerChannel[currentChannelIndex].beamMin,
-			_infoPerChannel[currentChannelIndex].beamPA);
+			_infoPerChannel[channelIndex].beamMaj,
+			_infoPerChannel[channelIndex].beamMin,
+			_infoPerChannel[channelIndex].beamPA);
 	}
 		
 	Logger::Info << "Writing psf image... ";
 	Logger::Info.Flush();
-	const std::string name(ImageFilename::GetPSFPrefix(_settings, currentChannelIndex, _currentIntervalIndex) + "-psf.fits");
+	const std::string name(ImageFilename::GetPSFPrefix(_settings, channelIndex, _currentIntervalIndex) + "-psf.fits");
 	_fitsWriter.Write(name, _gridder->ImageRealResult());
 	Logger::Info << "DONE\n";
 }
@@ -601,7 +606,11 @@ void WSClean::RunClean()
 					if(_settings.isDirtySaved)
 						makeMFSImage("dirty.fits", *pol, false);
 					if(_settings.deconvolutionIterationCount == 0)
+					{
 						makeMFSImage("image.fits", *pol, false);
+						if(_settings.applyPrimaryBeam)
+							makeMFSImage("image-pb.fits", *pol, false);
+					}
 					else 
 					{
 						makeMFSImage("residual.fits", *pol, false);
@@ -613,7 +622,11 @@ void WSClean::RunClean()
 						if(_settings.isDirtySaved)
 							makeMFSImage("dirty.fits", *pol, true);
 						if(_settings.deconvolutionIterationCount == 0)
+						{
 								makeMFSImage("image.fits", *pol, true);
+							if(_settings.applyPrimaryBeam)
+								makeMFSImage("image-pb.fits", *pol, true);
+						}
 						else
 						{
 							makeMFSImage("residual.fits", *pol, true);
@@ -822,8 +835,8 @@ void WSClean::saveRestoredImagesForGroup(const ImagingTableEntry& tableEntry)
 		tableEntry.outputChannelIndex;
 	
 	double
-		freqLow = tableEntry.minBandFrequency,
-		freqHigh = tableEntry.maxBandFrequency;
+		freqLow = tableEntry.bandStartFrequency,
+		freqHigh = tableEntry.bandEndFrequency;
 	
 	PolarizationEnum curPol = tableEntry.polarization;
 	for(size_t imageIter=0; imageIter!=tableEntry.imageCount; ++imageIter)
@@ -833,10 +846,10 @@ void WSClean::saveRestoredImagesForGroup(const ImagingTableEntry& tableEntry)
 		_residualImages.Load(restoredImage, curPol, currentChannelIndex, isImaginary);
 		
 		if(_settings.deconvolutionIterationCount != 0)
-			writeFits("residual.fits", restoredImage, curPol, currentChannelIndex, isImaginary);
+			writeFits("residual.fits", restoredImage, curPol, tableEntry, isImaginary);
 		
 		if(_settings.isUVImageSaved)
-			saveUVImage(restoredImage, curPol, currentChannelIndex, isImaginary, "uv");
+			saveUVImage(restoredImage, curPol, tableEntry, isImaginary, "uv");
 		
 		double* modelImage = _imageAllocator.Allocate(_settings.trimmedImageWidth*_settings.trimmedImageHeight);
 		_modelImages.Load(modelImage, curPol, currentChannelIndex, isImaginary);
@@ -884,7 +897,7 @@ void WSClean::saveRestoredImagesForGroup(const ImagingTableEntry& tableEntry)
 		
 		Logger::Info << "Writing restored image... ";
 		Logger::Info.Flush();
-		writeFits("image.fits", restoredImage, curPol, currentChannelIndex, isImaginary);
+		writeFits("image.fits", restoredImage, curPol, tableEntry, isImaginary);
 		Logger::Info << "DONE\n";
 		_imageAllocator.Free(restoredImage);
 		
@@ -893,7 +906,6 @@ void WSClean::saveRestoredImagesForGroup(const ImagingTableEntry& tableEntry)
 			ImageFilename imageName = ImageFilename(currentChannelIndex, _currentIntervalIndex);
 			initFitsWriter(_fitsWriter);
 			_primaryBeam->CorrectImages(_fitsWriter, imageName, "image", _imageAllocator);
-			_primaryBeam.reset();
 		}
 	}
 }
@@ -909,11 +921,11 @@ void WSClean::writeFirstResidualImages(const ImagingTable& groupTable)
 		size_t ch = entry.outputChannelIndex;
 		if(entry.polarization == Polarization::YX) {
 			_residualImages.Load(ptr.data(), Polarization::XY, ch, true);
-			writeFits("first-residual.fits", ptr.data(), Polarization::XY, ch, true);
+			writeFits("first-residual.fits", ptr.data(), Polarization::XY, entry, true);
 		}
 		else {
 			_residualImages.Load(ptr.data(), entry.polarization, ch, false);
-			writeFits("first-residual.fits", ptr.data(), entry.polarization, ch, false);
+			writeFits("first-residual.fits", ptr.data(), entry.polarization, entry, false);
 		}
 	}
 }
@@ -929,11 +941,11 @@ void WSClean::writeModelImages(const ImagingTable& groupTable)
 		size_t ch = entry.outputChannelIndex;
 		if(entry.polarization == Polarization::YX) {
 			_modelImages.Load(ptr.data(), Polarization::XY, ch, true);
-			writeFits("model.fits", ptr.data(), Polarization::XY, ch, true);
+			writeFits("model.fits", ptr.data(), Polarization::XY, entry, true);
 		}
 		else {
 			_modelImages.Load(ptr.data(), entry.polarization, ch, false);
-			writeFits("model.fits", ptr.data(), entry.polarization, ch, false);
+			writeFits("model.fits", ptr.data(), entry.polarization, entry, false);
 		}
 	}
 }
@@ -1054,7 +1066,7 @@ void WSClean::runFirstInversion(const ImagingTableEntry& entry)
 	bool isLastPol = entry.polarization == *_settings.polarizations.rbegin();
 	bool doMakePSF = _settings.deconvolutionIterationCount > 0 || _settings.makePSF || _settings.makePSFOnly;
 	if(doMakePSF && isFirstPol)
-		imagePSF(entry.outputChannelIndex);
+		imagePSF(entry);
 	
 	if(isLastPol && (_settings.applyPrimaryBeam || _settings.dftWithBeam))
 	{
@@ -1081,8 +1093,6 @@ void WSClean::runFirstInversion(const ImagingTableEntry& entry)
 		if(isFirstPol)
 		{
 			_infoPerChannel[entry.outputChannelIndex].weight = _gridder->ImageWeight();
-			_infoPerChannel[entry.outputChannelIndex].bandStart = _gridder->BandStart();
-			_infoPerChannel[entry.outputChannelIndex].bandEnd = _gridder->BandEnd();
 			// If no PSF is made, also set the beam size. If the PSF was made, these would already be set
 			// after imaging the PSF.
 			if(!doMakePSF)
@@ -1133,11 +1143,11 @@ void WSClean::runFirstInversion(const ImagingTableEntry& entry)
 				double* dirtyImage = _imageAllocator.Allocate(_settings.trimmedImageWidth * _settings.trimmedImageHeight);
 				_residualImages.Load(dirtyImage, savedPol, entry.outputChannelIndex, false);
 				Logger::Info << "Writing dirty image...\n";
-				writeFits("dirty.fits", dirtyImage, savedPol, entry.outputChannelIndex, false);
+				writeFits("dirty.fits", dirtyImage, savedPol, entry, false);
 				if(Polarization::IsComplex(entry.polarization))
 				{
 					_residualImages.Load(dirtyImage, savedPol, entry.outputChannelIndex, true);
-					writeFits("dirty.fits", dirtyImage, savedPol, entry.outputChannelIndex, true);
+					writeFits("dirty.fits", dirtyImage, savedPol, entry, true);
 				}
 				_imageAllocator.Free(dirtyImage);
 			}
@@ -1250,13 +1260,14 @@ void WSClean::renderMFSImage(PolarizationEnum pol, bool isImaginary)
 	imageWriter.Write(mfsPrefix + "-image.fits", image.data());
 }
 
-void WSClean::writeFits(const string& suffix, const double* image, PolarizationEnum pol, size_t channelIndex, bool isImaginary)
+void WSClean::writeFits(const string& suffix, const double* image, PolarizationEnum pol, const ImagingTableEntry& entry, bool isImaginary)
 {
 	const double
-		bandStart = _infoPerChannel[channelIndex].bandStart,
-		bandEnd = _infoPerChannel[channelIndex].bandEnd,
+		bandStart = entry.bandStartFrequency,
+		bandEnd = entry.bandEndFrequency,
 		centreFrequency = 0.5*(bandStart+bandEnd),
 		bandwidth = bandEnd-bandStart;
+	const size_t channelIndex = entry.outputChannelIndex;
 	const std::string name(ImageFilename::GetPrefix(_settings, pol, channelIndex, _currentIntervalIndex, isImaginary) + '-' + suffix);
 	initFitsWriter(_fitsWriter);
 	_fitsWriter.SetPolarization(pol);
@@ -1318,20 +1329,20 @@ MSSelection WSClean::selectInterval(MSSelection& fullSelection)
 	}
 }
 
-void WSClean::saveUVImage(const double* image, PolarizationEnum pol, size_t channelIndex, bool isImaginary, const std::string& prefix)
+void WSClean::saveUVImage(const double* image, PolarizationEnum pol, const ImagingTableEntry& entry, bool isImaginary, const std::string& prefix)
 {
 	ao::uvector<double>
 		realUV(_settings.trimmedImageWidth*_settings.trimmedImageHeight, std::numeric_limits<double>::quiet_NaN()),
 		imagUV(_settings.trimmedImageWidth*_settings.trimmedImageHeight, std::numeric_limits<double>::quiet_NaN());
 	FFTResampler fft(_settings.trimmedImageWidth, _settings.trimmedImageHeight, _settings.trimmedImageWidth, _settings.trimmedImageHeight, 1, true);
 	fft.SingleFT(image, realUV.data(), imagUV.data());
-	writeFits(prefix+"-real.fits", realUV.data(), pol, channelIndex, isImaginary);
-	writeFits(prefix+"-imag.fits", imagUV.data(), pol, channelIndex, isImaginary);
+	writeFits(prefix+"-real.fits", realUV.data(), pol, entry, isImaginary);
+	writeFits(prefix+"-imag.fits", imagUV.data(), pol, entry, isImaginary);
 }
 
 void WSClean::makeImagingTable()
 {
-	std::set<double> channelSet;
+	std::set<OrderedChannel> channelSet;
 	double highestFreq = 0.0;
 	_msBands.assign(_settings.filenames.size(), MultiBandData());
 	for(size_t i=0; i!=_settings.filenames.size(); ++i)
@@ -1347,8 +1358,7 @@ void WSClean::makeImagingTable()
 		{
 			for(size_t ch=0; ch!=_msBands[i][dataDescId].ChannelCount(); ++ch)
 			{
-				double f = _msBands[i][dataDescId].ChannelFrequency(ch);
-				channelSet.insert(f);
+				channelSet.insert(_msBands[i][dataDescId].Channel(ch));
 			}
 			if(_msBands[i][dataDescId].BandEnd() > highestFreq)
 				highestFreq = _msBands[i][dataDescId].BandEnd();
@@ -1360,7 +1370,7 @@ void WSClean::makeImagingTable()
 		str << "Parameter '-channelsout' was set to an invalid value: " << _settings.channelsOut << " output channels requested, but combined in all specified measurement sets, there are only " << channelSet.size() << " unique channels.";
 		throw std::runtime_error(str.str());
 	}
-	_inputChannelFrequencies = std::vector<double>(channelSet.begin(), channelSet.end());
+	_inputChannelFrequencies = std::vector<OrderedChannel>(channelSet.begin(), channelSet.end());
 	
 	size_t joinedGroupIndex = 0, squaredGroupIndex = 0;
 	_imagingTable.Clear();
@@ -1396,7 +1406,7 @@ void WSClean::makeImagingTable()
 	_imagingTable.Print();
 }
 
-void WSClean::makeImagingTableEntry(const std::vector<double>& channels, size_t outChannelIndex, ImagingTableEntry& entry)
+void WSClean::makeImagingTableEntry(const std::vector<OrderedChannel>& channels, size_t outChannelIndex, ImagingTableEntry& entry)
 {
 	size_t startCh, width;
 	if(_settings.endChannel != 0)
@@ -1414,11 +1424,12 @@ void WSClean::makeImagingTableEntry(const std::vector<double>& channels, size_t 
 	size_t
 		chLowIndex = startCh + outChannelIndex*width/_settings.channelsOut,
 		chHighIndex = startCh + (outChannelIndex+1)*width/_settings.channelsOut - 1;
-	entry.lowestFrequency = std::min(channels[chLowIndex], channels[chHighIndex]);
-	entry.highestFrequency = std::max(channels[chLowIndex], channels[chHighIndex]);
-	// TODO this should include the channelwidth
-	entry.minBandFrequency = entry.lowestFrequency;
-	entry.maxBandFrequency = entry.highestFrequency;
+	if(channels[chLowIndex].Frequency() > channels[chHighIndex].Frequency())
+		std::swap(chLowIndex, chHighIndex);
+	entry.lowestFrequency = channels[chLowIndex].Frequency();
+	entry.highestFrequency = channels[chHighIndex].Frequency();
+	entry.bandStartFrequency = entry.lowestFrequency - channels[chLowIndex].Width()*0.5;
+	entry.bandEndFrequency = entry.highestFrequency + channels[chHighIndex].Width()*0.5;
 	
 	entry.msData.resize(_settings.filenames.size());
 	for(size_t msIndex=0; msIndex!=_settings.filenames.size(); ++msIndex)
