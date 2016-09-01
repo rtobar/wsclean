@@ -169,6 +169,8 @@ void print_help()
 		"-baseline-averaging <size-in-wavelengths>\n"
 		"   Enable baseline-dependent averaging. The specified size is in number of wavelengths (i.e., uvw-units). One way\n"
 		"   to calculate this is with <baseline in nr. of lambdas> * 2pi * <acceptable integration in s> / (24*60*60).\n"
+		"-simulate-noise <stddev-in-jy>\n"
+		"   Will replace every visibility by a Gaussian distributed value with given standard deviation before imaging.\n"
 		"\n"
 		"  ** DATA SELECTION OPTIONS **\n"
 		"-pol <list>\n"
@@ -819,6 +821,12 @@ int main(int argc, char *argv[])
 		{
 			++argi;
 			settings.baselineDependentAveragingInWavelengths = atof(argv[argi]);
+		}
+		else if(param == "simulate-noise")
+		{
+			++argi;
+			settings.simulateNoise = true;
+			settings.simulatedNoiseStdDev = atof(argv[argi]);
 		}
 		else if(param == "visibility-weighting-mode")
 		{

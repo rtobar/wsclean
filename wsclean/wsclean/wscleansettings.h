@@ -49,6 +49,8 @@ public:
 	enum GridModeEnum gridMode;
 	enum MeasurementSetGridder::VisibilityWeightingMode visibilityWeightingMode;
 	double baselineDependentAveragingInWavelengths;
+	bool simulateNoise;
+	double simulatedNoiseStdDev;
 	
 	/** @{
 	 * These settings all relate to the deconvolution.
@@ -134,6 +136,8 @@ inline WSCleanSettings::WSCleanSettings() :
 	gridMode(KaiserBesselKernel),
 	visibilityWeightingMode(MeasurementSetGridder::NormalVisibilityWeighting),
 	baselineDependentAveragingInWavelengths(0.0),
+	simulateNoise(false),
+	simulatedNoiseStdDev(0.0),
 // Deconvolution default settings:
 	deconvolutionThreshold(0.0),
 	deconvolutionGain(0.1),

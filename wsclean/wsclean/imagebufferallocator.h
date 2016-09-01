@@ -73,8 +73,7 @@ public:
 		}
 		if(usedCount != 0)
 		{
-			str << usedCount << " image buffer(s) were still in use when image buffer allocator was destroyed!";
-			throw std::runtime_error(str.str());
+			std::cerr << usedCount << " image buffer(s) were still in use when image buffer allocator was destroyed!";
 		}
 	}
 	

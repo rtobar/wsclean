@@ -1,7 +1,9 @@
 #include "partitionedms.h"
-#include "msrowprovider.h"
+
 #include "averagingmsrowprovider.h"
 #include "directmsrowprovider.h"
+#include "msrowprovider.h"
+#include "noisemsrowprovider.h"
 
 #include "../progressbar.h"
 
@@ -329,7 +331,12 @@ PartitionedMS::Handle PartitionedMS::Partition(const string& msPath, const std::
 	
 	std::unique_ptr<MSRowProvider> rowProvider;
 	if(settings.baselineDependentAveragingInWavelengths == 0.0)
-		rowProvider.reset(new DirectMSRowProvider(msPath, selection, selectedDataDescIds, dataColumnName, initialModelRequired));
+	{
+		if(settings.simulateNoise)
+			rowProvider.reset(new NoiseMSRowProvider(settings.simulatedNoiseStdDev, msPath, selection, selectedDataDescIds, dataColumnName, initialModelRequired));
+		else
+			rowProvider.reset(new DirectMSRowProvider(msPath, selection, selectedDataDescIds, dataColumnName, initialModelRequired));
+	}
 	else
 		rowProvider.reset(new AveragingMSRowProvider(settings.baselineDependentAveragingInWavelengths, msPath, selection, selectedDataDescIds, dataColumnName, initialModelRequired));
 	
