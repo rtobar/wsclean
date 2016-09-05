@@ -43,6 +43,7 @@ class FitsWriter : protected FitsIOChecker
 			_hasBeam(false),
 			_beamMajorAxisRad(0.0), _beamMinorAxisRad(0.0), _beamPositionAngle(0.0),
 			_polarization(Polarization::StokesI),
+			_unit(JanskyPerBeam),
 			_origin("AO/WSImager"), _originComment("Imager written by Andre Offringa"),
 			_multiFPtr(0)
 		{

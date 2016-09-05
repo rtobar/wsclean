@@ -601,7 +601,7 @@ void MSProvider::getRowRange(casacore::MeasurementSet& ms, const MSSelection& se
 	}
 }
 
-void MSProvider::getRowRangeAndIDMap(casacore::MeasurementSet& ms, const MSSelection& selection, size_t& startRow, size_t& endRow, vector<size_t>& idToMSRow)
+void MSProvider::getRowRangeAndIDMap(casacore::MeasurementSet& ms, const MSSelection& selection, size_t& startRow, size_t& endRow, const std::set<size_t>& dataDescIds, vector<size_t>& idToMSRow)
 {
 	startRow = 0;
 	endRow = ms.nrow();
@@ -613,6 +613,7 @@ void MSProvider::getRowRangeAndIDMap(casacore::MeasurementSet& ms, const MSSelec
 	casacore::ROScalarColumn<int> antenna2Column(ms, casacore::MS::columnName(casacore::MSMainEnums::ANTENNA2));
 	casacore::ROScalarColumn<int> fieldIdColumn(ms, casacore::MS::columnName(casacore::MSMainEnums::FIELD_ID));
 	casacore::ROScalarColumn<double> timeColumn(ms, casacore::MS::columnName(casacore::MSMainEnums::TIME));
+	casacore::ROScalarColumn<int> dataDescIdColumn(ms, ms.columnName(casacore::MSMainEnums::DATA_DESC_ID));
 	double time = timeColumn(0);
 	size_t timestepIndex = 0;
 	bool timeStepSelected = !selection.HasInterval() || timestepIndex == selection.IntervalStart();
@@ -638,9 +639,10 @@ void MSProvider::getRowRangeAndIDMap(casacore::MeasurementSet& ms, const MSSelec
 		{
 			const int
 				a1 = antenna1Column(row), a2 = antenna2Column(row),
-				fieldId = fieldIdColumn(row);
+				fieldId = fieldIdColumn(row), dataDescId = dataDescIdColumn(row);
 			casacore::Vector<double> uvw = uvwColumn(row);
-			if(selection.IsSelected(fieldId, timestepIndex, a1, a2, uvw))
+			std::set<size_t>::const_iterator dataDescIdIter = dataDescIds.find(dataDescId);
+			if(selection.IsSelected(fieldId, timestepIndex, a1, a2, uvw) && dataDescIdIter != dataDescIds.end())
 				idToMSRow.push_back(row);
 		}
 	}

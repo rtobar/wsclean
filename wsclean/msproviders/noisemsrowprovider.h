@@ -10,6 +10,7 @@ class NoiseMSRowProvider : public DirectMSRowProvider
 public:
 	NoiseMSRowProvider(double noiseStdDevJy, const string& msPath, const MSSelection& selection, const std::map<size_t,size_t>& selectedDataDescIds, const std::string &dataColumnName, bool requireModel) :
 	DirectMSRowProvider(msPath, selection, selectedDataDescIds, dataColumnName, requireModel),
+	_rng(std::random_device{}()),
 	_distribution(0.0, noiseStdDevJy)
 	{ }
 	

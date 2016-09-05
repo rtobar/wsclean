@@ -572,6 +572,7 @@ void PartitionedMS::unpartition(const PartitionedMS::Handle& handle)
 		getRowRange(ms, handle._data->_selection, startRow, endRow);
 		size_t timestep = handle._data->_selection.HasInterval() ? handle._data->_selection.IntervalStart() : 0;
 		double time = timeColumn(startRow);
+		size_t selectedRowCountForDebug = 0;
 		for(size_t row=startRow; row!=endRow; ++row)
 		{
 			progress.SetProgress(row - startRow, startRow - endRow);
@@ -623,10 +624,13 @@ void PartitionedMS::unpartition(const PartitionedMS::Handle& handle)
 						}
 					}
 					modelColumn.put(row, modelDataArray);
+					selectedRowCountForDebug++;
 				}
 			}
 		}
 		progress.SetProgress(ms.nrow(),ms.nrow());
+		
+		Logger::Debug << "Row count during unpartitioning: " << selectedRowCountForDebug << '\n';
 		
 		fileIndex = 0;
 		for(size_t part=0; part!=channelParts; ++part)
@@ -680,49 +684,17 @@ void PartitionedMS::openMS()
 		_ms.reset(new casacore::MeasurementSet(_msPath.data()));
 }
 
-/*
-void PartitionedMS::MakeMSRowToRowIdMapping(std::vector<size_t>& msToId)
-{
-	openMS();
-	const size_t nRow = _ms->nrow();
-	casacore::ROArrayColumn<double> uvwColumn(*_ms, casacore::MS::columnName(casacore::MSMainEnums::UVW));
-	casacore::ROScalarColumn<int> antenna1Column(*_ms, casacore::MS::columnName(casacore::MSMainEnums::ANTENNA1));
-	casacore::ROScalarColumn<int> antenna2Column(*_ms, casacore::MS::columnName(casacore::MSMainEnums::ANTENNA2));
-	casacore::ROScalarColumn<int> fieldIdColumn(*_ms, casacore::MS::columnName(casacore::MSMainEnums::FIELD_ID));
-	casacore::ROScalarColumn<double> timeColumn(*_ms, casacore::MS::columnName(casacore::MSMainEnums::TIME));
-	size_t startRow, endRow;
-	const MSSelection& selection = _handle._data->_selection;
-	getRowRange(*_ms, selection, startRow, endRow);
-	
-	msToId.assign(startRow, 0);
-	size_t currentRowId = 0;
-	size_t timestep = selection.HasInterval() ? selection.IntervalStart() : 0;
-	double time = timeColumn(startRow);
-	for(size_t row=startRow; row!=endRow; ++row)
-	{
-		msToId.push_back(currentRowId);
-		const int
-			a1 = antenna1Column(row), a2 = antenna2Column(row),
-			fieldId = fieldIdColumn(row);
-		casacore::Vector<double> uvw = uvwColumn(row);
-		if(time != timeColumn(row))
-		{
-			++timestep;
-			time = timeColumn(row);
-		}
-		if(selection.IsSelected(fieldId, timestep, a1, a2, uvw))
-			++currentRowId;
-	}
-	for(size_t i=0; i!=nRow-endRow; ++i)
-		msToId.push_back(0);
-}*/
-
 void PartitionedMS::MakeIdToMSRowMapping(vector<size_t>& idToMSRow)
 {
 	openMS();
 	const MSSelection& selection = _handle._data->_selection;
+	std::map<size_t, size_t> dataDescIds;
+	getDataDescIdMap(dataDescIds, _handle._data->_channels);
+	std::set<size_t> dataDescIdSet;
+	for(std::map<size_t, size_t>::const_iterator i=dataDescIds.begin(); i!=dataDescIds.end(); ++i)
+		dataDescIdSet.insert(i->first);
 	size_t startRow, endRow;
-	getRowRangeAndIDMap(*_ms, selection, startRow, endRow, idToMSRow);
+	getRowRangeAndIDMap(*_ms, selection, startRow, endRow, dataDescIdSet, idToMSRow);
 }
 
 void PartitionedMS::getDataDescIdMap(std::map<size_t, size_t>& dataDescIds, const vector<PartitionedMS::ChannelRange>& channels)

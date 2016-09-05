@@ -53,6 +53,15 @@ MSRowProvider::MSRowProvider(const string& msPath, const MSSelection& selection,
 	_currentTime = _timeColumn(_startRow);
 	_currentUVWArray = _uvwColumn(_startRow);
 	_currentDataDescId = _dataDescIdColumn(_startRow);
+	
+	// If this row is not selected, it is necessary to continue to the first
+	// selected row.
+	const int
+		a1 = _antenna1Column(_currentRow),
+		a2 = _antenna2Column(_currentRow),
+		fieldId = _fieldIdColumn(_currentRow);
+	if(!isCurrentRowSelected(fieldId, a1, a2))
+		NextRow();
 }
 
 void MSRowProvider::NextRow()
@@ -77,11 +86,16 @@ void MSRowProvider::NextRow()
 				_currentTime = _timeColumn(_currentRow);
 			}
 			_currentUVWArray = _uvwColumn(_currentRow);
-			std::map<size_t,size_t>::const_iterator dataDescIdIter = _selectedDataDescIds.find(_currentDataDescId);
-			bool isDataDescIdSelected = dataDescIdIter!=_selectedDataDescIds.end();
-			isRowSelected = _selection.IsSelected(fieldId, _currentTimestep, a1, a2, _currentUVWArray) && isDataDescIdSelected;
+			isRowSelected = isCurrentRowSelected(fieldId, a1, a2);
 		}
 	} while(!isRowSelected);
+}
+
+bool MSRowProvider::isCurrentRowSelected(int fieldId, int a1, int a2) const
+{
+	std::map<size_t,size_t>::const_iterator dataDescIdIter = _selectedDataDescIds.find(_currentDataDescId);
+	bool isDataDescIdSelected = dataDescIdIter!=_selectedDataDescIds.end();
+	return _selection.IsSelected(fieldId, _currentTimestep, a1, a2, _currentUVWArray) && isDataDescIdSelected;
 }
 
 void MSRowProvider::getCurrentWeights(WeightArray& weights)

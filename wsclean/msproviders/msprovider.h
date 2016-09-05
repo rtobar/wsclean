@@ -8,6 +8,7 @@
 #include <casacore/tables/Tables/ArrayColumn.h>
 
 #include <complex>
+#include <set>
 
 namespace casacore {
 	class MeasurementSet;
@@ -68,7 +69,7 @@ protected:
 	
 	static void getRowRange(casacore::MeasurementSet& ms, const MSSelection& selection, size_t& startRow, size_t& endRow);
 	
-	static void getRowRangeAndIDMap(casacore::MeasurementSet& ms, const MSSelection& selection, size_t& startRow, size_t& endRow, vector<size_t>& idToMSRow);
+	static void getRowRangeAndIDMap(casacore::MeasurementSet& ms, const MSSelection& selection, size_t& startRow, size_t& endRow, const std::set<size_t>& dataDescIdMap, vector<size_t>& idToMSRow);
 	
 	static void copyRealToComplex(std::complex<float>* dest, const float* source, size_t n)
 	{

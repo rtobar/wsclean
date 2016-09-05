@@ -67,6 +67,8 @@ protected:
 	const std::map<size_t,size_t>& selectedDataDescIds() const { return _selectedDataDescIds; }
 	bool requireModel() const { return _requireModel; }
 	
+	bool isCurrentRowSelected(int fieldId, int a1, int a2) const;
+	
 	size_t _currentRow;
 	size_t _currentTimestep;
 	double _currentTime;

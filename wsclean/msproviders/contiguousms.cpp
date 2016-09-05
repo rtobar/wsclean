@@ -40,7 +40,7 @@ ContiguousMS::ContiguousMS(const string& msPath, const std::string& dataColumnNa
 		_weightScalarColumn.reset(new casacore::ROArrayColumn<float>(_ms, casacore::MS::columnName(casacore::MSMainEnums::WEIGHT)));
 	}
 	
-	getRowRangeAndIDMap(_ms, selection, _startRow, _endRow, _idToMSRow);
+	getRowRangeAndIDMap(_ms, selection, _startRow, _endRow, std::set<size_t>{dataDescId}, _idToMSRow);
 	Reset();
 }
 
