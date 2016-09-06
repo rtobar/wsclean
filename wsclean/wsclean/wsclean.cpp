@@ -617,7 +617,11 @@ void WSClean::RunClean()
 						makeMFSImage("model.fits", *pol, false);
 						renderMFSImage(*pol, false, false);
 						if(_settings.applyPrimaryBeam)
+						{
+							makeMFSImage("residual-pb.fits", *pol, false);
+							makeMFSImage("model-pb.fits", *pol, false);
 							renderMFSImage(*pol, false, true);
+						}
 					}
 					if(Polarization::IsComplex(*pol))
 					{
@@ -635,7 +639,11 @@ void WSClean::RunClean()
 							makeMFSImage("model.fits", *pol, true);
 							renderMFSImage(*pol, true, false);
 							if(_settings.applyPrimaryBeam)
+							{
+								makeMFSImage("residual-pb.fits", *pol, true);
+								makeMFSImage("model-pb.fits", *pol, true);
 								renderMFSImage(*pol, true, true);
+							}
 						}
 					}
 				}
