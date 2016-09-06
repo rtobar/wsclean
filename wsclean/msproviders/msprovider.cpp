@@ -646,7 +646,7 @@ void MSProvider::getRowRangeAndIDMap(casacore::MeasurementSet& ms, const MSSelec
 				idToMSRow.push_back(row);
 		}
 	}
-	Logger::Info << "DONE (" << startRow << '-' << endRow << ")\n";
+	Logger::Info << "DONE (" << startRow << '-' << endRow << "; " << idToMSRow.size() << " rows)\n";
 }
 
 void MSProvider::initializeModelColumn(casacore::MeasurementSet& ms)

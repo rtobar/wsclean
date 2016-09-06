@@ -74,7 +74,7 @@ private:
 	void dftPredict(const ImagingTable& squaredGroup);
 	
 	void makeMFSImage(const string& suffix, PolarizationEnum pol, bool isImaginary, bool isPSF = false);
-	void renderMFSImage(PolarizationEnum pol, bool isImaginary);
+	void renderMFSImage(PolarizationEnum pol, bool isImaginary, bool isPBCorrected);
 	void writeFits(const string& suffix, const double* image, PolarizationEnum pol, const ImagingTableEntry& entry, bool isImaginary);
 	void saveUVImage(const double* image, PolarizationEnum pol, const ImagingTableEntry& entry, bool isImaginary, const std::string& prefix);
 	void writeFirstResidualImages(const ImagingTable& groupTable);

@@ -40,7 +40,7 @@ MSGridderBase::MSGridderBase() :
 {
 }
 
-void MSGridderBase::initializePhaseCentre(casacore::MeasurementSet& ms, size_t fieldId)
+void MSGridderBase::GetPhaseCentreInfo(casa::MeasurementSet& ms, size_t fieldId, double& ra, double& dec, double& dl, double& dm)
 {
 	casacore::MSAntenna aTable = ms.antenna();
 	size_t antennaCount = aTable.nrow();
@@ -57,15 +57,20 @@ void MSGridderBase::initializePhaseCentre(casacore::MeasurementSet& ms, size_t f
 	casacore::MDirection::Ref j2000Ref(casacore::MDirection::J2000, frame);
 	casacore::MDirection j2000 = casacore::MDirection::Convert(phaseDir, j2000Ref)();
 	casacore::Vector<casacore::Double> j2000Val = j2000.getValue().get();
-	_phaseCentreRA = j2000Val[0];
-	_phaseCentreDec = j2000Val[1];
+	ra = j2000Val[0];
+	dec = j2000Val[1];
 	if(fTable.keywordSet().isDefined("WSCLEAN_DL"))
-		_phaseCentreDL = fTable.keywordSet().asDouble(casacore::RecordFieldId("WSCLEAN_DL"));
-	else _phaseCentreDL = 0.0;
+		dl = fTable.keywordSet().asDouble(casacore::RecordFieldId("WSCLEAN_DL"));
+	else dl = 0.0;
 	if(fTable.keywordSet().isDefined("WSCLEAN_DM"))
-		_phaseCentreDM = fTable.keywordSet().asDouble(casacore::RecordFieldId("WSCLEAN_DM"));
-	else _phaseCentreDM = 0.0;
+		dm = fTable.keywordSet().asDouble(casacore::RecordFieldId("WSCLEAN_DM"));
+	else dm = 0.0;
+}
 
+void MSGridderBase::initializePhaseCentre(casacore::MeasurementSet& ms, size_t fieldId)
+{
+	GetPhaseCentreInfo(ms, fieldId, _phaseCentreRA, _phaseCentreDec, _phaseCentreDL, _phaseCentreDM);
+	
 	_denormalPhaseCentre = _phaseCentreDL != 0.0 || _phaseCentreDM != 0.0;
 	if(_denormalPhaseCentre)
 		Logger::Info << "Set has denormal phase centre: dl=" << _phaseCentreDL << ", dm=" << _phaseCentreDM << '\n';

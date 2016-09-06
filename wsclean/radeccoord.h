@@ -172,6 +172,11 @@ class RaDecCoord
 			return s.str();
 		}
 		
+		static std::string RaDecToString(long double ra, long double dec)
+		{
+			return RAToString(ra) + ' ' + DecToString(dec);
+		}
+		
 		static void RAToHMS(long double ra, int& hrs, int& min, double& sec)
 		{
 			const long double partsPerHour = 60.0L*60.0L*100.0L;

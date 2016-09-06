@@ -9,10 +9,6 @@ class MSGridderBase : public MeasurementSetGridder
 public:
 	MSGridderBase();
 	
-//	virtual double HighestFrequencyChannel() const { return _freqHigh; }
-//	virtual double LowestFrequencyChannel() const { return _freqLow; }
-//	virtual double BandStart() const { return _bandStart; }
-//	virtual double BandEnd() const { return _bandEnd; }
 	virtual double StartTime() const { return _startTime; }
 	virtual double PhaseCentreRA() const { return _phaseCentreRA; }
 	virtual double PhaseCentreDec() const { return _phaseCentreDec; }
@@ -27,6 +23,8 @@ public:
 	size_t GriddedVisibilityCount() const { return _griddedVisibilityCount; }
 	double MaxGriddedWeight() const { return _maxGriddedWeight; }
 	double EffectiveGriddedVisibilityCount() const { return totalWeight()/MaxGriddedWeight(); }
+	
+	static void GetPhaseCentreInfo(casacore::MeasurementSet& ms, size_t fieldId, double& ra, double& dec, double& dl, double& dm);
 protected:
 	struct MSData
 	{

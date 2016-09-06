@@ -615,7 +615,9 @@ void WSClean::RunClean()
 					{
 						makeMFSImage("residual.fits", *pol, false);
 						makeMFSImage("model.fits", *pol, false);
-						renderMFSImage(*pol, false);
+						renderMFSImage(*pol, false, false);
+						if(_settings.applyPrimaryBeam)
+							renderMFSImage(*pol, false, true);
 					}
 					if(Polarization::IsComplex(*pol))
 					{
@@ -631,7 +633,9 @@ void WSClean::RunClean()
 						{
 							makeMFSImage("residual.fits", *pol, true);
 							makeMFSImage("model.fits", *pol, true);
-							renderMFSImage(*pol, true);
+							renderMFSImage(*pol, true, false);
+							if(_settings.applyPrimaryBeam)
+								renderMFSImage(*pol, true, true);
 						}
 					}
 				}
@@ -906,6 +910,11 @@ void WSClean::saveRestoredImagesForGroup(const ImagingTableEntry& tableEntry)
 			ImageFilename imageName = ImageFilename(currentChannelIndex, _currentIntervalIndex);
 			initFitsWriter(_fitsWriter);
 			_primaryBeam->CorrectImages(_fitsWriter, imageName, "image", _imageAllocator);
+			if(_settings.deconvolutionIterationCount != 0)
+			{
+				_primaryBeam->CorrectImages(_fitsWriter, imageName, "residual", _imageAllocator);
+				_primaryBeam->CorrectImages(_fitsWriter, imageName, "model", _imageAllocator);
+			}
 		}
 	}
 }
@@ -1073,7 +1082,9 @@ void WSClean::runFirstInversion(const ImagingTableEntry& entry)
 		_primaryBeam.reset(new PrimaryBeam(_settings));
 		initializeMSProvidersForPB(entry, *_primaryBeam);
 		// we don't have to call initializeImageWeights(entry), because they're still set ok.
-		_primaryBeam->SetPhaseCentre(_fitsWriter.RA(), _fitsWriter.Dec(), _fitsWriter.PhaseCentreDL(), _fitsWriter.PhaseCentreDM());
+		double ra, dec, dl, dm;
+		MSGridderBase::GetPhaseCentreInfo(_currentPolMSes.front()->MS(), _settings.fieldId, ra, dec, dl, dm);
+		_primaryBeam->SetPhaseCentre(ra, dec, dl, dm);
 		ImageFilename imageName = ImageFilename(entry.outputChannelIndex, _currentIntervalIndex);
 		_primaryBeam->MakeBeamImages(imageName, entry, _imageWeightCache.get(), _imageAllocator);
 		clearCurMSProviders();
@@ -1223,13 +1234,14 @@ void WSClean::makeMFSImage(const string& suffix, PolarizationEnum pol, bool isIm
 	writer.Write(mfsName, mfsImage.data());
 }
 
-void WSClean::renderMFSImage(PolarizationEnum pol, bool isImaginary)
+void WSClean::renderMFSImage(PolarizationEnum pol, bool isImaginary, bool isPBCorrected)
 {
 	const size_t size = _settings.trimmedImageWidth * _settings.trimmedImageHeight;
 	
 	std::string mfsPrefix(ImageFilename::GetMFSPrefix(_settings, pol, _currentIntervalIndex, isImaginary, false));
-	FitsReader residualReader(mfsPrefix + "-residual.fits");
-	FitsReader modelReader(mfsPrefix + "-model.fits");
+	std::string postfix = isPBCorrected ? "-pb.fits" : ".fits";
+	FitsReader residualReader(mfsPrefix + "-residual" + postfix);
+	FitsReader modelReader(mfsPrefix + "-model" + postfix);
 	ao::uvector<double> image(size), modelImage(size);
 	residualReader.Read(image.data());
 	modelReader.Read(modelImage.data());
@@ -1255,9 +1267,9 @@ void WSClean::renderMFSImage(PolarizationEnum pol, bool isImaginary)
 	renderer.Restore(image.data(), modelImage.data(), _settings.trimmedImageWidth, _settings.trimmedImageHeight, beamMaj, beamMin, beamPA);
 	Logger::Info << "DONE\n";
 	
-	Logger::Info << "Writing " + mfsPrefix + "-image.fits...\n";
+	Logger::Info << "Writing " << mfsPrefix << "-image" << postfix << "...\n";
 	FitsWriter imageWriter(residualReader);
-	imageWriter.Write(mfsPrefix + "-image.fits", image.data());
+	imageWriter.Write(mfsPrefix + "-image" + postfix, image.data());
 }
 
 void WSClean::writeFits(const string& suffix, const double* image, PolarizationEnum pol, const ImagingTableEntry& entry, bool isImaginary)
