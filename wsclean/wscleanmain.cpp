@@ -302,7 +302,9 @@ void print_help()
 		"-circularbeam\n"
 		"   Force the beam to be circular: bmin will be set to bmaj.\n"
 		"-ellipticalbeam\n"
-		"   Allow the beam to be elliptical. Default.\n";
+		"   Allow the beam to be elliptical. Default.\n"
+		"\n"
+		"For detailed help, check the WSClean website: http://wsclean.sourceforge.net/ .\n";
 }
 #endif
 

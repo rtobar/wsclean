@@ -40,6 +40,9 @@ void WSCleanSettings::Validate()
 	if(channelsOut == 0)
 		throw std::runtime_error("You have specified 0 output channels -- at least one output channel is required.");
 	
+	if(joinedFrequencyCleaning && channelsOut == 1)
+		throw std::runtime_error("Joined frequency cleaning was requested, but only one output channel is being requested. Did you forget -channelsout?");
+	
 	if(forceReorder && forceNoReorder)
 		throw std::runtime_error("Can not both force reordering and force not reordering!");
 }

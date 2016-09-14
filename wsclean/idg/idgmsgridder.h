@@ -41,7 +41,7 @@ private:
 		return 1; // TODO
 	}
 		
-	void constructGridders(const MultiBandData& selectedBands, size_t nStations);
+	void constructGridders(const MultiBandData& selectedBands, size_t nStations, bool constructDegridders);
 	
 	void gridMeasurementSet(MSGridderBase::MSData& msData);
 	void gridThreadFunction();
@@ -62,7 +62,8 @@ private:
 		size_t rowId;
 	};
 	
-	std::vector<idg::GridderPlan*> _interfaces;
+	std::vector<idg::GridderPlan*> _gridderPlans;
+	std::vector<idg::DegridderPlan*> _degridderPlans;
 	size_t _kernelSize;
 	ao::uvector<std::complex<double>> _grid;
 	ao::uvector<double> _image;
