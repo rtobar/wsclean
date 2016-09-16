@@ -158,6 +158,8 @@ class MultiBandData
 			return maxChannels;
 		}
 		
+		size_t GetBandIndex(size_t dataDescId) const { return _dataDescToBand[dataDescId]; }
+		
 		std::set<size_t> GetUsedDataDescIds(casa::MeasurementSet& mainTable) const;
 		
 	private:

@@ -1374,6 +1374,19 @@ void WSClean::makeImagingTable()
 		{
 			Logger::Debug << dataDescIds.size() << "/" << _msBands[i].DataDescCount() << " spws are used of " << _settings.filenames[i] << '\n';
 		}
+		
+		// Apply user selection: remove unselected spws
+		if(!_settings.spectralWindows.empty())
+		{
+			for(std::set<size_t>::iterator d = dataDescIds.begin(); d!=dataDescIds.end(); )
+			{
+				if(_settings.spectralWindows.find(_msBands[i].GetBandIndex(*d)) == _settings.spectralWindows.end())
+					d = dataDescIds.erase(d);
+				else
+					++d;
+			}
+		}
+		// accumulate channel info
 		for(const size_t dataDescId : dataDescIds)
 		{
 			for(size_t ch=0; ch!=_msBands[i][dataDescId].ChannelCount(); ++ch)

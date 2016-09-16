@@ -116,7 +116,7 @@ void print_help()
 		"-size <width> <height>\n"
 		"   Default: 2048 x 2048\n"
 		"-trim <width> <height>\n"
-		"   After inversion, trim the image to the given size.\n"
+		"   After inversion, trim the image to the given size. Default: no trimming.\n"
 		"-scale <pixel-scale>\n"
 		"   Scale of a pixel. Default unit is degrees, but can be specificied, e.g. -scale 20asec. Default: 0.01deg.\n"
 		"-nwlayers <nwlayers>\n"
@@ -191,6 +191,8 @@ void print_help()
 		"   Default: image all channels.\n"
 		"-field <fieldid>\n"
 		"   Image the given field id. Default: first field (id 0).\n"
+		"-spws <list>\n"
+		"   Selects only the spws given in the list. list should be a comma-separated list of integers. Default: all spws.\n"
 		"-datacolumn <columnname>\n"
 		"   Default: CORRECTED_DATA if it exists, otherwise DATA will be used.\n"
 		"-maxuvw-m <meters>\n"
@@ -255,7 +257,8 @@ void print_help()
 		"   levels and go down with subsequent loops, e.g. 20,10,5\n"
 		"-cleanborder <percentage>\n"
 		"   Set the border size in which no cleaning is performed, in percentage of the width/height of the image.\n"
-		"   With an image size of 1000 and clean border of 1%, each border is 10 pixels. Default: 5 (%).\n"
+		"   With an image size of 1000 and clean border of 1%, each border is 10 pixels. \n"
+		"   Default: 5 (%) when trim is not specified, 0% when trim was specified.\n"
 		"-fitsmask <mask>\n"
 		"   Use the specified fits-file as mask during cleaning.\n"
 		"-casamask <mask>\n"
@@ -325,6 +328,7 @@ int main(int argc, char *argv[])
 	WSCleanSettings& settings = wsclean.Settings();;
 	int argi = 1;
 	bool mfsWeighting = false, noMFSWeighting = false, predictionMode = false;
+	bool hasCleanBorder = false;
 	while(argi < argc && argv[argi][0] == '-')
 	{
 		const std::string param = argv[argi][1]=='-' ? (&argv[argi][2]) : (&argv[argi][1]);
@@ -384,6 +388,8 @@ int main(int argc, char *argv[])
 		{
 			settings.trimmedImageWidth = atoi(argv[argi+1]);
 			settings.trimmedImageHeight = atoi(argv[argi+2]);
+			if(!hasCleanBorder)
+				settings.deconvolutionBorderRatio = 0;
 			argi += 2;
 		}
 		else if(param == "scale")
@@ -638,6 +644,7 @@ int main(int argc, char *argv[])
 		{
 			++argi;
 			settings.deconvolutionBorderRatio = atof(argv[argi])*0.01;
+			hasCleanBorder = true;
 		}
 		else if(param == "fitsmask")
 		{
@@ -686,6 +693,13 @@ int main(int argc, char *argv[])
 		{
 			++argi;
 			settings.fieldId = atoi(argv[argi]);
+		}
+		else if(param == "spws")
+		{
+			++argi;
+			ao::uvector<int> list;
+			NumberList::ParseIntList(argv[argi], list);
+			settings.spectralWindows.insert(list.begin(), list.end());
 		}
 		else if(param == "weight")
 		{

@@ -39,6 +39,7 @@ public:
 	size_t predictionChannels;
 	std::string dataColumnName;
 	std::set<PolarizationEnum> polarizations;
+	std::set<size_t> spectralWindows;
 	WeightMode weightMode;
 	std::string prefixName;
 	bool smallInversion, makePSF, makePSFOnly, isWeightImageSaved, isUVImageSaved, isDirtySaved, isGriddingImageSaved, dftPrediction, dftWithBeam;
