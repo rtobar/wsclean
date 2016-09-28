@@ -393,11 +393,11 @@ void ImageWeights::RankFilter(double rankLimit, size_t windowSize)
 
 void ImageWeights::SetGaussianTaper(double beamSize)
 {
-	Logger::Info << "Applying " << Angle::ToNiceString(beamSize) << " Gaussian taper...\n";
+	Logger::Debug << "Applying " << Angle::ToNiceString(beamSize) << " Gaussian taper...\n";
 	double halfPowerUV = 1.0 / (beamSize * 2.0 * M_PI);
 	const long double sigmaToHP = 2.0L * sqrtl(2.0L * logl(2.0L));
 	double minusTwoSigmaSq = halfPowerUV * sigmaToHP;
-	Logger::Info << "UV taper: " << minusTwoSigmaSq << '\n';
+	Logger::Debug << "UV taper: " << minusTwoSigmaSq << '\n';
 	minusTwoSigmaSq *= -2.0 * minusTwoSigmaSq;
 	for(size_t y=0; y!=_imageHeight/2; ++y)
 	{

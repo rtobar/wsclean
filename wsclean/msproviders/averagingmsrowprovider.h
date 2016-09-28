@@ -16,7 +16,7 @@ public:
 	
 	virtual void NextRow();
 	
-	virtual void ReadData(DataArray& data, FlagArray& flags, WeightArray& weights, double& u, double& v, double& w, uint32_t& dataDescId);
+	virtual void ReadData(DataArray& data, FlagArray& flags, WeightArray& weights, double& u, double& v, double& w, uint32_t& dataDescId, uint32_t& antenna1, uint32_t& antenna2);
 	
 	virtual void ReadModel(DataArray& model);
 	
@@ -148,8 +148,11 @@ private:
 	DataArray _currentData, _currentModel;
 	FlagArray _currentFlags;
 	WeightArray _currentWeights;
-	size_t _averagedDataDescId;
+	size_t _averagedDataDescId, _averagedAntenna1Index, _averagedAntenna2Index;
 	size_t _nElements;
+	
+	// Once the Measurement Set has completely been read, the buffer might be still full.
+	// This value represents the position within that buffer at that point
 	size_t _flushPosition;
 	
 	// Some statistics

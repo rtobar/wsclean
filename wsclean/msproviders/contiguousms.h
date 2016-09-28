@@ -33,6 +33,8 @@ public:
 	
 	virtual void ReadMeta(double& u, double& v, double& w, size_t& dataDescId)  ;
 	
+	virtual void ReadMeta(double& u, double& v, double& w, size_t& dataDescId, size_t& antenna1, size_t& antenna2);
+	
 	virtual void ReadData(std::complex<float>* buffer)  ;
 	
 	virtual void ReadModel(std::complex<float>* buffer)  ;

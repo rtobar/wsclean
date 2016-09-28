@@ -183,7 +183,7 @@ void LBeamImageMaker::makeBeamForMS(std::vector<ImageBufferAllocator::Ptr>& beam
 		double intervalWeight = 0.0;
 		ao::uvector<double> stationWeights(stations.size(), 0.0);
 		WeightMatrix baselineWeights(stations.size());
-		calculateStationWeights(_imageWeightCache->Weights(), intervalWeight, stationWeights, baselineWeights, msProvider, msInfo, selection, idToMSRow, intervalStartId, intervalEndId);
+		calculateStationWeights(_imageWeightCache->Weights(), intervalWeight, stationWeights, baselineWeights, msProvider, selection, intervalStartId, intervalEndId);
 		
 		if(refIntervalWeight == 0.0)
 			refIntervalWeight = intervalWeight;
@@ -324,15 +324,13 @@ void LBeamImageMaker::makeBeamSnapshot(const std::vector<Station::Ptr>& stations
 	progressBar.SetProgress(_sampledHeight, _sampledHeight);
 }
 
-void LBeamImageMaker::calculateStationWeights(const ImageWeights& imageWeights, double& totalWeight, ao::uvector<double>& weights, WeightMatrix& baselineWeights, MSProvider& msProvider, const ImagingTableEntry::MSInfo& msInfo, const MSSelection& selection, const std::vector<size_t>& idToMSRow, size_t intervalStartIdIndex, size_t intervalEndIdIndex)
+void LBeamImageMaker::calculateStationWeights(const ImageWeights& imageWeights, double& totalWeight, ao::uvector<double>& weights, WeightMatrix& baselineWeights, MSProvider& msProvider, const MSSelection& selection, size_t intervalStartIdIndex, size_t intervalEndIdIndex)
 {
 	casacore::MeasurementSet& ms = msProvider.MS();
 	casacore::MSAntenna antTable(ms.antenna());
 	totalWeight = 0.0;
 	weights.assign(antTable.nrow(), 0.0);
 	
-	casacore::ROScalarColumn<int> ant1Col(ms, ms.columnName(casacore::MeasurementSet::ANTENNA1));
-	casacore::ROScalarColumn<int> ant2Col(ms, ms.columnName(casacore::MeasurementSet::ANTENNA2));
 	MultiBandData multiband(ms.spectralWindow(), ms.dataDescription());
 	size_t channelCount = selection.ChannelRangeEnd() - selection.ChannelRangeStart();
 	ao::uvector<float> weightArr(channelCount);
@@ -340,13 +338,9 @@ void LBeamImageMaker::calculateStationWeights(const ImageWeights& imageWeights, 
 	size_t id = intervalStartIdIndex;
 	while(msProvider.CurrentRowAvailable() && id < intervalEndIdIndex)
 	{
-		int
-			a1 = ant1Col(idToMSRow[id]),
-			a2 = ant2Col(idToMSRow[id]);
-		
-		size_t dataDescId;
+		size_t a1, a2, dataDescId;
 		double uInM, vInM, wInM;
-		msProvider.ReadMeta(uInM, vInM, wInM, dataDescId);
+		msProvider.ReadMeta(uInM, vInM, wInM, dataDescId, a1, a2);
 		const BandData &band(multiband[dataDescId]);
 		msProvider.ReadWeights(weightArr.data());
 		

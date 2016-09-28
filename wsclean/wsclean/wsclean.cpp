@@ -187,17 +187,10 @@ void WSClean::imagePSF(const ImagingTableEntry& entry)
 	_infoPerChannel[channelIndex].beamMin = bMin;
 	_infoPerChannel[channelIndex].beamPA = bPA;
 		
-	if(std::isfinite(_infoPerChannel[channelIndex].beamMaj))
-	{
-		_fitsWriter.SetBeamInfo(
-			_infoPerChannel[channelIndex].beamMaj,
-			_infoPerChannel[channelIndex].beamMin,
-			_infoPerChannel[channelIndex].beamPA);
-	}
-		
 	Logger::Info << "Writing psf image... ";
 	Logger::Info.Flush();
 	const std::string name(ImageFilename::GetPSFPrefix(_settings, channelIndex, _currentIntervalIndex) + "-psf.fits");
+	initFitsWriterForChannel(_fitsWriter, entry);
 	_fitsWriter.Write(name, _gridder->ImageRealResult());
 	Logger::Info << "DONE\n";
 }
@@ -226,7 +219,7 @@ void WSClean::imageMainFirst(PolarizationEnum polarization, size_t joinedChannel
 	else
 		_gridder->SetNoWGridSize();
 	_gridder->SetDoImagePSF(false);
-	_gridder->SetDoSubtractModel(_settings.subtractModel);
+	_gridder->SetDoSubtractModel(_settings.subtractModel || _settings.continuedRun);
 	_gridder->SetVerbose(_isFirstInversion);
 	_gridder->Invert();
 	_inversionWatch.Pause();
@@ -533,8 +526,8 @@ void WSClean::performReordering(bool isPredictMode)
 			}
 		}
 		
-		bool useModel = _settings.deconvolutionMGain != 1.0 || isPredictMode || _settings.subtractModel;
-		bool initialModelRequired = _settings.subtractModel;
+		bool useModel = _settings.deconvolutionMGain != 1.0 || isPredictMode || _settings.subtractModel || _settings.continuedRun;
+		bool initialModelRequired = _settings.subtractModel || _settings.continuedRun;
 		_partitionedMSHandles.push_back(PartitionedMS::Partition(_settings.filenames[i], channels, _globalSelection, _settings.dataColumnName, useModel, initialModelRequired, _settings));
 	}
 }
@@ -881,7 +874,7 @@ void WSClean::saveRestoredImagesForGroup(const ImagingTableEntry& tableEntry)
 			beamStr = "(beam is neither fitted nor estimated -- using delta scales!)";
 			beamMaj = 0.0; beamMin = 0.0; beamPA = 0.0;
 		}
-		if(_settings.useMultiscale || _settings.useFastMultiscale || _settings.useMoreSaneDeconvolution || _settings.useIUWTDeconvolution)
+		if(_settings.useMultiscale || _settings.useFastMultiscale || _settings.useMoreSaneDeconvolution || _settings.useIUWTDeconvolution || _settings.continuedRun)
 		{
 			Logger::Info << "Rendering sources to restored image " + beamStr + "... ";
 			Logger::Info.Flush();
@@ -967,6 +960,30 @@ void WSClean::writeModelImages(const ImagingTable& groupTable)
 	}
 }
 
+void WSClean::readEarlierModelImages(const ImagingTableEntry& entry)
+{
+	// load image(s) from disk and store them in the model-image cache.
+	for(size_t i=0; i!=entry.imageCount; ++i)
+	{
+		std::string prefix = ImageFilename::GetPrefix(_settings, entry.polarization, entry.outputChannelIndex, _currentIntervalIndex, i==1);
+		FitsReader reader(prefix + "-model.fits");
+		_fitsWriter = FitsWriter(reader);
+		_modelImages.SetFitsWriter(_fitsWriter);
+		Logger::Info << "Reading " << reader.Filename() << "...\n";
+		double* buffer = _imageAllocator.Allocate(_settings.trimmedImageWidth*_settings.trimmedImageHeight);
+		if(reader.ImageWidth()!=_settings.trimmedImageWidth || reader.ImageHeight()!=_settings.trimmedImageHeight)
+			throw std::runtime_error("Inconsistent image size: input image did not match with specified dimensions.");
+		reader.Read(buffer);
+		for(size_t j=0; j!=_settings.trimmedImageWidth*_settings.trimmedImageHeight; ++j)
+		{
+			if(!std::isfinite(buffer[j]))
+				throw std::runtime_error("The input image contains non-finite values -- can't predict from an image with non-finite values");
+		}
+		_modelImages.Store(buffer, entry.polarization, entry.outputChannelIndex, i==1);
+		_imageAllocator.Free(buffer);
+	}
+}
+
 void WSClean::predictGroup(const ImagingTable& imagingGroup)
 {
 	if(_settings.useIDG)
@@ -981,26 +998,8 @@ void WSClean::predictGroup(const ImagingTable& imagingGroup)
 	for(size_t e=0; e!=imagingGroup.EntryCount(); ++e)
 	{
 		const ImagingTableEntry& entry = imagingGroup[e];
-		// load image(s) from disk
-		for(size_t i=0; i!=entry.imageCount; ++i)
-		{
-			std::string prefix = ImageFilename::GetPrefix(_settings, entry.polarization, entry.outputChannelIndex, _currentIntervalIndex, i==1);
-			FitsReader reader(prefix + "-model.fits");
-			_fitsWriter = FitsWriter(reader);
-			_modelImages.SetFitsWriter(_fitsWriter);
-			Logger::Info << "Reading " << reader.Filename() << "...\n";
-			double* buffer = _imageAllocator.Allocate(_settings.trimmedImageWidth*_settings.trimmedImageHeight);
-			if(reader.ImageWidth()!=_settings.trimmedImageWidth || reader.ImageHeight()!=_settings.trimmedImageHeight)
-				throw std::runtime_error("Inconsistent image size: input image did not match with specified dimensions.");
-			reader.Read(buffer);
-			for(size_t j=0; j!=_settings.trimmedImageWidth*_settings.trimmedImageHeight; ++j)
-			{
-				if(!std::isfinite(buffer[j]))
-					throw std::runtime_error("The input image contains non-finite values -- can't predict from an image with non-finite values");
-			}
-			_modelImages.Store(buffer, entry.polarization, 0, i==1);
-			_imageAllocator.Free(buffer);
-		}
+		
+		readEarlierModelImages(entry);
 		
 		prepareInversionAlgorithm(entry.polarization);
 		initializeCurMSProviders(entry);
@@ -1139,15 +1138,21 @@ void WSClean::runFirstInversion(const ImagingTableEntry& entry)
 		
 		_isFirstInversion = false;
 		
-		// Set model to zero: already done if this is YX of XY/YX imaging combi
-		if(!(entry.polarization == Polarization::YX && _settings.polarizations.count(Polarization::XY)!=0))
+		if(_settings.continuedRun)
 		{
-			double* modelImage = _imageAllocator.Allocate(_settings.trimmedImageWidth * _settings.trimmedImageHeight);
-			memset(modelImage, 0, _settings.trimmedImageWidth * _settings.trimmedImageHeight * sizeof(double));
-			_modelImages.Store(modelImage, entry.polarization, entry.outputChannelIndex, false);
-			if(Polarization::IsComplex(entry.polarization))
-				_modelImages.Store(modelImage, entry.polarization, entry.outputChannelIndex, true);
-			_imageAllocator.Free(modelImage);
+			readEarlierModelImages(entry);
+		}
+		else {
+			// Set model to zero: already done if this is YX of XY/YX imaging combi
+			if(!(entry.polarization == Polarization::YX && _settings.polarizations.count(Polarization::XY)!=0))
+			{
+				double* modelImage = _imageAllocator.Allocate(_settings.trimmedImageWidth * _settings.trimmedImageHeight);
+				memset(modelImage, 0, _settings.trimmedImageWidth * _settings.trimmedImageHeight * sizeof(double));
+				_modelImages.Store(modelImage, entry.polarization, entry.outputChannelIndex, false);
+				if(Polarization::IsComplex(entry.polarization))
+					_modelImages.Store(modelImage, entry.polarization, entry.outputChannelIndex, true);
+				_imageAllocator.Free(modelImage);
+			}
 		}
 		
 		if(entry.polarization == Polarization::XY && _settings.polarizations.count(Polarization::YX)!=0)
@@ -1280,23 +1285,29 @@ void WSClean::renderMFSImage(PolarizationEnum pol, bool isImaginary, bool isPBCo
 	imageWriter.Write(mfsPrefix + "-image" + postfix, image.data());
 }
 
-void WSClean::writeFits(const string& suffix, const double* image, PolarizationEnum pol, const ImagingTableEntry& entry, bool isImaginary)
+void WSClean::initFitsWriterForChannel(FitsWriter& writer, const ImagingTableEntry& entry)
 {
+	initFitsWriter(writer);
 	const double
 		bandStart = entry.bandStartFrequency,
 		bandEnd = entry.bandEndFrequency,
 		centreFrequency = 0.5*(bandStart+bandEnd),
 		bandwidth = bandEnd-bandStart;
 	const size_t channelIndex = entry.outputChannelIndex;
-	const std::string name(ImageFilename::GetPrefix(_settings, pol, channelIndex, _currentIntervalIndex, isImaginary) + '-' + suffix);
-	initFitsWriter(_fitsWriter);
-	_fitsWriter.SetPolarization(pol);
-	_fitsWriter.SetFrequency(centreFrequency, bandwidth);
-	_fitsWriter.SetExtraKeyword("WSCIMGWG", _infoPerChannel[channelIndex].weight);
-	_fitsWriter.SetBeamInfo(
+	writer.SetFrequency(centreFrequency, bandwidth);
+	writer.SetExtraKeyword("WSCIMGWG", _infoPerChannel[channelIndex].weight);
+	writer.SetBeamInfo(
 		_infoPerChannel[channelIndex].beamMaj,
 		_infoPerChannel[channelIndex].beamMin,
 		_infoPerChannel[channelIndex].beamPA);
+}
+
+void WSClean::writeFits(const string& suffix, const double* image, PolarizationEnum pol, const ImagingTableEntry& entry, bool isImaginary)
+{
+	const size_t channelIndex = entry.outputChannelIndex;
+	const std::string name(ImageFilename::GetPrefix(_settings, pol, channelIndex, _currentIntervalIndex, isImaginary) + '-' + suffix);
+	initFitsWriterForChannel(_fitsWriter, entry);
+	_fitsWriter.SetPolarization(pol);
 	size_t polIndex;
 	if(_settings.joinedPolarizationCleaning)
 		polIndex = 0;

@@ -93,6 +93,8 @@ bool AveragingMSRowProvider::processCurrentTimestep()
 	size_t a1 = _antenna1Column(_currentRow);
 	size_t a2 = _antenna2Column(_currentRow);
 	_averagedDataDescId = _currentDataDescId;
+	_averagedAntenna1Index = a1;
+	_averagedAntenna2Index = a2;
 	
 	size_t spwCount = selectedDataDescIds().size();
 	size_t elementIndex = spwCount*(a2 + a1*_nAntennae) + selectedDataDescIds().find(_averagedDataDescId)->second;
@@ -150,6 +152,7 @@ void AveragingMSRowProvider::NextRow()
 			
 			foundFullBuffer = processCurrentTimestep();
 		}
+		// TODO I think this should now say "if(foundFullBuffer) return; "
 	}
 	
 	if(MSRowProvider::AtEnd())
@@ -168,13 +171,19 @@ void AveragingMSRowProvider::NextRow()
 				buffer->Get(bufferSize, _currentData.data(), _currentModel.data(), _currentFlags.data(), _currentWeights.data(), _currentUVWArray.data());
 			else
 				buffer->Get(bufferSize, _currentData.data(), _currentFlags.data(), _currentWeights.data(), _currentUVWArray.data());
-			size_t spwIndex = (_flushPosition-1) % selectedDataDescIds().size();
+			
+			size_t elementIndex = _flushPosition-1;
+			size_t spwCount = selectedDataDescIds().size();
+			size_t spwIndex = elementIndex % spwCount;
+			size_t subIndex = elementIndex / spwCount;
+			_averagedAntenna1Index = subIndex/_nAntennae;
+			_averagedAntenna2Index = subIndex%_nAntennae;
 			_averagedDataDescId = _spwIndexToDataDescId[spwIndex];
 		}
 	}
 }
 
-void AveragingMSRowProvider::ReadData(MSRowProvider::DataArray& data, MSRowProvider::FlagArray& flags, MSRowProvider::WeightArray& weights, double& u, double& v, double& w, uint32_t& dataDescId)
+void AveragingMSRowProvider::ReadData(MSRowProvider::DataArray& data, MSRowProvider::FlagArray& flags, MSRowProvider::WeightArray& weights, double& u, double& v, double& w, uint32_t& dataDescId, uint32_t& antenna1, uint32_t& antenna2)
 {
 	size_t bufferSize = DataShape()[0] * DataShape()[1];
 	memcpy(data.data(), _currentData.data(), bufferSize*sizeof(std::complex<float>));
@@ -184,6 +193,8 @@ void AveragingMSRowProvider::ReadData(MSRowProvider::DataArray& data, MSRowProvi
 	v = _currentUVWArray.data()[1];
 	w = _currentUVWArray.data()[2];
 	dataDescId = _averagedDataDescId;
+	antenna1 = _averagedAntenna1Index;
+	antenna2 = _averagedAntenna2Index;
 }
 
 void AveragingMSRowProvider::ReadModel(MSRowProvider::DataArray& model)

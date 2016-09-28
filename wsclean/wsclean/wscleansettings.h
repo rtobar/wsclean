@@ -28,6 +28,7 @@ public:
 	double pixelScaleX, pixelScaleY;
 	double manualBeamMajorSize, manualBeamMinorSize, manualBeamPA;
 	bool fittedBeam, theoreticBeam, circularBeam;
+	bool continuedRun;
 	double memFraction, absMemLimit, minUVWInMeters, maxUVWInMeters, minUVInLambda, maxUVInLambda, wLimit, rankFilterLevel;
 	size_t rankFilterSize;
 	double gaussianTaperBeamSize, tukeyTaperInLambda, tukeyInnerTaperInLambda, edgeTaperInLambda, edgeTukeyTaperInLambda;
@@ -104,6 +105,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	pixelScaleX(0.01 * M_PI / 180.0), pixelScaleY(0.01 * M_PI / 180.0),
 	manualBeamMajorSize(0.0), manualBeamMinorSize(0.0),
 	manualBeamPA(0.0), fittedBeam(true), theoreticBeam(false), circularBeam(false),
+	continuedRun(false),
 	memFraction(1.0), absMemLimit(0.0),
 	minUVWInMeters(0.0), maxUVWInMeters(0.0),
 	minUVInLambda(0.0), maxUVInLambda(0.0), wLimit(0.0),

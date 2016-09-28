@@ -147,6 +147,22 @@ void PartitionedMS::ReadMeta(double& u, double& v, double& w, size_t& dataDescId
 	dataDescId = record.dataDescId;
 }
 
+void PartitionedMS::ReadMeta(double& u, double& v, double& w, size_t& dataDescId, size_t& antenna1, size_t& antenna2)
+{
+	if(!_metaPtrIsOk)
+		_metaFile.seekg(-sizeof(MetaRecord), std::ios::cur);
+	_metaPtrIsOk = false;
+	
+	MetaRecord record;
+	_metaFile.read(reinterpret_cast<char*>(&record), sizeof(MetaRecord));
+	u = record.u;
+	v = record.v;
+	w = record.w;
+	dataDescId = record.dataDescId;
+	antenna1 = record.antenna1;
+	antenna2 = record.antenna2;
+}
+
 void PartitionedMS::ReadData(std::complex<float>* buffer)
 {
 	if(!_readPtrIsOk)
@@ -385,7 +401,11 @@ PartitionedMS::Handle PartitionedMS::Partition(const string& msPath, const std::
 		MetaRecord meta;
 		memset(&meta, 0, sizeof(MetaRecord));
 
-		rowProvider->ReadData(dataArray, flagArray, weightSpectrumArray, meta.u, meta.v, meta.w, meta.dataDescId);
+		uint32_t dataDescId, antenna1, antenna2;
+		rowProvider->ReadData(dataArray, flagArray, weightSpectrumArray, meta.u, meta.v, meta.w, dataDescId, antenna1, antenna2);
+		meta.dataDescId = dataDescId;
+		meta.antenna1 = antenna1;
+		meta.antenna2 = antenna2;
 		size_t spwIndex = selectedDataDescIds[meta.dataDescId];
 		++selectedRowCountPerSpwIndex[spwIndex];
 		++selectedRowsTotal;

@@ -53,6 +53,8 @@ public:
 	
 	virtual void ReadMeta(double& u, double& v, double& w, size_t& dataDescId)  ;
 	
+	virtual void ReadMeta(double& u, double& v, double& w, size_t& dataDescId, size_t& antenna1, size_t& antenna2);
+	
 	virtual void ReadData(std::complex<float>* buffer)  ;
 	
 	virtual void ReadModel(std::complex<float>* buffer)  ;
@@ -137,7 +139,7 @@ private:
 	struct MetaRecord
 	{
 		double u, v, w;
-		uint32_t dataDescId;
+		uint16_t antenna1, antenna2, dataDescId;
 	};
 	struct PartHeader
 	{

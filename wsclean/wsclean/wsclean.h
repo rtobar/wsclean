@@ -59,6 +59,7 @@ private:
 	void storeAndCombineXYandYX(CachedImageSet& dest, PolarizationEnum polarization, size_t joinedChannelIndex, bool isImaginary, const double* image);
 	bool selectChannels(MSSelection& selection, size_t msIndex, size_t bandIndex, const ImagingTableEntry& entry);
 	MSSelection selectInterval(MSSelection& fullSelection);
+	void readEarlierModelImages(const ImagingTableEntry& entry);
 	
 	void makeImagingTable();
 	void makeImagingTableEntry(const std::vector<OrderedChannel>& channels, size_t outChannelIndex, ImagingTableEntry& entry);
@@ -76,6 +77,7 @@ private:
 	void makeMFSImage(const string& suffix, PolarizationEnum pol, bool isImaginary, bool isPSF = false);
 	void renderMFSImage(PolarizationEnum pol, bool isImaginary, bool isPBCorrected);
 	void writeFits(const string& suffix, const double* image, PolarizationEnum pol, const ImagingTableEntry& entry, bool isImaginary);
+	void initFitsWriterForChannel(FitsWriter& writer, const ImagingTableEntry& entry);
 	void saveUVImage(const double* image, PolarizationEnum pol, const ImagingTableEntry& entry, bool isImaginary, const std::string& prefix);
 	void writeFirstResidualImages(const ImagingTable& groupTable);
 	void writeModelImages(const ImagingTable& groupTable);

@@ -10,7 +10,7 @@ public:
 	: MSRowProvider(msPath, selection, selectedDataDescIds, dataColumnName, requireModel)
 	{ }
 	
-	virtual void ReadData(DataArray& data, FlagArray& flags, WeightArray& weights, double& u, double& v, double& w, uint32_t& dataDescId);
+	virtual void ReadData(DataArray& data, FlagArray& flags, WeightArray& weights, double& u, double& v, double& w, uint32_t& dataDescId, uint32_t& antenna1, uint32_t& antenna2);
 	
 	virtual void ReadModel(DataArray& model);
 	
