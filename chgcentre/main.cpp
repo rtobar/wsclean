@@ -127,7 +127,12 @@ casacore::MPosition ArrayPosition(MeasurementSet& set, bool fallBackToCentroid=f
 		MSObservation obsTable(set.observation());
 		ROScalarColumn<String> telescopeNameColumn(obsTable, obsTable.columnName(casacore::MSObservation::TELESCOPE_NAME));
 		bool hasTelescopeName = telescopeNameColumn.nrow()!=0;
-		bool hasObservatoryInfo = hasTelescopeName && MeasTable::Observatory(arrayPos, telescopeNameColumn(0));
+		bool hasObservatoryInfo = false;
+		if(hasTelescopeName)
+		{
+			std::string telescopeName = telescopeNameColumn(0);
+			hasObservatoryInfo = MeasTable::Observatory(arrayPos, telescopeName);
+		}
 		if(!hasTelescopeName || !hasObservatoryInfo) {
 			if(!hasTelescopeName)
 				std::cout << "WARNING: This set did not specify an observatory name.\n";
@@ -203,7 +208,7 @@ void processField(
 	const bool
 		hasCorrData = set.isColumn(casacore::MSMainEnums::CORRECTED_DATA),
 		hasModelData = set.isColumn(casacore::MSMainEnums::MODEL_DATA);
-	std::auto_ptr<ArrayColumn<Complex> > dataCol, correctedDataCol, modelDataCol;
+	std::unique_ptr<ArrayColumn<Complex> > dataCol, correctedDataCol, modelDataCol;
 	if(!onlyUVW)
 	{
 		dataCol.reset(new ArrayColumn<Complex>(set,
@@ -265,7 +270,7 @@ void processField(
 													MDirection::Ref(MDirection::J2000))();
 		IPosition dataShape;
 		unsigned polarizationCount = 0;
-		std::auto_ptr<Array<Complex> > dataArray;
+		std::unique_ptr<Array<Complex> > dataArray;
 		if(!onlyUVW)
 		{
 			dataShape = dataCol->shape(0);
@@ -462,7 +467,7 @@ void rotateToGeoZenith(
 	const bool
 		hasCorrData = set.isColumn(casacore::MSMainEnums::CORRECTED_DATA),
 		hasModelData = set.isColumn(casacore::MSMainEnums::MODEL_DATA);
-	std::auto_ptr<ArrayColumn<Complex> > dataCol, correctedDataCol, modelDataCol;
+	std::unique_ptr<ArrayColumn<Complex> > dataCol, correctedDataCol, modelDataCol;
 	if(!onlyUVW)
 	{
 		dataCol.reset(new ArrayColumn<Complex>(set,
@@ -487,7 +492,7 @@ void rotateToGeoZenith(
 	
 	IPosition dataShape;
 	unsigned polarizationCount = 0;
-	std::auto_ptr<Array<Complex> > dataArray;
+	std::unique_ptr<Array<Complex> > dataArray;
 	if(!onlyUVW)
 	{
 		dataShape = dataCol->shape(0);
@@ -689,6 +694,8 @@ int main(int argc, char **argv)
 			"-shiftback\n"
 			"\tAfter changing the phase centre, project the visibilities back to the old phase centre. This is useful\n"
 			"\tin WSClean for imaging with minimum w-values in a different projection.\n"
+			"-f\n"
+			"\tForce recalculation, even if destination is same as original phase direction.\n"
 			"\n";
 	} else {
 		int argi=1;
