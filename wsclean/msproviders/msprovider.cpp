@@ -398,6 +398,8 @@ void MSProvider::copyWeights(NumType* dest, size_t startChannel, size_t endChann
 			flagPtr += polIndexB-polIndexA;
 			if(!*flagPtr && std::isfinite(inPtr->real()) && std::isfinite(inPtr->imag()))
 				dest[ch] += *weightPtr;
+			else
+				dest[ch] = 0.0;
 			weightPtr += polCount - polIndexB + polIndexA;
 			inPtr += polCount - polIndexB + polIndexA;
 			flagPtr += polCount - polIndexB + polIndexA;

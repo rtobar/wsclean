@@ -151,6 +151,7 @@ void WSClean::imagePSF(const ImagingTableEntry& entry)
 	Logger::Info << " == Constructing PSF ==\n";
 	_inversionWatch.Start();
 	_gridder->SetDoImagePSF(true);
+	_gridder->SetDoSubtractModel(false);
 	_gridder->SetVerbose(_isFirstInversion);
 	_gridder->Invert();
 	
@@ -214,10 +215,6 @@ void WSClean::imageMainFirst(PolarizationEnum polarization, size_t joinedChannel
 	Logger::Info.Flush();
 	Logger::Info << " == Constructing image ==\n";
 	_inversionWatch.Start();
-	if(_settings.nWLayers != 0)
-		_gridder->SetWGridSize(_settings.nWLayers);
-	else
-		_gridder->SetNoWGridSize();
 	_gridder->SetDoImagePSF(false);
 	_gridder->SetDoSubtractModel(_settings.subtractModel || _settings.continuedRun);
 	_gridder->SetVerbose(_isFirstInversion);
@@ -874,14 +871,14 @@ void WSClean::saveRestoredImagesForGroup(const ImagingTableEntry& tableEntry)
 			beamStr = "(beam is neither fitted nor estimated -- using delta scales!)";
 			beamMaj = 0.0; beamMin = 0.0; beamPA = 0.0;
 		}
-		if(_settings.useMultiscale || _settings.useFastMultiscale || _settings.useMoreSaneDeconvolution || _settings.useIUWTDeconvolution || _settings.continuedRun)
-		{
+		//if(_settings.useMultiscale || _settings.useFastMultiscale || _settings.useMoreSaneDeconvolution || _settings.useIUWTDeconvolution || _settings.continuedRun)
+		//{
 			Logger::Info << "Rendering sources to restored image " + beamStr + "... ";
 			Logger::Info.Flush();
 			renderer.Restore(restoredImage, modelImage, _settings.trimmedImageWidth, _settings.trimmedImageHeight, beamMaj, beamMin, beamPA);
 			Logger::Info << "DONE\n";
-		}
-		else {
+		//}
+		/*else {
 			Model model;
 			// A model cannot hold instrumental pols (xx/xy/yx/yy), hence always use Stokes I here
 			DeconvolutionAlgorithm::GetModelFromImage(model, modelImage, _settings.trimmedImageWidth, _settings.trimmedImageHeight, _fitsWriter.RA(), _fitsWriter.Dec(), _settings.pixelScaleX, _settings.pixelScaleY, _fitsWriter.PhaseCentreDL(), _fitsWriter.PhaseCentreDM(), 0.0, _fitsWriter.Frequency(), Polarization::StokesI);
@@ -897,7 +894,7 @@ void WSClean::saveRestoredImagesForGroup(const ImagingTableEntry& tableEntry)
 				renderer.Restore(restoredImage, _settings.trimmedImageWidth, _settings.trimmedImageHeight, model, beamMaj, beamMin, beamPA, freqLow, freqHigh, Polarization::StokesI);
 			}
 			Logger::Info << "DONE\n";
-		}
+		}*/
 		_imageAllocator.Free(modelImage);
 		
 		Logger::Info << "Writing restored image... ";
