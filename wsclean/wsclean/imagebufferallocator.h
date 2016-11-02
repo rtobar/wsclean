@@ -226,7 +226,7 @@ public:
 		}
 		if(unusedCount != 0)
 		{
-			Logger::Info << "Freed " << unusedCount << " image buffer(s).\n";
+			Logger::Debug << "Freed " << unusedCount << " image buffer(s).\n";
 		}
 	}
 	

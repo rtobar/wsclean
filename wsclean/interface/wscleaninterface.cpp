@@ -22,7 +22,6 @@ struct WSCleanUserData
 	std::string extraParameters;
 	
 	std::string dataColumn;
-	bool hasAImage, hasAtImage;
 	size_t nACalls, nAtCalls;
 	
 	boost::mutex mutex;
@@ -45,6 +44,7 @@ void wsclean_main(const std::vector<std::string>& parms)
 		argv[i] = new char[parms[i].size()+1];
 		memcpy(argv[i], parms[i].c_str(), parms[i].size()+1);
 	}
+	std::cout << '\n';
 
 	wsclean_main(parms.size(), argv);
 	
@@ -68,8 +68,6 @@ void wsclean_initialize(
 	wscUserData->pixelScaleX = parameters->pixelScaleX;
 	wscUserData->pixelScaleY = parameters->pixelScaleY;
 	wscUserData->extraParameters = parameters->extraParameters;
-	wscUserData->hasAImage = false;
-	wscUserData->hasAtImage = false;
 	wscUserData->nACalls = 0;
 	wscUserData->nAtCalls = 0;
 	(*userData) = static_cast<void*>(wscUserData);
@@ -111,6 +109,9 @@ void wsclean_deinitialize(void* userData)
 {
 	WSCleanUserData* wscUserData = static_cast<WSCleanUserData*>(userData);
 	boost::mutex::scoped_lock lock(wscUserData->mutex);
+	if(wscUserData->nAtCalls != 0)
+		std::remove("tmp-operator-At-0-image.fits");
+		
 	delete wscUserData;
 }
 
@@ -183,7 +184,7 @@ void wsclean_write(void* userData, const char* filename, const double* image)
 	std::cout << "wsclean_write() : Writing " << filename << "...\n";
 	FitsWriter writer;
 	writer.SetImageDimensions(wscUserData->width, wscUserData->height, wscUserData->pixelScaleX, wscUserData->pixelScaleY);
-	if(wscUserData->hasAtImage)
+	if(wscUserData->nAtCalls != 0)
 	{
 		FitsReader reader("tmp-operator-At-0-image.fits");
 		writer = FitsWriter(reader);
@@ -199,6 +200,7 @@ void getCommandLine(std::vector<std::string>& commandline, const WSCleanUserData
 	commandline.push_back(str(userData.height));
 	commandline.push_back("-scale");
 	commandline.push_back(Angle::ToNiceString(userData.pixelScaleX));
+	commandline.push_back("-quiet");
 	if(!userData.extraParameters.empty())
 	{
 		size_t pos = 0;
@@ -251,7 +253,6 @@ void wsclean_operator_A(void* userData, DCOMPLEX* dataOut, const double* dataIn)
 	FitsWriter writer;
 	writer.SetImageDimensions(wscUserData->width, wscUserData->height, wscUserData->pixelScaleX, wscUserData->pixelScaleY);
 	writer.Write(filenameStr.str() + "-model.fits", dataIn);
-	wscUserData->hasAImage = true;
 	
 	// Run WSClean -predict (creates/fills new column MODEL_DATA)
 	std::vector<std::string> commandline;
@@ -351,15 +352,16 @@ void wsclean_operator_At(void* userData, double* dataOut, const DCOMPLEX* dataIn
 	commandline.push_back(prefixName.str());
 	commandline.push_back("-datacolumn");
 	commandline.push_back("MODEL_DATA");
+	commandline.push_back("-no-dirty");
 	commandline.push_back(wscUserData->msPath);
 	wsclean_main(commandline);
-	wscUserData->hasAtImage = true;
 	
 	// Read dirty image and store in dataOut
 	FitsReader reader(prefixName.str() + "-image.fits");
 	reader.Read(dataOut);
-	std::remove((prefixName.str() + "-image.fits").c_str());
-	std::remove((prefixName.str() + "-dirty.fits").c_str());
+	// Image 0 is saved until the end to retrieve keywords from...
+	if(wscUserData->nAtCalls != 0)
+		std::remove((prefixName.str() + "-image.fits").c_str());
 	++(wscUserData->nAtCalls);
 	std::cout << "------ end of wsclean_operator_At()\n";
 }

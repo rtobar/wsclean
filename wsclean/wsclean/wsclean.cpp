@@ -187,6 +187,7 @@ void WSClean::imagePSF(const ImagingTableEntry& entry)
 	_infoPerChannel[channelIndex].beamMaj = bMaj;
 	_infoPerChannel[channelIndex].beamMin = bMin;
 	_infoPerChannel[channelIndex].beamPA = bPA;
+	_infoPerChannel[channelIndex].weight = _gridder->ImageWeight();
 		
 	Logger::Info << "Writing psf image... ";
 	Logger::Info.Flush();
@@ -836,10 +837,6 @@ void WSClean::saveRestoredImagesForGroup(const ImagingTableEntry& tableEntry)
 	size_t currentChannelIndex =
 		tableEntry.outputChannelIndex;
 	
-	double
-		freqLow = tableEntry.bandStartFrequency,
-		freqHigh = tableEntry.bandEndFrequency;
-	
 	PolarizationEnum curPol = tableEntry.polarization;
 	for(size_t imageIter=0; imageIter!=tableEntry.imageCount; ++imageIter)
 	{
@@ -1224,8 +1221,18 @@ void WSClean::makeMFSImage(const string& suffix, PolarizationEnum pol, bool isIm
 	
 	if(isPSF)
 	{
+		double smallestTheoreticBeamSize = 0.0;
+		for(std::vector<ChannelInfo>::const_reverse_iterator r = _infoPerChannel.rbegin();
+				r != _infoPerChannel.rend(); ++r)
+		{
+			if(std::isfinite(r->theoreticBeamSize)) {
+				smallestTheoreticBeamSize = r->theoreticBeamSize;
+				break;
+			}
+		}
+		
 		double bMaj, bMin, bPA;
-		determineBeamSize(bMaj, bMin, bPA, mfsImage.data(), _infoPerChannel.back().theoreticBeamSize);
+		determineBeamSize(bMaj, bMin, bPA, mfsImage.data(), smallestTheoreticBeamSize);
 		_infoForMFS.beamMaj = bMaj;
 		_infoForMFS.beamMin = bMin;
 		_infoForMFS.beamPA = bPA;
