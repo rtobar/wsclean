@@ -4,6 +4,11 @@
 
 void WSCleanSettings::Validate()
 {
+	if(untrimmedImageWidth == 0 || untrimmedImageHeight == 0)
+	{
+		throw std::runtime_error("Invalid image size given: one of the dimensions was zero.");
+	}
+	
 	// antialiasingKernelSize should be odd
 	if(antialiasingKernelSize%2 == 0)
 	{

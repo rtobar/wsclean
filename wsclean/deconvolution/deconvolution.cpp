@@ -10,6 +10,8 @@
 #include "../multiscale/multiscalealgorithm.h"
 
 #include "../casamaskreader.h"
+#include "../image.h"
+
 #include "../wsclean/imagingtable.h"
 #include "../wsclean/wscleansettings.h"
 
@@ -34,6 +36,17 @@ void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedM
 		
 	residualSet.LoadAndAverage(*_residualImages);
 	modelSet.LoadAndAverage(*_modelImages);
+	
+	ImageBufferAllocator::Ptr integrated;
+	_imageAllocator->Allocate(_imgWidth * _imgHeight, integrated);
+	residualSet.GetLinearIntegrated(integrated.data());
+	double stddev = Image::StdDevFromMAD(integrated.data(), _imgWidth * _imgHeight);
+	Logger::Info << "Estimated standard deviation of background noise: " << stddev << " Jy\n";
+	if(_settings.autoDeconvolutionThreshold)
+	{
+		_cleanAlgorithm->SetThreshold(std::max(stddev * _settings.autoDeconvolutionThresholdSigma, _settings.deconvolutionThreshold));
+	}
+	integrated.reset();
 	
 	std::vector<ao::uvector<double>> psfVecs(groupTable.SquaredGroupCount());
 	residualSet.LoadAndAveragePSFs(*_psfImages, psfVecs, _psfPolarization);

@@ -104,7 +104,7 @@ IF("${isSystemDir}" STREQUAL "-1")
 ENDIF("${isSystemDir}" STREQUAL "-1")
 
 add_library(wsclean-object OBJECT
-  casamaskreader.cpp dftpredictionalgorithm.cpp fftconvolver.cpp fftresampler.cpp fftwmultithreadenabler.cpp fitsiochecker.cpp fitsreader.cpp fitswriter.cpp imageweights.cpp modelrenderer.cpp multibanddata.cpp nlplfitter.cpp polynomialfitter.cpp progressbar.cpp stopwatch.cpp
+  casamaskreader.cpp dftpredictionalgorithm.cpp fftconvolver.cpp fftresampler.cpp fftwmultithreadenabler.cpp fitsiochecker.cpp fitsreader.cpp fitswriter.cpp image.cpp imageweights.cpp modelrenderer.cpp multibanddata.cpp nlplfitter.cpp polynomialfitter.cpp progressbar.cpp stopwatch.cpp
   deconvolution/deconvolution.cpp deconvolution/deconvolutionalgorithm.cpp deconvolution/dynamicjoinedclean.cpp deconvolution/dynamicset.cpp deconvolution/fastmultiscaleclean.cpp deconvolution/joinedclean.cpp deconvolution/moresane.cpp deconvolution/simpleclean.cpp deconvolution/spectralfitter.cpp
   interface/wscleaninterface.cpp
   iuwt/imageanalysis.cpp iuwt/iuwtdecomposition.cpp iuwt/iuwtdeconvolutionalgorithm.cpp iuwt/iuwtmask.cpp
@@ -151,5 +151,21 @@ if(DOXYGEN_FOUND)
     COMMENT "Generating API documentation with Doxygen" VERBATIM)
 
 endif(DOXYGEN_FOUND)
+
+find_package(Boost COMPONENTS date_time thread system filesystem unit_test_framework)
+if(Boost_FOUND)
+  add_executable(runtest EXCLUDE_FROM_ALL
+		tests/test.cpp tests/testclean.cpp tests/testradeccoord.cpp
+		tests/testpolynomialfitter.cpp tests/testfitsdateobstime.cpp
+		tests/testbaselinedependentaveraging.cpp
+		tests/testdynamicset.cpp
+		tests/testimage.cpp
+		${WSCLEANFILES})
+  target_link_libraries(runtest ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} ${CASACORE_LIBRARIES} ${FFTW3_LIB} ${FFTW3_THREADS_LIB} ${Boost_DATE_TIME_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${CFITSIO_LIBRARY} ${GSL_LIB} ${GSL_CBLAS_LIB} ${LBEAM_LIBS} ${IDG_OPT_LIBS})
+  add_test(runtest runtest)
+  add_custom_target(check COMMAND runtest -l unit_scope DEPENDS runtest)
+else()
+  message("Boost testing framework not found (not required for wsclean: only required for running make check).")
+endif()
 
 message(STATUS "Flags passed to C++ compiler: " ${CMAKE_CXX_FLAGS})

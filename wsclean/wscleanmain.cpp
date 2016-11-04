@@ -214,6 +214,8 @@ void print_help()
 		"   Maximum number of clean iterations to perform. Default: 0\n"
 		"-threshold <threshold>\n"
 		"   Stopping clean thresholding in Jy. Default: 0.0\n"
+		"-auto-threshold <sigma>\n"
+		"   Estimate noise level using a robust estimator and stop at sigma x stddev.\n"
 		"-gain <gain>\n"
 		"   Cleaning gain: Ratio of peak that will be subtracted in each iteration. Default: 0.1\n"
 		"-mgain <gain>\n"
@@ -292,9 +294,13 @@ void print_help()
 		"   Use alternative joined clean algorithm (feature for testing).\n"
 		"\n"
 		"  ** RESTORATION OPTIONS **\n"
+//		"-restore <input model> <input residual> <output image>\n"
+//		"   Restore the model image onto the residual image and save it in output image. By\n"
+//		"   default, the beam parameters are read from the residual image. If this parameter\n"
+//		"   is given, wsclean will do the restoring and then exit: no cleaning is performed.\n"
 		"-beamsize <arcsec>\n"
-		"   Set a circular beam size (FWHM) in arcsec for restoring the clean components. This is the same as\n"
-		"   -beamshape size size 0.\n"
+		"   Set a circular beam size (FWHM) in arcsec for restoring the clean components. This is\n"
+		"   the same as -beamshape <size> <size> 0.\n"
 		"-beamshape <maj in arcsec> <min in arcsec> <position angle in deg>\n"
 		"   Set the FWHM beam shape for restoring the clean components. Defaults units for maj and min are arcsec, and\n"
 		"   degrees for PA. Can be overriden, e.g. '-beamshape 1amin 1amin 3deg'. Default: shape of PSF.\n"
@@ -439,6 +445,12 @@ int main(int argc, char *argv[])
 		{
 			++argi;
 			settings.deconvolutionThreshold = atof(argv[argi]);
+		}
+		else if(param == "auto-threshold")
+		{
+			++argi;
+			settings.autoDeconvolutionThreshold = true;
+			settings.autoDeconvolutionThresholdSigma = atof(argv[argi]);
 		}
 		else if(param == "datacolumn")
 		{
@@ -732,6 +744,14 @@ int main(int argc, char *argv[])
 			++argi;
 			settings.weightMode.SetSuperWeight(atof(argv[argi]));
 		}
+		else if(param == "restore")
+		{
+			settings.restoreOnly = true;
+			settings.restoreModel = argv[argi+1];
+			settings.restoreInput = argv[argi+2];
+			settings.restoreOutput = argv[argi+3];
+			argi += 3;
+		}
 		else if(param == "beamsize")
 		{
 			++argi;
@@ -906,7 +926,9 @@ int main(int argc, char *argv[])
 	
 	settings.Validate();
 	
-	if(predictionMode)
+	if(settings.restoreOnly)
+		;
+	else if(predictionMode)
 		wsclean.RunPredict();
 	else
 		wsclean.RunClean();

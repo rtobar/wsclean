@@ -26,6 +26,8 @@ public:
 	size_t widthForNWCalculation, heightForNWCalculation;
 	size_t channelsOut, intervalsOut;
 	double pixelScaleX, pixelScaleY;
+	bool restoreOnly;
+	std::string restoreModel, restoreInput, restoreOutput;
 	double manualBeamMajorSize, manualBeamMinorSize, manualBeamPA;
 	bool fittedBeam, theoreticBeam, circularBeam;
 	bool continuedRun;
@@ -58,6 +60,8 @@ public:
 	 * These settings all relate to the deconvolution.
 	 */
 	double deconvolutionThreshold, deconvolutionGain, deconvolutionMGain;
+	bool autoDeconvolutionThreshold;
+	double autoDeconvolutionThresholdSigma;
 	size_t deconvolutionIterationCount;
 	bool allowNegativeComponents, stopOnNegativeComponents;
 	bool useMultiscale, useFastMultiscale, squaredJoins, forceDynamicJoin;
@@ -103,6 +107,8 @@ inline WSCleanSettings::WSCleanSettings() :
 	widthForNWCalculation(0), heightForNWCalculation(0),
 	channelsOut(1), intervalsOut(1),
 	pixelScaleX(0.01 * M_PI / 180.0), pixelScaleY(0.01 * M_PI / 180.0),
+	restoreOnly(false),
+	restoreModel(), restoreInput(), restoreOutput(),
 	manualBeamMajorSize(0.0), manualBeamMinorSize(0.0),
 	manualBeamPA(0.0), fittedBeam(true), theoreticBeam(false), circularBeam(false),
 	continuedRun(false),
@@ -145,6 +151,8 @@ inline WSCleanSettings::WSCleanSettings() :
 	deconvolutionThreshold(0.0),
 	deconvolutionGain(0.1),
 	deconvolutionMGain(1.0),
+	autoDeconvolutionThreshold(false),
+	autoDeconvolutionThresholdSigma(3.0),
 	deconvolutionIterationCount(0),
 	allowNegativeComponents(true), 
 	stopOnNegativeComponents(false),

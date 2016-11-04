@@ -9,7 +9,7 @@
 #include "../threadpool.h"
 
 #include "../deconvolution/dynamicset.h"
-#include "../imageoperations.h"
+#include "../image.h"
 
 #include <algorithm>
 #include <iostream>
@@ -699,7 +699,7 @@ bool IUWTDeconvolutionAlgorithm::fillAndDeconvolveStructure(IUWTDecomposition& i
 		{
 			trimmedPriorMask.resize(newWidth * newHeight);
 			trimmedPriorMaskPtr = trimmedPriorMask.data();
-			ImageOperations::TrimBox(trimmedPriorMaskPtr, x1, y1, newWidth, newHeight, priorMask, width, height);
+			Image::TrimBox(trimmedPriorMaskPtr, x1, y1, newWidth, newHeight, priorMask, width, height);
 		}
 
 		ImageAnalysis::Component newMaxComp(maxComp.x-x1, maxComp.y-y1, maxComp.scale);
