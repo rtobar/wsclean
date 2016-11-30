@@ -37,7 +37,7 @@ public:
 	
 	size_t outputChannelIndex;
 	
-	size_t outputTimestepIndex;
+	size_t outputIntervalIndex;
 	
 	std::vector<MSInfo> msData;
 	

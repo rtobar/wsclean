@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <set>
 #include <vector>
+
 /**
  * Class for various simple polarization related values.
  * 
@@ -15,14 +16,19 @@
  *   LR = Q - iU ;   U = -i (RL - LR)/2
  *   LL = I - V  ;   V = (RR - LL)/2
  *
- *   XX = I - Q  ;   I = (YY + XX)/2
- *   XY = U - iV ;   Q = (YY - XX)/2
- *   YX = U + iV ;   U = (YX + XY)/2
- *   YY = I + Q  ;   V = -i(YX - XY)/2
+ *   XX = I + Q  ;   I = (XX + YY)/2
+ *   XY = U + iV ;   Q = (XX - YY)/2
+ *   YX = U - iV ;   U = (XY + YX)/2
+ *   YY = I - Q  ;   V = -i(XY - YX)/2
  * 
  * These definitions assume that 'X' and 'Y' are labelled as they are in
- * CASA measurement sets and uvfits files, which is NOT the same as what
- * the IEEE definitions tell (X and Y are swapped).
+ * CASA measurement sets: X is North-South.
+ * 
+ * Note that uv-fits files have the polarizations labelled such that X
+ * is East-West, confusingly. We have also observed that at present (2016)
+ * CASA's importuvfits does not swap the polarizations, hence Measurement
+ * Sets exist that have the polarizations labelled wrong.
+ * The IEEE definition is to have X be N-S.
  */
 class Polarization
 {
@@ -320,22 +326,20 @@ public:
 	template<typename NumType>
 	static void LinearToStokes(const std::complex<NumType> *linear, NumType* stokes)
 	{
-		// In UVFits, X is defined as parallel to the celestial equator. This is
-		// also done in Casa files. However, the common definition of Stokes
-		// equations use X = North-South. Therefore, X and Y are swapped.
-		stokes[0] = 0.5 * (linear[3].real() + linear[0].real());
-		stokes[1] = 0.5 * (linear[3].real() - linear[0].real());
-		stokes[2] = 0.5 * (linear[2].real() + linear[1].real());
-		stokes[3] = 0.5 * (linear[2].imag() - linear[1].imag());
+		// Note comments about X and Y at the top of this file!
+		stokes[0] = 0.5 * (linear[0].real() + linear[3].real());
+		stokes[1] = 0.5 * (linear[0].real() - linear[3].real());
+		stokes[2] = 0.5 * (linear[1].real() + linear[2].real());
+		stokes[3] = 0.5 * (linear[1].imag() - linear[2].imag());
 	}
 	
 	template<typename NumType>
 	static void StokesToLinear(const NumType* stokes, std::complex<NumType> *linear)
 	{
-		linear[0] = stokes[0] - stokes[1];
-		linear[1] = std::complex<NumType>(stokes[2], -stokes[3]);
-		linear[2] = std::complex<NumType>(stokes[2], stokes[3]);
-		linear[3] = stokes[0] + stokes[1];
+		linear[0] = stokes[0] + stokes[1];
+		linear[1] = std::complex<NumType>(stokes[2], stokes[3]);
+		linear[2] = std::complex<NumType>(stokes[2], -stokes[3]);
+		linear[3] = stokes[0] - stokes[1];
 	}
 	
 	template<typename NumType>

@@ -73,7 +73,7 @@ public:
 		}
 		if(usedCount != 0)
 		{
-			std::cerr << usedCount << " image buffer(s) were still in use when image buffer allocator was destroyed!";
+			std::cerr << usedCount << " image buffer(s) were still in use when image buffer allocator was destroyed!\n";
 		}
 	}
 	
@@ -181,7 +181,10 @@ public:
 				}
 			}
 			if(!found)
+			{
+				std::cerr << "Invalid or double call to ImageBufferAllocator::Free(double*).\n";
 				throw std::runtime_error("Invalid or double call to ImageBufferAllocator::Free(double*).");
+			}
 			--_nReal;
 		}
 	}
@@ -203,7 +206,10 @@ public:
 				}
 			}
 			if(!found)
+			{
+				std::cerr << "Invalid or double call to ImageBufferAllocator::Free(std::complex<double>*).\n";
 				throw std::runtime_error("Invalid or double call to ImageBufferAllocator::Free(std::complex<double>*).");
+			}
 			--_nComplex;
 		}
 	}
@@ -245,15 +251,18 @@ private:
 		int errVal = posix_memalign(reinterpret_cast<void**>(&buffer->ptr), sizeof(double)*2, size*sizeof(double) * 2);
 		if(errVal != 0)
 		{
+			std::ostringstream msg;
+			msg << "posix_memalign() failed when allocating " << size*sizeof(double) * 2 << " bytes: ";
 			switch(errVal)
 			{
 				case EINVAL:
-					throw std::runtime_error("posix_memalign() failed: the alignment argument was not a power of two, or was not a multiple of sizeof(void *)");
+					msg << "the alignment argument was not a power of two, or was not a multiple of sizeof(void *)";
 				case ENOMEM:
-					throw std::runtime_error("posix_memalign() failed: there was insufficient memory to fulfill the allocation request.");
+					msg << "there was insufficient memory to fulfill the allocation request.";
 				default:
-					throw std::runtime_error("posix_memalign() failed but returned unknown error value");
+					msg << "an unknown error value was returned";
 			}
+			throw std::runtime_error(msg.str());
 		}
 		buffer->size = size;
 		buffer->isFirstHalfUsed = false;

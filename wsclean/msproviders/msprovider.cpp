@@ -90,8 +90,10 @@ void MSProvider::copyWeightedData(std::complex<float>* dest, size_t startChannel
 				bool flagB = *flagPtr || !std::isfinite(inPtr->real())|| !std::isfinite(inPtr->imag());
 				if(flagA || flagB)
 					dest[ch] = 0.0;
-				else
+				else {
+					// I = XX + YY
 					dest[ch] = (*inPtr * (*weightPtr)) + valA;
+				}
 				
 				weightPtr += polCount - polIndexB;
 				inPtr += polCount - polIndexB;
@@ -122,8 +124,8 @@ void MSProvider::copyWeightedData(std::complex<float>* dest, size_t startChannel
 					if(flagA || flagB)
 						dest[ch] = 0.0;
 					else {
-						// Q = (YY - XX)/2
-						dest[ch] = (*inPtr * (*weightPtr)) - valA;
+						// Q = (XX - YY)/2
+						dest[ch] = valA - (*inPtr * (*weightPtr));
 					}
 					
 					weightPtr += polCount - polIndexB;
@@ -188,7 +190,7 @@ void MSProvider::copyWeightedData(std::complex<float>* dest, size_t startChannel
 					if(flagA || flagB)
 						dest[ch] = 0.0;
 					else
-						dest[ch] = valA + (*inPtr * (*weightPtr)); // U = (YX + XY)/2
+						dest[ch] = valA + (*inPtr * (*weightPtr)); // U = (XY + YX)/2
 					
 					weightPtr += polCount - polIndexB;
 					inPtr += polCount - polIndexB;
@@ -253,8 +255,8 @@ void MSProvider::copyWeightedData(std::complex<float>* dest, size_t startChannel
 					if(flagA || flagB)
 						dest[ch] = 0.0;
 					else {
-						casacore::Complex diff = (*inPtr * (*weightPtr) - valA);
-						// V = -i(YX - XY)/2
+						casacore::Complex diff = valA - (*inPtr * (*weightPtr));
+						// V = -i(XY - YX)/2
 						dest[ch] = casacore::Complex(diff.imag(), -diff.real());
 					}
 					
@@ -455,8 +457,8 @@ void MSProvider::reverseCopyData(casacore::Array<std::complex<float>>& dest, siz
 				{
 					if(std::isfinite(source[ch].real()))
 					{
-						*(dataIter + polIndexA) = source[ch];
-						*(dataIter + polIndexB) = source[ch];
+						*(dataIter + polIndexA) = source[ch]; // XX = I (or rr = I)
+						*(dataIter + polIndexB) = source[ch]; // YY = I (or ll = I)
 					}
 					dataIter += polCount;
 				}
@@ -473,8 +475,8 @@ void MSProvider::reverseCopyData(casacore::Array<std::complex<float>>& dest, siz
 						if(std::isfinite(source[ch].real()))
 						{
 							casacore::Complex stokesI = casacore::Complex::value_type(0.5) * (*(dataIter + polIndexB) + *(dataIter + polIndexA));
-							*(dataIter + polIndexA) = stokesI - source[ch]; // XX = I - Q
-							*(dataIter + polIndexB) = stokesI + source[ch]; // YY = I + Q
+							*(dataIter + polIndexA) = stokesI + source[ch]; // XX = I + Q
+							*(dataIter + polIndexB) = stokesI - source[ch]; // YY = I - Q
 						}
 						dataIter += polCount;
 					}
@@ -505,8 +507,8 @@ void MSProvider::reverseCopyData(casacore::Array<std::complex<float>>& dest, siz
 					{
 						if(std::isfinite(source[ch].real()))
 						{
-							*(dataIter + polIndexA) = source[ch]; // XY = (U - iV), V still zero
-							*(dataIter + polIndexB) = source[ch]; // YX = (U + iV), V still zero
+							*(dataIter + polIndexA) = source[ch]; // XY = (U + iV), V still zero
+							*(dataIter + polIndexB) = source[ch]; // YX = (U - iV), V still zero
 						}
 						dataIter += polCount;
 					}
@@ -543,8 +545,8 @@ void MSProvider::reverseCopyData(casacore::Array<std::complex<float>>& dest, siz
 							// U = (YX + XY)/2
 							casacore::Complex stokesU = casacore::Complex::value_type(0.5) * (*(dataIter + polIndexB) + *(dataIter + polIndexA));
 							casacore::Complex iTimesStokesV = casacore::Complex(-source[ch].imag(), source[ch].real());
-							*(dataIter + polIndexA) = stokesU - iTimesStokesV; // XY = (U - iV)
-							*(dataIter + polIndexB) = stokesU + iTimesStokesV; // YX = (U + iV)
+							*(dataIter + polIndexA) = stokesU + iTimesStokesV; // XY = (U + iV)
+							*(dataIter + polIndexB) = stokesU - iTimesStokesV; // YX = (U - iV)
 						}
 						dataIter += polCount;
 					}

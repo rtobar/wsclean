@@ -37,6 +37,9 @@ void FitsWriter::writeHeaders(fitsfile*& fptr, const std::string& filename, size
 		case JanskyPerBeam:
 			fits_write_key(fptr, TSTRING, "BUNIT", (void*) "JY/BEAM", "Units are in Jansky per beam", &status); checkStatus(status, filename);
 			break;
+		case Jansky:
+			fits_write_key(fptr, TSTRING, "BUNIT", (void*) "JY", "Units are in Jansky", &status); checkStatus(status, filename);
+			break;
 		case Kelvin:
 			fits_write_key(fptr, TSTRING, "BUNIT", (void*) "K", "Units are in Kelvin", &status); checkStatus(status, filename);
 			break;
@@ -62,20 +65,47 @@ void FitsWriter::writeHeaders(fitsfile*& fptr, const std::string& filename, size
 	double phaseCentreRADeg = (_phaseCentreRA/M_PI)*180.0, phaseCentreDecDeg = (_phaseCentreDec/M_PI)*180.0;
 	double
 		centrePixelX = _pixelSizeX!=0.0 ? ((_width / 2.0)+1.0 + _phaseCentreDL/_pixelSizeX) : (_width / 2.0)+1.0,
-		centrePixelY = _pixelSizeY!=0.0 ? ((_height / 2.0)+1.0 - _phaseCentreDM/_pixelSizeY) : (_height / 2.0)+1.0,
-		stepXDeg = (-_pixelSizeX / M_PI)*180.0,
-		stepYDeg = ( _pixelSizeY / M_PI)*180.0;
-	fits_write_key(fptr, TSTRING, "CTYPE1", (void*) "RA---SIN", "Right ascension angle cosine", &status); checkStatus(status, filename);
-	fits_write_key(fptr, TDOUBLE, "CRPIX1", (void*) &centrePixelX, "", &status); checkStatus(status, filename);
-	fits_write_key(fptr, TDOUBLE, "CRVAL1", (void*) &phaseCentreRADeg, "", &status); checkStatus(status, filename);
-	fits_write_key(fptr, TDOUBLE, "CDELT1", (void*) &stepXDeg, "", &status); checkStatus(status, filename);
-	fits_write_key(fptr, TSTRING, "CUNIT1", (void*) "deg", "", &status); checkStatus(status, filename);
+		centrePixelY = _pixelSizeY!=0.0 ? ((_height / 2.0)+1.0 - _phaseCentreDM/_pixelSizeY) : (_height / 2.0)+1.0;
+	if(_isUV)
+	{
+		double deltX, deltY;
+		if(_pixelSizeX==0.0 || _pixelSizeY==0.0)
+		{
+			deltX = 1.0; deltY = 1.0;
+		}
+		else {
+			deltX = 1.0 / (_width * _pixelSizeX);
+			deltY = 1.0 / (_height * _pixelSizeY);
+		}
+		fits_write_key(fptr, TSTRING, "CTYPE1", (void*) "U---WAV", "U axis of UV plane", &status); checkStatus(status, filename);
+		fits_write_key(fptr, TDOUBLE, "CRPIX1", (void*) &centrePixelX, "", &status); checkStatus(status, filename);
+		fits_write_key(fptr, TDOUBLE, "CRVAL1", (void*) &zero, "", &status); checkStatus(status, filename);
+		fits_write_key(fptr, TDOUBLE, "CDELT1", (void*) &deltX, "", &status); checkStatus(status, filename);
+		fits_write_key(fptr, TSTRING, "CUNIT1", (void*) "lambda", "", &status); checkStatus(status, filename);
+		
+		fits_write_key(fptr, TSTRING, "CTYPE2", (void*) "V---WAV", "V axis of UV plane", &status); checkStatus(status, filename);
+		fits_write_key(fptr, TDOUBLE, "CRPIX2", (void*) &centrePixelY, "", &status); checkStatus(status, filename);
+		fits_write_key(fptr, TDOUBLE, "CRVAL2", (void*) &zero, "", &status); checkStatus(status, filename);
+		fits_write_key(fptr, TDOUBLE, "CDELT2", (void*) &deltY, "", &status); checkStatus(status, filename);
+		fits_write_key(fptr, TSTRING, "CUNIT2", (void*) "lambda", "", &status); checkStatus(status, filename);
+	}
+	else {
+		double
+			stepXDeg = (-_pixelSizeX / M_PI)*180.0,
+			stepYDeg = ( _pixelSizeY / M_PI)*180.0;
+		fits_write_key(fptr, TSTRING, "CTYPE1", (void*) "RA---SIN", "Right ascension angle cosine", &status); checkStatus(status, filename);
+		fits_write_key(fptr, TDOUBLE, "CRPIX1", (void*) &centrePixelX, "", &status); checkStatus(status, filename);
+		fits_write_key(fptr, TDOUBLE, "CRVAL1", (void*) &phaseCentreRADeg, "", &status); checkStatus(status, filename);
+		fits_write_key(fptr, TDOUBLE, "CDELT1", (void*) &stepXDeg, "", &status); checkStatus(status, filename);
+		fits_write_key(fptr, TSTRING, "CUNIT1", (void*) "deg", "", &status); checkStatus(status, filename);
+		
+		fits_write_key(fptr, TSTRING, "CTYPE2", (void*) "DEC--SIN", "Declination angle cosine", &status); checkStatus(status, filename);
+		fits_write_key(fptr, TDOUBLE, "CRPIX2", (void*) &centrePixelY, "", &status); checkStatus(status, filename);
+		fits_write_key(fptr, TDOUBLE, "CRVAL2", (void*) &phaseCentreDecDeg, "", &status); checkStatus(status, filename);
+		fits_write_key(fptr, TDOUBLE, "CDELT2", (void*) &stepYDeg, "", &status); checkStatus(status, filename);
+		fits_write_key(fptr, TSTRING, "CUNIT2", (void*) "deg", "", &status); checkStatus(status, filename);
+	}
 	
-	fits_write_key(fptr, TSTRING, "CTYPE2", (void*) "DEC--SIN", "Declination angle cosine", &status); checkStatus(status, filename);
-	fits_write_key(fptr, TDOUBLE, "CRPIX2", (void*) &centrePixelY, "", &status); checkStatus(status, filename);
-	fits_write_key(fptr, TDOUBLE, "CRVAL2", (void*) &phaseCentreDecDeg, "", &status); checkStatus(status, filename);
-	fits_write_key(fptr, TDOUBLE, "CDELT2", (void*) &stepYDeg, "", &status); checkStatus(status, filename);
-	fits_write_key(fptr, TSTRING, "CUNIT2", (void*) "deg", "", &status); checkStatus(status, filename);
 
 	fits_write_key(fptr, TSTRING, "CTYPE3", (void*) "FREQ", "Central frequency", &status); checkStatus(status, filename);
 	fits_write_key(fptr, TDOUBLE, "CRPIX3", (void*) &one, "", &status); checkStatus(status, filename);

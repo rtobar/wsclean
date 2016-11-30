@@ -1,6 +1,7 @@
 
 #include <iostream>
 
+#include "fitsreader.h"
 #include "modelrenderer.h"
 #include "model/model.h"
 #include "imagecoordinates.h"
@@ -8,7 +9,7 @@
 #include "fftconvolver.h"
 
 template<typename T>
-T ModelRenderer::gaus(T x, T sigma) const
+T ModelRenderer::gaus(T x, T sigma)
 {
 	long double xi = x / sigma;
 	return exp(T(-0.5) * xi * xi);// / (sigma * sqrt(T(2.0) * M_PIl));
@@ -152,7 +153,7 @@ void ModelRenderer::Restore(double* imageData, size_t imageWidth, size_t imageHe
 /**
  * Restore a diffuse image (e.g. produced with multi-scale clean)
  */
-void ModelRenderer::Restore(double* imageData, double* modelData, size_t imageWidth, size_t imageHeight, long double beamMaj, long double beamMin, long double beamPA)
+void ModelRenderer::Restore(double* imageData, double* modelData, size_t imageWidth, size_t imageHeight, long double beamMaj, long double beamMin, long double beamPA, long double pixelScaleL, long double pixelScaleM)
 {
 	if(beamMaj == 0.0 && beamMin == 0.0)
 	{
@@ -178,7 +179,7 @@ void ModelRenderer::Restore(double* imageData, double* modelData, size_t imageWi
 		transf[3] = transf[3] / sigmaMin;
 		
 		size_t minDimension = std::min(imageWidth, imageHeight);
-		size_t boundingBoxSize = std::min<size_t>(ceil(sigmaMax * 40.0 / std::min(_pixelScaleL, _pixelScaleM)), minDimension);
+		size_t boundingBoxSize = std::min<size_t>(ceil(sigmaMax * 40.0 / std::min(pixelScaleL, pixelScaleM)), minDimension);
 		if(boundingBoxSize%2!=0) ++boundingBoxSize;
 		ao::uvector<double> kernel(boundingBoxSize*boundingBoxSize);
 		typename ao::uvector<double>::iterator i=kernel.begin();
@@ -187,7 +188,7 @@ void ModelRenderer::Restore(double* imageData, double* modelData, size_t imageWi
 			for(size_t x=0; x!=boundingBoxSize; ++x)
 			{
 				long double l, m;
-				ImageCoordinates::XYToLM<long double>(x, y, _pixelScaleL, _pixelScaleM, boundingBoxSize, boundingBoxSize, l, m);
+				ImageCoordinates::XYToLM<long double>(x, y, pixelScaleL, pixelScaleM, boundingBoxSize, boundingBoxSize, l, m);
 				long double
 					lTransf = l*transf[0] + m*transf[1],
 					mTransf = l*transf[2] + m*transf[3];

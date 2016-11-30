@@ -34,7 +34,11 @@
  * This example demonstrates how to use this interface in a C program. This file
  * can be found in the directory wsclean/examples.
  */
+#ifdef __cplusplus
+#include <complex>
+#else
 #include <complex.h>
+#endif
 
 #include "imaginginterface.h"
 

@@ -44,7 +44,7 @@ public:
 		_writer = writer;
 	}
 	
-	void Load(double* image, PolarizationEnum polarization, size_t freqIndex, bool isImaginary)
+	void Load(double* image, PolarizationEnum polarization, size_t freqIndex, bool isImaginary) const
 	{
 		if(_writer.Width() == 0 || _writer.Height() == 0)
 			throw std::runtime_error("Writer is not set.");

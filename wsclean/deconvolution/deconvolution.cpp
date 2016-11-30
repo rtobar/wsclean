@@ -15,7 +15,7 @@
 #include "../wsclean/imagingtable.h"
 #include "../wsclean/wscleansettings.h"
 
-Deconvolution::Deconvolution(const class WSCleanSettings& settings) : _settings(settings)
+Deconvolution::Deconvolution(const class WSCleanSettings& settings) : _settings(settings), _autoMaskIsFinished(false)
 {
 }
 
@@ -44,7 +44,10 @@ void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedM
 	Logger::Info << "Estimated standard deviation of background noise: " << stddev << " Jy\n";
 	if(_settings.autoDeconvolutionThreshold)
 	{
-		_cleanAlgorithm->SetThreshold(std::max(stddev * _settings.autoDeconvolutionThresholdSigma, _settings.deconvolutionThreshold));
+		if(!_settings.autoMask || _autoMaskIsFinished)
+			_cleanAlgorithm->SetThreshold(std::max(stddev * _settings.autoDeconvolutionThresholdSigma, _settings.deconvolutionThreshold));
+		else
+			_cleanAlgorithm->SetThreshold(std::max(stddev * _settings.autoMaskSigma, _settings.deconvolutionThreshold));
 	}
 	integrated.reset();
 	
@@ -57,9 +60,31 @@ void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedM
 	
 	if(_settings.useIUWTDeconvolution || _settings.useMultiscale || _settings.useMoreSaneDeconvolution || _settings.forceDynamicJoin || _settings.squaredJoins)
 	{
+		if(_settings.useMultiscale)
+		{
+			MultiScaleAlgorithm *algorithm = static_cast<MultiScaleAlgorithm*>(_cleanAlgorithm.get());
+			if(_settings.autoMask)
+			{
+				if(_autoMaskIsFinished)
+					algorithm->SetAutoMaskMode(false, true);
+				else
+					algorithm->SetAutoMaskMode(true, false);
+			}
+		}
+		
 		UntypedDeconvolutionAlgorithm& algorithm =
 			static_cast<UntypedDeconvolutionAlgorithm&>(*_cleanAlgorithm);
 		algorithm.ExecuteMajorIteration(residualSet, modelSet, psfs, _imgWidth, _imgHeight, reachedMajorThreshold);
+		
+		if(_settings.useMultiscale)
+		{
+			if(!reachedMajorThreshold && _settings.autoMask && !_autoMaskIsFinished)
+			{
+				Logger::Info << "Auto-masking threshold reached; continuing next major iteration with deeper threshold and mask.\n";
+				_autoMaskIsFinished = true;
+				reachedMajorThreshold = true;
+			}
+		}
 	}
 	else if(_summedCount != 1)
 	{
@@ -166,7 +191,8 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 	else if(_settings.useMultiscale)
 	{
 		_cleanAlgorithm.reset(new MultiScaleAlgorithm(*_imageAllocator, beamSize, pixelScaleX, pixelScaleY));
-		static_cast<MultiScaleAlgorithm*>(_cleanAlgorithm.get())->SetManualScaleList(_settings.multiscaleScaleList);
+		MultiScaleAlgorithm *algorithm = static_cast<MultiScaleAlgorithm*>(_cleanAlgorithm.get());
+		algorithm->SetManualScaleList(_settings.multiscaleScaleList);
 	}
 	else if(_settings.forceDynamicJoin || _settings.squaredJoins)
 	{

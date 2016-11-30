@@ -3,11 +3,31 @@
 
 #include <cstring>
 
+#include "wsclean/imagebufferallocator.h"
+
 #include "uvector.h"
 
 class Image
 {
 public:
+	Image(size_t width, size_t height, class ImageBufferAllocator& allocator);
+	
+	~Image();
+	
+	Image(Image&& source);
+	Image& operator=(Image&& source);
+	
+	Image(const Image&) = delete;
+	Image& operator=(const Image&) = delete;
+	
+	double* data() { return _data; }
+	const double* data() const { return _data; }
+	
+	size_t Width() const { return _width; }
+	size_t Height() const { return _height; }
+	
+	Image& operator*=(double factor);
+	
 	// Cut-off the borders of an image.
 	// @param outWidth Should be <= inWidth.
 	// @param outHeight Should be <= inHeight.
@@ -33,8 +53,11 @@ public:
 		// norminv(0.75) x MAD
 		return 1.48260221850560 * MAD(data, size);
 	}
-	
 private:
+	double* _data;
+	size_t _width, _height;
+	ImageBufferAllocator* _allocator;
+	
 	static double median_with_copy(const double* data, size_t size, ao::uvector<double>& copy);
 };
 

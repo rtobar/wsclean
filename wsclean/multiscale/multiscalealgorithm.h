@@ -19,13 +19,16 @@ public:
 	MultiScaleAlgorithm(class ImageBufferAllocator& allocator, double beamSize, double pixelScaleX, double pixelScaleY);
 	~MultiScaleAlgorithm();
 	
-	void SetCleanMask(const bool* cleanMask) { _cleanMask = cleanMask; }
-	
 	void SetManualScaleList(const ao::uvector<double>& scaleList) { _manualScaleList = scaleList; }
 	
 	//void PerformMajorIteration(size_t& iterCounter, size_t nIter, DynamicSet& modelSet, DynamicSet& dirtySet, const ao::uvector<const double*>& psfs, bool& reachedMajorThreshold);
 	
-	virtual void ExecuteMajorIteration(DynamicSet& dataImage, DynamicSet& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedMajorThreshold)  ;
+	virtual void ExecuteMajorIteration(DynamicSet& dataImage, DynamicSet& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedMajorThreshold);
+	
+	void SetAutoMaskMode(bool trackPerScaleMasks, bool usePerScaleMasks) {
+		_trackPerScaleMasks = trackPerScaleMasks;
+		_usePerScaleMasks = usePerScaleMasks; 
+	}
 private:
 	class ImageBufferAllocator& _allocator;
 	size_t _width, _height;
@@ -56,6 +59,9 @@ private:
 	};
 	std::vector<MultiScaleAlgorithm::ScaleInfo> _scaleInfos;
 	ao::uvector<double> _manualScaleList;
+	
+	bool _trackPerScaleMasks, _usePerScaleMasks;
+	std::vector<ao::uvector<bool>> _scaleMasks;
 
 	void initializeScaleInfo();
 	void convolvePSFs(std::unique_ptr<ImageBufferAllocator::Ptr[]>& convolvedPSFs, const double* psf, double* tmp, bool isIntegrated);
@@ -65,7 +71,7 @@ private:
 	void activateScales(size_t scaleWithLastPeak);
 	void measureComponentValues(ao::uvector<double>& componentValues, size_t scaleIndex, DynamicSet& imageSet);
 	void addComponentToModel(double* model, size_t scaleWithPeak, double componentValue);
-	double findPeak(const double *image, size_t &x, size_t &y);
+	double findPeak(const double *image, size_t &x, size_t &y, size_t scaleIndex);
 	
 	double* getConvolvedPSF(size_t psfIndex, size_t scaleIndex, const ao::uvector<const double*>& psfs, double* scratch, const std::unique_ptr<std::unique_ptr<ImageBufferAllocator::Ptr[]>[]>& convolvedPSFs);
 	

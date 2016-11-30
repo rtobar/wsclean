@@ -11,7 +11,6 @@ BOOST_AUTO_TEST_SUITE(clean_algorithms)
 const size_t nRepeats = 3; /* This should be set to 100 to assert the performance */
 
 #if defined __AVX__ && !defined FORCE_NON_AVX
-
 struct CleanTestFixture
 {
 	size_t x, y;
@@ -26,6 +25,7 @@ struct CleanTestFixture
 		SimpleClean::FindPeakAVX(img.data(), width, height, x, y, true, ystart, yend, 0.0);
 	}
 };
+#endif
 
 struct NoiseFixture
 {
@@ -48,6 +48,7 @@ struct NoiseFixture
 	std::normal_distribution<double> normal_dist;
 };
 
+#if defined __AVX__ && !defined FORCE_NON_AVX
 BOOST_AUTO_TEST_CASE( findPeakAVX1 )
 {
 	CleanTestFixture f;

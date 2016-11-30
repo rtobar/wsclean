@@ -1,16 +1,17 @@
-#define WSCLEAN_NO_MAIN
-#include "../wscleanmain.cpp"
-#undef WSCLEAN_NO_MAIN
-
 #include "wscleaninterface.h"
 
-#include "../banddata.h"
+#include "../wsclean/commandline.h"
 
 #include <string>
 
 #include <casacore/ms/MeasurementSets/MeasurementSet.h>
 
 #include <boost/thread/mutex.hpp>
+
+#include "../angle.h"
+#include "../banddata.h"
+#include "../fitsreader.h"
+#include "../fitswriter.h"
 
 struct WSCleanUserData
 {
@@ -46,7 +47,7 @@ void wsclean_main(const std::vector<std::string>& parms)
 	}
 	std::cout << '\n';
 
-	wsclean_main(parms.size(), argv);
+	CommandLine::Run(parms.size(), argv);
 	
 	for(size_t i=0; i!=parms.size(); ++i)
 		delete[] argv[i];

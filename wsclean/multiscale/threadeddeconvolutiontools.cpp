@@ -155,7 +155,7 @@ ThreadedDeconvolutionTools::ThreadResult* ThreadedDeconvolutionTools::MultiScale
 	return 0;
 }
 
-void ThreadedDeconvolutionTools::FindMultiScalePeak(MultiScaleTransforms* msTransforms, ImageBufferAllocator* allocator, const double* image, const ao::uvector<double>& scales, std::vector<ThreadedDeconvolutionTools::PeakData>& results, bool allowNegativeComponents, const bool* mask, double borderRatio, bool calculateRMS)
+void ThreadedDeconvolutionTools::FindMultiScalePeak(MultiScaleTransforms* msTransforms, ImageBufferAllocator* allocator, const double* image, const ao::uvector<double>& scales, std::vector<ThreadedDeconvolutionTools::PeakData>& results, bool allowNegativeComponents, const bool* mask, const std::vector<ao::uvector<bool>>& scaleMasks, double borderRatio, bool calculateRMS)
 {
 	size_t imageIndex = 0;
 	size_t nextThread = 0;
@@ -184,7 +184,10 @@ void ThreadedDeconvolutionTools::FindMultiScalePeak(MultiScaleTransforms* msTran
 		task->scratch = scratchData[nextThread].data();
 		task->scale = scales[imageIndex];
 		task->allowNegativeComponents = allowNegativeComponents;
-		task->mask = mask;
+		if(scaleMasks.empty())
+			task->mask = mask;
+		else
+			task->mask = scaleMasks[imageIndex].data();
 		task->borderRatio = borderRatio;
 		task->calculateRMS = calculateRMS;
 		_taskLanes[nextThread]->write(task);

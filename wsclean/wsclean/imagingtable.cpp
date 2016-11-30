@@ -7,7 +7,7 @@ ImagingTableEntry::ImagingTableEntry() :
 	highestFrequency(0.0),
 	polarization(Polarization::StokesI),
 	outputChannelIndex(0),
-	outputTimestepIndex(0),
+	outputIntervalIndex(0),
 	msData(),
 	squaredDeconvolutionIndex(0),
 	joinedGroupIndex(0),

@@ -18,15 +18,18 @@ struct WSCleanSettings
 public:
 	WSCleanSettings();
 	
-	void Validate();
+	void Validate() const;
+	
+	void Propogate() { setDimensions(); }
 	
 	std::vector<std::string> filenames;
+	enum Mode { ImagingMode, PredictMode, RestoreMode } mode;
 	size_t untrimmedImageWidth, untrimmedImageHeight;
 	size_t trimmedImageWidth, trimmedImageHeight;
+	double imagePadding;
 	size_t widthForNWCalculation, heightForNWCalculation;
 	size_t channelsOut, intervalsOut;
 	double pixelScaleX, pixelScaleY;
-	bool restoreOnly;
 	std::string restoreModel, restoreInput, restoreOutput;
 	double manualBeamMajorSize, manualBeamMinorSize, manualBeamPA;
 	bool fittedBeam, theoreticBeam, circularBeam;
@@ -60,8 +63,8 @@ public:
 	 * These settings all relate to the deconvolution.
 	 */
 	double deconvolutionThreshold, deconvolutionGain, deconvolutionMGain;
-	bool autoDeconvolutionThreshold;
-	double autoDeconvolutionThresholdSigma;
+	bool autoDeconvolutionThreshold, autoMask;
+	double autoDeconvolutionThresholdSigma, autoMaskSigma;
 	size_t deconvolutionIterationCount;
 	bool allowNegativeComponents, stopOnNegativeComponents;
 	bool useMultiscale, useFastMultiscale, squaredJoins, forceDynamicJoin;
@@ -95,19 +98,24 @@ public:
 		selection.SetMaxUVWInM(maxUVWInMeters);
 	}
 	
-	bool IsSpectralFittingEnabled() {
+	bool IsSpectralFittingEnabled() const {
 		return spectralFittingMode != NoSpectralFitting;
 	}
+	
+private:
+	void checkPolarizations() const;
+	void setDimensions();
 };
 
 inline WSCleanSettings::WSCleanSettings() :
 	filenames(),
-	untrimmedImageWidth(2048), untrimmedImageHeight(2048),
+	mode(ImagingMode),
+	untrimmedImageWidth(0), untrimmedImageHeight(0),
 	trimmedImageWidth(0), trimmedImageHeight(0),
+	imagePadding(1.2),
 	widthForNWCalculation(0), heightForNWCalculation(0),
 	channelsOut(1), intervalsOut(1),
-	pixelScaleX(0.01 * M_PI / 180.0), pixelScaleY(0.01 * M_PI / 180.0),
-	restoreOnly(false),
+	pixelScaleX(0.0), pixelScaleY(0.0),
 	restoreModel(), restoreInput(), restoreOutput(),
 	manualBeamMajorSize(0.0), manualBeamMinorSize(0.0),
 	manualBeamPA(0.0), fittedBeam(true), theoreticBeam(false), circularBeam(false),
@@ -152,7 +160,9 @@ inline WSCleanSettings::WSCleanSettings() :
 	deconvolutionGain(0.1),
 	deconvolutionMGain(1.0),
 	autoDeconvolutionThreshold(false),
-	autoDeconvolutionThresholdSigma(3.0),
+	autoMask(false),
+	autoDeconvolutionThresholdSigma(0.0),
+	autoMaskSigma(0.0),
 	deconvolutionIterationCount(0),
 	allowNegativeComponents(true), 
 	stopOnNegativeComponents(false),

@@ -16,6 +16,7 @@ class FitsWriter : protected FitsIOChecker
 	public:
 	enum Unit {
 		JanskyPerBeam,
+		Jansky,
 		Kelvin,
 		MilliKelvin
 	};
@@ -29,6 +30,7 @@ class FitsWriter : protected FitsIOChecker
 			_beamMajorAxisRad(0.0), _beamMinorAxisRad(0.0), _beamPositionAngle(0.0),
 			_polarization(Polarization::StokesI),
 			_unit(JanskyPerBeam),
+			_isUV(false),
 			_origin("AO/WSImager"), _originComment("Imager written by Andre Offringa"),
 			_multiFPtr(0)
 		{
@@ -44,6 +46,7 @@ class FitsWriter : protected FitsIOChecker
 			_beamMajorAxisRad(0.0), _beamMinorAxisRad(0.0), _beamPositionAngle(0.0),
 			_polarization(Polarization::StokesI),
 			_unit(JanskyPerBeam),
+			_isUV(false),
 			_origin("AO/WSImager"), _originComment("Imager written by Andre Offringa"),
 			_multiFPtr(0)
 		{
@@ -123,9 +126,14 @@ class FitsWriter : protected FitsIOChecker
 		{
 			_polarization = polarization;
 		}
+		Unit GetUnit() const { return _unit; }
 		void SetUnit(Unit unit)
 		{
 			_unit = unit;
+		}
+		void SetIsUV(bool isUV)
+		{
+			_isUV = isUV;
 		}
 		void SetOrigin(const std::string& origin, const std::string& comment)
 		{
@@ -136,7 +144,7 @@ class FitsWriter : protected FitsIOChecker
 		{
 			_history = history;
 		}
-		void AddHistory(std::string& historyLine)
+		void AddHistory(const std::string& historyLine)
 		{
 			_history.push_back(historyLine);
 		}
@@ -206,6 +214,7 @@ class FitsWriter : protected FitsIOChecker
 		double _beamMajorAxisRad, _beamMinorAxisRad, _beamPositionAngle;
 		PolarizationEnum _polarization;
 		Unit _unit;
+		bool _isUV;
 		std::string _origin, _originComment;
 		std::vector<std::string> _history;
 		std::map<std::string, std::string> _extraStringKeywords;

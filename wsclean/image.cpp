@@ -2,6 +2,44 @@
 
 #include <cmath>
 
+Image::Image(size_t width, size_t height, ImageBufferAllocator& allocator) :
+	_width(width), _height(height), _allocator(&allocator)
+{
+	_data = _allocator->Allocate(width*height);
+}
+
+Image::~Image()
+{
+	_allocator->Free(_data);
+}
+
+Image::Image(Image&& source) :
+	_data(source._data),
+	_width(source._width), _height(source._height),
+	_allocator(source._allocator)
+{
+	source._width = 0;
+	source._height = 0;
+	source._data = nullptr;
+	source._allocator = nullptr;
+}
+
+Image& Image::operator=(Image&& source)
+{
+	std::swap(_data, source._data);
+	std::swap(_width, source._width);
+	std::swap(_height, source._height);
+	std::swap(_allocator, source._allocator);
+	return *this;
+}
+
+Image& Image::operator*=(double factor)
+{
+	for(size_t i=0; i!=_width*_height; ++i)
+		_data[i] *= factor;
+	return *this;
+}
+
 // Cut-off the borders of an image.
 // @param outWidth Should be <= inWidth.
 // @param outHeight Should be <= inHeight.

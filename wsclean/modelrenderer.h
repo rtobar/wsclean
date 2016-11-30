@@ -22,8 +22,19 @@ class ModelRenderer
 		 */
 		void Restore(double* imageData, size_t imageWidth, size_t imageHeight, const class Model& model, long double beamMaj, long double beamMin, long double beamPA, long double startFrequency, long double endFrequency, PolarizationEnum polarization);
 		
-		void Restore(double* imageData, double* modelData, size_t imageWidth, size_t imageHeight, long double beamMaj, long double beamMin, long double beamPA);
+		/**
+		 * Restore elliptical beam using a FFT deconvolution
+		 */
+		void Restore(double* imageData, double* modelData, size_t imageWidth, size_t imageHeight, long double beamMaj, long double beamMin, long double beamPA)
+		{
+			Restore(imageData, modelData, imageWidth, imageHeight, beamMaj, beamMin, beamPA, _pixelScaleL, _pixelScaleM);
+		}
 
+		/**
+		 * Restore elliptical beam using a FFT deconvolution (static version).
+		 */
+		static void Restore(double* imageData, double* modelData, size_t imageWidth, size_t imageHeight, long double beamMaj, long double beamMin, long double beamPA, long double pixelScaleL, long double pixelScaleM);
+		
 		/**
 		 * Render each point-source as one pixel
 		 */
@@ -40,7 +51,7 @@ class ModelRenderer
 		long double _pixelScaleL, _pixelScaleM;
 		long double _phaseCentreDL, _phaseCentreDM;
 		template<typename T>
-		T gaus(T x, T sigma) const;
+		static T gaus(T x, T sigma);
 		
 		ModelRenderer(const ModelRenderer &) { }
 		void operator=(const ModelRenderer &) { };
