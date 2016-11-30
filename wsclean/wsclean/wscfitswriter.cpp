@@ -1,4 +1,4 @@
-#include "wscfitsfile.h"
+#include "wscfitswriter.h"
 
 #include "imagefilename.h"
 #include "msgridderbase.h"

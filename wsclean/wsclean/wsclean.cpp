@@ -3,7 +3,7 @@
 #include "imageweightcache.h"
 #include "inversionalgorithm.h"
 #include "logger.h"
-#include "wscfitsfile.h"
+#include "wscfitswriter.h"
 #include "wsmsgridder.h"
 #include "primarybeam.h"
 #include "imagefilename.h"

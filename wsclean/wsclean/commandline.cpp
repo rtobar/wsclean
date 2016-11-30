@@ -5,7 +5,7 @@
 #include "../wscversion.h"
 
 #include "wsclean.h"
-#include "wscfitsfile.h"
+#include "wscfitswriter.h"
 #include "logger.h"
 
 #include <boost/algorithm/string.hpp>

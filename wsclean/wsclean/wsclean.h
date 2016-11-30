@@ -15,7 +15,7 @@
 #include "imagebufferallocator.h"
 #include "imagingtable.h"
 #include "outputchannelinfo.h"
-#include "wscfitsfile.h"
+#include "wscfitswriter.h"
 #include "wscleansettings.h"
 
 #include <set>
