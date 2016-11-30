@@ -187,7 +187,7 @@ MDirection ZenithDirectionEnd(MeasurementSet& set)
 }
 
 void processField(
-	MeasurementSet &set, int fieldIndex, MSField &fieldTable, const MDirection &newDirection,
+	MeasurementSet &set, const std::string& dataColumn, int fieldIndex, MSField &fieldTable, const MDirection &newDirection,
 	bool onlyUVW, bool shiftback, bool flipUVWSign, bool force)
 {
 	MultiBandData bandData(set.spectralWindow(), set.dataDescription());
@@ -206,23 +206,27 @@ void processField(
 		uvwOutCol(set, set.columnName(MSMainEnums::UVW));
 	
 	const bool
-		hasCorrData = set.isColumn(casacore::MSMainEnums::CORRECTED_DATA),
-		hasModelData = set.isColumn(casacore::MSMainEnums::MODEL_DATA);
+		hasCorrData = dataColumn.empty() && set.isColumn(casacore::MSMainEnums::CORRECTED_DATA),
+		hasModelData = dataColumn.empty() && set.isColumn(casacore::MSMainEnums::MODEL_DATA);
 	std::unique_ptr<ArrayColumn<Complex> > dataCol, correctedDataCol, modelDataCol;
 	if(!onlyUVW)
 	{
-		dataCol.reset(new ArrayColumn<Complex>(set,
-			set.columnName(MSMainEnums::DATA)));
-		
-		if(hasCorrData)
+		if(dataColumn.empty())
 		{
-			correctedDataCol.reset(new ArrayColumn<Complex>(set,
-				set.columnName(MSMainEnums::CORRECTED_DATA)));
+			dataCol.reset(new ArrayColumn<Complex>(set, set.columnName(MSMainEnums::DATA)));
+			if(hasCorrData)
+			{
+				correctedDataCol.reset(new ArrayColumn<Complex>(set,
+					set.columnName(MSMainEnums::CORRECTED_DATA)));
+			}
+			if(hasModelData)
+			{
+				modelDataCol.reset(new ArrayColumn<Complex>(set,
+					set.columnName(MSMainEnums::MODEL_DATA)));
+			}
 		}
-		if(hasModelData)
-		{
-			modelDataCol.reset(new ArrayColumn<Complex>(set,
-				set.columnName(MSMainEnums::MODEL_DATA)));
+		else {
+			dataCol.reset(new ArrayColumn<Complex>(set, dataColumn));
 		}
 	}
 	
@@ -696,12 +700,16 @@ int main(int argc, char **argv)
 			"\tin WSClean for imaging with minimum w-values in a different projection.\n"
 			"-f\n"
 			"\tForce recalculation, even if destination is same as original phase direction.\n"
+			"-datacolumn <name>\n"
+			"\tOnly phase-rotate the visibilities in the given column. Otherwise, the columns\n"
+			"\tDATA, MODEL_DATA and CORRECTED_DATA will all be processed if they exist.\n"
 			"\n";
 	} else {
 		int argi=1;
 		bool
 			toZenith = false, toMinW = false, onlyUVW = false,
 			shiftback = false, toGeozenith = false, flipUVWSign = false, force = false, show = false, same = false;
+		std::string dataColumn;
 		while(argv[argi][0] == '-')
 		{
 			std::string param(&argv[argi][1]);
@@ -740,6 +748,11 @@ int main(int argc, char **argv)
 			else if(param == "same")
 			{
 				same = true;
+			}
+			else if(param == "datacolumn")
+			{
+				++argi;
+				dataColumn = argv[argi];
 			}
 			else throw std::runtime_error("Invalid parameter");
 			++argi;
@@ -788,7 +801,7 @@ int main(int argc, char **argv)
 				else if(toGeozenith)
 					rotateToGeoZenith(*set, fieldIndex, fieldTable, onlyUVW, flipUVWSign);
 				else
-					processField(*set, fieldIndex, fieldTable, newDirection, onlyUVW, shiftback, flipUVWSign, force);
+					processField(*set, dataColumn, fieldIndex, fieldTable, newDirection, onlyUVW, shiftback, flipUVWSign, force);
 			}
 			delete set;
 		}
