@@ -5,7 +5,7 @@
 
 #include <cstring>
 
-#include "../polarizationenum.h"
+#include "../polarization.h"
 
 class Measurement
 {

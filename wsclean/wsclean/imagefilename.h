@@ -3,7 +3,7 @@
 
 #include "wscleansettings.h"
 
-#include "../polarizationenum.h"
+#include "../polarization.h"
 
 class ImageFilename
 {

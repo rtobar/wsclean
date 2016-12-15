@@ -110,7 +110,7 @@ class lane
 		 * of lanes. After the container is created, the lanes can be
 		 * resized with @ref resize().
 		 */
-		lane() :
+		lane() noexcept :
 			_buffer(0),
 			_capacity(0),
 			_write_position(0),
@@ -139,7 +139,7 @@ class lane
 		 * other threads access the source lane.
 		 * @param source Original lane to be moved from.
 		 */
-		lane(lane<Tp>&& source) :
+		lane(lane<Tp>&& source) noexcept :
 			_buffer(0),
 			_capacity(0),
 			_write_position(0),
@@ -166,7 +166,7 @@ class lane
 		 * @param source Original lane to be moved from.
 		 * @returns This lane.
 		 */
-		lane<Tp>& operator=(lane<Tp>&& source)
+		lane<Tp>& operator=(lane<Tp>&& source) noexcept
 		{
 			swap(source);
 			return *this;
@@ -176,7 +176,7 @@ class lane
 		 * @details This operation is not thread safe: the behaviour is undefined when
 		 * other threads access either lane.
 		 */
-		void swap(lane<Tp>& other)
+		void swap(lane<Tp>& other) noexcept
 		{
 			std::swap(_buffer, other._buffer);
 			std::swap(_capacity, other._capacity);
@@ -192,7 +192,7 @@ class lane
 		 * 
 		 * This method is not thread safe.
 		 */
-		void clear()
+		void clear() noexcept
 		{
 			_write_position = 0;
 			_free_write_space = _capacity;
@@ -344,7 +344,7 @@ class lane
 			_reading_possible_condition.notify_all();
 		}
 		
-		size_t capacity() const
+		size_t capacity() const noexcept
 		{
 			return _capacity;
 		}
@@ -402,17 +402,17 @@ class lane
 		
 		std::condition_variable _writing_possible_condition, _reading_possible_condition;
 		
-		size_t read_position() const
+		size_t read_position() const noexcept
 		{
 			return (_write_position + _free_write_space) % _capacity;
 		}
 		
-		size_t free_read_space() const
+		size_t free_read_space() const noexcept
 		{
 			return _capacity - _free_write_space;
 		}
 		
-		void immediate_write(const value_type *elements, size_t n)
+		void immediate_write(const value_type *elements, size_t n) noexcept
 		{
 			// Split the writing in two ranges if needed. The first range fits in
 			// [_write_position, _capacity), the second range in [0, end). By doing
@@ -446,7 +446,7 @@ class lane
 			}
 		}
 		
-		void immediate_read(value_type *elements, size_t n)
+		void immediate_read(value_type *elements, size_t n) noexcept
 		{
 			// As with write, split in two ranges if needed. The first range fits in
 			// [read_position(), _capacity), the second range in [0, end).
@@ -479,16 +479,16 @@ class lane
 			}
 		}
 #ifdef LANE_DEBUG_MODE
-		void registerDebugInfo()
+		void registerDebugInfo() noexcept
 		{
 			_debugSummedSize += _capacity - _free_write_space;
 			_debugMeasureCount++;
 		}
-		void registerDebugReadWait()
+		void registerDebugReadWait() noexcept
 		{
 			++_debugReadWaitCount;
 		}
-		void registerDebugWriteWait()
+		void registerDebugWriteWait() noexcept
 		{
 			++_debugWriteWaitCount;
 		}
@@ -516,7 +516,7 @@ class lane
 };
 
 template<typename Tp>
-void swap(ao::lane<Tp>& first, ao::lane<Tp>& second)
+void swap(ao::lane<Tp>& first, ao::lane<Tp>& second) noexcept
 {
 	first.swap(second);
 }

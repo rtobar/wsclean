@@ -49,6 +49,14 @@ void WStackingGridder::PrepareWLayers(size_t nWLayers, double maxMem, double min
 	_maxW = maxW;
 	_nWLayers = nWLayers;
 	
+	if(_minW == _maxW)
+	{
+		// All values have the same w-value. Some computations divide by _maxW-_minW, so prevent
+		// division by zero. By changing only maxW, one makes sure that layer 0 is still at the
+		// exact w value of all visibilies.
+		_maxW += 1.0;
+	}
+	
 	size_t nrCopies = _nFFTThreads;
 	if(nrCopies > _nWLayers) nrCopies = _nWLayers;
 	double memPerImage = _width * _height * sizeof(double);

@@ -1,5 +1,5 @@
 #include "fitsreader.h"
-#include "polarizationenum.h"
+#include "polarization.h"
 
 #include <stdexcept>
 #include <sstream>

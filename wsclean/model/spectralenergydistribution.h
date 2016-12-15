@@ -4,7 +4,7 @@
 #include "measurement.h"
 
 #include "../nlplfitter.h"
-#include "../polarizationenum.h"
+#include "../polarization.h"
 
 #include <cmath>
 #include <iostream>

@@ -6,7 +6,7 @@
 
 #include "spectralfitter.h"
 
-#include "../polarizationenum.h"
+#include "../polarization.h"
 #include "../uvector.h"
 
 namespace ao {

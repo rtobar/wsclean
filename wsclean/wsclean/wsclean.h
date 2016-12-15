@@ -5,7 +5,7 @@
 #include "../msproviders/partitionedms.h"
 
 #include "../msselection.h"
-#include "../polarizationenum.h"
+#include "../polarization.h"
 #include "../weightmode.h"
 #include "../stopwatch.h"
 

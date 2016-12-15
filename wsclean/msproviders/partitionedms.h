@@ -9,7 +9,7 @@
 #include <casacore/tables/Tables/ArrayColumn.h>
 #include <casacore/tables/Tables/ScalarColumn.h>
 
-#include "../polarizationenum.h"
+#include "../polarization.h"
 #include "../uvector.h"
 #include "../msselection.h"
 

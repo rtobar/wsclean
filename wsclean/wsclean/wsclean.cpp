@@ -265,7 +265,7 @@ void WSClean::dftPredict(const ImagingTable& squaredGroup)
 		DeconvolutionAlgorithm::GetModelFromImage(model, modelImages[0].data(), _settings.trimmedImageWidth, _settings.trimmedImageHeight, _gridder->PhaseCentreRA(), _gridder->PhaseCentreDec(), _settings.pixelScaleX, _settings.pixelScaleY, _gridder->PhaseCentreDL(), _gridder->PhaseCentreDM(), 0.0, squaredGroup.Front().CentralFrequency());
 	else throw std::runtime_error("Can't perform DFT for this set of polarizations: either image only I or IQUV.");
 	
-	NDPPP::SaveSkyModel("wsclean-prediction-skymodel.txt", model);
+	NDPPP::SaveSkyModel("wsclean-prediction-skymodel.txt", model, false);
 	NDPPP::ConvertSkyModelToSourceDB("wsclean-prediction.sourcedb", "wsclean-prediction-skymodel.txt");
 	
 	Logger::Info << "Number of components to be predicted: " << model.SourceCount() << '\n';
@@ -835,7 +835,9 @@ void WSClean::readEarlierModelImages(const ImagingTableEntry& entry)
 		else if(reader.ImageWidth()!=_settings.trimmedImageWidth || reader.ImageHeight()!=_settings.trimmedImageHeight)
 			throw std::runtime_error("Inconsistent image size: dimensions of input image did not match.");
 		
-		if(_settings.pixelScaleX == 0 && _settings.pixelScaleY == 0)
+		if(reader.PixelSizeX()==0.0 || reader.PixelSizeY()==0.0)
+			Logger::Warn << "Warning: input fits file misses the pixel size keywords.\n";
+		else if(_settings.pixelScaleX == 0 && _settings.pixelScaleY == 0)
 		{
 			_settings.pixelScaleX = reader.PixelSizeX();
 			_settings.pixelScaleY = reader.PixelSizeY();
@@ -846,6 +848,10 @@ void WSClean::readEarlierModelImages(const ImagingTableEntry& entry)
 		else if(std::fabs(reader.PixelSizeX() - _settings.pixelScaleX) * _settings.trimmedImageWidth > 0.1 * _settings.pixelScaleX ||
 			std::fabs(reader.PixelSizeY() - _settings.pixelScaleY) * _settings.trimmedImageHeight > 0.1 * _settings.pixelScaleY)
 			throw std::runtime_error("Inconsistent pixel size: pixel size of input image did not match.");
+		if(_settings.pixelScaleX == 0.0 || _settings.pixelScaleY == 0.0)
+		{
+			throw std::runtime_error("Could not determine proper pixel size. The input image did not provide proper pixel size values, and no or an invalid -scale was provided to WSClean");
+		}
 		
 		// TODO check phase centre
 		

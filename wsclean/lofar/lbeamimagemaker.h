@@ -3,7 +3,7 @@
 
 #include <set>
 
-#include "../polarizationenum.h"
+#include "../polarization.h"
 #include "../uvector.h"
 #include "../wsclean/imagingtable.h"
 #include "../wsclean/imagebufferallocator.h"

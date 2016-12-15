@@ -6,7 +6,7 @@
 
 #include <fitsio.h>
 
-#include "polarizationenum.h"
+#include "polarization.h"
 #include "fitsiochecker.h"
 
 class FitsReader : protected FitsIOChecker

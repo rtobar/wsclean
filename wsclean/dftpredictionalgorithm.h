@@ -2,7 +2,7 @@
 #define DFT_PREDICTION_ALGORITHM_H
 #include "banddata.h"
 #include "matrix2x2.h"
-#include "polarizationenum.h"
+#include "polarization.h"
 #include "uvector.h"
 
 #include "wsclean/imagebufferallocator.h"

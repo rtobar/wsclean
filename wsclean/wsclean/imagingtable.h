@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "../uvector.h"
-#include "../polarizationenum.h"
+#include "../polarization.h"
 
 #include "../msproviders/partitionedms.h"
 

@@ -8,7 +8,7 @@
 #include "wscleansettings.h"
 #include "imagefilename.h"
 
-#include "../polarizationenum.h"
+#include "../polarization.h"
 
 #include "../lofar/lbeamimagemaker.h"
 #include "../fitswriter.h"

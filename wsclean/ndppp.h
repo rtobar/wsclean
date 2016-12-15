@@ -18,20 +18,32 @@ public:
 		Application::Run("makesourcedb in=" + input + " out=" + destination + " format='<'");
 	}
 	
-	static void SaveSkyModel(const std::string& destination, const Model& model)
+	static void SaveSkyModel(const std::string& destination, const Model& model, bool convertClustersToPatches)
 	{
 		std::ofstream file(destination);
 		file << "# (Name, Patch, Type, Ra, Dec, I, Q, U, V, ReferenceFrequency='150.e6', SpectralIndex) = format\n\n";
+		std::string patchName = ",";
 		for(Model::const_iterator s=model.begin(); s!=model.end(); ++s)
 		{
 			// Define a patch for this source
 			// A patch is created by not giving a source name
-			file << ", " << s->Name() << ", POINT, , , , , , , ,\n";
+			if(convertClustersToPatches)
+			{
+				if(patchName != s->ClusterName())
+				{
+					patchName = s->ClusterName();
+					file << ", " << s->ClusterName() << ", POINT, , , , , , , ,\n";
+				}
+			}
+			else {
+				file << ", " << s->Name() << ", POINT, , , , , , , ,\n";
+				patchName = s->Name();
+			}
 					
 			for(size_t ci=0; ci!=s->ComponentCount(); ++ci)
 			{
 				const ModelComponent& c = s->Component(ci);
-				file << s->Name() << '_' << ci << ", " << s->Name() << ", POINT, "
+				file << s->Name() << '_' << ci << ", " << patchName << ", POINT, "
 					<< RaDecCoord::RAToString(c.PosRA(), ':') << ", "
 					<< RaDecCoord::DecToString(c.PosDec(), '.') << ", ";
 				if(c.HasMeasuredSED())

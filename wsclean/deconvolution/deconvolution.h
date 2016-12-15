@@ -3,7 +3,7 @@
 
 #include "../uvector.h"
 #include "../wsclean/imagebufferallocator.h"
-#include "../polarizationenum.h"
+#include "../polarization.h"
 
 #include <cstring>
 

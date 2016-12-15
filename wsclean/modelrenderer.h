@@ -2,7 +2,7 @@
 #define MODELRENDERER_H
 
 #include <cstring>
-#include "polarizationenum.h"
+#include "polarization.h"
 
 class ModelRenderer
 {

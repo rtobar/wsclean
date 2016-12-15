@@ -7,7 +7,7 @@
 #include "wscleansettings.h"
 
 #include "../fitswriter.h"
-#include "../polarizationenum.h"
+#include "../polarization.h"
 
 #include <string>
 

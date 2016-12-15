@@ -192,6 +192,7 @@ class WStackingGridder
 				return 0.0;
 			else {
 				if(_isComplex)
+					// In this case, replace minW with -maxW :
 					return layer * (_maxW + _maxW) / (_nWLayers-1) - _maxW;
 				else
 					return layer * (_maxW - _minW) / (_nWLayers-1) + _minW;

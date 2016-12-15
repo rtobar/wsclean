@@ -8,7 +8,7 @@
 #include <map>
 #include <cmath>
 
-#include "polarizationenum.h"
+#include "polarization.h"
 #include "fitsiochecker.h"
 
 class FitsWriter : protected FitsIOChecker

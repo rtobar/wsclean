@@ -3,7 +3,7 @@
 
 #include "gridmodeenum.h"
 
-#include "../polarizationenum.h"
+#include "../polarization.h"
 #include "../msselection.h"
 #include "../weightmode.h"
 
