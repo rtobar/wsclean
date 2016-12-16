@@ -1,5 +1,5 @@
-#ifndef POLARIZATION_ENUM_H
-#define POLARIZATION_ENUM_H
+#ifndef POLARIZATION_H
+#define POLARIZATION_H
 
 #include <complex>
 #include <stdexcept>
@@ -35,10 +35,6 @@ class Polarization
 public:
 	enum PolarizationEnum
 	{
-		XX,
-		XY,
-		YX,
-		YY,
 		StokesI,
 		StokesQ,
 		StokesU,
@@ -47,6 +43,10 @@ public:
 		RL,
 		LR,
 		LL,
+		XX,
+		XY,
+		YX,
+		YY,
 		/**
 		 * Instrumental is a special value representing that four polarizations are
 		 * stored, and these are the 'raw' measurement set polarizations. It is used
@@ -187,6 +187,26 @@ public:
 			case LR: return "LR";
 			case LL: return "LL";
 			default: return "";
+		}
+	}
+	
+	static std::string TypeToFullString(enum PolarizationEnum polarization)
+	{
+		switch(polarization)
+		{
+			case XX: return "XX";
+			case XY: return "XY";
+			case YX: return "YX";
+			case YY: return "YY";
+			case StokesI: return "Stokes I";
+			case StokesQ: return "Stokes Q";
+			case StokesU: return "Stokes U";
+			case StokesV: return "Stokes V";
+			case RR: return "RR";
+			case RL: return "RL";
+			case LR: return "LR";
+			case LL: return "LL";
+			default: return "Unknown polarization";
 		}
 	}
 	
