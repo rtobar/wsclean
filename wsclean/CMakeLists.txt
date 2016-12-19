@@ -6,12 +6,12 @@ project(wsclean)
 #  set(CMAKE_BUILD_TYPE "Release")
 #endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -O3 -Wall -DNDEBUG -ggdb")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -O3 -Wall -DNDEBUG")
 
 if(PORTABLE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ")
 else()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -msse4.1") 
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native") 
 endif(PORTABLE)
 
 # Casacore has a separate CMake file in this directory
