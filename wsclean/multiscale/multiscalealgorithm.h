@@ -29,6 +29,9 @@ public:
 		_trackPerScaleMasks = trackPerScaleMasks;
 		_usePerScaleMasks = usePerScaleMasks; 
 	}
+	void SetUseFastSubMinorLoop(bool fastSubMinorLoop) {
+		_fastSubMinorLoop = fastSubMinorLoop;
+	}
 private:
 	class ImageBufferAllocator& _allocator;
 	size_t _width, _height;
@@ -60,7 +63,7 @@ private:
 	std::vector<MultiScaleAlgorithm::ScaleInfo> _scaleInfos;
 	ao::uvector<double> _manualScaleList;
 	
-	bool _trackPerScaleMasks, _usePerScaleMasks;
+	bool _trackPerScaleMasks, _usePerScaleMasks, _fastSubMinorLoop;
 	std::vector<ao::uvector<bool>> _scaleMasks;
 
 	void initializeScaleInfo();

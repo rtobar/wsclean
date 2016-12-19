@@ -68,6 +68,7 @@ public:
 	size_t deconvolutionIterationCount;
 	bool allowNegativeComponents, stopOnNegativeComponents;
 	bool useMultiscale, useFastMultiscale, squaredJoins, forceDynamicJoin;
+	bool multiscaleFastSubMinorLoop;
 	double multiscaleDeconvolutionThresholdBias, multiscaleDeconvolutionScaleBias;
 	bool multiscaleNormalizeResponse;
 	ao::uvector<double> multiscaleScaleList;
@@ -170,6 +171,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	useFastMultiscale(false),
 	squaredJoins(false),
 	forceDynamicJoin(false),
+	multiscaleFastSubMinorLoop(true),
 	multiscaleDeconvolutionThresholdBias(0.7),
 	multiscaleDeconvolutionScaleBias(0.6),
 	multiscaleNormalizeResponse(false),

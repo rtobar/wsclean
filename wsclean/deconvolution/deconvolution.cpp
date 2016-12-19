@@ -70,6 +70,7 @@ void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedM
 				else
 					algorithm->SetAutoMaskMode(true, false);
 			}
+			algorithm->SetUseFastSubMinorLoop(_settings.multiscaleFastSubMinorLoop);
 		}
 		
 		UntypedDeconvolutionAlgorithm& algorithm =

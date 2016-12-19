@@ -239,6 +239,9 @@ void CommandLine::printHelp()
 		"   Sets a list of scales to use in multi-scale cleaning. If unset, WSClean will select the delta\n"
 		"   (zero) scale, scales starting at four times the synthesized PSF, and increase by a factor of\n"
 		"   two until the maximum scale is reached. Example: -multiscale-scales 0,5,12.5\n"
+		"-no-multiscale-fast-subminor\n"
+		"   Disable the 'fast subminor loop' optimization, that will only search a part of the\n"
+		"   image during the multi-scale subminor loop. The optimization is on by default.\n"
 		"-iuwt\n"
 		"   Use the IUWT deconvolution algorithm.\n"
 		"-iuwt-snr-test / -no-iuwt-snr-test\n"
@@ -678,6 +681,10 @@ int CommandLine::Run(int argc, char* argv[])
 		{
 			++argi;
 			NumberList::ParseDoubleList(argv[argi], settings.multiscaleScaleList);
+		}
+		else if(param == "no-multiscale-fast-subminor")
+		{
+			settings.multiscaleFastSubMinorLoop = false;
 		}
 		else if(param == "weighting-rank-filter")
 		{
