@@ -6,8 +6,15 @@
 #include "../areaset.h"
 
 #include <boost/thread/thread.hpp>
+
+#ifdef __SSE__
+#define USE_INTRINSICS
+#endif
+
+#ifdef USE_INTRINSICS
 #include <emmintrin.h>
 #include <immintrin.h>
+#endif
 
 #include <iostream>
 #include <limits>
@@ -92,7 +99,7 @@ double SimpleClean::FindPeak(const double *image, size_t width, size_t height, s
 		return image[x + y*width];
 }
 
-#if defined __AVX__ && !defined FORCE_NON_AVX
+#if defined __AVX__ && defined USE_INTRINSICS && !defined FORCE_NON_AVX
 template<bool AllowNegativeComponent>
 double SimpleClean::FindPeakAVX(const double *image, size_t width, size_t height, size_t &x, size_t &y, size_t startY, size_t endY, double borderRatio)
 {
@@ -185,23 +192,19 @@ void SimpleClean::SubtractImage(double *image, const double *psf, size_t width, 
 	endY = y + height/2;
 	if(endY > height) endY = height;
 	
-	__m128d factor2 = _mm_set_pd(factor, factor);
 	for(size_t ypos = startY; ypos != endY; ++ypos)
 	{
 		double *imageIter = image + ypos * width + startX;
 		const double *psfIter = psf + (ypos - offsetY) * width + startX - offsetX;
-		for(size_t xpos = startX; xpos != endX; xpos+=2)
+		for(size_t xpos = startX; xpos != endX; xpos++)
 		{
 			// I've SSE-ified this, but it didn't improve speed at all :-/
 			// (Compiler probably already did it)
-			//*imageIter = *imageIter - (*psfIter * factor);
+			*imageIter -= (*psfIter * factor);
 			//*(imageIter+1) = *(imageIter+1) - (*(psfIter+1) * factor);
-			_mm_storeu_pd(imageIter, _mm_sub_pd(_mm_loadu_pd(imageIter), _mm_mul_pd(_mm_loadu_pd(psfIter), factor2)));
-			imageIter+=2;
-			psfIter+=2;
+			++imageIter;
+			++psfIter;
 		}
-		if(!isAligned)
-			*imageIter -= *psfIter * factor;
 	}
 }
 
@@ -278,7 +281,7 @@ void SimpleClean::PartialSubtractImage(double *image, size_t imgWidth, size_t im
 	}
 }
 
-#ifdef __AVX__
+#if defined __AVX__ && defined USE_INTRINSICS
 void SimpleClean::PartialSubtractImageAVX(double *image, size_t imgWidth, size_t imgHeight, const double *psf, size_t psfWidth, size_t psfHeight, size_t x, size_t y, double factor, size_t startY, size_t endY)
 {
 	size_t startX, endX;

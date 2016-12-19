@@ -8,7 +8,9 @@
 #include "deconvolutionalgorithm.h"
 #include "imageset.h"
 
-//#define FORCE_NON_AVX 1
+#ifdef __SSE__
+#define USE_INTRINSICS
+#endif
 
 namespace ao {
 	template<typename T> class lane;
@@ -21,7 +23,7 @@ class SimpleClean : public TypedDeconvolutionAlgorithm<deconvolution::SingleImag
 		
 		static double FindPeak(const double *image, size_t width, size_t height, size_t &x, size_t &y, bool allowNegativeComponents, const bool* cleanMask);
 
-#if defined __AVX__ && !defined FORCE_NON_AVX
+#if defined __AVX__ && defined USE_INTRINSICS && !defined FORCE_NON_AVX
 		template<bool AllowNegativeComponent>
 		static double FindPeakAVX(const double *image, size_t width, size_t height, size_t &x, size_t &y, size_t startY, size_t endY, double borderRatio);
 		
@@ -51,7 +53,7 @@ class SimpleClean : public TypedDeconvolutionAlgorithm<deconvolution::SingleImag
 		
 		static void PartialSubtractImage(double *image, size_t imgWidth, size_t imgHeight, const double *psf, size_t psfWidth, size_t psfHeight, size_t x, size_t y, double factor, size_t startY, size_t endY);
 		
-#ifdef __AVX__
+#if defined __AVX__ && defined USE_INTRINSICS
 		static void PartialSubtractImageAVX(double *image, size_t imgWidth, size_t imgHeight, const double *psf, size_t psfWidth, size_t psfHeight, size_t x, size_t y, double factor, size_t startY, size_t endY);
 #endif
 		
