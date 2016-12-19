@@ -4,6 +4,7 @@
 #include "multiscaletransforms.h"
 
 #include "../deconvolution/simpleclean.h"
+#include "../fftwmultithreadenabler.h"
 #include "../wsclean/logger.h"
 
 MultiScaleAlgorithm::MultiScaleAlgorithm(ImageBufferAllocator& allocator, double beamSize, double pixelScaleX, double pixelScaleY) :
@@ -141,6 +142,7 @@ void MultiScaleAlgorithm::ExecuteMajorIteration(DynamicSet& dirtySet, DynamicSet
 		// many iterations.
 		if(_fastSubMinorLoop)
 		{
+			FFTWMultiThreadEnabler fftwMT(false);
 			size_t subMinorStartIteration = _iterationNumber;
 			ClarkLoop clarkLoop(_width, _height);
 			clarkLoop.SetIterationInfo(_iterationNumber, MaxNIter());
@@ -161,7 +163,7 @@ void MultiScaleAlgorithm::ExecuteMajorIteration(DynamicSet& dirtySet, DynamicSet
 			
 			_iterationNumber = clarkLoop.CurrentIteration();
 			_scaleInfos[scaleWithPeak].nComponentsCleaned += (_iterationNumber - subMinorStartIteration);
-			_scaleInfos[scaleWithPeak].totalFluxCleaned += clarkLoop.FluxCleaned() * _scaleInfos[scaleWithPeak].INTEGRATED_FLUX;
+			_scaleInfos[scaleWithPeak].totalFluxCleaned += clarkLoop.FluxCleaned();
 			
 			for(size_t imageIndex=0; imageIndex!=dirtySet.size(); ++imageIndex)
 			{

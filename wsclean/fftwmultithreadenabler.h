@@ -31,13 +31,13 @@ public:
 	 * This will set FFTW to use as many threads as there are cores in the 
 	 * system.
 	 */
-	FFTWMultiThreadEnabler(bool reportNrThreads = true);
+	explicit FFTWMultiThreadEnabler(bool reportNrThreads = true);
 	
 	/**
 	 * Constructor that sets FFTW to use multiple threads.
 	 * This will set FFTW to use the given number of threads.
 	 */
-	FFTWMultiThreadEnabler(size_t nThreads, bool reportNrThreads = true);
+	explicit FFTWMultiThreadEnabler(size_t nThreads, bool reportNrThreads = true);
 	
 	/**
 	 * Destructor that resets the FFTWs threads.
