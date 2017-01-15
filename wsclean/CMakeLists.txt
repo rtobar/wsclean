@@ -105,7 +105,7 @@ ENDIF("${isSystemDir}" STREQUAL "-1")
 
 add_library(wsclean-object OBJECT
   casamaskreader.cpp dftpredictionalgorithm.cpp fftconvolver.cpp fftresampler.cpp fftwmultithreadenabler.cpp fitsiochecker.cpp fitsreader.cpp fitswriter.cpp image.cpp imageweights.cpp modelrenderer.cpp multibanddata.cpp nlplfitter.cpp polynomialfitter.cpp progressbar.cpp stopwatch.cpp
-  deconvolution/deconvolution.cpp deconvolution/deconvolutionalgorithm.cpp deconvolution/dynamicjoinedclean.cpp deconvolution/dynamicset.cpp deconvolution/fastmultiscaleclean.cpp deconvolution/joinedclean.cpp deconvolution/moresane.cpp deconvolution/simpleclean.cpp deconvolution/spectralfitter.cpp
+  deconvolution/deconvolution.cpp deconvolution/deconvolutionalgorithm.cpp deconvolution/genericclean.cpp deconvolution/imageset.cpp deconvolution/moresane.cpp deconvolution/simpleclean.cpp deconvolution/spectralfitter.cpp
   interface/wscleaninterface.cpp
   iuwt/imageanalysis.cpp iuwt/iuwtdecomposition.cpp iuwt/iuwtdeconvolutionalgorithm.cpp iuwt/iuwtmask.cpp
   lofar/lbeamimagemaker.cpp
@@ -159,7 +159,7 @@ if(Boost_FOUND)
 		tests/test.cpp tests/testclean.cpp tests/testradeccoord.cpp
 		tests/testpolynomialfitter.cpp tests/testfitsdateobstime.cpp
 		tests/testbaselinedependentaveraging.cpp
-		tests/testdynamicset.cpp
+		tests/testimageset.cpp
 		tests/testimage.cpp
 		${WSCLEANFILES})
   target_link_libraries(runtest ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} ${CASACORE_LIBRARIES} ${FFTW3_LIB} ${FFTW3_THREADS_LIB} ${Boost_DATE_TIME_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${CFITSIO_LIBRARY} ${GSL_LIB} ${GSL_CBLAS_LIB} ${LBEAM_LIBS} ${IDG_OPT_LIBS})

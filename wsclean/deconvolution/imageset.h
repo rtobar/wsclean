@@ -1,437 +1,338 @@
-#ifndef CLEANABLE_IMAGE_SET_H
-#define CLEANABLE_IMAGE_SET_H
+#ifndef DYNAMIC_SET_H
+#define DYNAMIC_SET_H
 
-#include "../wsclean/cachedimageset.h"
+#include "../uvector.h"
+#include "../wsclean/imagingtable.h"
 #include "../wsclean/imagebufferallocator.h"
 
-#include "dynamicset.h"
-
 #include <vector>
+#include <map>
 
-namespace deconvolution {
+class DynamicSet
+{
+public:
+	DynamicSet(const ImagingTable* table, ImageBufferAllocator& allocator, size_t requestedChannelsInDeconvolution, bool squareJoinedChannels) :
+		_images(),
+		_imageSize(0),
+		_channelsInDeconvolution((requestedChannelsInDeconvolution==0) ? table->SquaredGroupCount() : requestedChannelsInDeconvolution),
+		_squareJoinedChannels(squareJoinedChannels),
+		_imagingTable(*table),
+		_imageIndexToPSFIndex(),
+		_allocator(allocator)
+	{
+		size_t nPol = table->GetSquaredGroup(0).EntryCount();
+		size_t nImages = nPol * _channelsInDeconvolution;
+		_images.assign(nImages, static_cast<double*>(0));
+		_imageIndexToPSFIndex.resize(nImages);
 		
-	class SingleImageSet {
-	public:
-		struct Value {
-			double value;
-			Value() { }
-			Value(double _value) : value(_value) { }
-			double GetValue(size_t i) { 
-				return value;
-			}
-			static Value Zero() { return Value(0.0); }
-		};
-		
-		SingleImageSet(size_t size, SingleImageSet& prototype) :
-			image(prototype._allocator->Allocate(size)),
-			_allocator(prototype._allocator)
-		{
-		}
-		
-		SingleImageSet(size_t size, ImageBufferAllocator& allocator) :
-			image(allocator.Allocate(size)),
-			_allocator(&allocator)
-		{
-		}
-		
-		SingleImageSet(double* allocatedData, ImageBufferAllocator& allocator) :
-			image(allocatedData),
-			_allocator(&allocator)
-		{
-		}
-		
-		~SingleImageSet()
-		{
-			_allocator->Free(image);
-		}
-		
-		void Load(CachedImageSet& set, PolarizationEnum pol, size_t freqIndex)
-		{
-			set.Load(image, pol, freqIndex, false);
-		}
-		
-		void Store(CachedImageSet& set, PolarizationEnum pol, size_t freqIndex) const
-		{
-			set.Store(image, pol, freqIndex, false);
-		}
-		
-		void Transfer(DynamicSet& destination)
-		{
-			destination.Claim(0, image);
-			image = 0;
-		}
-		
-		Value Get(size_t pixelIndex) const
-		{
-			return Value(image[pixelIndex]);
-		}
-		
-		double JoinedValue(size_t pixelIndex) const
-		{
-			return image[pixelIndex];
-		}
-		
-		double JoinedValueNormalized(size_t pixelIndex) const
-		{
-			return image[pixelIndex];
-		}
-		
-		double AbsJoinedValue(size_t pixelIndex) const
-		{
-			return fabs(image[pixelIndex]);
-		}
-		
-		bool IsComponentNegative(size_t pixelIndex) const
-		{
-			return image[pixelIndex]<0.0;
-		}
-		
-		void AddComponent(size_t pixelIndex, const double* values)
-		{
-			image[pixelIndex] += values[0];
-		}
-		
-		size_t ImageCount() const { return 1; }
-		
-		static size_t StaticImageCount() { return 1; }
-		
-		double* GetImage(size_t imageIndex)
-		{
-			return image;
-		}
-		static size_t PSFIndex(size_t imageIndex)
-		{
-			return 0;
-		}
-		ImageBufferAllocator* Allocator() { return _allocator; }
-		
-		double* Data() { return image; }
-	private:
-		double *image;
-		
-		ImageBufferAllocator* _allocator;
-	};
+		initializeIndices();
+	}
 	
-	template<size_t PolCount>
-	class PolarizedImageSet {
-	public:
-		struct Value {
-			double data[PolCount];
-			double GetValue(size_t i) { 
-				return data[i];
-			}
-			static Value Zero() {
-				Value zero;
-				for(size_t i=0; i!=PolCount; ++i)
-					zero.data[i] = 0.0;
-				return zero;
-			}
-		};
+	DynamicSet(const ImagingTable* table, ImageBufferAllocator& allocator, size_t requestedChannelsInDeconvolution, bool squareJoinedChannels, size_t width, size_t height) :
+		_images(),
+		_imageSize(width*height),
+		_channelsInDeconvolution((requestedChannelsInDeconvolution==0) ? table->SquaredGroupCount() : requestedChannelsInDeconvolution),
+		_squareJoinedChannels(squareJoinedChannels),
+		_imagingTable(*table),
+		_imageIndexToPSFIndex(),
+		_allocator(allocator)
+	{
+		size_t nPol = table->GetSquaredGroup(0).EntryCount();
+		size_t nImages = nPol * _channelsInDeconvolution;
+		_images.assign(nImages, static_cast<double*>(0));
+		_imageIndexToPSFIndex.resize(nImages);
 		
-		PolarizedImageSet(size_t size, PolarizedImageSet<PolCount>& prototype) :
-			_allocator(prototype._allocator)
-		{
-			for(size_t i=0; i!=PolCount; ++i)
-				images[i] = _allocator->Allocate(size);
-		}
-		
-		PolarizedImageSet(size_t size, ImageBufferAllocator& allocator) :
-			_allocator(&allocator)
-		{
-			for(size_t i=0; i!=PolCount; ++i)
-				images[i] = _allocator->Allocate(size);
-		}
-		
-		PolarizedImageSet(DynamicSet& source, ImageBufferAllocator& allocator) :
-			_allocator(&allocator)
-		{
-			for(size_t i=0; i!=PolCount; ++i)
-				images[i] = source.Release(i);
-		}
-		
-		PolarizedImageSet(DynamicSet& source, size_t offset, ImageBufferAllocator& allocator) :
-			_allocator(&allocator)
-		{
-			for(size_t i=0; i!=PolCount; ++i)
-				images[i] = source.Release(i+offset);
-		}
-		
-		~PolarizedImageSet()
-		{
-			for(size_t i=0; i!=PolCount; ++i)
-				_allocator->Free(images[i]);
-		}
-		
-		void Transfer(DynamicSet& destination, size_t offset)
-		{
-			for(size_t i=0; i!=PolCount; ++i)
-			{
-				destination.Claim(offset+i, images[i]);
-				images[i] = 0;
-			}
-		}
-		
-		void Load(CachedImageSet& set, PolarizationEnum polarization, size_t freqIndex)
-		{
-			set.Load(images[0], polarization, freqIndex, false);
-		}
-		
-		void Load(CachedImageSet& set, const std::set<PolarizationEnum>& polarizations, size_t freqIndex)
-		{
-			std::set<PolarizationEnum>::const_iterator p=polarizations.begin();
-			for(size_t i = 0; i!=PolCount; ++i, ++p)
-			{
-				if(*p == Polarization::YX)
-					set.Load(images[i], PolarizationEnum::XY, freqIndex, true);
-				else
-					set.Load(images[i], *p, freqIndex, false);
-			}
-		}
-		
-		void Store(CachedImageSet& set, PolarizationEnum polarization, size_t freqIndex)
-		{
-			set.Store(images[0], polarization, freqIndex, false);
-		}
-		
-		void Store(CachedImageSet& set, const std::set<PolarizationEnum>& polarizations, size_t freqIndex) const
-		{
-			std::set<PolarizationEnum>::const_iterator p=polarizations.begin();
-			for(size_t i = 0; i!=PolCount; ++i, ++p)
-			{
-				if(*p == Polarization::YX)
-					set.Store(images[i], PolarizationEnum::XY, freqIndex, true);
-				else
-					set.Store(images[i], *p, freqIndex, false);
-			}
-		}
-		
-		Value Get(size_t index) const
-		{
-			Value v;
-			for(size_t i=0; i!=PolCount; ++i)
-				v.data[i] = images[i][index];
-			return v;
-		}
-		
-		double JoinedValue(size_t index) const
-		{
-			return SquaredSum(index);
-		}
-		
-		double JoinedValueNormalized(size_t index) const
-		{
-			return sqrt(SquaredSum(index)*0.5);
-		}
-		
-		double AbsJoinedValue(size_t index) const
-		{
-			return SquaredSum(index);
-		}
-		
-		double SquaredSum(size_t index) const
-		{
-			if(PolCount == 4)
-			{
-				return
-					images[0][index]*images[0][index] +
-					images[1][index]*images[1][index] + images[2][index]*images[2][index] +
-					images[3][index]*images[3][index];
-			}
-			else {
-				double sum = 0.0;
-				for(size_t i=0; i!=PolCount; ++i)
-					sum += images[i][index]*images[i][index];
-				return sum;
-			}
-		}
-		
-		bool IsComponentNegative(size_t index) const
-		{
-			if(PolCount == 4)
-				return images[0][index]<0.0 || images[3][index]<0.0;
-			else if(PolCount == 2)
-				return images[0][index]<0.0 || images[1][index]<0.0;
-			else if(PolCount == 1)
-				return images[0][index]<0.0;
-			else
-				return false;
-		}
-		
-		void AddComponent(size_t index, const double* values)
-		{
-			for(size_t i=0; i!=PolCount; ++i)
-				images[i][index] += values[i];
-		}
-		
-		size_t ImageCount() const { return PolCount; }
-		
-		static size_t StaticImageCount() { return PolCount; }
-		
-		double* GetImage(size_t imageIndex)
-		{
-			return images[imageIndex];
-		}
-		static size_t PSFIndex(size_t imageIndex)
-		{
-			return 0;
-		}
-		ImageBufferAllocator* Allocator() { return _allocator; }
-	private:
-		double *images[PolCount];
-		
-		ImageBufferAllocator* _allocator;
-	};
+		initializeIndices();
+		AllocateImages();
+	}
 	
-	template<typename SingleImageSetType>
-	class MultiImageSet {
-	public:
-		struct Value {
-			std::vector<typename SingleImageSetType::Value> values;
-			double GetValue(size_t i)
+	~DynamicSet()
+	{
+		for(ao::uvector<double*>::iterator img=_images.begin();
+				img!=_images.end(); ++img)
+			_allocator.Free(*img);
+	}
+	
+	void AllocateImages()
+	{
+		for(ao::uvector<double*>::iterator img=_images.begin();
+				img!=_images.end(); ++img)
+		{
+			*img = _allocator.Allocate(_imageSize);
+		}
+	}
+	
+	void AllocateImages(size_t width, size_t height)
+	{
+		_imageSize = width*height;
+		for(ao::uvector<double*>::iterator img=_images.begin();
+				img!=_images.end(); ++img)
+		{
+			*img = _allocator.Allocate(_imageSize);
+		}
+	}
+	
+	double* Release(size_t imageIndex)
+	{
+		double* image = _images[imageIndex];
+		_images[imageIndex] = 0;
+		return image;
+	}
+	
+	void Claim(size_t imageIndex, double* data)
+	{
+		_allocator.Free(_images[imageIndex]);
+		_images[imageIndex] = data;
+	}
+	
+	bool IsAllocated() const
+	{
+		return _imageSize!=0;
+	}
+	
+	ImageBufferAllocator& Allocator() const
+	{
+		return _allocator;
+	}
+	
+	void LoadAndAverage(class CachedImageSet& imageSet);
+	
+	void LoadAndAveragePSFs(class CachedImageSet& psfSet, std::vector<ao::uvector<double>>& psfImages, PolarizationEnum psfPolarization);
+	
+	void InterpolateAndStore(class CachedImageSet& imageSet, const class SpectralFitter& fitter);
+	
+	void AssignAndStore(class CachedImageSet& imageSet);
+	
+	/**
+	 * This function will calculate the integration over all images, squaring
+	 * images that are in the same square-image group. For example, with
+	 * a squared group of [I, Q, ..] and another group [I2, Q2, ...], this
+	 * will calculate:
+	 * 
+	 * sqrt(I^2 + Q^2 + ..) + sqrt(I2^2 + Q2^2 ..) + ..
+	 * ----------------------------------------------
+	 *           1          +           1          + ..
+	 * 
+	 * If the 'squared groups' are of size 1, the average of the groups will be
+	 * returned (i.e., without square-rooting the square).
+	 * 
+	 * If the squared joining option is set in the provided wsclean settings, the
+	 * behaviour of this method changes. In that case, it will return the square
+	 * root of the average squared value:
+	 * 
+	 *       I^2 + Q^2 + ..  +  I2^2 + Q2^2 ..  + ..
+	 * sqrt( --------------------------------------- )
+	 *            1          +        1         + ..
+	 * 
+	 * These formulae are such that the values will have normal flux values.
+	 * @param dest Pre-allocated output array that will be filled with the
+	 * integrated image.
+	 * @param scratch Pre-allocated scratch space, same size as image.
+	 */
+	void GetSquareIntegrated(double* dest, double* scratch) const
+	{
+		if(_squareJoinedChannels)
+			getSquareIntegratedWithSquaredChannels(dest);
+		else
+			getSquareIntegratedWithNormalChannels(dest, scratch);
+	}
+	
+	/**
+	 * This function will calculate the 'linear' integration over all images.
+	 * This will return the average of all images. Normally, @ref GetSquareIntegrated
+	 * should be used for peak finding, but in case negative values should remain
+	 * negative, such as with multiscale (otherwise a sidelobe will be fitted with
+	 * large scales), this function can be used.
+	 * @param dest Pre-allocated output array that will be filled with the average
+	 * values.
+	 */
+	void GetLinearIntegrated(double* dest) const
+	{
+		if(_squareJoinedChannels)
+			getSquareIntegratedWithSquaredChannels(dest);
+		else
+			getLinearIntegratedWithNormalChannels(dest);
+	}
+
+	void GetIntegratedPSF(double* dest, const ao::uvector<const double*>& psfs)
+	{
+		memcpy(dest, psfs[0], sizeof(double) * _imageSize);
+		for(size_t i = 1; i!=PSFCount(); ++i)
+		{
+			add(dest, psfs[i]);
+		}
+		multiply(dest, 1.0/double(PSFCount()));
+	}
+	
+	size_t PSFCount() const { return _channelsInDeconvolution; }
+	
+	size_t ChannelsInDeconvolution() const { return _channelsInDeconvolution; }
+	
+	DynamicSet& operator=(double val)
+	{
+		for(size_t i=0; i!=size(); ++i)
+			assign(_images[i], val);
+		return *this;
+	}
+	
+	double* operator[](size_t index)
+	{
+		return _images[index];
+	}
+	
+	const double* operator[](size_t index) const
+	{
+		return _images[index];
+	}
+	
+	size_t size() const { return _images.size(); }
+	
+	size_t PSFIndex(size_t imageIndex) const { return _imageIndexToPSFIndex[imageIndex]; }
+	
+	const ImagingTable& Table() const { return _imagingTable; }
+	
+	DynamicSet* CreateTrimmed(size_t x1, size_t y1, size_t x2, size_t y2, size_t oldWidth) const
+	{
+		std::unique_ptr<DynamicSet> p(new DynamicSet(&_imagingTable, _allocator, _channelsInDeconvolution, _squareJoinedChannels, x2-x1, y2-y1));
+		for(size_t i=0; i!=_images.size(); ++i)
+		{
+			copySmallerPart(_images[i], p->_images[i], x1, y1, x2, y2, oldWidth);
+		}
+		return p.release();
+	}
+	
+	DynamicSet& operator*=(double factor)
+	{
+		for(size_t i=0; i!=size(); ++i)
+			multiply(_images[i], factor);
+		return *this;
+	}
+	
+	DynamicSet& operator+=(const DynamicSet& other)
+	{
+		for(size_t i=0; i!=size(); ++i)
+			add(_images[i], other._images[i]);
+		return *this;
+	}
+	
+	void FactorAdd(DynamicSet& rhs, double factor)
+	{
+		for(size_t i=0; i!=size(); ++i)
+			addFactor(_images[i], rhs._images[i], factor);
+	}
+	
+	void Set(size_t index, const double* rhs)
+	{
+		assign(_images[index], rhs);
+	}
+	
+	bool SquareJoinedChannels() const {
+		return _squareJoinedChannels; 
+	}
+private:
+	void assign(double* lhs, const double* rhs) const
+	{
+		memcpy(lhs, rhs, sizeof(double) * _imageSize);
+	}
+	
+	void assign(double* lhs, const ImageBufferAllocator::Ptr& rhs) const
+	{
+		memcpy(lhs, rhs.data(), sizeof(double) * _imageSize);
+	}
+	
+	void assign(double* image, double value) const
+	{
+		for(size_t i=0; i!=_imageSize; ++i)
+			image[i] = value;
+	}
+	
+	void add(double* lhs, const double* rhs) const
+	{
+		for(size_t i=0; i!=_imageSize; ++i)
+			lhs[i] += rhs[i];
+	}
+	
+	void square(double* image) const
+	{
+		for(size_t i=0; i!=_imageSize; ++i)
+			image[i] *= image[i];
+	}
+	
+	void squareRoot(double* image) const
+	{
+		for(size_t i=0; i!=_imageSize; ++i)
+			image[i] = sqrt(image[i]);
+	}
+	
+	void addSquared(double* lhs, const double* rhs) const
+	{
+		for(size_t i=0; i!=_imageSize; ++i)
+			lhs[i] += rhs[i]*rhs[i];
+	}
+	
+	void addFactor(double* lhs, const double* rhs, double factor) const
+	{
+		for(size_t i=0; i!=_imageSize; ++i)
+			lhs[i] += rhs[i] * factor;
+	}
+	
+	void multiply(double* image, double fact) const
+	{
+		if(fact != 1.0)
+		{
+			for(size_t i=0; i!=_imageSize; ++i)
+				image[i] *= fact;
+		}
+	}
+	
+	void initializeIndices()
+	{
+		for(size_t i=0; i!=_imagingTable.EntryCount(); ++i)
+		{
+			_tableIndexToImageIndex.insert(
+				std::make_pair(_imagingTable[i].index, i));
+		}
+		for(size_t sqIndex = 0; sqIndex!=_channelsInDeconvolution; ++sqIndex)
+		{
+			ImagingTable subTable = _imagingTable.GetSquaredGroup(sqIndex);
+			for(size_t eIndex = 0; eIndex!=subTable.EntryCount(); ++eIndex)
 			{
-				return values[i/SingleImageSetType::StaticImageCount()].GetValue(i%SingleImageSetType::StaticImageCount());
+				const ImagingTableEntry& entry = subTable[eIndex];
+				size_t imageIndex = _tableIndexToImageIndex.find(entry.index)->second;
+				_imageIndexToPSFIndex[imageIndex] = sqIndex;
 			}
-			static Value Zero() { return Value(); }
-		};
-		
-		MultiImageSet(size_t imageSize, MultiImageSet& prototype)
+		}
+	}
+	
+	void copySmallerPart(const double* input, double* output, size_t x1, size_t y1, size_t x2, size_t y2, size_t oldWidth) const
+	{
+		size_t newWidth = x2 - x1;
+		for(size_t y=y1; y!=y2; ++y)
 		{
-			for(size_t i=0; i!=prototype._sets.size(); ++i)
+			const double* oldPtr = &input[y*oldWidth];
+			double* newPtr = &output[(y-y1)*newWidth];
+			for(size_t x=x1; x!=x2; ++x)
 			{
-				_sets.push_back(new SingleImageSetType(imageSize, *prototype.Allocator()));
+				newPtr[x - x1] = oldPtr[x];
 			}
 		}
-		
-		MultiImageSet(size_t imageSize, size_t count, ImageBufferAllocator& allocator)
-		{
-			for(size_t i=0; i!=count; ++i)
-			{
-				_sets.push_back(new SingleImageSetType(imageSize, allocator));
-			}
-		}
-		
-		MultiImageSet(DynamicSet& source, size_t count, ImageBufferAllocator& allocator)
-		{
-			size_t imgIndex = 0;
-			for(size_t i=0; i!=count; ++i)
-			{
-				SingleImageSetType* img = new SingleImageSetType(source, imgIndex, allocator);
-				size_t imagesInGroup = img->ImageCount();
-				imgIndex += imagesInGroup;
-				_sets.push_back(img);
-			}
-		}
-		
-		~MultiImageSet()
-		{
-			for(typename std::vector<SingleImageSetType*>::const_iterator i=_sets.begin(); i!=_sets.end(); ++i)
-			{
-				delete *i;
-			}
-		}
-		
-		void Transfer(DynamicSet& destination)
-		{
-			size_t imgIndex = 0;
-			for(size_t i=0; i!=_sets.size(); ++i)
-			{
-				size_t imagesInGroup = _sets[i]->ImageCount();
-				_sets[i]->Transfer(destination, imgIndex);
-				imgIndex += imagesInGroup;
-			}
-		}
-		
-		void Load(CachedImageSet& set, PolarizationEnum polarization, size_t freqIndex)
-		{
-			_sets[freqIndex]->Load(set, polarization, freqIndex);
-		}
-		
-		void Load(CachedImageSet& set, const std::set<PolarizationEnum>& polarizations, size_t i)
-		{
-			_sets[i]->Load(set, polarizations, i);
-		}
-		
-		void Store(CachedImageSet& set, PolarizationEnum polarization, size_t freqIndex)
-		{
-			_sets[freqIndex]->Store(set, polarization, freqIndex);
-		}
-		
-		void Store(CachedImageSet& set, const std::set<PolarizationEnum>& polarizations, size_t i) const
-		{
-			_sets[i]->Store(set, polarizations, i);
-		}
-		
-		double JoinedValue(size_t index) const
-		{
-			double val = 0.0;
-			for(typename std::vector<SingleImageSetType*>::const_iterator i=_sets.begin(); i!=_sets.end(); ++i)
-			{
-				val += (*i)->JoinedValueNormalized(index);
-			}
-			return val;
-		}
-		
-		double JoinedValueNormalized(size_t index) const
-		{
-			return JoinedValue(index) / _sets.size();
-		}
-		
-		double AbsJoinedValue(size_t index) const
-		{
-			return std::fabs(JoinedValue(index));
-		}
-		
-		bool IsComponentNegative(size_t index) const
-		{
-			for(typename std::vector<SingleImageSetType*>::const_iterator i=_sets.begin(); i!=_sets.end(); ++i)
-			{
-				if((*i)->IsComponentNegative(index)) return true;
-			}
-			return false;
-		}
-		
-		void AddComponent(size_t index, const double* values)
-		{
-			size_t vi = 0;
-			for(size_t i=0; i!=_sets.size(); ++i)
-			{
-				_sets[i]->AddComponent(index, &values[vi]);
-				vi += _sets[i]->ImageCount();
-			}
-		}
-		
-		Value Get(const size_t index)
-		{
-			Value v;
-			v.values.resize(_sets.size());
-			for(size_t i=0; i!=_sets.size(); ++i)
-				v.values[i] = _sets[i]->Get(index);
-			return v;
-		}
-		
-		size_t ImageCount() const { return SingleImageSetType::StaticImageCount() * _sets.size(); }
-		
-		double* GetImage(size_t imageIndex)
-		{
-			return _sets[imageIndex/SingleImageSetType::StaticImageCount()]->GetImage(imageIndex%SingleImageSetType::StaticImageCount());
-		}
-		
-		double* GetImage(size_t polIndex, size_t freqIndex)
-		{
-			return _sets[freqIndex]->GetImage(polIndex);
-		}
-		
-		static size_t PSFIndex(size_t imageIndex)
-		{
-			return imageIndex/SingleImageSetType::StaticImageCount();
-		}
-		ImageBufferAllocator* Allocator()
-		{ 
-			return _sets.front()->Allocator();
-		}
-	private:
-		std::vector<SingleImageSetType*> _sets;
-	};	
-}
+	}
+	
+	void directStore(class CachedImageSet& imageSet);
+	
+	void getSquareIntegratedWithNormalChannels(double* dest, double* scratch) const;
+	
+	void getSquareIntegratedWithSquaredChannels(double* dest) const;
+	
+	void getLinearIntegratedWithNormalChannels(double* dest) const;
+	
+	ao::uvector<double*> _images;
+	size_t _imageSize, _channelsInDeconvolution;
+	bool _squareJoinedChannels;
+	const ImagingTable& _imagingTable;
+	std::map<size_t, size_t> _tableIndexToImageIndex;
+	ao::uvector<size_t> _imageIndexToPSFIndex;
+	ImageBufferAllocator& _allocator;
+};
 
 #endif
