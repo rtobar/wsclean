@@ -1,25 +1,28 @@
-#ifndef DYNAMIC_JOINED_CLEAN_H
-#define DYNAMIC_JOINED_CLEAN_H
+#ifndef GENERIC_CLEAN_H
+#define GENERIC_CLEAN_H
 
 #include "deconvolutionalgorithm.h"
-#include "dynamicset.h"
+#include "imageset.h"
 #include "simpleclean.h"
 
 #include "../uvector.h"
 
-namespace ao {
-	template<typename T> class lane;
-}
-
-class DynamicJoinedClean : public UntypedDeconvolutionAlgorithm
+/**
+ * This class implements a generalized version of Högbom clean. It performs a single-channel
+ * or joined cleaning, depending on the number of images provided. It can use the Clark optimization
+ * to speed up the cleaning. When multiple frequencies are provided, it can perform spectral fitting.
+ */
+class GenericClean : public DeconvolutionAlgorithm
 {
 public:
-	DynamicJoinedClean(class ImageBufferAllocator& allocator);
+	explicit GenericClean(class ImageBufferAllocator& allocator, bool useClarkOptimization);
 	
-	virtual void ExecuteMajorIteration(DynamicSet& dirtySet, DynamicSet& modelSet, const ao::uvector<const double*>& psfs, size_t width, size_t height, bool& reachedMajorThreshold);
+	virtual void ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& modelSet, const ao::uvector<const double*>& psfs, size_t width, size_t height, bool& reachedMajorThreshold) final override;
 	
 private:
-	size_t _width, _height;
+	size_t _width, _height, _convolutionWidth, _convolutionHeight;
+	double _convolutionPadding;
+	bool _useClarkOptimization;
 	
 	double findPeak(const double *image, size_t &x, size_t &y);
 	

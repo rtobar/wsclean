@@ -8,7 +8,7 @@
 #include "../modelrenderer.h"
 #include "../threadpool.h"
 
-#include "../deconvolution/dynamicset.h"
+#include "../deconvolution/imageset.h"
 #include "../image.h"
 
 #include <algorithm>
@@ -569,7 +569,7 @@ void IUWTDeconvolutionAlgorithm::constrainedPSFConvolve(double* image, const dou
 	FFTConvolver::ConvolveSameSize(image, kernel.data(), width, height);
 }
 
-bool IUWTDeconvolutionAlgorithm::findAndDeconvolveStructure(IUWTDecomposition& iuwt, ao::uvector<double>& dirty, const ao::uvector<double>& psf, const ao::uvector<double>& psfKernel, ao::uvector<double>& scratch, DynamicSet& structureModel, size_t curEndScale, size_t curMinScale, double gain, std::vector<IUWTDeconvolutionAlgorithm::ValComponent>& maxComponents)
+bool IUWTDeconvolutionAlgorithm::findAndDeconvolveStructure(IUWTDecomposition& iuwt, ao::uvector<double>& dirty, const ao::uvector<double>& psf, const ao::uvector<double>& psfKernel, ao::uvector<double>& scratch, ImageSet& structureModel, size_t curEndScale, size_t curMinScale, double gain, std::vector<IUWTDeconvolutionAlgorithm::ValComponent>& maxComponents)
 {
 	iuwt.Decompose(*_threadPool, dirty.data(), scratch.data(), false);
 	ao::uvector<double> thresholds(curEndScale);
@@ -651,7 +651,7 @@ bool IUWTDeconvolutionAlgorithm::findAndDeconvolveStructure(IUWTDecomposition& i
 	return fillAndDeconvolveStructure(iuwt, dirty, structureModel, scratch, psf, psfKernel, curEndScale, curMinScale, _width, _height, thresholds, maxComp, true, _mask);
 }
 
-bool IUWTDeconvolutionAlgorithm::fillAndDeconvolveStructure(IUWTDecomposition& iuwt, ao::uvector<double>& dirty, DynamicSet& structureModelFull, ao::uvector<double>& scratch, const ao::uvector<double>& psf, const ao::uvector<double>& psfKernel, size_t curEndScale, size_t curMinScale, size_t width, size_t height, const ao::uvector<double>& thresholds, const ImageAnalysis::Component& maxComp, bool allowTrimming, const bool* priorMask)
+bool IUWTDeconvolutionAlgorithm::fillAndDeconvolveStructure(IUWTDecomposition& iuwt, ao::uvector<double>& dirty, ImageSet& structureModelFull, ao::uvector<double>& scratch, const ao::uvector<double>& psf, const ao::uvector<double>& psfKernel, size_t curEndScale, size_t curMinScale, size_t width, size_t height, const ao::uvector<double>& thresholds, const ImageAnalysis::Component& maxComp, bool allowTrimming, const bool* priorMask)
 {
 	IUWTMask mask(curEndScale, width, height);
 	size_t areaSize;
@@ -689,7 +689,7 @@ bool IUWTDeconvolutionAlgorithm::fillAndDeconvolveStructure(IUWTDecomposition& i
 		}
 		std::unique_ptr<IUWTDecomposition> trimmedIUWT(iuwt.CreateTrimmed(curEndScale, x1, y1, x2, y2));
 		
-		std::unique_ptr<DynamicSet> trimmedStructureModel(structureModelFull.CreateTrimmed(x1, y1, x2, y2, width));
+		std::unique_ptr<ImageSet> trimmedStructureModel(structureModelFull.CreateTrimmed(x1, y1, x2, y2, width));
 		
 		ao::uvector<bool> trimmedPriorMask;
 		bool* trimmedPriorMaskPtr;
@@ -755,7 +755,7 @@ bool IUWTDeconvolutionAlgorithm::fillAndDeconvolveStructure(IUWTDecomposition& i
 	}
 }
 
-void IUWTDeconvolutionAlgorithm::performSubImageFitAll(IUWTDecomposition& iuwt, const IUWTMask& mask, const ao::uvector<double>& structureModel, ao::uvector<double>& scratchA, ao::uvector<double>& scratchB, const ImageAnalysis::Component& maxComp, DynamicSet& fittedModel, const double* psf, const ao::uvector<double>& dirty)
+void IUWTDeconvolutionAlgorithm::performSubImageFitAll(IUWTDecomposition& iuwt, const IUWTMask& mask, const ao::uvector<double>& structureModel, ao::uvector<double>& scratchA, ao::uvector<double>& scratchB, const ImageAnalysis::Component& maxComp, ImageSet& fittedModel, const double* psf, const ao::uvector<double>& dirty)
 {
 	size_t width = iuwt.Width(), height = iuwt.Height();
 	
@@ -905,7 +905,7 @@ double IUWTDeconvolutionAlgorithm::performSubImageComponentFit(IUWTDecomposition
 		return dirtySum / modelSum;
 }
 
-void IUWTDeconvolutionAlgorithm::PerformMajorIteration(size_t& iterCounter, size_t nIter, DynamicSet& modelSet, DynamicSet& dirtySet, const ao::uvector<const double*>& psfs, bool& reachedMajorThreshold)
+void IUWTDeconvolutionAlgorithm::PerformMajorIteration(size_t& iterCounter, size_t nIter, ImageSet& modelSet, ImageSet& dirtySet, const ao::uvector<const double*>& psfs, bool& reachedMajorThreshold)
 {
 	FFTWMultiThreadEnabler fftwThreadsEnabled;
 	std::unique_ptr<ThreadPool> threadPool(new ThreadPool());
@@ -950,7 +950,7 @@ void IUWTDeconvolutionAlgorithm::PerformMajorIteration(size_t& iterCounter, size
 		measureRMSPerScale(psf.data(), convolvedPSF.data(), scratch.data(), maxScale, _psfResponse);
 	}
 	
-	DynamicSet structureModel(&modelSet.Table(), dirtySet.Allocator(), modelSet.ChannelsInDeconvolution(), modelSet.SquareJoinedChannels(), _width, _height);
+	ImageSet structureModel(&modelSet.Table(), dirtySet.Allocator(), modelSet.ChannelsInDeconvolution(), modelSet.SquareJoinedChannels(), _width, _height);
 	
 	std::unique_ptr<IUWTDecomposition> iuwt(new IUWTDecomposition(curEndScale, _width, _height));
 	

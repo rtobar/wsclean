@@ -96,6 +96,9 @@ public:
 	}
 	
 private:
+	lane_read_buffer(const lane_read_buffer&) = delete;
+	lane_read_buffer& operator=(const lane_read_buffer&) = delete;
+
 	Tp* _buffer;
 	size_t _buffer_size, _buffer_pos, _buffer_fill_count;
 	ao::lane<Tp>* _lane;

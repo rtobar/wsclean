@@ -12,7 +12,8 @@ IdgMsGridder::IdgMsGridder() :
 	_kernelSize(32),
 	_inversionLane(1024),
 	_predictionCalcLane(1024),
-	_predictionWriteLane(1024)
+	_predictionWriteLane(1024),
+	_outputProvider(nullptr)
 { }
 
 IdgMsGridder::~IdgMsGridder()
@@ -207,7 +208,7 @@ void IdgMsGridder::Predict(double* real)
 		_grid.resize(width * height * 4);
 		
 		// use a temporary gridder to transform the grid
-		idg::GridderPlan* iface = new idg::GridderPlan(); // TODO;
+		std::unique_ptr<idg::GridderPlan> iface( new idg::GridderPlan() ); // TODO;
 		iface->set_grid(4, height, width, _grid.data());
 		iface->set_spheroidal(_kernelSize, _kernel.data());
 		iface->transform_grid();

@@ -1,10 +1,10 @@
-#include "dynamicset.h"
+#include "imageset.h"
 #include "spectralfitter.h"
 
 #include "../wsclean/cachedimageset.h"
 #include "../wsclean/logger.h"
 
-void DynamicSet::LoadAndAverage(CachedImageSet& imageSet)
+void ImageSet::LoadAndAverage(CachedImageSet& imageSet)
 {
 	for(size_t i=0; i!=_images.size(); ++i)
 		assign(_images[i], 0.0);
@@ -39,7 +39,7 @@ void DynamicSet::LoadAndAverage(CachedImageSet& imageSet)
 		multiply(_images[i], 1.0/double(weights[i]));
 }
 
-void DynamicSet::LoadAndAveragePSFs(CachedImageSet& psfSet, vector<ao::uvector<double>>& psfImages, PolarizationEnum psfPolarization)
+void ImageSet::LoadAndAveragePSFs(CachedImageSet& psfSet, vector<ao::uvector<double>>& psfImages, PolarizationEnum psfPolarization)
 {
 	for(size_t chIndex=0; chIndex!=_channelsInDeconvolution; ++chIndex)
 		psfImages[chIndex].assign(_imageSize, 0.0);
@@ -62,7 +62,7 @@ void DynamicSet::LoadAndAveragePSFs(CachedImageSet& psfSet, vector<ao::uvector<d
 		multiply(psfImages[chIndex].data(), 1.0/double(weights[chIndex]));
 }
 
-void DynamicSet::InterpolateAndStore(CachedImageSet& imageSet, const SpectralFitter& fitter)
+void ImageSet::InterpolateAndStore(CachedImageSet& imageSet, const SpectralFitter& fitter)
 {
 	if(_channelsInDeconvolution == _imagingTable.SquaredGroupCount())
 	{
@@ -84,7 +84,7 @@ void DynamicSet::InterpolateAndStore(CachedImageSet& imageSet, const SpectralFit
 		ao::uvector<double> termsPixel(nTerms);
 		for(size_t px=0; px!=_imageSize; ++px)
 		{
-			double isZero = true;
+			bool isZero = true;
 			for(size_t s=0; s!=_images.size(); ++s)
 			{
 				double value = _images[s][px];
@@ -128,7 +128,7 @@ void DynamicSet::InterpolateAndStore(CachedImageSet& imageSet, const SpectralFit
 	}
 }
 
-void DynamicSet::AssignAndStore(CachedImageSet& imageSet)
+void ImageSet::AssignAndStore(CachedImageSet& imageSet)
 {
 	if(_channelsInDeconvolution == _imagingTable.SquaredGroupCount())
 	{
@@ -158,7 +158,7 @@ void DynamicSet::AssignAndStore(CachedImageSet& imageSet)
 	}
 }
 
-void DynamicSet::directStore(CachedImageSet& imageSet)
+void ImageSet::directStore(CachedImageSet& imageSet)
 {
 	size_t imgIndex = 0;
 	for(size_t i=0; i!=_imagingTable.EntryCount(); ++i)
@@ -172,16 +172,18 @@ void DynamicSet::directStore(CachedImageSet& imageSet)
 	}
 }
 
-void DynamicSet::getSquareIntegratedWithNormalChannels(double* dest, double* scratch) const
+void ImageSet::getSquareIntegratedWithNormalChannels(double* dest, double* scratch) const
 {
-	for(size_t sqIndex = 0; sqIndex!=_channelsInDeconvolution; ++sqIndex)
+	if(_channelsInDeconvolution == 1)
 	{
-		ImagingTable subTable = _imagingTable.GetSquaredGroup(sqIndex);
+		// In case only one frequency channel is used, we do not have to use 'scratch',
+		// which saves copying and normalizing the data.
+		ImagingTable subTable = _imagingTable.GetSquaredGroup(0);
 		if(subTable.EntryCount() == 1)
 		{
 			const ImagingTableEntry& entry = subTable[0];
 			size_t imageIndex = _tableIndexToImageIndex.find(entry.index)->second;
-			assign(scratch, _images[imageIndex]);
+			assign(dest, _images[imageIndex]);
 		}
 		else {
 			for(size_t eIndex = 0; eIndex!=subTable.EntryCount(); ++eIndex)
@@ -190,28 +192,56 @@ void DynamicSet::getSquareIntegratedWithNormalChannels(double* dest, double* scr
 				size_t imageIndex = _tableIndexToImageIndex.find(entry.index)->second;
 				if(eIndex == 0)
 				{
-					assign(scratch, _images[0]);
-					square(scratch);
+					assign(dest, _images[0]);
+					square(dest);
 				}
 				else {
-					addSquared(scratch, _images[imageIndex]);
+					addSquared(dest, _images[imageIndex]);
 				}
 			}
-			squareRoot(scratch);
+			squareRoot(dest);
 		}
-		
-		if(sqIndex == 0)
-			assign(dest, scratch);
-		else
-			add(dest, scratch);
 	}
-	if(_channelsInDeconvolution > 0.0)
-		multiply(dest, 1.0/_channelsInDeconvolution);
-	else
-		assign(dest, 0.0);
+	else {
+		for(size_t sqIndex = 0; sqIndex!=_channelsInDeconvolution; ++sqIndex)
+		{
+			ImagingTable subTable = _imagingTable.GetSquaredGroup(sqIndex);
+			if(subTable.EntryCount() == 1)
+			{
+				const ImagingTableEntry& entry = subTable[0];
+				size_t imageIndex = _tableIndexToImageIndex.find(entry.index)->second;
+				assign(scratch, _images[imageIndex]);
+			}
+			else {
+				for(size_t eIndex = 0; eIndex!=subTable.EntryCount(); ++eIndex)
+				{
+					const ImagingTableEntry& entry = subTable[eIndex];
+					size_t imageIndex = _tableIndexToImageIndex.find(entry.index)->second;
+					if(eIndex == 0)
+					{
+						assign(scratch, _images[0]);
+						square(scratch);
+					}
+					else {
+						addSquared(scratch, _images[imageIndex]);
+					}
+				}
+				squareRoot(scratch);
+			}
+			
+			if(sqIndex == 0)
+				assign(dest, scratch);
+			else
+				add(dest, scratch);
+		}
+		if(_channelsInDeconvolution > 0)
+			multiply(dest, 1.0/_channelsInDeconvolution);
+		else
+			assign(dest, 0.0);
+	}
 }
 
-void DynamicSet::getSquareIntegratedWithSquaredChannels(double* dest) const
+void ImageSet::getSquareIntegratedWithSquaredChannels(double* dest) const
 {
 	size_t addIndex = 0;
 	for(size_t sqIndex = 0; sqIndex!=_channelsInDeconvolution; ++sqIndex)
@@ -237,7 +267,7 @@ void DynamicSet::getSquareIntegratedWithSquaredChannels(double* dest) const
 	squareRoot(dest);
 }
 
-void DynamicSet::getLinearIntegratedWithNormalChannels(double* dest) const
+void ImageSet::getLinearIntegratedWithNormalChannels(double* dest) const
 {
 	size_t addIndex = 0;
 	for(size_t sqIndex = 0; sqIndex!=_channelsInDeconvolution; ++sqIndex)
@@ -254,8 +284,11 @@ void DynamicSet::getLinearIntegratedWithNormalChannels(double* dest) const
 			++addIndex;
 		}
 	}
-	if(_channelsInDeconvolution > 0)
-		multiply(dest, 1.0/double(_channelsInDeconvolution));
-	else
-		assign(dest, 0.0);
+	if(_channelsInDeconvolution != 1)
+	{
+		if(_channelsInDeconvolution > 0)
+			multiply(dest, 1.0/double(_channelsInDeconvolution));
+		else
+			assign(dest, 0.0);
+	}
 }

@@ -6,7 +6,7 @@
 class CasaMaskReader
 {
 public:
-	CasaMaskReader(const std::string& path);
+	explicit CasaMaskReader(const std::string& path);
 	
 	void Read(bool* mask);
 	

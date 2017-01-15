@@ -18,7 +18,7 @@
 class LBeamImageMaker
 {
 public:
-	LBeamImageMaker(const class ImagingTableEntry* tableEntry, class ImageBufferAllocator* allocator) :
+	LBeamImageMaker(const ImagingTableEntry* tableEntry, ImageBufferAllocator* allocator) :
 	_tableEntry(tableEntry), _allocator(allocator),
 	_undersample(8), _secondsBeforeBeamUpdate(1800),
 	_useDifferentialBeam(false)
@@ -58,7 +58,7 @@ private:
 	class WeightMatrix
 	{
 	public:
-		WeightMatrix(size_t nAntenna) : _nAntenna(nAntenna), _weights(nAntenna*nAntenna, 0)
+		explicit WeightMatrix(size_t nAntenna) : _nAntenna(nAntenna), _weights(nAntenna*nAntenna, 0)
 		{ }
 		double& Value(size_t a1, size_t a2)
 		{
@@ -97,7 +97,7 @@ private:
 		const MSSelection* selection;
 	};
 	
-	const class ImagingTableEntry* _tableEntry;
+	const ImagingTableEntry* _tableEntry;
 	std::vector<MSProviderInfo> _msProviders;
 	
 	const class ImageWeightCache* _imageWeightCache;

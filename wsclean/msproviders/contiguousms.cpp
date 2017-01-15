@@ -3,7 +3,7 @@
 #include <casacore/measures/Measures/MEpoch.h>
 #include <casacore/measures/TableMeasures/ScalarMeasColumn.h>
 
-ContiguousMS::ContiguousMS(const string& msPath, const std::string& dataColumnName, MSSelection selection, PolarizationEnum polOut, size_t dataDescId, bool includeModel) :
+ContiguousMS::ContiguousMS(const string& msPath, const std::string& dataColumnName, const MSSelection& selection, PolarizationEnum polOut, size_t dataDescId, bool includeModel) :
 	_timestep(0),
 	_time(0.0),
 	_dataDescId(dataDescId),

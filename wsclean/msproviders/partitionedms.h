@@ -82,7 +82,7 @@ public:
 			++(_data->_referenceCount);
 		}
 		~Handle() { decrease(); }
-		void operator=(const Handle& handle)
+		Handle operator=(const Handle& handle)
 		{
 			if(handle._data != _data)
 			{
@@ -90,6 +90,7 @@ public:
 				_data = handle._data;
 				++(_data->_referenceCount);
 			}
+			return *this;
 		}
 	private:
 		struct HandleData

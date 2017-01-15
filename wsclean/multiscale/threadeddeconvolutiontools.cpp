@@ -1,6 +1,9 @@
 #include "threadeddeconvolutiontools.h"
 #include "multiscaletransforms.h"
+
 #include "../deconvolution/simpleclean.h"
+
+#include "../wsclean/imagebufferallocator.h"
 
 ThreadedDeconvolutionTools::ThreadedDeconvolutionTools(size_t threadCount) :
 	_taskLanes(threadCount),
@@ -226,15 +229,20 @@ void ThreadedDeconvolutionTools::FindMultiScalePeak(MultiScaleTransforms* msTran
 ThreadedDeconvolutionTools::ThreadResult* ThreadedDeconvolutionTools::FindMultiScalePeakTask::operator()()
 {
 	msTransforms->Transform(image, scratch, scale);
-	size_t width = msTransforms->Width(), height = msTransforms->Height();
+	const size_t
+		width = msTransforms->Width(),
+		height = msTransforms->Height(),
+		scaleBorder = size_t(ceil(scale*0.5)),
+		horBorderSize = std::max<size_t>(round(width * borderRatio), scaleBorder),
+		vertBorderSize = std::max<size_t>(round(height * borderRatio), scaleBorder);
 	FindMultiScalePeakResult* result = new FindMultiScalePeakResult();
 	if(calculateRMS)
 		result->rms = RMS(image, width*height);
 	else
 		result->rms=-1.0;
 	if(mask == 0)
-		result->value = SimpleClean::FindPeak(image, width, height, result->x, result->y, allowNegativeComponents, 0, height, borderRatio);
+		result->value = SimpleClean::FindPeak(image, width, height, result->x, result->y, allowNegativeComponents, 0, height, horBorderSize, vertBorderSize);
 	else
-		result->value = SimpleClean::FindPeak(image, width, height, result->x, result->y, allowNegativeComponents, 0, height, mask, borderRatio);
+		result->value = SimpleClean::FindPeakWithMask(image, width, height, result->x, result->y, allowNegativeComponents, 0, height, mask, horBorderSize, vertBorderSize);
 	return result;
 }

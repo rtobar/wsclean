@@ -116,10 +116,10 @@ struct LSDeconvolutionData
 				dpval = 0.0;*/
 			if(dpval < 0.0)
 				dpval = -dpval;
-			else if(dpval > 0.0)
-				dpval = dpval;
-			else
-				dpval = 0.0;
+			//else if(dpval > 0.0)
+			//	dpval = dpval;
+			//else
+			//	dpval = 0.0;
 			gsl_matrix_set(J, lsData.width*lsData.height, p, dpval * lsData.regularization);
 		}
 #ifdef OUTPUT_LSD_DEBUG_INFO
@@ -136,7 +136,7 @@ struct LSDeconvolutionData
 	}
 };
 
-LSDeconvolution::LSDeconvolution() : _data(new LSDeconvolutionData())
+LSDeconvolution::LSDeconvolution() : _allocator(nullptr), _data(new LSDeconvolutionData())
 {
 }
 

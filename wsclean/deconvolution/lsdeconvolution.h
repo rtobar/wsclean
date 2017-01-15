@@ -7,20 +7,20 @@
 #include "../uvector.h"
 
 #include "deconvolutionalgorithm.h"
-#include "imageset.h"
+#include "dynamicset.h"
 
 struct LSDeconvolutionData;
 
-class LSDeconvolution : public TypedDeconvolutionAlgorithm<deconvolution::SingleImageSet>
+class LSDeconvolution : public UntypedDeconvolutionAlgorithm
 {
 	public:
 		LSDeconvolution();
 		~LSDeconvolution();
 		
-    virtual void ExecuteMajorIteration(ImageSet& dataImage, ImageSet& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedMajorThreshold)  
+    virtual void ExecuteMajorIteration(DynamicSet& dataImage, DynamicSet& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedMajorThreshold)
 		{
-      _allocator = dataImage.Allocator();
-			ExecuteMajorIteration(dataImage.GetImage(0), modelImage.GetImage(0), psfImages[0], width, height, reachedMajorThreshold);
+      _allocator = &dataImage.Allocator();
+			ExecuteMajorIteration(dataImage[0], modelImage[0], psfImages[0], width, height, reachedMajorThreshold);
 		}
 		
 		void ExecuteMajorIteration(double* dataImage, double* modelImage, const double* psfImage, size_t width, size_t height, bool& reachedMajorThreshold)

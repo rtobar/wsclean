@@ -3,6 +3,7 @@
 #include "../deconvolution/spectralfitter.h"
 
 #include "../fftconvolver.h"
+#include "../image.h"
 
 #include "../wsclean/logger.h"
 
@@ -28,7 +29,7 @@ size_t ClarkModel::GetMaxComponent(double* scratch, double& maxValue) const
 	return maxComponent;
 }
 
-void ClarkLoop::Run(DynamicSet& convolvedResidual, const std::vector<const double*>& doubleConvolvedPsfs)
+double ClarkLoop::Run(ImageSet& convolvedResidual, const ao::uvector<const double*>& doubleConvolvedPsfs)
 {
 	_clarkModel = ClarkModel(_width, _height);
 	
@@ -74,12 +75,13 @@ void ClarkLoop::Run(DynamicSet& convolvedResidual, const std::vector<const doubl
 		maxComponent = _clarkModel.GetMaxComponent(scratch.data(), maxValue, _allowNegativeComponents);
 		++_currentIteration;
 	}
+	return maxValue;
 }
 
-void ClarkModel::MakeSets(const DynamicSet& residualSet)
+void ClarkModel::MakeSets(const ImageSet& residualSet)
 {
-	_residual.reset(new DynamicSet(&residualSet.Table(), residualSet.Allocator(), residualSet.ChannelsInDeconvolution(), residualSet.SquareJoinedChannels(), size(), 1));
-	_model.reset(new DynamicSet(&residualSet.Table(), residualSet.Allocator(), residualSet.ChannelsInDeconvolution(), residualSet.SquareJoinedChannels(), size(), 1));
+	_residual.reset(new ImageSet(&residualSet.Table(), residualSet.Allocator(), residualSet.ChannelsInDeconvolution(), residualSet.SquareJoinedChannels(), size(), 1));
+	_model.reset(new ImageSet(&residualSet.Table(), residualSet.Allocator(), residualSet.ChannelsInDeconvolution(), residualSet.SquareJoinedChannels(), size(), 1));
 	for(size_t imgIndex=0; imgIndex!=_model->size(); ++imgIndex)
 	{
 		std::fill((*_model)[imgIndex], (*_model)[imgIndex]+size(), 0.0);
@@ -94,45 +96,47 @@ void ClarkModel::MakeSets(const DynamicSet& residualSet)
 	}
 }
 
-void ClarkLoop::findPeakPositions(DynamicSet& convolvedResidual)
+void ClarkLoop::findPeakPositions(ImageSet& convolvedResidual)
 {
 	ImageBufferAllocator::Ptr integratedScratch;
 	convolvedResidual.Allocator().Allocate(_width * _height, integratedScratch);
 	convolvedResidual.GetLinearIntegrated(integratedScratch.data());
 	
-	double* imagePtr = integratedScratch.data();
+	const size_t
+		xiStart = _horizontalBorder, xiEnd = std::max<long>(xiStart, _width - _horizontalBorder),
+		yiStart = _verticalBorder, yiEnd = std::max<long>(yiStart, _height - _verticalBorder);
+	
 	if(_mask)
 	{
-		const bool* maskPtr = _mask;
-		for(size_t y=0; y!=_height; ++y)
+		for(size_t y=yiStart; y!=yiEnd; ++y)
 		{
-			for(size_t x=0; x!=_width; ++x)
+			const bool* maskPtr = _mask + y*_width;
+			double* imagePtr = integratedScratch.data() + y*_width;
+			for(size_t x=xiStart; x!=xiEnd; ++x)
 			{
 				double value;
 				if(_allowNegativeComponents)
-					value = fabs(*imagePtr);
+					value = fabs(imagePtr[x]);
 				else
-					value = *imagePtr;
-				if(value >= _threshold && *maskPtr)
+					value = imagePtr[x];
+				if(value >= _threshold && maskPtr[x])
 					_clarkModel.AddPosition(x, y);
-				++imagePtr;
-				++maskPtr;
 			}
 		}
 	}
 	else {
-		for(size_t y=0; y!=_height; ++y)
+		for(size_t y=yiStart; y!=yiEnd; ++y)
 		{
-			for(size_t x=0; x!=_width; ++x)
+			double* imagePtr = integratedScratch.data() + y*_width;
+			for(size_t x=xiStart; x!=xiEnd; ++x)
 			{
 				double value;
 				if(_allowNegativeComponents)
-					value = fabs(*imagePtr);
+					value = fabs(imagePtr[x]);
 				else
-					value = *imagePtr;
+					value = imagePtr[x];
 				if(value >= _threshold)
 					_clarkModel.AddPosition(x, y);
-				++imagePtr;
 			}
 		}
 	}
@@ -148,15 +152,24 @@ void ClarkLoop::GetFullIndividualModel(size_t imageIndex, double* individualMode
 	}
 }
 
-void ClarkLoop::CorrectResidualDirty(double* scratchA, double* scratchB, size_t imageIndex, double* residual, const double* singleConvolvedPsf) const
+void ClarkLoop::CorrectResidualDirty(double* scratchA, double* scratchB, double* scratchC, size_t imageIndex, double* residual, const double* singleConvolvedPsf) const
 {
-	GetFullIndividualModel(imageIndex, scratchA);
+	// Get padded kernel in scratchB
+	Image::Untrim(scratchA, _untrimmedWidth, _untrimmedHeight, singleConvolvedPsf, _width, _height);
+	FFTConvolver::PrepareKernel(scratchB, scratchA, _untrimmedWidth, _untrimmedHeight);
 	
-	FFTConvolver::PrepareKernel(scratchB, singleConvolvedPsf, _width, _height);
-	FFTConvolver::ConvolveSameSize(scratchA, scratchB, _width, _height);
+	// Get padded model image in scratchA
+	GetFullIndividualModel(imageIndex, scratchC);
+	Image::Untrim(scratchA, _untrimmedWidth, _untrimmedHeight, scratchC, _width, _height);
+	
+	// Convolve and store in scratchA
+	FFTConvolver::ConvolveSameSize(scratchA, scratchB, _untrimmedWidth, _untrimmedHeight);
+	
+	//Trim the result into scratchC
+	Image::Trim(scratchC, _width, _height, scratchA, _untrimmedWidth, _untrimmedHeight);
 	
 	for(size_t i=0; i!=_width*_height; ++i)
-		residual[i] -= scratchA[i];
+		residual[i] -= scratchC[i];
 }
 
 void ClarkLoop::UpdateAutoMask(bool* mask) const

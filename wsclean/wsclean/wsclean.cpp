@@ -25,7 +25,7 @@
 #include "../uvector.h"
 
 #include "../deconvolution/deconvolutionalgorithm.h"
-#include "../deconvolution/dynamicset.h"
+#include "../deconvolution/imageset.h"
 
 #include "../idg/idgmsgridder.h"
 

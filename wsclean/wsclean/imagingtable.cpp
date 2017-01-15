@@ -3,8 +3,11 @@
 #include <map>
 
 ImagingTableEntry::ImagingTableEntry() :
+	index(0),
 	lowestFrequency(0.0),
 	highestFrequency(0.0),
+	bandStartFrequency(0.0),
+	bandEndFrequency(0.0),
 	polarization(Polarization::StokesI),
 	outputChannelIndex(0),
 	outputIntervalIndex(0),

@@ -12,7 +12,7 @@
 class CachedImageSet
 {
 public:
-	CachedImageSet() : _allocator(0), _image(0)
+	CachedImageSet() : _polCount(0), _freqCount(0), _allocator(0), _image(0)
 	{
 	}
 	

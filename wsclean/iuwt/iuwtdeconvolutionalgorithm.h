@@ -13,7 +13,7 @@ class IUWTDeconvolutionAlgorithm
 public:
 	IUWTDeconvolutionAlgorithm(size_t width, size_t height, double gain, double mGain, double cleanBorder, bool allowNegativeComponents, const bool* mask, double absoluteThreshold, double thresholdSigmaLevel=4.0, double tolerance=0.75, bool useSNRTest=true);
 	
-	void PerformMajorIteration(size_t& iterCounter, size_t nIter, class DynamicSet& modelSet, class DynamicSet& dirtySet, const ao::uvector<const double*>& psfs, bool& reachedMajorThreshold);
+	void PerformMajorIteration(size_t& iterCounter, size_t nIter, class ImageSet& modelSet, class ImageSet& dirtySet, const ao::uvector<const double*>& psfs, bool& reachedMajorThreshold);
 	
 	void Subtract(double* dest, const ao::uvector<double>& rhs);
 	void Subtract(ao::uvector<double>& dest, const ao::uvector<double>& rhs)
@@ -93,11 +93,11 @@ private:
 	
 	bool runConjugateGradient(IUWTDecomposition& iuwt, const IUWTMask& mask, ao::uvector<double>& maskedDirty, ao::uvector<double>& structureModel, ao::uvector<double>& scratch, const ao::uvector<double>& psfKernel, size_t width, size_t height);
 	
-	bool fillAndDeconvolveStructure(IUWTDecomposition& iuwt, ao::uvector<double>& dirty, class DynamicSet& structureModelFull, ao::uvector<double>& scratch, const ao::uvector<double>& psf, const ao::uvector<double>& psfKernel, size_t curEndScale, size_t curMinScale, size_t width, size_t height, const ao::uvector<double>& thresholds, const ImageAnalysis::Component& maxComp, bool allowTrimming, const bool* priorMask);
+	bool fillAndDeconvolveStructure(IUWTDecomposition& iuwt, ao::uvector<double>& dirty, class ImageSet& structureModelFull, ao::uvector<double>& scratch, const ao::uvector<double>& psf, const ao::uvector<double>& psfKernel, size_t curEndScale, size_t curMinScale, size_t width, size_t height, const ao::uvector<double>& thresholds, const ImageAnalysis::Component& maxComp, bool allowTrimming, const bool* priorMask);
 	
-	bool findAndDeconvolveStructure(IUWTDecomposition& iuwt, ao::uvector<double>& dirty, const ao::uvector<double>& psf, const ao::uvector<double>& psfKernel, ao::uvector<double>& scratch, class DynamicSet& structureModelFull, size_t curEndScale, size_t curMinScale, double gain, std::vector<ValComponent>& maxComponents);
+	bool findAndDeconvolveStructure(IUWTDecomposition& iuwt, ao::uvector<double>& dirty, const ao::uvector<double>& psf, const ao::uvector<double>& psfKernel, ao::uvector<double>& scratch, class ImageSet& structureModelFull, size_t curEndScale, size_t curMinScale, double gain, std::vector<ValComponent>& maxComponents);
 	
-	void performSubImageFitAll(IUWTDecomposition& iuwt, const IUWTMask& mask, const ao::uvector<double>& structureModel, ao::uvector<double>& scratchA, ao::uvector<double>& scratchB, const ImageAnalysis::Component& maxComp, DynamicSet& fittedModel, const double* psf, const ao::uvector<double>& dirty);
+	void performSubImageFitAll(IUWTDecomposition& iuwt, const IUWTMask& mask, const ao::uvector<double>& structureModel, ao::uvector<double>& scratchA, ao::uvector<double>& scratchB, const ImageAnalysis::Component& maxComp, ImageSet& fittedModel, const double* psf, const ao::uvector<double>& dirty);
 	
 	void performSubImageFitSingle(IUWTDecomposition& iuwt, const IUWTMask& mask, const ao::uvector<double>& structureModel, ao::uvector<double>& scratchB, const ImageAnalysis::Component& maxComp, const double* psf, ao::uvector<double>& subDirty, double* fittedSubModel, ao::uvector<double>& correctionFactors);
 	
@@ -124,8 +124,8 @@ private:
 	FitsWriter _writer;
 	std::vector<ScaleResponse> _psfResponse;
 	bool _allowNegativeComponents, _useSNRTest;
-	class DynamicSet* _modelSet;
-	class DynamicSet* _dirtySet;
+	class ImageSet* _modelSet;
+	class ImageSet* _dirtySet;
 	ao::uvector<const double*> _psfs;
 	class ThreadPool *_threadPool;
 };

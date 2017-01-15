@@ -18,6 +18,8 @@ class DeconvolutionAlgorithm
 public:
 	virtual ~DeconvolutionAlgorithm() { }
 	
+	virtual void ExecuteMajorIteration(class ImageSet& dataImage, class ImageSet& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedMajorThreshold) = 0;
+	
 	void SetMaxNIter(size_t nIter) { _maxIter = nIter; }
 	
 	void SetThreshold(double threshold) { _threshold = threshold; }
@@ -108,29 +110,6 @@ protected:
 	const bool* _cleanMask;
 	
 	SpectralFitter _spectralFitter;
-};
-
-template<typename ImageSetType>
-class TypedDeconvolutionAlgorithm : public DeconvolutionAlgorithm
-{
-public:
-	typedef ImageSetType ImageSet;
-	
-	virtual ~TypedDeconvolutionAlgorithm() { }
-	
-	virtual void ExecuteMajorIteration(ImageSetType& dataImage, ImageSetType& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedStopGain) = 0;
-	
-private:
-};
-
-class UntypedDeconvolutionAlgorithm : public DeconvolutionAlgorithm
-{
-public:
-	virtual ~UntypedDeconvolutionAlgorithm() { }
-	
-	virtual void ExecuteMajorIteration(class DynamicSet& dataImage, class DynamicSet& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedMajorThreshold) = 0;
-	
-private:
 };
 
 #endif

@@ -8,12 +8,12 @@
 
 #include "../uvector.h"
 
-#include "../deconvolution/dynamicset.h"
+#include "../deconvolution/imageset.h"
 #include "../deconvolution/deconvolutionalgorithm.h"
 
 #include "../wsclean/imagebufferallocator.h"
 
-class MultiScaleAlgorithm : public UntypedDeconvolutionAlgorithm
+class MultiScaleAlgorithm : public DeconvolutionAlgorithm
 {
 public:
 	MultiScaleAlgorithm(class ImageBufferAllocator& allocator, double beamSize, double pixelScaleX, double pixelScaleY);
@@ -23,7 +23,7 @@ public:
 	
 	//void PerformMajorIteration(size_t& iterCounter, size_t nIter, DynamicSet& modelSet, DynamicSet& dirtySet, const ao::uvector<const double*>& psfs, bool& reachedMajorThreshold);
 	
-	virtual void ExecuteMajorIteration(DynamicSet& dataImage, DynamicSet& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedMajorThreshold);
+	virtual void ExecuteMajorIteration(ImageSet& dataImage, ImageSet& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedMajorThreshold);
 	
 	void SetAutoMaskMode(bool trackPerScaleMasks, bool usePerScaleMasks) {
 		_trackPerScaleMasks = trackPerScaleMasks;
@@ -34,7 +34,8 @@ public:
 	}
 private:
 	class ImageBufferAllocator& _allocator;
-	size_t _width, _height;
+	size_t _width, _height, _convolutionWidth, _convolutionHeight;
+	double _convolutionPadding;
 	double _beamSizeInPixels;
 	ThreadedDeconvolutionTools* _tools;
 	
@@ -68,13 +69,13 @@ private:
 
 	void initializeScaleInfo();
 	void convolvePSFs(std::unique_ptr<ImageBufferAllocator::Ptr[]>& convolvedPSFs, const double* psf, double* tmp, bool isIntegrated);
-	void findActiveScaleConvolvedMaxima(const DynamicSet& imageSet, double* integratedScratch, bool reportRMS);
+	void findActiveScaleConvolvedMaxima(const ImageSet& imageSet, double* integratedScratch, bool reportRMS);
 	void findSingleScaleMaximum(const double* convolvedImage, size_t scaleIndex);
 	void sortScalesOnMaxima(size_t& scaleWithPeak);
 	void activateScales(size_t scaleWithLastPeak);
-	void measureComponentValues(ao::uvector<double>& componentValues, size_t scaleIndex, DynamicSet& imageSet);
+	void measureComponentValues(ao::uvector<double>& componentValues, size_t scaleIndex, ImageSet& imageSet);
 	void addComponentToModel(double* model, size_t scaleWithPeak, double componentValue);
-	double findPeak(const double *image, size_t &x, size_t &y, size_t scaleIndex);
+	double findPeakScale0(const double *image, size_t &x, size_t &y, size_t scaleIndex);
 	
 	double* getConvolvedPSF(size_t psfIndex, size_t scaleIndex, const ao::uvector<const double*>& psfs, double* scratch, const std::unique_ptr<std::unique_ptr<ImageBufferAllocator::Ptr[]>[]>& convolvedPSFs);
 	

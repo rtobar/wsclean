@@ -29,7 +29,7 @@ public:
 #endif
 	};
 	
-	LBeamEvaluator(casacore::MeasurementSet& ms);
+	explicit LBeamEvaluator(casacore::MeasurementSet& ms);
 	~LBeamEvaluator();
 
 	void Evaluate(double ra, double dec, double frequency, size_t antennaIndex, MC2x2& beamValues);
@@ -49,11 +49,10 @@ public:
 private:
 	casacore::MeasurementSet _ms;
 	casacore::MEpoch _time;
-	double _timeAsDouble;
 	
 #ifdef HAVE_LOFAR_BEAM
 	std::vector<LOFAR::StationResponse::Station::Ptr> _stations;
-	double _subbandFrequency;
+	double _subbandFrequency, _timeAsDouble;
 	casacore::MDirection _delayDir, _tileBeamDir;
 	casacore::MPosition _arrayPos;
 	casacore::MeasFrame _frame;

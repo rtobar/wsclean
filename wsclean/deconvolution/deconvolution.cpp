@@ -1,15 +1,14 @@
 #include "deconvolution.h"
 
-#include "joinedclean.h"
 #include "simpleclean.h"
 #include "moresane.h"
-#include "fastmultiscaleclean.h"
 #include "iuwtdeconvolution.h"
-#include "dynamicjoinedclean.h"
+#include "genericclean.h"
 
 #include "../multiscale/multiscalealgorithm.h"
 
 #include "../casamaskreader.h"
+#include "../fitsreader.h"
 #include "../image.h"
 
 #include "../wsclean/imagingtable.h"
@@ -30,7 +29,7 @@ void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedM
 	Logger::Info << " == Cleaning (" << majorIterationNr << ") ==\n";
 	
 	_imageAllocator->FreeUnused();
-	DynamicSet
+	ImageSet
 		residualSet(&groupTable, *_imageAllocator, _settings.deconvolutionChannelCount, _settings.squaredJoins, _imgWidth, _imgHeight),
 		modelSet(&groupTable, *_imageAllocator, _settings.deconvolutionChannelCount, _settings.squaredJoins, _imgWidth, _imgHeight);
 		
@@ -42,13 +41,10 @@ void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedM
 	residualSet.GetLinearIntegrated(integrated.data());
 	double stddev = Image::StdDevFromMAD(integrated.data(), _imgWidth * _imgHeight);
 	Logger::Info << "Estimated standard deviation of background noise: " << stddev << " Jy\n";
-	if(_settings.autoDeconvolutionThreshold)
-	{
-		if(!_settings.autoMask || _autoMaskIsFinished)
-			_cleanAlgorithm->SetThreshold(std::max(stddev * _settings.autoDeconvolutionThresholdSigma, _settings.deconvolutionThreshold));
-		else
-			_cleanAlgorithm->SetThreshold(std::max(stddev * _settings.autoMaskSigma, _settings.deconvolutionThreshold));
-	}
+	if(_settings.autoDeconvolutionThreshold && (!_settings.autoMask || _autoMaskIsFinished))
+		_cleanAlgorithm->SetThreshold(std::max(stddev * _settings.autoDeconvolutionThresholdSigma, _settings.deconvolutionThreshold));
+	else if(_settings.autoMask && !_autoMaskIsFinished)
+		_cleanAlgorithm->SetThreshold(std::max(stddev * _settings.autoMaskSigma, _settings.deconvolutionThreshold));
 	integrated.reset();
 	
 	std::vector<ao::uvector<double>> psfVecs(groupTable.SquaredGroupCount());
@@ -58,97 +54,50 @@ void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedM
 	for(size_t i=0; i!=psfVecs.size(); ++i)
 		psfs[i] = psfVecs[i].data();
 	
-	if(_settings.useIUWTDeconvolution || _settings.useMultiscale || _settings.useMoreSaneDeconvolution || _settings.forceDynamicJoin || _settings.squaredJoins)
+	if(_settings.useMultiscale)
 	{
-		if(_settings.useMultiscale)
+		MultiScaleAlgorithm& algorithm = static_cast<MultiScaleAlgorithm&>(*_cleanAlgorithm.get());
+		if(_settings.autoMask)
 		{
-			MultiScaleAlgorithm *algorithm = static_cast<MultiScaleAlgorithm*>(_cleanAlgorithm.get());
-			if(_settings.autoMask)
-			{
-				if(_autoMaskIsFinished)
-					algorithm->SetAutoMaskMode(false, true);
-				else
-					algorithm->SetAutoMaskMode(true, false);
-			}
-			algorithm->SetUseFastSubMinorLoop(_settings.multiscaleFastSubMinorLoop);
+			if(_autoMaskIsFinished)
+				algorithm.SetAutoMaskMode(false, true);
+			else
+				algorithm.SetAutoMaskMode(true, false);
 		}
-		
-		UntypedDeconvolutionAlgorithm& algorithm =
-			static_cast<UntypedDeconvolutionAlgorithm&>(*_cleanAlgorithm);
-		algorithm.ExecuteMajorIteration(residualSet, modelSet, psfs, _imgWidth, _imgHeight, reachedMajorThreshold);
-		
-		if(_settings.useMultiscale)
-		{
-			if(!reachedMajorThreshold && _settings.autoMask && !_autoMaskIsFinished)
-			{
-				Logger::Info << "Auto-masking threshold reached; continuing next major iteration with deeper threshold and mask.\n";
-				_autoMaskIsFinished = true;
-				reachedMajorThreshold = true;
-			}
-		}
-	}
-	else if(_summedCount != 1)
-	{
-		if(_squaredCount == 4)
-			performJoinedPolFreqClean<4>(residualSet, modelSet, psfs, reachedMajorThreshold, majorIterationNr);
-		else if(_squaredCount == 2)
-			performJoinedPolFreqClean<2>(residualSet, modelSet, psfs, reachedMajorThreshold, majorIterationNr);
-		else // if(_squaredCount == 1)
-			performJoinedPolFreqClean<1>(residualSet, modelSet, psfs, reachedMajorThreshold, majorIterationNr);
-	}
-	else if(_squaredCount != 1) {
-		if(_squaredCount == 4)
-			performJoinedPolClean<4>(residualSet, modelSet, psfs, reachedMajorThreshold, majorIterationNr);
-		else // if(_squaredCount == 2)
-			performJoinedPolClean<2>(residualSet, modelSet, psfs, reachedMajorThreshold, majorIterationNr);
+		algorithm.SetUseFastSubMinorLoop(_settings.multiscaleFastSubMinorLoop);
 	}
 	else {
-		performSimpleClean(residualSet, modelSet, psfs, reachedMajorThreshold, majorIterationNr);
+		if(_settings.autoMask && _autoMaskIsFinished)
+		{
+			if(_autoMask.empty())
+			{
+				_autoMask.resize(_imgWidth * _imgHeight);
+				for(size_t imgIndex=0; imgIndex!=modelSet.size(); ++imgIndex)
+				{
+					const double* image = modelSet[imgIndex];
+					for(size_t i=0; i!=_imgWidth * _imgHeight; ++i)
+					{
+						_autoMask[i] = (image[i]==0.0) ? false : true;
+					}
+				}
+			}
+			_cleanAlgorithm->SetCleanMask(_autoMask.data());
+		}
+	}
+		
+	_cleanAlgorithm->ExecuteMajorIteration(residualSet, modelSet, psfs, _imgWidth, _imgHeight, reachedMajorThreshold);
+	
+	if(!reachedMajorThreshold && _settings.autoMask && !_autoMaskIsFinished)
+	{
+		Logger::Info << "Auto-masking threshold reached; continuing next major iteration with deeper threshold and mask.\n";
+		_autoMaskIsFinished = true;
+		reachedMajorThreshold = true;
 	}
 	
 	residualSet.AssignAndStore(*_residualImages);
 	
 	SpectralFitter fitter(_settings.spectralFittingMode, _settings.spectralFittingTerms);
 	modelSet.InterpolateAndStore(*_modelImages, _cleanAlgorithm->Fitter());
-}
-
-void Deconvolution::performSimpleClean(DynamicSet& residual, DynamicSet& model, const ao::uvector<const double*>& psfs, bool& reachedMajorThreshold, size_t majorIterationNr)
-{
-	deconvolution::SingleImageSet
-		residualImage(residual.Release(0), *_imageAllocator),
-		modelImage(model.Release(0), *_imageAllocator);
-		
-	TypedDeconvolutionAlgorithm<deconvolution::SingleImageSet>& tAlgorithm =
-		static_cast<TypedDeconvolutionAlgorithm<deconvolution::SingleImageSet>&>(*_cleanAlgorithm);
-	tAlgorithm.ExecuteMajorIteration(residualImage, modelImage, psfs, _imgWidth, _imgHeight, reachedMajorThreshold);
-	
-	residualImage.Transfer(residual);
-	modelImage.Transfer(model);
-}
-
-template<size_t PolCount>
-void Deconvolution::performJoinedPolClean(DynamicSet& residual, DynamicSet& model, const ao::uvector<const double*>& psfs, bool& reachedMajorThreshold, size_t majorIterationNr)
-{
-	typename JoinedClean<deconvolution::PolarizedImageSet<PolCount>>::ImageSet
-		modelSet(model, *_imageAllocator),
-		residualSet(residual, *_imageAllocator);
-		
-	static_cast<TypedDeconvolutionAlgorithm<deconvolution::PolarizedImageSet<PolCount>>&>(*_cleanAlgorithm).ExecuteMajorIteration(residualSet, modelSet, psfs, _imgWidth, _imgHeight, reachedMajorThreshold);
-	
-	modelSet.Transfer(model, 0);
-	residualSet.Transfer(residual, 0);
-}
-
-template<size_t PolCount>
-void Deconvolution::performJoinedPolFreqClean(DynamicSet& residual, DynamicSet& model, const ao::uvector<const double*>& psfs, bool& reachedMajorThreshold, size_t majorIterationNr)
-{
-	typename JoinedClean<deconvolution::MultiImageSet<deconvolution::PolarizedImageSet<PolCount>>>::ImageSet
-		modelSet(model, model.ChannelsInDeconvolution(), *_imageAllocator),
-		residualSet(residual, residual.ChannelsInDeconvolution(), *_imageAllocator);
-	static_cast<TypedDeconvolutionAlgorithm<deconvolution::MultiImageSet<deconvolution::PolarizedImageSet<PolCount>>>&>(*_cleanAlgorithm).ExecuteMajorIteration(residualSet, modelSet, psfs, _imgWidth, _imgHeight, reachedMajorThreshold);
-	
-	modelSet.Transfer(model);
-	residualSet.Transfer(residual);
 }
 
 void Deconvolution::FreeDeconvolutionAlgorithms()
@@ -195,74 +144,9 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 		MultiScaleAlgorithm *algorithm = static_cast<MultiScaleAlgorithm*>(_cleanAlgorithm.get());
 		algorithm->SetManualScaleList(_settings.multiscaleScaleList);
 	}
-	else if(_settings.forceDynamicJoin || _settings.squaredJoins)
+	else
 	{
-		_cleanAlgorithm.reset(new DynamicJoinedClean(*_imageAllocator));
-	}
-	else if(_squaredCount != 1)
-	{
-		if(_squaredCount != 2 && _squaredCount != 4)
-			throw std::runtime_error("Joined polarization cleaning was requested, but can't find a compatible set of 2 or 4 pols to clean");
-		bool hasXY = _polarizations.count(Polarization::XY)!=0;
-		bool hasYX = _polarizations.count(Polarization::YX)!=0;
-		if((hasXY && !hasYX) || (hasYX && !hasXY))
-			throw std::runtime_error("Cannot jointly clean polarization XY or YX without cleaning both.");
-			
-		if(_summedCount != 1)
-		{
-			if(_settings.useFastMultiscale)
-			{
-				if(_squaredCount == 4)
-				{
-					_cleanAlgorithm.reset(
-					new FastMultiScaleClean
-					<deconvolution::MultiImageSet
-					<deconvolution::PolarizedImageSet<4>>>(beamSize, pixelScaleX, pixelScaleY));
-				}
-				else {
-					_cleanAlgorithm.reset(
-					new FastMultiScaleClean
-					<deconvolution::MultiImageSet<deconvolution::PolarizedImageSet<2>>>(beamSize, pixelScaleX, pixelScaleY));
-				}
-			}
-			else {
-				if(_squaredCount == 4)
-					_cleanAlgorithm.reset(new JoinedClean<deconvolution::MultiImageSet<deconvolution::PolarizedImageSet<4>>>());
-				else
-					_cleanAlgorithm.reset(new JoinedClean<deconvolution::MultiImageSet<deconvolution::PolarizedImageSet<2>>>());
-			}
-		}
-		else {
-			if(_settings.useFastMultiscale)
-			{
-				if(_squaredCount == 4)
-					_cleanAlgorithm.reset(new FastMultiScaleClean<deconvolution::PolarizedImageSet<4>>(beamSize, pixelScaleX, pixelScaleY));
-				else
-					_cleanAlgorithm.reset(new FastMultiScaleClean<deconvolution::PolarizedImageSet<2>>(beamSize, pixelScaleX, pixelScaleY));
-			}
-			else
-			{
-				if(_squaredCount == 4)
-					_cleanAlgorithm.reset(new JoinedClean<deconvolution::PolarizedImageSet<4>>());
-				else
-					_cleanAlgorithm.reset(new JoinedClean<deconvolution::PolarizedImageSet<2>>());
-			}
-		}
-	}
-	else { // squaredCount == 1
-		if(_summedCount != 1)
-		{
-			if(_settings.useFastMultiscale)
-				_cleanAlgorithm.reset(new FastMultiScaleClean<deconvolution::MultiImageSet<deconvolution::SingleImageSet>>(beamSize, pixelScaleX, pixelScaleY));
-			else
-				_cleanAlgorithm.reset(new JoinedClean<deconvolution::MultiImageSet<deconvolution::SingleImageSet>>());
-		}
-		else {
-			if(_settings.useFastMultiscale)
-				_cleanAlgorithm.reset(new FastMultiScaleClean<deconvolution::SingleImageSet>(beamSize, pixelScaleX, pixelScaleY));
-			else
-				_cleanAlgorithm.reset(new SimpleClean());
-		}
+		_cleanAlgorithm.reset(new GenericClean(*_imageAllocator, _settings.useClarkOptimization));
 	}
 	
 	_cleanAlgorithm->SetMaxNIter(_settings.deconvolutionIterationCount);

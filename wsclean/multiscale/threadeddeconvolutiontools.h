@@ -11,7 +11,7 @@
 class ThreadedDeconvolutionTools
 {
 public:
-	ThreadedDeconvolutionTools(size_t threadCount);
+	explicit ThreadedDeconvolutionTools(size_t threadCount);
 	~ThreadedDeconvolutionTools();
 	
 	struct PeakData

@@ -4,7 +4,7 @@
 #include <cstring>
 #include <vector>
 
-#include "../deconvolution/dynamicset.h"
+#include "../deconvolution/imageset.h"
 
 /**
  * In multi-scale, a subminor Clark-optimized loop looks like this:
@@ -36,7 +36,7 @@ class ClarkModel
 {
 public:
 	ClarkModel(size_t width, size_t height) :
-	_width(width), _height(height)
+		_width(width), _height(height)
 	{ }
 	
 	void AddPosition(size_t x, size_t y)
@@ -44,13 +44,13 @@ public:
 	
 	size_t size() const { return _positions.size(); }
 	
-	void MakeSets(const DynamicSet& templateSet);
+	void MakeSets(const ImageSet& templateSet);
 	
-	DynamicSet& Residual() { return *_residual; }
-	const DynamicSet& Residual() const { return *_residual; }
+	ImageSet& Residual() { return *_residual; }
+	const ImageSet& Residual() const { return *_residual; }
 	
-	DynamicSet& Model() { return *_model; }
-	const DynamicSet& Model() const { return *_model; }
+	ImageSet& Model() { return *_model; }
+	const ImageSet& Model() const { return *_model; }
 	
 	size_t X(size_t index) const { return _positions[index].first; }
 	size_t Y(size_t index) const { return _positions[index].second; }
@@ -66,21 +66,23 @@ public:
 	}
 private:
 	std::vector<std::pair<size_t,size_t>> _positions;
-	std::unique_ptr<DynamicSet> _residual, _model;
+	std::unique_ptr<ImageSet> _residual, _model;
 	size_t _width, _height;
 };
 
 class ClarkLoop
 {
 public:
-	ClarkLoop(size_t width, size_t height) :
-	_width(width), _height(height),
-	_threshold(0.0), _gain(0.0),
-	_currentIteration(0), _maxIterations(0),
-	_allowNegativeComponents(true),
-	_mask(0), _fitter(0),
-	_clarkModel(width, height),
-	_fluxCleaned(0.0)
+	ClarkLoop(size_t width, size_t height, size_t convolutionWidth, size_t convolutionHeight) :
+		_width(width), _height(height),
+		_untrimmedWidth(convolutionWidth), _untrimmedHeight(convolutionHeight),
+		_threshold(0.0), _gain(0.0),
+		_horizontalBorder(0), _verticalBorder(0),
+		_currentIteration(0), _maxIterations(0),
+		_allowNegativeComponents(true),
+		_mask(0), _fitter(0),
+		_clarkModel(width, height),
+		_fluxCleaned(0.0)
 	{ }
 	
 	void SetThreshold(double threshold)
@@ -96,27 +98,38 @@ public:
 	{ _allowNegativeComponents = allowNegativeComponents; }
 	
 	void SetSpectralFitter(const SpectralFitter* fitter) { _fitter = fitter; }
+	
+	void SetCleanBorders(size_t horizontalBorder, size_t verticalBorder)
+	{ _horizontalBorder = horizontalBorder; _verticalBorder = verticalBorder; }
 
+	void SetMask(const bool* mask)
+	{ _mask = mask; }
+	
 	size_t CurrentIteration() const { return _currentIteration; }
 	
 	double FluxCleaned() const { return _fluxCleaned; }
 	
-	void SetMask(const bool* mask)
-	{ _mask = mask; }
+	double Run(ImageSet& convolvedResidual, const ao::uvector<const double*>& doubleConvolvedPsfs);
 	
-	void Run(DynamicSet& convolvedResidual, const std::vector<const double*>& doubleConvolvedPsfs);
-	
-	void CorrectResidualDirty(double* scratchA, double* scratchB, size_t imageIndex, double* residual, const double* singleConvolvedPsf) const;
+	/**
+	 * The produced model is convolved with the given psf, and the result is subtracted from the given residual image.
+	 * To be called after Run().
+	 * After this method, the residual will hold the result of the Clark loop run.
+	 * scratchA and scratchB need to be able to store the full padded image (_untrimmedWidth x _untrimmedHeight).
+	 * scratchC only needs to store the trimmed size (_width x _height).
+	 */
+	void CorrectResidualDirty(double* scratchA, double* scratchB, double* scratchC, size_t imageIndex, double* residual, const double* singleConvolvedPsf) const;
 	
 	void GetFullIndividualModel(size_t imageIndex, double* individualModelImg) const;
 	
 	void UpdateAutoMask(bool* mask) const;
 	
 private:
-	void findPeakPositions(DynamicSet& convolvedResidual);
+	void findPeakPositions(ImageSet& convolvedResidual);
 	
-	size_t _width, _height;
+	size_t _width, _height, _untrimmedWidth, _untrimmedHeight;
 	double _threshold, _gain;
+	size_t _horizontalBorder, _verticalBorder;
 	size_t _currentIteration, _maxIterations;
 	bool _allowNegativeComponents;
 	const bool* _mask;

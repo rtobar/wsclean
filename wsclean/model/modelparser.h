@@ -14,7 +14,7 @@
 class ModelParser : private Tokenizer
 {
 	public:
-		ModelParser()
+		ModelParser() : _fileVersion1_0(false)
 		{
 		}
 		

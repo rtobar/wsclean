@@ -32,7 +32,9 @@ private:
 			_weights(0),
 			_averagedDataCount(0),
 			_uvwWeight(0)
-		{ }
+		{
+			_uvw[0] = 0.0; _uvw[1] = 0.0; _uvw[2] = 0.0;
+		}
 		~AveragingBuffer()
 		{
 			delete[] _data;

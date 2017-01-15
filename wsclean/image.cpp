@@ -63,9 +63,10 @@ void Image::TrimBox(bool* output, size_t x1, size_t y1, size_t boxWidth, size_t 
 	}
 }
 
-// Extend an image with zeros, complement of Trim.
-// @param outWidth Should be >= inWidth.
-// @param outHeight Should be >= inHeight.
+/** Extend an image with zeros, complement of Trim.
+	* @param outWidth Should be &gt;= inWidth.
+	* @param outHeight Should be &gt;= inHeight.
+	*/
 void Image::Untrim(double* output, size_t outWidth, size_t outHeight, const double* input, size_t inWidth, size_t inHeight)
 {
 	size_t startX = (outWidth - inWidth) / 2;

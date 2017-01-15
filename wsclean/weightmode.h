@@ -9,7 +9,7 @@ class WeightMode
 public:
 	enum WeightingEnum { NaturalWeighted, UniformWeighted, BriggsWeighted };
 		
-	WeightMode(WeightingEnum mode) : _mode(mode), _briggsRobustness(0.0), _superWeight(1.0)
+	explicit WeightMode(WeightingEnum mode) : _mode(mode), _briggsRobustness(0.0), _superWeight(1.0)
 	{ }
 	
 	WeightMode(const WeightMode& source)

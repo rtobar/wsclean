@@ -61,6 +61,9 @@ void WSCleanSettings::Validate() const
 	if(forceReorder && forceNoReorder)
 		throw std::runtime_error("Can not both force reordering and force not reordering!");
 	
+	if(deconvolutionChannelCount != 0 && deconvolutionChannelCount != channelsOut && spectralFittingMode == NoSpectralFitting)
+		throw std::runtime_error("You have requested to deconvolve with a decreased number of channels (-deconvolution-channels), but you have not enabled spectral fitting. You should specify an interpolation function by enabling spectral fitting in order to interpolate the deconvolved channels back to the full number of channels. The most useful and common spectral fitting function is -fit-spectral-pol.");
+	
 	checkPolarizations();
 }
 

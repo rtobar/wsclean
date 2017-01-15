@@ -255,25 +255,6 @@ private:
 			}
 		}
 	}
-	
-	void squareBeam()
-	{
-		size_t size = _settings.trimmedImageWidth * _settings.trimmedImageHeight;
-		for(size_t j=0; j!=size; ++j)
-		{
-			std::complex<double> val[4];
-			val[0] = std::complex<double>(_beamImages[0][j], _beamImages[1][j]);
-			val[1] = std::complex<double>(_beamImages[2][j], _beamImages[3][j]);
-			val[2] = std::complex<double>(_beamImages[4][j], _beamImages[5][j]);
-			val[3] = std::complex<double>(_beamImages[6][j], _beamImages[7][j]);
-			std::complex<double> sq[4];
-			Matrix2x2::ATimesHermB(sq, val, val);
-			_beamImages[0][j] = sq[0].real(); _beamImages[1][j] = sq[0].imag();
-			_beamImages[2][j] = sq[1].real(); _beamImages[3][j] = sq[1].imag();
-			_beamImages[4][j] = sq[2].real(); _beamImages[5][j] = sq[2].imag();
-			_beamImages[6][j] = sq[3].real(); _beamImages[7][j] = sq[3].imag();
-		}
-	}
 };
 
 #endif

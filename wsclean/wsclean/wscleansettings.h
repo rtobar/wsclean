@@ -13,7 +13,7 @@
  * This class describes all settings for a single WSClean run.
  * @sa WSClean
  */
-struct WSCleanSettings
+class WSCleanSettings
 {
 public:
 	WSCleanSettings();
@@ -67,7 +67,7 @@ public:
 	double autoDeconvolutionThresholdSigma, autoMaskSigma;
 	size_t deconvolutionIterationCount;
 	bool allowNegativeComponents, stopOnNegativeComponents;
-	bool useMultiscale, useFastMultiscale, squaredJoins, forceDynamicJoin;
+	bool useMultiscale, useClarkOptimization, squaredJoins, forceDynamicJoin;
 	bool multiscaleFastSubMinorLoop;
 	double multiscaleDeconvolutionThresholdBias, multiscaleDeconvolutionScaleBias;
 	bool multiscaleNormalizeResponse;
@@ -168,7 +168,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	allowNegativeComponents(true), 
 	stopOnNegativeComponents(false),
 	useMultiscale(false),
-	useFastMultiscale(false),
+	useClarkOptimization(true),
 	squaredJoins(false),
 	forceDynamicJoin(false),
 	multiscaleFastSubMinorLoop(true),

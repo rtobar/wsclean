@@ -46,7 +46,7 @@ class BandData
 		 * can only have a single entry, otherwise an exception is thrown.
 		 * @param spwTable The CASA Measurement Set spectral window table.
 		 */
-		BandData(casacore::MSSpectralWindow& spwTable)
+		explicit BandData(casacore::MSSpectralWindow& spwTable)
 		{
 			if(spwTable.nrow() != 1) throw std::runtime_error("Set should have exactly one spectral window");
 			
@@ -119,7 +119,7 @@ class BandData
 		}
 		
 		/** Assignment operator */
-		void operator=(const BandData& source)
+		BandData operator=(const BandData& source)
 		{
 			_channelCount = source._channelCount;
 			_frequencyStep = source._frequencyStep;
@@ -134,6 +134,7 @@ class BandData
 			else {
 				_channelFrequencies = 0;
 			}
+			return *this;
 		}
 		
 		/** Iterator over frequencies, pointing to first channel */

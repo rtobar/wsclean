@@ -22,7 +22,7 @@ struct CleanTestFixture
 	{	}
 	void findPeak(size_t width=4, size_t height=2, size_t ystart=0, size_t yend=2)
 	{
-		SimpleClean::FindPeakAVX(img.data(), width, height, x, y, true, ystart, yend, 0.0);
+		SimpleClean::FindPeakAVX(img.data(), width, height, x, y, true, ystart, yend, 0, 0);
 	}
 };
 #endif
@@ -136,7 +136,7 @@ BOOST_AUTO_TEST_CASE( findPeakSimplePerformance )
 	for(size_t repeat=0; repeat!=nRepeats; ++repeat)
 	{
 		size_t x, y;
-		SimpleClean::FindPeakSimple(f.img.data(), f.n, f.n, x, y, true, 0, f.n/2, 0.0);
+		SimpleClean::FindPeakSimple(f.img.data(), f.n, f.n, x, y, true, 0, f.n/2, 0, 0);
 	}
 	BOOST_CHECK(true);
 }
@@ -148,7 +148,7 @@ BOOST_AUTO_TEST_CASE( findPeakAVXPerformance )
 	for(size_t repeat=0; repeat!=nRepeats; ++repeat)
 	{
 		size_t x, y;
-		SimpleClean::FindPeakAVX(f.img.data(), f.n, f.n, x, y, true, 0, f.n/2, 0.0);
+		SimpleClean::FindPeakAVX(f.img.data(), f.n, f.n, x, y, true, 0, f.n/2, 0, 0);
 	}
 	BOOST_CHECK(true);
 }

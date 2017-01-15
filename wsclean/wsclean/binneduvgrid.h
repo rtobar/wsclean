@@ -43,7 +43,7 @@ public:
 	/**
 	 * Grid a single sample on the UV grid.
 	 */
-	void GridSample(std::complex<float> value, double weight, double uInLambda, double vInLambda, double wInLambda)
+	void GridSample(const std::complex<float>& value, double weight, double uInLambda, double vInLambda, double wInLambda)
 	{
 		_fullGridder->AddDataSample(value * float(weight), uInLambda, vInLambda, wInLambda);
 		_imageWeights.Grid(uInLambda, vInLambda, weight);

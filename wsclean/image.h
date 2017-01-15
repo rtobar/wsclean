@@ -28,16 +28,18 @@ public:
 	
 	Image& operator*=(double factor);
 	
-	// Cut-off the borders of an image.
-	// @param outWidth Should be <= inWidth.
-	// @param outHeight Should be <= inHeight.
+	/** Cut-off the borders of an image.
+	 * @param outWidth Should be &lt;= inWidth.
+	 * @param outHeight Should be &lt;= inHeight.
+	 */
 	static void Trim(double* output, size_t outWidth, size_t outHeight, const double* input, size_t inWidth, size_t inHeight);
 	
 	static void TrimBox(bool* output, size_t x1, size_t y1, size_t boxWidth, size_t boxHeight, const bool* input, size_t inWidth, size_t inHeight);
 	
-	// Extend an image with zeros, complement of Trim.
-	// @param outWidth Should be >= inWidth.
-	// @param outHeight Should be >= inHeight.
+	/** Extend an image with zeros, complement of Trim.
+	 * @param outWidth Should be &gt;= inWidth.
+	 * @param outHeight Should be &gt;= inHeight.
+	 */
 	static void Untrim(double* output, size_t outWidth, size_t outHeight, const double* input, size_t inWidth, size_t inHeight);
 	
 	static double Median(const double* data, size_t size)

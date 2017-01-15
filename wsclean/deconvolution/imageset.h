@@ -1,5 +1,5 @@
-#ifndef DYNAMIC_SET_H
-#define DYNAMIC_SET_H
+#ifndef IMAGE_SET_H
+#define IMAGE_SET_H
 
 #include "../uvector.h"
 #include "../wsclean/imagingtable.h"
@@ -8,10 +8,10 @@
 #include <vector>
 #include <map>
 
-class DynamicSet
+class ImageSet
 {
 public:
-	DynamicSet(const ImagingTable* table, ImageBufferAllocator& allocator, size_t requestedChannelsInDeconvolution, bool squareJoinedChannels) :
+	ImageSet(const ImagingTable* table, ImageBufferAllocator& allocator, size_t requestedChannelsInDeconvolution, bool squareJoinedChannels) :
 		_images(),
 		_imageSize(0),
 		_channelsInDeconvolution((requestedChannelsInDeconvolution==0) ? table->SquaredGroupCount() : requestedChannelsInDeconvolution),
@@ -28,7 +28,7 @@ public:
 		initializeIndices();
 	}
 	
-	DynamicSet(const ImagingTable* table, ImageBufferAllocator& allocator, size_t requestedChannelsInDeconvolution, bool squareJoinedChannels, size_t width, size_t height) :
+	ImageSet(const ImagingTable* table, ImageBufferAllocator& allocator, size_t requestedChannelsInDeconvolution, bool squareJoinedChannels, size_t width, size_t height) :
 		_images(),
 		_imageSize(width*height),
 		_channelsInDeconvolution((requestedChannelsInDeconvolution==0) ? table->SquaredGroupCount() : requestedChannelsInDeconvolution),
@@ -46,7 +46,7 @@ public:
 		AllocateImages();
 	}
 	
-	~DynamicSet()
+	~ImageSet()
 	{
 		for(ao::uvector<double*>::iterator img=_images.begin();
 				img!=_images.end(); ++img)
@@ -168,7 +168,7 @@ public:
 	
 	size_t ChannelsInDeconvolution() const { return _channelsInDeconvolution; }
 	
-	DynamicSet& operator=(double val)
+	ImageSet& operator=(double val)
 	{
 		for(size_t i=0; i!=size(); ++i)
 			assign(_images[i], val);
@@ -191,9 +191,9 @@ public:
 	
 	const ImagingTable& Table() const { return _imagingTable; }
 	
-	DynamicSet* CreateTrimmed(size_t x1, size_t y1, size_t x2, size_t y2, size_t oldWidth) const
+	ImageSet* CreateTrimmed(size_t x1, size_t y1, size_t x2, size_t y2, size_t oldWidth) const
 	{
-		std::unique_ptr<DynamicSet> p(new DynamicSet(&_imagingTable, _allocator, _channelsInDeconvolution, _squareJoinedChannels, x2-x1, y2-y1));
+		std::unique_ptr<ImageSet> p(new ImageSet(&_imagingTable, _allocator, _channelsInDeconvolution, _squareJoinedChannels, x2-x1, y2-y1));
 		for(size_t i=0; i!=_images.size(); ++i)
 		{
 			copySmallerPart(_images[i], p->_images[i], x1, y1, x2, y2, oldWidth);
@@ -201,21 +201,21 @@ public:
 		return p.release();
 	}
 	
-	DynamicSet& operator*=(double factor)
+	ImageSet& operator*=(double factor)
 	{
 		for(size_t i=0; i!=size(); ++i)
 			multiply(_images[i], factor);
 		return *this;
 	}
 	
-	DynamicSet& operator+=(const DynamicSet& other)
+	ImageSet& operator+=(const ImageSet& other)
 	{
 		for(size_t i=0; i!=size(); ++i)
 			add(_images[i], other._images[i]);
 		return *this;
 	}
 	
-	void FactorAdd(DynamicSet& rhs, double factor)
+	void FactorAdd(ImageSet& rhs, double factor)
 	{
 		for(size_t i=0; i!=size(); ++i)
 			addFactor(_images[i], rhs._images[i], factor);

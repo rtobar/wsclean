@@ -54,15 +54,8 @@ class ImageWeights
 		size_t Width() const { return _imageWidth; }
 		size_t Height() const { return _imageHeight; }
 	private:
-		ImageWeights(const ImageWeights&) :
-			_weightMode(WeightMode::NaturalWeighted),
-			_imageWidth(0),
-			_imageHeight(0),
-			_pixelScaleX(0.0),
-			_pixelScaleY(0.0),
-			_totalSum(0.0)
-		{ }
-		void operator=(const ImageWeights&) { }
+		ImageWeights(const ImageWeights&) = delete;
+		void operator=(const ImageWeights&) = delete;
 		
 		
 		void uvToXY(double u, double v, int& x, int& y) const

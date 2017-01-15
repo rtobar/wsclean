@@ -14,9 +14,9 @@ BOOST_AUTO_TEST_CASE( noAveraging )
 {
 	Logger::SetVerbosity(Logger::QuietVerbosity);
 	std::string filename("/home/anoko/Data/3C196-TestSet/L258627_SAP000_SB120_uv.MS.1ch12s.dppp");
-	size_t nAnt=70;
 	if(boost::filesystem::exists(filename))
 	{
+		size_t nAnt=70;
 		MSSelection selection;
 		std::map<size_t, size_t> dataDescIds;
 		dataDescIds.insert(std::make_pair(0, 0));

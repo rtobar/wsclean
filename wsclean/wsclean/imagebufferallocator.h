@@ -20,32 +20,33 @@ public:
 	public:
 		friend class ImageBufferAllocator;
 		Ptr()
-			: _data(0), _allocator(0) { }
+			: _data(nullptr), _allocator(nullptr) { }
 		Ptr(double* data, ImageBufferAllocator& allocator) 
 			: _data(data), _allocator(&allocator) { }
 		~Ptr()
 		{
 			reset();
 		}
+		operator bool() const { return _data != nullptr; }
 		double* data() const { return _data; }
 		double& operator*() const { return *_data; }
 		void reset()
 		{
 			// We have to check for nullptr, because the _allocator might not be set.
-			if(_data != 0) _allocator->Free(_data);
-			_data = 0;
+			if(_data != nullptr) _allocator->Free(_data);
+			_data = nullptr;
 		}
 		void reset(double* data, ImageBufferAllocator& allocator)
 		{
 			// We have to check for nullptr, because the _allocator might not be set.
-			if(_data != 0) _allocator->Free(_data);
+			if(_data != nullptr) _allocator->Free(_data);
 			_data = data;
 			_allocator = &allocator;
 		}
 		double& operator[](size_t index) const { return _data[index]; }
 	private:
-		Ptr(const Ptr&) { }
-		void operator=(const Ptr&) { }
+		Ptr(const Ptr&) = delete;
+		void operator=(const Ptr&) = delete;
 		
 		double* _data;
 		ImageBufferAllocator* _allocator;
