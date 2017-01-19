@@ -1,23 +1,22 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.8.8)
 
 project(chgcentre)
 
-find_library(CASA_MS_LIB casa_ms REQUIRED)
-find_library(CASA_TABLES_LIB casa_tables REQUIRED)
-find_library(CASA_CASA_LIB casa_casa REQUIRED)
-find_library(CASA_MEASURES_LIB casa_measures REQUIRED)
-find_library(GSL_LIB gsl REQUIRED)
-enable_language(Fortran OPTIONAL)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -O3 -Wall -DNDEBUG -march=native")
+
+# Casacore has a separate CMake file in this directory
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMake)
+
+SET(CASACORE_MAKE_REQUIRED_EXTERNALS_OPTIONAL TRUE)
+find_package(Casacore REQUIRED COMPONENTS casa ms tables measures)
+
+find_library(GSL_LIB NAMES gsl REQUIRED)
+find_path(GSL_INCLUDE_DIR NAMES gsl/gsl_version.h)
+find_library(GSL_CBLAS_LIB NAMES gslcblas)
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
 
-set(CASA_LIBS ${CASA_MS_LIB} ${CASA_TABLES_LIB} ${CASA_CASA_LIB} ${CASA_MEASURES_LIB})
-
-find_path(CASA_INCLUDE_DIR NAMES ms/MeasurementSets/MeasurementSet.h PATHS /usr/local/include/casacore PATH_SUFFIXES casacore)
-
-include_directories(${CASA_INCLUDE_DIR})
-
-set(CMAKE_CXX_FLAGS "-O3 -ggdb -Wall -DNDEBUG -march=native")
+include_directories(${CASACORE_INCLUDE_DIRS} ${GSL_INCLUDE_DIR} ${GSL_CBLAS_DIR})
 
 # The following stuff will set the "rpath" correctly, so that
 # LD_LIBRARY_PATH doesn't have to be set.
@@ -39,6 +38,6 @@ ENDIF("${isSystemDir}" STREQUAL "-1")
 
 add_executable(chgcentre main.cpp progressbar.cpp)
 
-target_link_libraries(chgcentre ${CASA_LIBS} ${LAPACK_lapack_LIBRARY} ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
+target_link_libraries(chgcentre ${CASACORE_LIBRARIES} ${GSL_LIB} ${GSL_CBLAS_LIB} ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
 
 install (TARGETS chgcentre DESTINATION bin)
