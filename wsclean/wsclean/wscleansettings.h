@@ -69,7 +69,7 @@ public:
 	bool allowNegativeComponents, stopOnNegativeComponents;
 	bool useMultiscale, useClarkOptimization, squaredJoins, forceDynamicJoin;
 	bool multiscaleFastSubMinorLoop;
-	double multiscaleDeconvolutionThresholdBias, multiscaleDeconvolutionScaleBias;
+	double multiscaleGain, multiscaleDeconvolutionScaleBias;
 	bool multiscaleNormalizeResponse;
 	ao::uvector<double> multiscaleScaleList;
 	double deconvolutionBorderRatio;
@@ -124,7 +124,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	memFraction(1.0), absMemLimit(0.0),
 	minUVWInMeters(0.0), maxUVWInMeters(0.0),
 	minUVInLambda(0.0), maxUVInLambda(0.0), wLimit(0.0),
-	rankFilterLevel(0.0), rankFilterSize(16),
+	rankFilterLevel(3.0), rankFilterSize(16),
 	gaussianTaperBeamSize(0.0),
 	tukeyTaperInLambda(0.0), tukeyInnerTaperInLambda(0.0),
 	edgeTaperInLambda(0.0), edgeTukeyTaperInLambda(0.0),
@@ -172,7 +172,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	squaredJoins(false),
 	forceDynamicJoin(false),
 	multiscaleFastSubMinorLoop(true),
-	multiscaleDeconvolutionThresholdBias(0.7),
+	multiscaleGain(0.2),
 	multiscaleDeconvolutionScaleBias(0.6),
 	multiscaleNormalizeResponse(false),
 	multiscaleScaleList(),

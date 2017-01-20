@@ -12,14 +12,11 @@ DeconvolutionAlgorithm::DeconvolutionAlgorithm() :
 	_gain(0.1),
 	_mGain(1.0),
 	_cleanBorderRatio(0.05),
-	_multiscaleThresholdBias(0.7),
-	_multiscaleScaleBias(0.6),
 	_maxIter(500),
 	_iterationNumber(0),
 	_threadCount(System::ProcessorCount()),
 	_allowNegativeComponents(true),
 	_stopOnNegativeComponent(false),
-	_multiscaleNormalizeResponse(false),
 	_cleanMask(0),
 	_spectralFitter(NoSpectralFitting, 0)
 {

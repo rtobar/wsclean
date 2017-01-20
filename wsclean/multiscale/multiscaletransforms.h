@@ -80,6 +80,10 @@ public:
 		}
 	}
 	
+	static void MakeShapeFunction(double scaleSizeInPixels, ao::uvector<double>& output, size_t& n)
+	{
+		makeShapeFunction(scaleSizeInPixels, output, n);
+	}
 private:
 	size_t _width, _height;
 	

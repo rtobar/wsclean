@@ -143,6 +143,9 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 		_cleanAlgorithm.reset(new MultiScaleAlgorithm(*_imageAllocator, beamSize, pixelScaleX, pixelScaleY));
 		MultiScaleAlgorithm *algorithm = static_cast<MultiScaleAlgorithm*>(_cleanAlgorithm.get());
 		algorithm->SetManualScaleList(_settings.multiscaleScaleList);
+		algorithm->SetMultiscaleScaleBias(_settings.multiscaleDeconvolutionScaleBias);
+		algorithm->SetMultiscaleNormalizeResponse(_settings.multiscaleNormalizeResponse);
+		algorithm->SetMultiscaleGain(_settings.multiscaleGain);
 	}
 	else
 	{
@@ -157,9 +160,6 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 	_cleanAlgorithm->SetAllowNegativeComponents(_settings.allowNegativeComponents);
 	_cleanAlgorithm->SetStopOnNegativeComponents(_settings.stopOnNegativeComponents);
 	_cleanAlgorithm->SetThreadCount(threadCount);
-	_cleanAlgorithm->SetMultiscaleScaleBias(_settings.multiscaleDeconvolutionScaleBias);
-	_cleanAlgorithm->SetMultiscaleThresholdBias(_settings.multiscaleDeconvolutionThresholdBias);
-	_cleanAlgorithm->SetMultiscaleNormalizeResponse(_settings.multiscaleNormalizeResponse);
 	_cleanAlgorithm->SetSpectralFittingMode(_settings.spectralFittingMode, _settings.spectralFittingTerms);
 	
 	ao::uvector<double> frequencies;

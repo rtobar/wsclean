@@ -7,17 +7,17 @@
 #include "../uvector.h"
 
 #include "deconvolutionalgorithm.h"
-#include "dynamicset.h"
+#include "imageset.h"
 
 struct LSDeconvolutionData;
 
-class LSDeconvolution : public UntypedDeconvolutionAlgorithm
+class LSDeconvolution : public DeconvolutionAlgorithm
 {
 	public:
 		LSDeconvolution();
 		~LSDeconvolution();
 		
-    virtual void ExecuteMajorIteration(DynamicSet& dataImage, DynamicSet& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedMajorThreshold)
+    virtual void ExecuteMajorIteration(ImageSet& dataImage, ImageSet& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedMajorThreshold) final override
 		{
       _allocator = &dataImage.Allocator();
 			ExecuteMajorIteration(dataImage[0], modelImage[0], psfImages[0], width, height, reachedMajorThreshold);

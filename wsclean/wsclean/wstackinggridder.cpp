@@ -181,8 +181,9 @@ void WStackingGridder::fftToImageThreadFunction(boost::mutex *mutex, std::stack<
 		// lock for accessing tasks in guard
 		lock.lock();
 	}
-	lock.unlock();
+	// Lock is still required for destroying plan
 	fftw_destroy_plan(plan);
+	lock.unlock();
 	_imageBufferAllocator->Free(fftwIn);
 	_imageBufferAllocator->Free(fftwOut);
 }
@@ -223,6 +224,8 @@ void WStackingGridder::fftToUVThreadFunction(boost::mutex *mutex, std::stack<siz
 		// lock for accessing tasks in guard
 		lock.lock();
 	}
+	// Lock is still required for destroying plan
+	fftw_destroy_plan(plan);
 	lock.unlock();
 	
 	_imageBufferAllocator->Free(fftwIn);

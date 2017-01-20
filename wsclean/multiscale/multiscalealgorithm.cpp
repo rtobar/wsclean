@@ -15,6 +15,9 @@ MultiScaleAlgorithm::MultiScaleAlgorithm(ImageBufferAllocator& allocator, double
 	_convolutionHeight(0),
 	_convolutionPadding(1.1),
 	_beamSizeInPixels(beamSize / std::max(pixelScaleX, pixelScaleY)),
+	_multiscaleScaleBias(0.6),
+	_multiscaleGain(0.2),
+	_multiscaleNormalizeResponse(false),
 	_trackPerScaleMasks(false), _usePerScaleMasks(false),
 	_fastSubMinorLoop(true)
 {
@@ -145,7 +148,7 @@ void MultiScaleAlgorithm::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& mo
 		// The sub-minor iteration loop for this scale
 		//
 		double firstSubIterationThreshold = std::max(
-			std::fabs(_scaleInfos[scaleWithPeak].maxImageValue * _scaleInfos[scaleWithPeak].biasFactor) * (1.0 - _gain),
+			std::fabs(_scaleInfos[scaleWithPeak].maxImageValue * _scaleInfos[scaleWithPeak].biasFactor) * (1.0 - _multiscaleGain),
 			firstThreshold);
 		// TODO we could chose to run the non-fast loop until we hit e.g. 10 iterations in a scale,
 		// because the fast loop takes more constant time and is only efficient when doing

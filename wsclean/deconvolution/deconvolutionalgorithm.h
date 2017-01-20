@@ -75,18 +75,6 @@ public:
 		_spectralFitter = source._spectralFitter;
 	}
 	
-	void SetMultiscaleThresholdBias(double bias)
-	{
-		_multiscaleThresholdBias = bias;
-	}
-	void SetMultiscaleScaleBias(double bias)
-	{
-		_multiscaleScaleBias = bias;
-	}
-	void SetMultiscaleNormalizeResponse(bool normResponse)
-	{
-		_multiscaleNormalizeResponse = normResponse;
-	}
 	void SetSpectralFittingMode(SpectralFittingMode mode, size_t nTerms)
 	{
 		_spectralFitter.SetMode(mode, nTerms);
@@ -104,9 +92,8 @@ protected:
 	void PerformSpectralFit(double* values);
 	
 	double _threshold, _gain, _mGain, _cleanBorderRatio;
-	double _multiscaleThresholdBias, _multiscaleScaleBias;
 	size_t _maxIter, _iterationNumber, _threadCount;
-	bool _allowNegativeComponents, _stopOnNegativeComponent, _multiscaleNormalizeResponse;
+	bool _allowNegativeComponents, _stopOnNegativeComponent;
 	const bool* _cleanMask;
 	
 	SpectralFitter _spectralFitter;

@@ -32,11 +32,26 @@ public:
 	void SetUseFastSubMinorLoop(bool fastSubMinorLoop) {
 		_fastSubMinorLoop = fastSubMinorLoop;
 	}
+	void SetMultiscaleScaleBias(double bias)
+	{
+		_multiscaleScaleBias = bias;
+	}
+	void SetMultiscaleGain(double gain)
+	{
+		_multiscaleGain = gain;
+	}
+	void SetMultiscaleNormalizeResponse(bool normResponse)
+	{
+		_multiscaleNormalizeResponse = normResponse;
+	}
 private:
 	class ImageBufferAllocator& _allocator;
 	size_t _width, _height, _convolutionWidth, _convolutionHeight;
 	double _convolutionPadding;
 	double _beamSizeInPixels;
+	double _multiscaleScaleBias;
+	double _multiscaleGain;
+	bool _multiscaleNormalizeResponse;
 	ThreadedDeconvolutionTools* _tools;
 	
 	struct ScaleInfo

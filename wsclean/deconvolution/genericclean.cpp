@@ -18,6 +18,7 @@ void GenericClean::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& modelSet,
 {
 	Logger::Debug << "Running dynamically-joined clean algorithm.\n";
 	
+	const size_t iterationCounterAtStart = _iterationNumber;
 	if(_stopOnNegativeComponent)
 		_allowNegativeComponents = true;
 	_width = width;
@@ -120,7 +121,7 @@ void GenericClean::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& modelSet,
 		}
 	}
 	Logger::Info << "Stopped on peak " << maxValue << '\n';
-	reachedMajorThreshold = std::fabs(maxValue) <= stopGainThreshold && (maxValue != 0.0);
+	reachedMajorThreshold = std::fabs(maxValue) <= stopGainThreshold && (maxValue != 0.0) && (_iterationNumber-iterationCounterAtStart)!=0;
 }
 
 std::string GenericClean::peakDescription(const double* image, size_t& x, size_t& y)

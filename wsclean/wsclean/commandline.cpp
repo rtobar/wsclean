@@ -325,7 +325,13 @@ void CommandLine::printHeader()
 
 size_t CommandLine::parse_size_t(const char* param, const char* name)
 {
-	long v = atol(param);
+	char* endptr;
+	long v = strtol(param, &endptr, 0);
+	if(*endptr!=0 || errno!=0) {
+		std::ostringstream msg;
+		msg << "Could not parse value '" << param << "' for parameter -" << name << " to an integer";
+		throw std::runtime_error(msg.str());
+	}
 	if(v < 0) {
 		std::ostringstream msg;
 		msg << "Invalid value (" << v << ") for parameter -" << name;
@@ -653,10 +659,10 @@ int CommandLine::Run(int argc, char* argv[])
 		{
 			settings.useMultiscale = true;
 		}
-		else if(param == "multiscale-threshold-bias")
+		else if(param == "multiscale-gain")
 		{
 			++argi;
-			settings.multiscaleDeconvolutionThresholdBias = atof(argv[argi]);
+			settings.multiscaleGain = atof(argv[argi]);
 		}
 		else if(param == "multiscale-scale-bias")
 		{
