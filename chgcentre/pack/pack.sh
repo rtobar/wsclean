@@ -2,7 +2,7 @@ WORKDIR=`pwd`
 rm -rf /tmp/chgcentre
 mkdir /tmp/chgcentre
 cd ..
-cp -v CMakeLists.txt *.{h,cpp} /tmp/chgcentre/
+cp -vr CMakeLists.txt CMake/ *.{h,cpp} /tmp/chgcentre/
 cd /tmp
 tar -cjvf ${WORKDIR}/chgcentre.tar.bz2 chgcentre
 rm -rf /tmp/chgcentre
