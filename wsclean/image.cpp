@@ -1,21 +1,65 @@
 #include "image.h"
 
+#include <algorithm>
 #include <cmath>
 
 Image::Image(size_t width, size_t height, ImageBufferAllocator& allocator) :
+	_data(allocator.Allocate(width*height)),
 	_width(width), _height(height), _allocator(&allocator)
 {
-	_data = _allocator->Allocate(width*height);
+}
+
+Image::Image(size_t width, size_t height, double initialValue, ImageBufferAllocator& allocator) :
+	_data(allocator.Allocate(width*height)),
+	_width(width), _height(height), _allocator(&allocator)
+{
+	std::fill(_data, _data+_width*_height, initialValue);
 }
 
 Image::~Image()
 {
-	_allocator->Free(_data);
+	if(_allocator != nullptr)
+		_allocator->Free(_data);
+}
+
+Image::Image(const Image& source) :
+	_data((source._allocator==nullptr) ? nullptr : source._allocator->Allocate(source._width * source._height)),
+	_width(source._width),
+	_height(source._height),
+	_allocator(source._allocator)
+{
+	std::copy(source._data, source._data + _width*_height, _data);
+}
+
+Image& Image::operator=(const Image& source)
+{
+	if(source._allocator == nullptr)
+	{
+		reset();
+	}
+	else {
+		if(_allocator == nullptr)
+		{
+			_allocator = source._allocator;
+			_data = _allocator->Allocate(source._width * source._height);
+		}
+		else if(_width * _height != source._width * source._height || source._allocator != _allocator)
+		{
+			_allocator->Free(_data);
+			_allocator = source._allocator;
+			_data = _allocator->Allocate(source._width * source._height);
+		}
+		_width = source._width;
+		_height = source._height;
+		std::copy(source._data, source._data + _width*_height, _data);
+	}
+	return *this;
 }
 
 Image::Image(Image&& source) :
 	_data(source._data),
-	_width(source._width), _height(source._height),
+	_width(source._width),
+	_height(source._height),
 	_allocator(source._allocator)
 {
 	source._width = 0;
@@ -33,10 +77,27 @@ Image& Image::operator=(Image&& source)
 	return *this;
 }
 
+void Image::reset()
+{
+	if(_allocator != nullptr)
+		_allocator->Free(_data);
+	_data = nullptr;
+	_width = 0;
+	_height = 0;
+	_allocator = nullptr;
+}
+
 Image& Image::operator*=(double factor)
 {
 	for(size_t i=0; i!=_width*_height; ++i)
 		_data[i] *= factor;
+	return *this;
+}
+
+Image& Image::operator*=(const Image& other)
+{
+	for(size_t i=0; i!=_width*_height; ++i)
+		_data[i] *= other[i];
 	return *this;
 }
 
@@ -94,6 +155,24 @@ void Image::Untrim(double* output, size_t outWidth, size_t outHeight, const doub
 		for(size_t x=0; x!=outWidth; ++x)
 			ptr[x] = 0.0;
 	}
+}
+
+double Image::Average() const
+{
+	double sum = 0.0;
+	for(const double& v : *this)
+		sum += v;
+	return sum / size();
+}
+
+double Image::Min() const
+{
+	return *std::min_element(begin(), end());
+}
+
+double Image::Max() const
+{
+	return *std::max_element(begin(), end());
 }
 
 double Image::median_with_copy(const double* data, size_t size, ao::uvector<double>& copy)

@@ -6,6 +6,7 @@
 
 #include "spectralfitter.h"
 
+#include "../image.h"
 #include "../polarization.h"
 #include "../uvector.h"
 
@@ -86,6 +87,9 @@ public:
 	}
 	
 	const SpectralFitter& Fitter() const { return _spectralFitter; }
+	
+	void SetRMSFactorImage(Image&& image) { _rmsFactorImage = std::move(image); }
+	const Image& RMSFactorImage() const { return _rmsFactorImage; }
 protected:
 	DeconvolutionAlgorithm();
 	
@@ -95,6 +99,7 @@ protected:
 	size_t _maxIter, _iterationNumber, _threadCount;
 	bool _allowNegativeComponents, _stopOnNegativeComponent;
 	const bool* _cleanMask;
+	Image _rmsFactorImage;
 	
 	SpectralFitter _spectralFitter;
 };

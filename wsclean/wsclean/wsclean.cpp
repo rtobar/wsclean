@@ -1347,7 +1347,7 @@ void WSClean::makeImagingTableEntry(const std::vector<OrderedChannel>& channels,
 	entry.msData.resize(_settings.filenames.size());
 	for(size_t msIndex=0; msIndex!=_settings.filenames.size(); ++msIndex)
 	{
-		entry.msData[msIndex].bands.resize(_msBands[msIndex].BandCount());
+		entry.msData[msIndex].bands.resize(_msBands[msIndex].DataDescCount());
 	}
 }
 

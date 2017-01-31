@@ -36,7 +36,7 @@ void GenericClean::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& modelSet,
 	_allocator.Allocate(_convolutionWidth*_convolutionHeight, scratchB);
 	dirtySet.GetSquareIntegrated(integrated.data(), scratchA.data());
 	size_t componentX=0, componentY=0;
-	double maxValue = findPeak(integrated.data(), componentX, componentY);
+	double maxValue = findPeak(integrated.data(), scratchA.data(), componentX, componentY);
 	Logger::Info << "Initial peak: " << peakDescription(integrated.data(), componentX, componentY) << '\n';
 	double firstThreshold = this->_threshold;
 	double stopGainThreshold = std::fabs(maxValue)*(1.0-this->_mGain);
@@ -58,6 +58,8 @@ void GenericClean::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& modelSet,
 		clarkLoop.SetGain(Gain());
 		clarkLoop.SetAllowNegativeComponents(AllowNegativeComponents());
 		clarkLoop.SetSpectralFitter(&Fitter());
+		if(!_rmsFactorImage.empty())
+			clarkLoop.SetRMSFactorImage(_rmsFactorImage);
 		if(_cleanMask)
 			clarkLoop.SetMask(_cleanMask);
 		const size_t
@@ -113,7 +115,7 @@ void GenericClean::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& modelSet,
 			}
 			
 			dirtySet.GetSquareIntegrated(integrated.data(), scratchA.data());
-			maxValue = findPeak(integrated.data(), componentX, componentY);
+			maxValue = findPeak(integrated.data(), scratchA.data(), componentX, componentY);
 			
 			peakIndex = componentX + componentY*_width;
 			
@@ -133,10 +135,25 @@ std::string GenericClean::peakDescription(const double* image, size_t& x, size_t
 	return str.str();
 }
 
-double GenericClean::findPeak(const double* image, size_t& x, size_t& y)
+double GenericClean::findPeak(const double* image, double* scratch, size_t& x, size_t& y)
 {
-	if(_cleanMask == 0)
-		return SimpleClean::FindPeak(image, _width, _height, x, y, _allowNegativeComponents, 0, _height, _cleanBorderRatio);
-	else
-		return SimpleClean::FindPeakWithMask(image, _width, _height, x, y, _allowNegativeComponents, 0, _height, _cleanMask, _cleanBorderRatio);
+	if(_rmsFactorImage.empty())
+	{
+		if(_cleanMask == 0)
+			return SimpleClean::FindPeak(image, _width, _height, x, y, _allowNegativeComponents, 0, _height, _cleanBorderRatio);
+		else
+			return SimpleClean::FindPeakWithMask(image, _width, _height, x, y, _allowNegativeComponents, 0, _height, _cleanMask, _cleanBorderRatio);
+	}
+	else {
+		for(size_t i=0; i!=_width*_height; ++i)
+		{
+			scratch[i] = image[i] * _rmsFactorImage[i];
+		}
+		double maxValue;
+		if(_cleanMask == 0)
+			maxValue = SimpleClean::FindPeak(scratch, _width, _height, x, y, _allowNegativeComponents, 0, _height, _cleanBorderRatio);
+		else
+			maxValue = SimpleClean::FindPeakWithMask(scratch, _width, _height, x, y, _allowNegativeComponents, 0, _height, _cleanMask, _cleanBorderRatio);
+		return maxValue / _rmsFactorImage[x + y*_width];
+	}
 }

@@ -25,7 +25,7 @@ class ModelRenderer
 		/**
 		 * Restore elliptical beam using a FFT deconvolution
 		 */
-		void Restore(double* imageData, double* modelData, size_t imageWidth, size_t imageHeight, long double beamMaj, long double beamMin, long double beamPA)
+		void Restore(double* imageData, const double* modelData, size_t imageWidth, size_t imageHeight, long double beamMaj, long double beamMin, long double beamPA)
 		{
 			Restore(imageData, modelData, imageWidth, imageHeight, beamMaj, beamMin, beamPA, _pixelScaleL, _pixelScaleM);
 		}
@@ -33,7 +33,7 @@ class ModelRenderer
 		/**
 		 * Restore elliptical beam using a FFT deconvolution (static version).
 		 */
-		static void Restore(double* imageData, double* modelData, size_t imageWidth, size_t imageHeight, long double beamMaj, long double beamMin, long double beamPA, long double pixelScaleL, long double pixelScaleM);
+		static void Restore(double* imageData, const double* modelData, size_t imageWidth, size_t imageHeight, long double beamMaj, long double beamMin, long double beamPA, long double pixelScaleL, long double pixelScaleM);
 		
 		/**
 		 * Render each point-source as one pixel

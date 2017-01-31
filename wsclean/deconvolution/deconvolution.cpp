@@ -10,11 +10,14 @@
 #include "../casamaskreader.h"
 #include "../fitsreader.h"
 #include "../image.h"
+#include "../rmsimage.h"
 
 #include "../wsclean/imagingtable.h"
 #include "../wsclean/wscleansettings.h"
 
-Deconvolution::Deconvolution(const class WSCleanSettings& settings) : _settings(settings), _autoMaskIsFinished(false)
+Deconvolution::Deconvolution(const class WSCleanSettings& settings) :
+	_settings(settings), _autoMaskIsFinished(false),
+	_beamSize(0.0), _pixelScaleX(0.0), _pixelScaleY(0.0)
 {
 }
 
@@ -23,6 +26,7 @@ Deconvolution::~Deconvolution()
 	FreeDeconvolutionAlgorithms();
 }
 
+#include "../fitswriter.h"
 void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedMajorThreshold, size_t majorIterationNr)
 {
 	Logger::Info.Flush();
@@ -36,15 +40,29 @@ void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedM
 	residualSet.LoadAndAverage(*_residualImages);
 	modelSet.LoadAndAverage(*_modelImages);
 	
-	ImageBufferAllocator::Ptr integrated;
-	_imageAllocator->Allocate(_imgWidth * _imgHeight, integrated);
+	Image integrated(_imgWidth, _imgHeight, *_imageAllocator);
 	residualSet.GetLinearIntegrated(integrated.data());
-	double stddev = Image::StdDevFromMAD(integrated.data(), _imgWidth * _imgHeight);
+	double stddev = integrated.StdDevFromMAD();
 	Logger::Info << "Estimated standard deviation of background noise: " << stddev << " Jy\n";
-	if(_settings.autoDeconvolutionThreshold && (!_settings.autoMask || _autoMaskIsFinished))
-		_cleanAlgorithm->SetThreshold(std::max(stddev * _settings.autoDeconvolutionThresholdSigma, _settings.deconvolutionThreshold));
-	else if(_settings.autoMask && !_autoMaskIsFinished)
+	if(_settings.rmsBackground)
+	{
+		Image rmsImage;
+		// TODO this should use full beam parameters
+		RMSImage::Make(rmsImage, integrated, _beamSize, _beamSize, 0.0, _pixelScaleX, _pixelScaleY);
+		// We normalize the RMS image relative to the threshold so that Jy remains Jy.
+		double minRMS = rmsImage.Min();
+		FitsWriter rmsWriter;
+		rmsWriter.SetImageDimensions(_imgWidth, _imgHeight);
+		rmsWriter.Write("wsclean-rms.fits", rmsImage.data());
+		rmsWriter.Write("wsclean-curres.fits", integrated.data());
+		Logger::Info << "Beam=" << _beamSize << ", lowest RMS in image: " << minRMS << '\n';
+		rmsImage *= 1.0 / minRMS;
+		_cleanAlgorithm->SetRMSFactorImage(std::move(rmsImage));
+	}
+	if(_settings.autoMask && !_autoMaskIsFinished)
 		_cleanAlgorithm->SetThreshold(std::max(stddev * _settings.autoMaskSigma, _settings.deconvolutionThreshold));
+	else if(_settings.autoDeconvolutionThreshold)
+		_cleanAlgorithm->SetThreshold(std::max(stddev * _settings.autoDeconvolutionThresholdSigma, _settings.deconvolutionThreshold));
 	integrated.reset();
 	
 	std::vector<ao::uvector<double>> psfVecs(groupTable.SquaredGroupCount());
@@ -111,6 +129,9 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 	_imgWidth = imgWidth;
 	_imgHeight = imgHeight;
 	_psfPolarization = psfPolarization;
+	_beamSize = beamSize;
+	_pixelScaleX = pixelScaleX;
+	_pixelScaleY = pixelScaleY;
 	FreeDeconvolutionAlgorithms();
 	
 	_summedCount = groupTable.SquaredGroupCount();

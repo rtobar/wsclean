@@ -4,6 +4,7 @@
 #include <cstring>
 #include <vector>
 
+#include "../image.h"
 #include "../deconvolution/imageset.h"
 
 /**
@@ -45,6 +46,7 @@ public:
 	size_t size() const { return _positions.size(); }
 	
 	void MakeSets(const ImageSet& templateSet);
+	void MakeRMSFactorImage(Image& rmsFactorImage);
 	
 	ImageSet& Residual() { return *_residual; }
 	const ImageSet& Residual() const { return *_residual; }
@@ -67,6 +69,7 @@ public:
 private:
 	std::vector<std::pair<size_t,size_t>> _positions;
 	std::unique_ptr<ImageSet> _residual, _model;
+	Image _rmsFactorImage;
 	size_t _width, _height;
 };
 
@@ -105,6 +108,9 @@ public:
 	void SetMask(const bool* mask)
 	{ _mask = mask; }
 	
+	void SetRMSFactorImage(const Image& image)
+	{ _rmsFactorImage = image; }
+	
 	size_t CurrentIteration() const { return _currentIteration; }
 	
 	double FluxCleaned() const { return _fluxCleaned; }
@@ -136,6 +142,7 @@ private:
 	const SpectralFitter* _fitter;
 	ClarkModel _clarkModel;
 	double _fluxCleaned;
+	Image _rmsFactorImage;
 };
 
 #endif

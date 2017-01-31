@@ -207,6 +207,9 @@ void CommandLine::printHelp()
 		"-auto-mask <sigma>\n"
 		"   Construct a mask from found components and when a threshold of sigma is reached, continue\n"
 		"   cleaning with the mask down to the normal threshold. \n"
+		"-rms-background\n"
+		"   Instead of using a single RMS for auto thresholding/masking, use a spatially varying\n"
+		"   RMS image.\n"
 		"-gain <gain>\n"
 		"   Cleaning gain: Ratio of peak that will be subtracted in each iteration. Default: 0.1\n"
 		"-mgain <gain>\n"
@@ -234,8 +237,11 @@ void CommandLine::printHelp()
 		"   Sets a list of scales to use in multi-scale cleaning. If unset, WSClean will select the delta\n"
 		"   (zero) scale, scales starting at four times the synthesized PSF, and increase by a factor of\n"
 		"   two until the maximum scale is reached. Example: -multiscale-scales 0,5,12.5\n"
-		"-multiscale-shape [shape]\n"
+		"-multiscale-shape <shape>\n"
 		"   Sets the shape function used during multi-scale clean. Either 'tapered-quadratic' (default) or 'gaussian'.\n"
+		"-multiscale-gain <gain>\n"
+		"   Size of step made in the subminor loop of multi-scale. Default currently 0.2, but shows sign of instability.\n"
+		"   A value of 0.1 might be more stable.\n"
 		"-no-multiscale-fast-subminor\n"
 		"   Disable the 'fast subminor loop' optimization, that will only search a part of the\n"
 		"   image during the multi-scale subminor loop. The optimization is on by default.\n"
@@ -484,6 +490,10 @@ int CommandLine::Run(int argc, char* argv[])
 			++argi;
 			settings.autoMask = true;
 			settings.autoMaskSigma = atof(argv[argi]);
+		}
+		else if(param == "rms-background")
+		{
+			settings.rmsBackground = true;
 		}
 		else if(param == "datacolumn")
 		{

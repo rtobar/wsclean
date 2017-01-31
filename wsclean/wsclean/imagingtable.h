@@ -39,6 +39,9 @@ public:
 	
 	size_t outputIntervalIndex;
 	
+	/**
+	 * This vector links a filename index to MS data
+	 */
 	std::vector<MSInfo> msData;
 	
 	/**

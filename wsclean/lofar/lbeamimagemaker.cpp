@@ -60,9 +60,21 @@ void LBeamImageMaker::Make(std::vector<ImageBufferAllocator::Ptr>& beamImages)
 	
 	_totalWeightSum = 0.0;
 	
-	for(size_t i=0; i!=_msProviders.size(); ++i)
+	Logger::Debug << "Making beam for " << _msProviders.size() << " parts (" << _tableEntry->msData.size() << " ms)\n";
+	for(const MSProviderInfo& msProviderInfo : _msProviders)
 	{
-		makeBeamForMS(beamImages, *_msProviders[i].provider, _tableEntry->msData[i], *_msProviders[i].selection);
+		const ImagingTableEntry::MSInfo& msInfo = _tableEntry->msData[msProviderInfo.msIndex];
+		const MSSelection& selection = *msProviderInfo.selection;
+		casacore::MeasurementSet& ms = msProviderInfo.provider->MS();
+		MultiBandData band(ms.spectralWindow(), ms.dataDescription());
+		double centralFrequency = 0.0;
+		for(size_t dataDescId=0; dataDescId!=band.DataDescCount(); ++dataDescId)
+		{
+			BandData subBand(band[dataDescId], selection.ChannelRangeStart(), selection.ChannelRangeEnd());
+			centralFrequency += subBand.CentreFrequency();
+		}
+		centralFrequency /= msInfo.bands.size();
+		makeBeamForMS(beamImages, *msProviderInfo.provider, msInfo, selection, centralFrequency);
 	}
 
 	for(size_t i=0; i!=8; ++i)
@@ -83,7 +95,7 @@ void LBeamImageMaker::Make(std::vector<ImageBufferAllocator::Ptr>& beamImages)
 	}
 }
 
-void LBeamImageMaker::makeBeamForMS(std::vector<ImageBufferAllocator::Ptr>& beamImages, MSProvider& msProvider, const ImagingTableEntry::MSInfo& msInfo, const MSSelection& selection)
+void LBeamImageMaker::makeBeamForMS(std::vector<ImageBufferAllocator::Ptr>& beamImages, MSProvider& msProvider, const ImagingTableEntry::MSInfo& msInfo, const MSSelection& selection, double centralFrequency)
 {
 	/**
 		* Read some meta data from the measurement set
@@ -96,14 +108,6 @@ void LBeamImageMaker::makeBeamForMS(std::vector<ImageBufferAllocator::Ptr>& beam
 	casacore::MPosition::ROScalarColumn antPosColumn(aTable, aTable.columnName(casacore::MSAntennaEnums::POSITION));
 	casacore::MPosition arrayPos = antPosColumn(0);
 	
-	MultiBandData band(ms.spectralWindow(), ms.dataDescription());
-	double centralFrequency = 0.0;
-	for(size_t b=0; b!=msInfo.bands.size(); ++b)
-	{
-		BandData subBand(band[b], selection.ChannelRangeStart(), selection.ChannelRangeEnd());
-		centralFrequency += subBand.CentreFrequency();
-	}
-	centralFrequency /= msInfo.bands.size();
 	Logger::Debug << "Making beam for frequency " << centralFrequency * 1e-6 << " MHz.\n";
 	
 	casacore::MSField fieldTable(ms.field());

@@ -24,7 +24,7 @@ private:
 	double _convolutionPadding;
 	bool _useClarkOptimization;
 	
-	double findPeak(const double *image, size_t &x, size_t &y);
+	double findPeak(const double *image, double* scratch, size_t &x, size_t &y);
 	
 	std::string peakDescription(const double* image, size_t& x, size_t& y);
 	

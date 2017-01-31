@@ -25,9 +25,9 @@ public:
 	{
 	}
 	
-	void AddMS(class MSProvider* msProvider, const MSSelection* selection)
+	void AddMS(class MSProvider* msProvider, const MSSelection* selection, size_t msIndex)
 	{
-		_msProviders.push_back(MSProviderInfo(msProvider, selection));
+		_msProviders.push_back(MSProviderInfo(msProvider, selection, msIndex));
 	}
 	
 	void SetImageWeight(const class ImageWeightCache* imageWeightCache)
@@ -79,7 +79,7 @@ private:
 		ao::uvector<double> _weights;
 	};
 	
-	void makeBeamForMS(std::vector<ImageBufferAllocator::Ptr>& beamImages, MSProvider& msProvider, const ImagingTableEntry::MSInfo& msInfo, const MSSelection& selection);
+	void makeBeamForMS(std::vector<ImageBufferAllocator::Ptr>& beamImages, MSProvider& msProvider, const ImagingTableEntry::MSInfo& msInfo, const MSSelection& selection, double centralFrequency);
 
 	void makeBeamSnapshot(const std::vector<LOFAR::StationResponse::Station::Ptr>& stations, const ao::uvector<double>& weights, const WeightMatrix& baselineWeights, double** imgPtr, double time, double frequency, double subbandFrequency, const casacore::MeasFrame& frame);
 	
@@ -90,11 +90,12 @@ private:
 	
 	struct MSProviderInfo
 	{
-		MSProviderInfo(MSProvider* _provider, const MSSelection* _selection) :
-			provider(_provider), selection(_selection)
+		MSProviderInfo(MSProvider* _provider, const MSSelection* _selection, size_t _msIndex) :
+			provider(_provider), selection(_selection), msIndex(_msIndex)
 		{ }
 		MSProvider* provider;
 		const MSSelection* selection;
+		size_t msIndex;
 	};
 	
 	const ImagingTableEntry* _tableEntry;

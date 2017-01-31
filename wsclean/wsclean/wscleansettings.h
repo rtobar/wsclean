@@ -66,6 +66,7 @@ public:
 	double deconvolutionThreshold, deconvolutionGain, deconvolutionMGain;
 	bool autoDeconvolutionThreshold, autoMask;
 	double autoDeconvolutionThresholdSigma, autoMaskSigma;
+	bool rmsBackground;
 	size_t deconvolutionIterationCount;
 	bool allowNegativeComponents, stopOnNegativeComponents;
 	bool useMultiscale, useClarkOptimization, squaredJoins, forceDynamicJoin;
@@ -167,6 +168,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	autoMask(false),
 	autoDeconvolutionThresholdSigma(0.0),
 	autoMaskSigma(0.0),
+	rmsBackground(false),
 	deconvolutionIterationCount(0),
 	allowNegativeComponents(true), 
 	stopOnNegativeComponents(false),

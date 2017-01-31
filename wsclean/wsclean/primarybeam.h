@@ -194,8 +194,8 @@ private:
 	void makeLOFARImage(const ImagingTableEntry& entry, const ImageWeightCache* imageWeightCache, ImageBufferAllocator& allocator)
 	{
 		LBeamImageMaker lbeam(&entry, &allocator);
-		for(std::vector<std::pair<MSProvider*, MSSelection>>::const_iterator i=_msProviders.begin(); i!=_msProviders.end(); ++i)
-			lbeam.AddMS(i->first, &i->second);
+		for(size_t i=0; i!=_msProviders.size(); ++i)
+			lbeam.AddMS(_msProviders[i].first, &_msProviders[i].second, i);
 		lbeam.SetUseDifferentialBeam(_settings.useDifferentialLofarBeam);
 		lbeam.SetImageDetails(_settings.trimmedImageWidth, _settings.trimmedImageHeight, _settings.pixelScaleX, _settings.pixelScaleY, _phaseCentreRA, _phaseCentreDec, _phaseCentreDL, _phaseCentreDM);
 		lbeam.SetImageWeight(imageWeightCache);

@@ -19,7 +19,6 @@ ImagingTableEntry::ImagingTableEntry() :
 {
 }
 
-
 ImagingTable ImagingTable::GetIndependentGroup(size_t index) const
 {
 	ImagingTable table;

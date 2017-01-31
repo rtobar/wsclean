@@ -47,6 +47,7 @@ private:
 	ImageBufferAllocator* _imageAllocator;
 	CachedImageSet *_psfImages, *_modelImages, *_residualImages;
 	ao::uvector<bool> _autoMask;
+	double _beamSize, _pixelScaleX, _pixelScaleY;
 };
 
 #endif
