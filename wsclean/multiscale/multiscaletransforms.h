@@ -9,8 +9,10 @@
 class MultiScaleTransforms
 {
 public:
-	MultiScaleTransforms(size_t width, size_t height) :
-	_width(width), _height(height)
+	enum Shape { TaperedQuadraticShape, GaussianShape };
+	
+	MultiScaleTransforms(size_t width, size_t height, Shape shape) :
+	_width(width), _height(height), _shape(shape)
 	{ }
 	
 	void PrepareTransform(double* kernel, double scale);
@@ -27,15 +29,11 @@ public:
 	size_t Width() const { return _width; }
 	size_t Height() const { return _height; }
 	
-	static size_t KernelSize(double scaleInPixels)
-	{
-		return size_t(ceil(scaleInPixels*0.5)*2.0)+1;
-	}
-	static double KernelIntegratedValue(double scaleInPixels)
+	static double KernelIntegratedValue(double scaleInPixels, size_t maxN, Shape shape)
 	{
 		size_t n;
 		ao::uvector<double> kernel;
-		makeShapeFunction(scaleInPixels, kernel, n);
+		MakeShapeFunction(scaleInPixels, kernel, n, maxN, shape);
 		
 		double value = 0.0;
 		for(ao::uvector<double>::const_iterator x=kernel.begin(); x!=kernel.end(); ++x)
@@ -43,19 +41,20 @@ public:
 		
 		return value;
 	}
-	static double KernelPeakValue(double scaleInPixels)
+	
+	static double KernelPeakValue(double scaleInPixels, size_t maxN, Shape shape)
 	{
 		size_t n;
 		ao::uvector<double> kernel;
-		makeShapeFunction(scaleInPixels, kernel, n);
+		MakeShapeFunction(scaleInPixels, kernel, n, maxN, shape);
 		return kernel[n/2 + (n/2)*n];
 	}
 	
-	static void AddShapeComponent(double* image, size_t width, size_t height, double scaleSizeInPixels, size_t x, size_t y, double gain)
+	static void AddShapeComponent(double* image, size_t width, size_t height, double scaleSizeInPixels, size_t x, size_t y, double gain, Shape shape)
 	{
 		size_t n;
 		ao::uvector<double> kernel;
-		makeShapeFunction(scaleSizeInPixels, kernel, n);
+		MakeShapeFunction(scaleSizeInPixels, kernel, n, std::min(width,height), shape);
 		int left;
 		if(x > n/2)
 			left = x - n/2;
@@ -80,21 +79,77 @@ public:
 		}
 	}
 	
-	static void MakeShapeFunction(double scaleSizeInPixels, ao::uvector<double>& output, size_t& n)
+	static void MakeShapeFunction(double scaleSizeInPixels, ao::uvector<double>& output, size_t& n, size_t maxN, Shape shape)
 	{
-		makeShapeFunction(scaleSizeInPixels, output, n);
+		switch(shape)
+		{
+			default:
+			case TaperedQuadraticShape:
+				makeTaperedQuadraticShapeFunction(scaleSizeInPixels, output, n);
+				break;
+			case GaussianShape:
+				makeGaussianFunction(scaleSizeInPixels, output, n, maxN);
+				break;
+		}
+	}
+	
+	void MakeShapeFunction(double scaleSizeInPixels, ao::uvector<double>& output, size_t& n)
+	{
+		MakeShapeFunction(scaleSizeInPixels, output, n, std::min(_width, _height), _shape);
 	}
 private:
 	size_t _width, _height;
+	enum Shape _shape;
 	
-	static void makeShapeFunction(double scaleSizeInPixels, ao::uvector<double>& output, size_t& n)
+	static size_t taperedQuadraticKernelSize(double scaleInPixels)
 	{
-		n = KernelSize(scaleSizeInPixels);
-		output.resize(n * n);
-		shapeFunction(n, output, scaleSizeInPixels);
+		return size_t(ceil(scaleInPixels*0.5)*2.0)+1;
 	}
 	
-	static void shapeFunction(size_t n, ao::uvector<double>& output2d, double scaleSizeInPixels)
+	static void makeTaperedQuadraticShapeFunction(double scaleSizeInPixels, ao::uvector<double>& output, size_t& n)
+	{
+		n = taperedQuadraticKernelSize(scaleSizeInPixels);
+		output.resize(n * n);
+		taperedQuadraticShapeFunction(n, output, scaleSizeInPixels);
+	}
+	
+	static void makeGaussianFunction(double scaleSizeInPixels, ao::uvector<double>& output, size_t& n, size_t maxN)
+	{
+		double sigma = scaleSizeInPixels * (3.0 / 16.0);
+		n = int(ceil(sigma * 5.0 / 2.0)) * 2 + 1;
+		if(n > maxN)
+		{
+			n = maxN;
+			if((n%2) == 0 && n > 0) --n;
+		}
+		if(n < 1)
+			n = 1;
+		if(sigma == 0.0)
+		{
+			sigma = 1.0;
+			n = 1;
+		}
+		output.resize(n * n);
+		const double mu = int(n/2);
+		const double twoSigmaSquared = 2.0 * sigma * sigma;
+		double sum = 0.0;
+		double* outputPtr = output.data();
+		for(int y=0; y!=int(n); ++y)
+		{
+			for(int x=0; x!=int(n) ;++x)
+			{
+				double vX = double(x) - mu, vY = double(y) - mu;
+				*outputPtr = exp(-(vX*vX + vY*vY) / twoSigmaSquared);
+				sum += *outputPtr;
+				++outputPtr;
+			}
+		}
+		double normFactor = 1.0 / sum;
+		for(double &v : output)
+			v *= normFactor;
+	}
+	
+	static void taperedQuadraticShapeFunction(size_t n, ao::uvector<double>& output2d, double scaleSizeInPixels)
 	{
 		if(scaleSizeInPixels == 0.0)
 			output2d[0] = 1.0;

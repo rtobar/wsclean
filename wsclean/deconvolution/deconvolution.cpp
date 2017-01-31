@@ -146,6 +146,7 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 		algorithm->SetMultiscaleScaleBias(_settings.multiscaleDeconvolutionScaleBias);
 		algorithm->SetMultiscaleNormalizeResponse(_settings.multiscaleNormalizeResponse);
 		algorithm->SetMultiscaleGain(_settings.multiscaleGain);
+		algorithm->SetShape(_settings.multiscaleShapeFunction);
 	}
 	else
 	{

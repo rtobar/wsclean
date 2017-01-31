@@ -18,6 +18,7 @@ MultiScaleAlgorithm::MultiScaleAlgorithm(ImageBufferAllocator& allocator, double
 	_multiscaleScaleBias(0.6),
 	_multiscaleGain(0.2),
 	_multiscaleNormalizeResponse(false),
+	_scaleShape(MultiScaleTransforms::TaperedQuadraticShape),
 	_trackPerScaleMasks(false), _usePerScaleMasks(false),
 	_fastSubMinorLoop(true)
 {
@@ -98,7 +99,7 @@ void MultiScaleAlgorithm::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& mo
 		}
 	}
 	
-	MultiScaleTransforms msTransforms(_width, _height);
+	MultiScaleTransforms msTransforms(_width, _height, _scaleShape);
 	
 	size_t scaleWithPeak;
 	findActiveScaleConvolvedMaxima(dirtySet, integratedScratch.data(), true);
@@ -264,7 +265,7 @@ void MultiScaleAlgorithm::initializeScaleInfo()
 					newEntry.scale = 0.0;
 				else
 					newEntry.scale = scale;
-				newEntry.kernelPeak = MultiScaleTransforms::KernelPeakValue(scale);
+				newEntry.kernelPeak = MultiScaleTransforms::KernelPeakValue(scale, std::min(_width, _height), _scaleShape);
 				
 				scale *= 2.0;
 				++scaleIndex;
@@ -277,7 +278,7 @@ void MultiScaleAlgorithm::initializeScaleInfo()
 				_scaleInfos.push_back(ScaleInfo());
 				ScaleInfo& newEntry = _scaleInfos.back();
 				newEntry.scale = _manualScaleList[scaleIndex];
-				newEntry.kernelPeak = MultiScaleTransforms::KernelPeakValue(newEntry.scale);
+				newEntry.kernelPeak = MultiScaleTransforms::KernelPeakValue(newEntry.scale, std::min(_width, _height), _scaleShape);
 			}
 		}
 	}
@@ -285,7 +286,7 @@ void MultiScaleAlgorithm::initializeScaleInfo()
 
 void MultiScaleAlgorithm::convolvePSFs(std::unique_ptr<ImageBufferAllocator::Ptr[]>& convolvedPSFs, const double* psf, double* tmp, bool isIntegrated)
 {
-	MultiScaleTransforms msTransforms(_width, _height);
+	MultiScaleTransforms msTransforms(_width, _height, _scaleShape);
 	convolvedPSFs.reset(new ImageBufferAllocator::Ptr[_scaleInfos.size()]);
 	if(isIntegrated)
 		Logger::Info << "Scale info:\n";
@@ -299,7 +300,8 @@ void MultiScaleAlgorithm::convolvePSFs(std::unique_ptr<ImageBufferAllocator::Ptr
 		
 		if(isIntegrated)
 		{
-			msTransforms.Transform(convolvedPSFs[scaleIndex].data(), tmp, scaleEntry.scale);
+			if(scaleEntry.scale != 0.0)
+				msTransforms.Transform(convolvedPSFs[scaleIndex].data(), tmp, scaleEntry.scale);
 			
 			scaleEntry.psfPeak = convolvedPSFs[scaleIndex][_width/2 + (_height/2)*_width];
 			// We normalize this factor to 1 for scale 0, so:
@@ -335,7 +337,7 @@ void MultiScaleAlgorithm::convolvePSFs(std::unique_ptr<ImageBufferAllocator::Ptr
 
 void MultiScaleAlgorithm::findActiveScaleConvolvedMaxima(const ImageSet& imageSet, double* integratedScratch, bool reportRMS)
 {
-	MultiScaleTransforms msTransforms(_width, _height);
+	MultiScaleTransforms msTransforms(_width, _height, _scaleShape);
 	//ImageBufferAllocator::Ptr convolvedImage;
 	//_allocator.Allocate(_width*_height, convolvedImage);
 	imageSet.GetLinearIntegrated(integratedScratch);
@@ -469,7 +471,7 @@ void MultiScaleAlgorithm::addComponentToModel(double* model, size_t scaleWithPea
 	if(_scaleInfos[scaleWithPeak].scale == 0.0)
 		model[x + _width*y] += componentGain;
 	else
-		MultiScaleTransforms::AddShapeComponent(model, _width, _height, _scaleInfos[scaleWithPeak].scale, x, y, componentGain);
+		MultiScaleTransforms::AddShapeComponent(model, _width, _height, _scaleInfos[scaleWithPeak].scale, x, y, componentGain, _scaleShape);
 	
 	_scaleInfos[scaleWithPeak].nComponentsCleaned++;
 	_scaleInfos[scaleWithPeak].totalFluxCleaned += componentGain;

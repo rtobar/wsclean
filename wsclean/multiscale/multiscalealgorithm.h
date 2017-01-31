@@ -11,6 +11,8 @@
 #include "../deconvolution/imageset.h"
 #include "../deconvolution/deconvolutionalgorithm.h"
 
+#include "../multiscale/multiscaletransforms.h"
+
 #include "../wsclean/imagebufferallocator.h"
 
 class MultiScaleAlgorithm : public DeconvolutionAlgorithm
@@ -44,6 +46,10 @@ public:
 	{
 		_multiscaleNormalizeResponse = normResponse;
 	}
+	void SetShape(MultiScaleTransforms::Shape shape)
+	{
+		_scaleShape = shape;
+	}
 private:
 	class ImageBufferAllocator& _allocator;
 	size_t _width, _height, _convolutionWidth, _convolutionHeight;
@@ -52,6 +58,7 @@ private:
 	double _multiscaleScaleBias;
 	double _multiscaleGain;
 	bool _multiscaleNormalizeResponse;
+	MultiScaleTransforms::Shape _scaleShape;
 	ThreadedDeconvolutionTools* _tools;
 	
 	struct ScaleInfo

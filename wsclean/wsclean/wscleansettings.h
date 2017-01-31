@@ -1,5 +1,5 @@
-#ifndef WSCLEAN_SETTNGS_H
-#define WSCLEAN_SETTNGS_H
+#ifndef WSCLEAN_SETTINGS_H
+#define WSCLEAN_SETTINGS_H
 
 #include "wstackinggridder.h"
 #include "inversionalgorithm.h"
@@ -8,6 +8,7 @@
 #include "../system.h"
 
 #include "../deconvolution/deconvolutionalgorithm.h"
+#include "../multiscale/multiscaletransforms.h"
 
 /**
  * This class describes all settings for a single WSClean run.
@@ -72,6 +73,8 @@ public:
 	double multiscaleGain, multiscaleDeconvolutionScaleBias;
 	bool multiscaleNormalizeResponse;
 	ao::uvector<double> multiscaleScaleList;
+	MultiScaleTransforms::Shape multiscaleShapeFunction;
+	
 	double deconvolutionBorderRatio;
 	std::string fitsDeconvolutionMask, casaDeconvolutionMask;
 	bool useMoreSaneDeconvolution, useIUWTDeconvolution, iuwtSNRTest;
@@ -176,6 +179,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	multiscaleDeconvolutionScaleBias(0.6),
 	multiscaleNormalizeResponse(false),
 	multiscaleScaleList(),
+	multiscaleShapeFunction(MultiScaleTransforms::TaperedQuadraticShape),
 	deconvolutionBorderRatio(0.05),
 	fitsDeconvolutionMask(),
 	casaDeconvolutionMask(),

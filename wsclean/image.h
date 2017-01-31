@@ -55,6 +55,14 @@ public:
 		// norminv(0.75) x MAD
 		return 1.48260221850560 * MAD(data, size);
 	}
+	
+	static double RMS(const double* data, size_t size)
+	{
+		double sum = 0.0;
+		for(size_t i=0; i!=size; ++i)
+			sum += data[i]*data[i];
+		return sqrt(sum/size);
+	}
 private:
 	double* _data;
 	size_t _width, _height;

@@ -234,6 +234,8 @@ void CommandLine::printHelp()
 		"   Sets a list of scales to use in multi-scale cleaning. If unset, WSClean will select the delta\n"
 		"   (zero) scale, scales starting at four times the synthesized PSF, and increase by a factor of\n"
 		"   two until the maximum scale is reached. Example: -multiscale-scales 0,5,12.5\n"
+		"-multiscale-shape [shape]\n"
+		"   Sets the shape function used during multi-scale clean. Either 'tapered-quadratic' (default) or 'gaussian'.\n"
 		"-no-multiscale-fast-subminor\n"
 		"   Disable the 'fast subminor loop' optimization, that will only search a part of the\n"
 		"   image during the multi-scale subminor loop. The optimization is on by default.\n"
@@ -326,7 +328,7 @@ void CommandLine::printHeader()
 size_t CommandLine::parse_size_t(const char* param, const char* name)
 {
 	char* endptr;
-	errno=0;
+	errno = 0;
 	long v = strtol(param, &endptr, 0);
 	if(*endptr!=0 || endptr == param || errno!=0) {
 		std::ostringstream msg;
@@ -679,6 +681,16 @@ int CommandLine::Run(int argc, char* argv[])
 		{
 			++argi;
 			NumberList::ParseDoubleList(argv[argi], settings.multiscaleScaleList);
+		}
+		else if(param == "multiscale-shape")
+		{
+			++argi;
+			std::string shape = argv[argi];
+			if(shape == "tapered-quadratic")
+				settings.multiscaleShapeFunction = MultiScaleTransforms::TaperedQuadraticShape;
+			else if(shape == "gaussian")
+				settings.multiscaleShapeFunction = MultiScaleTransforms::GaussianShape;
+			else throw std::runtime_error("Unknown multiscale shape function given");
 		}
 		else if(param == "no-multiscale-fast-subminor")
 		{

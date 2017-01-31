@@ -6,7 +6,7 @@ void MultiScaleTransforms::Transform(const ao::uvector<double*>& images, double*
 {
 	ao::uvector<double> shape;
 	size_t kernelSize;
-	makeShapeFunction(scale, shape, kernelSize);
+	MakeShapeFunction(scale, shape, kernelSize);
 	
 	memset(scratch, 0, sizeof(double) * _width * _height);
 	
@@ -19,7 +19,7 @@ void MultiScaleTransforms::PrepareTransform(double* kernel, double scale)
 {
 	ao::uvector<double> shape;
 	size_t kernelSize;
-	makeShapeFunction(scale, shape, kernelSize);
+	MakeShapeFunction(scale, shape, kernelSize);
 	
 	memset(kernel, 0, sizeof(double) * _width * _height);
 	
