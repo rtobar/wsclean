@@ -91,13 +91,13 @@ private:
 
 	void initializeScaleInfo();
 	void convolvePSFs(std::unique_ptr<ImageBufferAllocator::Ptr[]>& convolvedPSFs, const double* psf, double* tmp, bool isIntegrated);
-	void findActiveScaleConvolvedMaxima(const ImageSet& imageSet, double* integratedScratch, bool reportRMS);
-	void findSingleScaleMaximum(const double* convolvedImage, size_t scaleIndex);
+	void findActiveScaleConvolvedMaxima(const ImageSet& imageSet, double* integratedScratch, double* scratch, bool reportRMS);
 	void sortScalesOnMaxima(size_t& scaleWithPeak);
 	void activateScales(size_t scaleWithLastPeak);
 	void measureComponentValues(ao::uvector<double>& componentValues, size_t scaleIndex, ImageSet& imageSet);
 	void addComponentToModel(double* model, size_t scaleWithPeak, double componentValue);
-	double findPeakScale0(const double *image, size_t &x, size_t &y, size_t scaleIndex);
+	
+	double findPeakDirect(const double *image, double* scratch, size_t &x, size_t &y, size_t scaleIndex);
 	
 	double* getConvolvedPSF(size_t psfIndex, size_t scaleIndex, const ao::uvector<const double*>& psfs, double* scratch, const std::unique_ptr<std::unique_ptr<ImageBufferAllocator::Ptr[]>[]>& convolvedPSFs);
 	

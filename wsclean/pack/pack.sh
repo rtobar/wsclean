@@ -19,7 +19,7 @@ else
 		mkdir /tmp/wsclean/wsclean
 		mkdir /tmp/wsclean/wsclean/examples
 		cd ..
-		cp -v CMakeLists.txt Doxyfile.in angle.h application.* areaset.* banddata.* buffered_lane.* casamaskreader.* dftpredictionalgorithm.* fftconvolver.* fftresampler.* fftwmultithreadenabler.* fitsiochecker.* fitsreader.* fitswriter.* gaussianfitter.h imagecoordinates.* image.* imageweights.* lane.* multibanddata.* nlplfitter.* numberlist.* matrix2x2.* modelrenderer.* msselection.* ndppp.* polarization.* polynomialfitter.* progressbar.* radeccoord.* stopwatch.* system.* threadpool.* uvector.* weightmode.* wscleanmain.cpp wscversion.h /tmp/wsclean/
+		cp -v CMakeLists.txt Doxyfile.in angle.h application.* areaset.* banddata.* buffered_lane.* casamaskreader.* dftpredictionalgorithm.* fftconvolver.* fftresampler.* fftwmultithreadenabler.* fitsiochecker.* fitsreader.* fitswriter.* gaussianfitter.h imagecoordinates.* image.* imageweights.* lane.* multibanddata.* nlplfitter.* numberlist.* matrix2x2.* modelrenderer.* msselection.* ndppp.* polarization.* polynomialfitter.* progressbar.* radeccoord.* rmsimage.* stopwatch.* system.* threadpool.* uvector.* weightmode.* wscleanmain.cpp wscversion.h /tmp/wsclean/
 		cp -v aocommon/lane.h aocommon/lane_03.h aocommon/lane_11.h aocommon/uvector_11.h aocommon/uvector_03.h /tmp/wsclean/aocommon/
 		cp -v CMake/*.cmake /tmp/wsclean/CMake/
 		cp -v deconvolution/*.{h,cpp} /tmp/wsclean/deconvolution/

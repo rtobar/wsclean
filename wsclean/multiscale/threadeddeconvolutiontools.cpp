@@ -158,7 +158,7 @@ ThreadedDeconvolutionTools::ThreadResult* ThreadedDeconvolutionTools::MultiScale
 	return 0;
 }
 
-void ThreadedDeconvolutionTools::FindMultiScalePeak(MultiScaleTransforms* msTransforms, ImageBufferAllocator* allocator, const double* image, const ao::uvector<double>& scales, std::vector<ThreadedDeconvolutionTools::PeakData>& results, bool allowNegativeComponents, const bool* mask, const std::vector<ao::uvector<bool>>& scaleMasks, double borderRatio, bool calculateRMS)
+void ThreadedDeconvolutionTools::FindMultiScalePeak(MultiScaleTransforms* msTransforms, ImageBufferAllocator* allocator, const double* image, const ao::uvector<double>& scales, std::vector<ThreadedDeconvolutionTools::PeakData>& results, bool allowNegativeComponents, const bool* mask, const std::vector<ao::uvector<bool>>& scaleMasks, double borderRatio, const Image& rmsFactorImage, bool calculateRMS)
 {
 	size_t imageIndex = 0;
 	size_t nextThread = 0;
@@ -193,6 +193,7 @@ void ThreadedDeconvolutionTools::FindMultiScalePeak(MultiScaleTransforms* msTran
 			task->mask = scaleMasks[imageIndex].data();
 		task->borderRatio = borderRatio;
 		task->calculateRMS = calculateRMS;
+		task->rmsFactorImage = &rmsFactorImage;
 		_taskLanes[nextThread]->write(task);
 		
 		++nextThread;
@@ -240,9 +241,23 @@ ThreadedDeconvolutionTools::ThreadResult* ThreadedDeconvolutionTools::FindMultiS
 		result->rms = RMS(image, width*height);
 	else
 		result->rms=-1.0;
-	if(mask == 0)
-		result->value = SimpleClean::FindPeak(image, width, height, result->x, result->y, allowNegativeComponents, 0, height, horBorderSize, vertBorderSize);
-	else
-		result->value = SimpleClean::FindPeakWithMask(image, width, height, result->x, result->y, allowNegativeComponents, 0, height, mask, horBorderSize, vertBorderSize);
+	if(rmsFactorImage->empty())
+	{
+		if(mask == 0)
+			result->value = SimpleClean::FindPeak(image, width, height, result->x, result->y, allowNegativeComponents, 0, height, horBorderSize, vertBorderSize);
+		else
+			result->value = SimpleClean::FindPeakWithMask(image, width, height, result->x, result->y, allowNegativeComponents, 0, height, mask, horBorderSize, vertBorderSize);
+	}
+	else {
+		for(size_t i=0; i!=rmsFactorImage->size(); ++i)
+			scratch[i] = image[i] * (*rmsFactorImage)[i];
+		
+		if(mask == 0)
+			result->value = SimpleClean::FindPeak(scratch, width, height, result->x, result->y, allowNegativeComponents, 0, height, horBorderSize, vertBorderSize);
+		else
+			result->value = SimpleClean::FindPeakWithMask(scratch, width, height, result->x, result->y, allowNegativeComponents, 0, height, mask, horBorderSize, vertBorderSize);
+		
+		result->value = result->value / (*rmsFactorImage)[result->x + result->y * width];
+	}
 	return result;
 }
