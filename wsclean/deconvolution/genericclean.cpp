@@ -54,7 +54,7 @@ void GenericClean::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& modelSet,
 		size_t startIteration = _iterationNumber;
 		ClarkLoop clarkLoop(_width, _height, _convolutionWidth, _convolutionHeight);
 		clarkLoop.SetIterationInfo(_iterationNumber, MaxNIter());
-		clarkLoop.SetThreshold(firstThreshold);
+		clarkLoop.SetThreshold(firstThreshold, firstThreshold*0.99);
 		clarkLoop.SetGain(Gain());
 		clarkLoop.SetAllowNegativeComponents(AllowNegativeComponents());
 		clarkLoop.SetSpectralFitter(&Fitter());

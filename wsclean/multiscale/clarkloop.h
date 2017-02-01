@@ -79,7 +79,7 @@ public:
 	ClarkLoop(size_t width, size_t height, size_t convolutionWidth, size_t convolutionHeight) :
 		_width(width), _height(height),
 		_untrimmedWidth(convolutionWidth), _untrimmedHeight(convolutionHeight),
-		_threshold(0.0), _gain(0.0),
+		_threshold(0.0), _consideredPixelThreshold(0.0), _gain(0.0),
 		_horizontalBorder(0), _verticalBorder(0),
 		_currentIteration(0), _maxIterations(0),
 		_allowNegativeComponents(true),
@@ -88,8 +88,16 @@ public:
 		_fluxCleaned(0.0)
 	{ }
 	
-	void SetThreshold(double threshold)
-	{ _threshold = threshold; }
+	/**
+	 * @param threshold The threshold to which this clark run should clean
+	 * @param consideredPixelThreshold The threshold that is used to determine whether a pixel
+	 * is considered. Typically, this is similar to threshold, but it can be set lower if
+	 * it is important that all peak values are below the threshold, as otherwise some pixels
+	 * might not be considered but get increased by the cleaning, thereby stay above the
+	 * threshold. This is important for making multi-scale clean efficient near a stopping threshold.
+	 */
+	void SetThreshold(double threshold, double consideredPixelThreshold)
+	{ _threshold = threshold; _consideredPixelThreshold = consideredPixelThreshold; }
 	
 	void SetIterationInfo(size_t currentIteration, size_t maxIterations)
 	{ _currentIteration = currentIteration; _maxIterations = maxIterations; }
@@ -134,7 +142,7 @@ private:
 	void findPeakPositions(ImageSet& convolvedResidual);
 	
 	size_t _width, _height, _untrimmedWidth, _untrimmedHeight;
-	double _threshold, _gain;
+	double _threshold, _consideredPixelThreshold, _gain;
 	size_t _horizontalBorder, _verticalBorder;
 	size_t _currentIteration, _maxIterations;
 	bool _allowNegativeComponents;

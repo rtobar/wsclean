@@ -148,9 +148,9 @@ void MultiScaleAlgorithm::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& mo
 		//
 		// The sub-minor iteration loop for this scale
 		//
-		double firstSubIterationThreshold = std::max(
-			std::fabs(_scaleInfos[scaleWithPeak].maxImageValue * _scaleInfos[scaleWithPeak].biasFactor) * (1.0 - _multiscaleGain),
-			firstThreshold);
+		double subIterationGainThreshold =
+			std::fabs(_scaleInfos[scaleWithPeak].maxImageValue * _scaleInfos[scaleWithPeak].biasFactor) * (1.0 - _multiscaleGain);
+		double firstSubIterationThreshold = std::max(subIterationGainThreshold, firstThreshold);
 		// TODO we could chose to run the non-fast loop until we hit e.g. 10 iterations in a scale,
 		// because the fast loop takes more constant time and is only efficient when doing
 		// many iterations.
@@ -160,7 +160,7 @@ void MultiScaleAlgorithm::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& mo
 			size_t subMinorStartIteration = _iterationNumber;
 			ClarkLoop clarkLoop(_width, _height, _convolutionWidth, _convolutionHeight);
 			clarkLoop.SetIterationInfo(_iterationNumber, MaxNIter());
-			clarkLoop.SetThreshold(firstSubIterationThreshold / _scaleInfos[scaleWithPeak].biasFactor);
+			clarkLoop.SetThreshold(firstSubIterationThreshold / _scaleInfos[scaleWithPeak].biasFactor, subIterationGainThreshold / _scaleInfos[scaleWithPeak].biasFactor);
 			clarkLoop.SetGain(_scaleInfos[scaleWithPeak].gain);
 			clarkLoop.SetAllowNegativeComponents(AllowNegativeComponents());
 			const size_t

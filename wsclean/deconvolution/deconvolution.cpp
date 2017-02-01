@@ -26,7 +26,6 @@ Deconvolution::~Deconvolution()
 	FreeDeconvolutionAlgorithms();
 }
 
-#include "../fitswriter.h"
 void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedMajorThreshold, size_t majorIterationNr)
 {
 	Logger::Info.Flush();
@@ -51,11 +50,7 @@ void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedM
 		RMSImage::Make(rmsImage, integrated, _beamSize, _beamSize, 0.0, _pixelScaleX, _pixelScaleY);
 		// We normalize the RMS image relative to the threshold so that Jy remains Jy.
 		double minRMS = rmsImage.Min();
-		FitsWriter rmsWriter;
-		rmsWriter.SetImageDimensions(_imgWidth, _imgHeight);
-		rmsWriter.Write("wsclean-rms.fits", rmsImage.data());
-		rmsWriter.Write("wsclean-curres.fits", integrated.data());
-		Logger::Info << "Beam=" << _beamSize << ", lowest RMS in image: " << minRMS << '\n';
+		Logger::Info << "Lowest RMS in image: " << minRMS << '\n';
 		rmsImage *= 1.0 / minRMS;
 		_cleanAlgorithm->SetRMSFactorImage(std::move(rmsImage));
 	}
