@@ -3,13 +3,16 @@
 //#include "interface.h"
 //#include "dummygridder.h"
 #include <idg.h>
+#include <idg-utility.h>
 
 #include "../msproviders/msprovider.h"
 
 #include <boost/thread/thread.hpp>
 
+#include "../wsclean/logger.h"
+
 IdgMsGridder::IdgMsGridder() :
-	_kernelSize(32),
+	_subgridSize(48),
 	_inversionLane(1024),
 	_predictionCalcLane(1024),
 	_predictionWriteLane(1024),
@@ -22,6 +25,11 @@ IdgMsGridder::~IdgMsGridder()
 void IdgMsGridder::Invert()
 {
 	const size_t width = TrimWidth(), height = TrimHeight();
+    
+    _taper_subgrid.resize(_subgridSize);
+    _taper_grid.resize(width);
+    idg::init_optimal_taper_1D(_subgridSize, width, 7.0, 1.25, _taper_subgrid.data(), _taper_grid.data());
+    
 
 	// Stokes I is always the first requested pol. So, only when Stokes I
 	// is requested, do the actual inversion. Since all pols are produced at once by IDG,
@@ -34,7 +42,8 @@ void IdgMsGridder::Invert()
 		initializeMSDataVector(msDataVector, 4);
 		
 		resetVisibilityCounters();
-		
+		std::cout << "total weight: " << totalWeight() << std::endl;
+        
 		// TODO use untrimmed dimensions and perform trimming
 		_grid.assign(width * height * 4, 0.0);
 		
@@ -43,16 +52,33 @@ void IdgMsGridder::Invert()
 			gridMeasurementSet(msDataVector[i]);
 		}
 		
-		idg::GridderPlan* plan = new idg::GridderPlan();
+		idg::GridderPlan* plan = new idg::GridderPlan(idg::Type::CPU_OPTIMIZED);
 		plan->set_grid(4, height, width, _grid.data());
-		plan->set_spheroidal(_kernelSize, _kernelSize, _kernel.data());
-		plan->set_cell_size(_actualPixelSizeX, _actualPixelSizeY);
-		int kernel_size = (_kernelSize / 4) + 1;
-		plan->set_w_kernel(kernel_size);
-		plan->internal_set_subgrid_size(_kernelSize);
+// 		plan->set_cell_size(_actualPixelSizeX, _actualPixelSizeY);
+// 		plan->set_w_kernel(7);
+// 		plan->internal_set_subgrid_size(_subgridSize);
+                
 		plan->transform_grid();
 		plan->bake();
-		delete plan;
+        
+        std::cout << "total weight: " << totalWeight() << std::endl;
+        
+        float inv_spheroidal[width];
+        for(size_t i=0; i < width ; ++i)
+        {
+            float y = _taper_grid[i];
+            inv_spheroidal[i] = 0.0;
+            if (y > 0.001) inv_spheroidal[i] = 1.0/y;
+        }
+        
+        for(size_t ii=0; ii != width * height; ++ii)
+        {
+            size_t i = ii % width;
+            size_t j = ii / width;
+            _grid[ii] *= 0.5*inv_spheroidal[i]*inv_spheroidal[j]/totalWeight()*width*height;
+        }
+
+        delete plan;
 	}
 	else if(_grid.empty()) {
 		throw std::runtime_error("IdgMsGridder::Invert() was called out of sequence");
@@ -67,49 +93,56 @@ void IdgMsGridder::Invert()
 
 void IdgMsGridder::constructGridders(const MultiBandData& selectedBands, size_t nStations, bool constructDegridders)
 {
-	// TODO This should be the prolate spheroidal in image domain
-	_kernel.assign(_kernelSize * _kernelSize, 1.0);  // TODO this is NN gridding
+	const size_t width = TrimWidth(), height = TrimHeight();
+
+    ao::uvector<float> taper;
+    taper.resize(_subgridSize * _subgridSize);
+    for(int i = 0; i < _subgridSize; i++)
+        for(int j = 0; j < _subgridSize; j++)
+            taper[i*_subgridSize + j] = _taper_subgrid[i] * _taper_subgrid[j];
 		
 	// A gridder per band is needed
-	if(constructDegridders)
+    if(constructDegridders)
 		_degridderPlans.resize(selectedBands.BandCount());
 	else
 		_gridderPlans.resize(selectedBands.BandCount());
-	ao::uvector<std::complex<double>> aterm(nStations * 4 * _kernelSize * _kernelSize, 0.0); // TODO fill with sensible data
+	ao::uvector<std::complex<double>> aterm(nStations * 4 * _subgridSize * _subgridSize, 0.0); // TODO fill with sensible data
 	//aterm[0] = 1.0; // TODO
-	aterm[(_kernelSize / 2) * (_kernelSize+1) * 4] = 1.0; // TODO
-	aterm[(_kernelSize / 2) * (_kernelSize+1) * 4+1] = 0.0; // TODO
-	aterm[(_kernelSize / 2) * (_kernelSize+1) * 4+2] = 0.0; // TODO
-	aterm[(_kernelSize / 2) * (_kernelSize+1) * 4+3] = 1.0; // TODO
-	const size_t width = TrimWidth(), height = TrimHeight();
+	aterm[(_subgridSize / 2) * (_subgridSize+1) * 4] = 1.0; // TODO
+	aterm[(_subgridSize / 2) * (_subgridSize+1) * 4+1] = 0.0; // TODO
+	aterm[(_subgridSize / 2) * (_subgridSize+1) * 4+2] = 0.0; // TODO
+	aterm[(_subgridSize / 2) * (_subgridSize+1) * 4+3] = 1.0; // TODO
 	for(size_t i=0; i!=selectedBands.BandCount(); ++i)
 	{
 		ao::uvector<double> frequencyList(selectedBands[i].begin(), selectedBands[i].end());
 		idg::Scheme* plan;
 		if(constructDegridders)
 		{
-			_degridderPlans[i] = new idg::DegridderPlan(idg::Type::CPU_REFERENCE, 1024);
+			_degridderPlans[i] = new idg::DegridderPlan(idg::Type::CUDA_GENERIC, 128);
+// 			_degridderPlans[i] = new idg::DegridderPlan(idg::Type::CPU_OPTIMIZED, 256);
 			plan = _degridderPlans[i];
 		}
 		else {
-			_gridderPlans[i] = new idg::GridderPlan(idg::Type::CPU_REFERENCE, 1024*10);
+			_gridderPlans[i] = new idg::GridderPlan(idg::Type::CUDA_GENERIC, 128);
+// 			_gridderPlans[i] = new idg::GridderPlan(idg::Type::CPU_OPTIMIZED, 256);
 			plan = _gridderPlans[i];
 		}
 		plan->set_frequencies(selectedBands[i].ChannelCount(), frequencyList.data());
 		plan->set_stations(nStations);
 		plan->set_grid(4, height, width, _grid.data());
-		plan->set_spheroidal(_kernelSize, _kernelSize, _kernel.data());
+		plan->set_spheroidal(_subgridSize, _subgridSize, taper.data());
 		plan->set_cell_size(_actualPixelSizeX, _actualPixelSizeY);
 //		plan->set_image_size(_actualPixelSizeX*width);
-		int kernel_size = (_kernelSize / 4) + 1;
-		plan->set_w_kernel(kernel_size);
-		plan->internal_set_subgrid_size(_kernelSize);
+		int w_kernel_size = (3*_subgridSize / 4) + 1;
+		plan->set_w_kernel(w_kernel_size);
+		plan->internal_set_subgrid_size(_subgridSize);
 		plan->bake();
 		
 		plan->start_w_layer(0.0); //TODO
+                Logger::Info << "start_w_layer\n";
 		
 		// This doesn't seem to have effect yet:
-		//plan->start_aterm(nStations, _kernelSize, _kernelSize, 4, aterm.data());
+		//plan->start_aterm(nStations, _subgridSize, _subgridSize, 4, aterm.data());
 	}
 }
 
@@ -153,18 +186,30 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 		msData.msProvider->ReadMeta(uInMeters, vInMeters, wInMeters, dataDescId);
 		const BandData& curBand(selectedBands[dataDescId]);
 		IDGInversionRow rowData;
+        
 		rowData.data = new std::complex<float>[curBand.ChannelCount()*4];
+        std::complex<float> *data4 = new std::complex<float>[curBand.ChannelCount()*4];
+        
 		rowData.uvw[0] = uInMeters;
-		rowData.uvw[1] = vInMeters;
-		rowData.uvw[2] = wInMeters;
+		rowData.uvw[1] = -vInMeters;  // DEBUG vdtol, flip axis
+		rowData.uvw[2] = -wInMeters;
 		rowData.antenna1 = antenna1Col(rowIndex);
 		rowData.antenna2 = antenna2Col(rowIndex);
 		rowData.timeIndex = timeIndex;
 		rowData.dataDescId = dataDescId;
 		
-		readAndWeightVisibilities<4>(*msData.msProvider, rowData, curBand, weightBuffer.data(), modelBuffer.data(), isSelected.data());
-		
-		_inversionLane.write(rowData);
+		readAndWeightVisibilities<1>(*msData.msProvider, rowData, curBand, weightBuffer.data(), modelBuffer.data(), isSelected.data());
+        for(int ii = 0;ii < (int)curBand.ChannelCount(); ++ii)
+        {
+          data4[ii*4] = rowData.data[ii];
+          data4[ii*4+1] = 0.0;
+          data4[ii*4+2] = 0.0;
+          data4[ii*4+3] = rowData.data[ii];
+        }
+        idg::GridderPlan* plan = _gridderPlans[rowData.dataDescId];
+        plan->grid_visibilities(timeIndex, antenna1Col(rowIndex), antenna2Col(rowIndex), rowData.uvw, data4);
+        delete[] data4;
+        delete[] rowData.data;
 	}
 	_inversionLane.write_end();
 	gridThread.join();
@@ -190,27 +235,47 @@ void IdgMsGridder::gridThreadFunction()
 	}
 }
 
-void IdgMsGridder::Predict(double* real)
+void IdgMsGridder::Predict(double* image)
 {
 	const size_t width = TrimWidth(), height = TrimHeight();
+    _taper_subgrid.resize(_subgridSize);
+    _taper_grid.resize(width);
+    idg::init_optimal_taper_1D(_subgridSize, width, 7.0, 1.25, _taper_subgrid.data(), _taper_grid.data());
 	
-	// Fill the grid with the image information for this polarization
-	_grid.resize(width * height * 4);
-	size_t polIndex = Polarization::StokesToIndex(Polarization());
-	for(size_t i=0; i != width * height; ++i)
-		_grid[i + polIndex*width*height].real(_image[i]);
-
+        
 	// Stokes V is always the last requested pol. So, only when Stokes V
 	// is requested, do the actual prediction. Since all pols are predicted at once by IDG,
 	// when Stokes I/Q/U prediction is requested, one waits until V is also predicted.
-	if(Polarization() == ::Polarization::StokesI)
+	if(Polarization() == Polarization::StokesI)
 	{
-		_grid.resize(width * height * 4);
-		
+      _grid.resize(width * height * 4);
+
+      // Fill the grid with the image information for this polarization
+      _grid.resize(width * height * 4);
+        
+        float inv_spheroidal[width];
+        for(size_t i=0; i < width ; ++i)
+        {
+            float y = _taper_grid[i];
+            inv_spheroidal[i] = 0.0;
+            if (y > 0.001) inv_spheroidal[i] = 1.0/y;
+        }
+        
+        for(size_t ii=0; ii != width * height; ++ii)
+        {
+            size_t i = ii % width;
+            size_t j = ii / width;
+            _grid[ii].real(image[ii]*inv_spheroidal[i]*inv_spheroidal[j]);
+            _grid[ii + 3*width*height].real(image[ii]*inv_spheroidal[i]*inv_spheroidal[j]);
+        }
+        
+        
 		// use a temporary gridder to transform the grid
-		std::unique_ptr<idg::GridderPlan> iface( new idg::GridderPlan() ); // TODO;
+
+		std::unique_ptr<idg::DegridderPlan> iface( new idg::DegridderPlan(idg::Type::CPU_OPTIMIZED) );
+
 		iface->set_grid(4, height, width, _grid.data());
-		iface->set_spheroidal(_kernelSize, _kernel.data());
+                
 		iface->transform_grid();
 		
 		std::vector<MSData> msDataVector;
@@ -225,6 +290,8 @@ void IdgMsGridder::Predict(double* real)
 
 void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 {
+        msData.msProvider->ReopenRW();
+
 	_selectedBands = msData.SelectedBand();
 	_outputProvider = msData.msProvider;
 	
@@ -266,8 +333,8 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 		
 		IDGPredictionRow row;
 		row.uvw[0] = uInMeters;
-		row.uvw[1] = vInMeters;
-		row.uvw[2] = wInMeters;
+		row.uvw[1] = -vInMeters;
+		row.uvw[2] = -wInMeters;
 		row.antenna1 = antenna1Col(msRowIndex);
 		row.antenna2 = antenna2Col(msRowIndex);
 		row.timeIndex = timeIndex;
@@ -290,27 +357,51 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 void IdgMsGridder::predictCalcThreadFunction()
 {
 	IDGPredictionRow row;
-	while(_predictionCalcLane.read(row))
+        // read the first sample, exit if none is there
+        if (!_predictionCalcLane.read(row)) return;
+        
+        
+        casa::MeasurementSet ms = _outputProvider->MS();
+        casacore::ArrayColumn<casacore::Complex> modelColumn(ms, casacore::MS::columnName(casacore::MSMainEnums::MODEL_DATA));
+        const casacore::IPosition shape(modelColumn.shape(0));
+        vector<size_t> idToMSRow;
+        _outputProvider->MakeIdToMSRowMapping(idToMSRow);
+        
+	while(true)
 	{
 		idg::DegridderPlan* plan = _degridderPlans[row.dataDescId];
-		// TODO was the buffer before or after the request full?
 		bool isBufferFull = plan->request_visibilities(row.rowId, row.timeIndex, row.antenna1, row.antenna2, row.uvw);
-		if(isBufferFull)
+                
+                // compute if the buffer is full, or if there are no more samples
+                // if the buffer is full, no new sample will be read
+		if (isBufferFull || !_predictionCalcLane.read(row))
 		{
-			// Get the band belonging to the gridder that is full
-			const BandData& curBand(_selectedBands[row.dataDescId]);
-			
 			auto available_row_ids = plan->compute();
-			for(size_t i : available_row_ids)
+//                         std::cout << "computed " << available_row_ids.size() << " rows" << std::endl;
+			for(auto i : available_row_ids)
 			{
-				IDGRowForWriting writeRow;
-				writeRow.data = new std::complex<float>[curBand.ChannelCount()*4];
-				plan->read_visibilities(i, writeRow.data); 
-				writeRow.rowId = i;
-				_predictionWriteLane.write(writeRow);
+                          size_t rowid(i.first);
+                          std::complex<float>* dataptr(i.second);
+                          casacore::Array<std::complex<float>> modeldataArray(shape, dataptr, casacore::SHARE);
+
+                          modelColumn.put(idToMSRow[rowid], modeldataArray);
+                          //                             _outputProvider->WriteModel(i.first, i.second);
+//                             for(int ii = -4;;)
+//                             {
+//                                 std::cout << i.second[ii];
+//                                 if (++ii == 24) break;
+//                                 std::cout << ", ";
+//                             }
+//                             std::cout << std::endl;
 			}
+			plan->finished_reading();
+                        
+                        // The buffer was not full
+                        // So, we were computing because there were no more samples
+                        if (!isBufferFull) return;
 		}
 	}
+	
 }
 
 void IdgMsGridder::predictWriteThreadFunction(boost::mutex* mutex)
@@ -320,7 +411,8 @@ void IdgMsGridder::predictWriteThreadFunction(boost::mutex* mutex)
 	{
 		boost::mutex::scoped_lock lock(*mutex);
 		// TODO we should not write visibilities that were outside the w-range
-		_outputProvider->WriteModel(row.rowId, row.data);
+// 		_outputProvider->WriteModel(row.rowId, row.data);
+                delete[] row.data;
 	}
 }
 

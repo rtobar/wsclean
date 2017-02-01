@@ -64,10 +64,11 @@ private:
 	
 	std::vector<idg::GridderPlan*> _gridderPlans;
 	std::vector<idg::DegridderPlan*> _degridderPlans;
-	size_t _kernelSize;
+	size_t _subgridSize;
 	ao::uvector<std::complex<double>> _grid;
 	ao::uvector<double> _image;
-	ao::uvector<double> _kernel;
+	ao::uvector<float> _taper_subgrid;
+	ao::uvector<float> _taper_grid;
 	ao::lane<IDGInversionRow> _inversionLane;
 	ao::lane<IDGPredictionRow> _predictionCalcLane;
 	ao::lane<IDGRowForWriting> _predictionWriteLane;
