@@ -12,7 +12,7 @@
 #include "../wsclean/logger.h"
 
 IdgMsGridder::IdgMsGridder() :
-	_subgridSize(48),
+	_subgridSize(24),
 	_inversionLane(1024),
 	_predictionCalcLane(1024),
 	_predictionWriteLane(1024),
@@ -118,13 +118,13 @@ void IdgMsGridder::constructGridders(const MultiBandData& selectedBands, size_t 
 		idg::Scheme* plan;
 		if(constructDegridders)
 		{
-			_degridderPlans[i] = new idg::DegridderPlan(idg::Type::CUDA_GENERIC, 128);
-// 			_degridderPlans[i] = new idg::DegridderPlan(idg::Type::CPU_OPTIMIZED, 256);
+//			_degridderPlans[i] = new idg::DegridderPlan(idg::Type::CUDA_GENERIC, 128);
+ 			_degridderPlans[i] = new idg::DegridderPlan(idg::Type::CPU_OPTIMIZED, 256);
 			plan = _degridderPlans[i];
 		}
 		else {
-			_gridderPlans[i] = new idg::GridderPlan(idg::Type::CUDA_GENERIC, 128);
-// 			_gridderPlans[i] = new idg::GridderPlan(idg::Type::CPU_OPTIMIZED, 256);
+//			_gridderPlans[i] = new idg::GridderPlan(idg::Type::CUDA_GENERIC, 128);
+ 			_gridderPlans[i] = new idg::GridderPlan(idg::Type::CPU_OPTIMIZED, 256);
 			plan = _gridderPlans[i];
 		}
 		plan->set_frequencies(selectedBands[i].ChannelCount(), frequencyList.data());
