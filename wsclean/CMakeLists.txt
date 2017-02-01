@@ -53,6 +53,20 @@ else()
   message("LOFAR beam library not found: LOFAR beam will not be available in WSClean. This is not an error, it means that LOFAR beam correction and the 'lofar-dft' mode will be unavailable.")
 endif(LOFAR_STATION_RESPONSE_DIR AND LOFAR_STATION_RESPONSE_LIB)
 
+find_package(IDG  NO_MODULE QUIET)
+
+if(IDG_LIB AND IDG_INCLUDE_DIR)
+  set(IDG_OPT_LIBS ${IDG_LIB} idg-utility)
+  set(IDG_FILES idg/idgmsgridder.cpp)
+  include_directories(${IDG_INCLUDE_DIR})
+  add_definitions(-DHAVE_IDG)
+  message("Image domain gridder libraries found.")
+else(IDG_LIB AND IDG_INCLUDE_DIR)
+  set(IDG_OPT_LIBS)
+  set(IDG_FILES)
+  message("Image domain gridder libraries NOT found. Experimental gridder will not be available.")
+endif(IDG_LIB AND IDG_INCLUDE_DIR)
+
 include_directories(${CASACORE_INCLUDE_DIRS})
 include_directories(${Boost_INCLUDE_DIR})
 include_directories(${CFITSIO_INCLUDE_DIR})
@@ -113,7 +127,7 @@ add_library(wsclean-object OBJECT
   multiscale/clarkloop.cpp multiscale/multiscalealgorithm.cpp multiscale/multiscaletransforms.cpp multiscale/threadeddeconvolutiontools.cpp
   wsclean/commandline.cpp wsclean/imagingtable.cpp wsclean/logger.cpp wsclean/msgridderbase.cpp wsclean/wscfitswriter.cpp wsclean/wsclean.cpp
   wsclean/wscleansettings.cpp wsclean/wsmsgridder.cpp wsclean/wstackinggridder.cpp
-	${LBEAM_FILES})
+	${LBEAM_FILES} ${IDG_FILES})
 
 set_property(TARGET wsclean-object PROPERTY POSITION_INDEPENDENT_CODE 1)
 
@@ -126,10 +140,10 @@ add_library(wsclean-shared SHARED ${WSCLEANFILES})
 target_link_libraries(wsclean-shared)
 
 add_executable(wsclean wscleanmain.cpp)
-target_link_libraries(wsclean wsclean-lib ${CASACORE_LIBRARIES} ${FFTW3_LIB} ${FFTW3_THREADS_LIB} ${Boost_DATE_TIME_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${CFITSIO_LIBRARY} ${GSL_LIB} ${GSL_CBLAS_LIB} ${PTHREAD_LIB} ${LBEAM_LIBS})
+target_link_libraries(wsclean wsclean-lib ${CASACORE_LIBRARIES} ${FFTW3_LIB} ${FFTW3_THREADS_LIB} ${Boost_DATE_TIME_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${CFITSIO_LIBRARY} ${GSL_LIB} ${GSL_CBLAS_LIB} ${PTHREAD_LIB} ${LBEAM_LIBS} ${IDG_OPT_LIBS})
 
 add_executable(interfaceexample EXCLUDE_FROM_ALL interface/interfaceexample.c)
-target_link_libraries(interfaceexample wsclean-lib ${CASACORE_LIBRARIES} ${FFTW3_LIB} ${FFTW3_THREADS_LIB} ${Boost_DATE_TIME_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${CFITSIO_LIBRARY} ${GSL_LIB} ${GSL_CBLAS_LIB} ${LBEAM_LIBS})
+target_link_libraries(interfaceexample wsclean-lib ${CASACORE_LIBRARIES} ${FFTW3_LIB} ${FFTW3_THREADS_LIB} ${Boost_DATE_TIME_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${CFITSIO_LIBRARY} ${GSL_LIB} ${GSL_CBLAS_LIB} ${LBEAM_LIBS} ${IDG_OPT_LIBS})
 
 set_target_properties(wsclean-object PROPERTIES COMPILE_FLAGS "-std=c++0x")
 set_target_properties(wsclean PROPERTIES COMPILE_FLAGS "-std=c++0x")
