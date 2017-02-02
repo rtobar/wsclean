@@ -47,7 +47,15 @@ void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedM
 	{
 		Image rmsImage;
 		// TODO this should use full beam parameters
-		RMSImage::Make(rmsImage, integrated, _beamSize, _beamSize, 0.0, _pixelScaleX, _pixelScaleY);
+		switch(_settings.rmsBackground)
+		{
+			case WSCleanSettings::RMSWindow:
+				RMSImage::Make(rmsImage, integrated, _settings.rmsBackgroundWindow, _beamSize, _beamSize, 0.0, _pixelScaleX, _pixelScaleY);
+				break;
+			case WSCleanSettings::RMSAndMinimumWindow:
+				RMSImage::MakeWithNegativityLimit(rmsImage, integrated, _settings.rmsBackgroundWindow, _beamSize, _beamSize, 0.0, _pixelScaleX, _pixelScaleY);
+				break;
+		}
 		// We normalize the RMS image relative to the threshold so that Jy remains Jy.
 		double minRMS = rmsImage.Min();
 		Logger::Info << "Lowest RMS in image: " << minRMS << '\n';
@@ -127,6 +135,7 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 	_beamSize = beamSize;
 	_pixelScaleX = pixelScaleX;
 	_pixelScaleY = pixelScaleY;
+	_autoMaskIsFinished = false;
 	FreeDeconvolutionAlgorithms();
 	
 	_summedCount = groupTable.SquaredGroupCount();

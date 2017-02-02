@@ -48,7 +48,7 @@ ImagingTable ImagingTable::GetSquaredGroup(size_t index) const
 void ImagingTable::Print()
 {
 	Logger::Info << "=== IMAGING TABLE ===\n"
-		"       # Pol Ch JG ²G Freq(MHz)\n";
+		"       # Pol Ch JG ²G In Freq(MHz)\n";
 	for(size_t i=0; i!=IndependentGroupCount(); ++i)
 	{
 		bool isLastGroup = ((i+1) == IndependentGroupCount());
@@ -106,6 +106,7 @@ string ImagingTableEntry::ToString()
 	str << outputChannelIndex
 		<< "  " << joinedGroupIndex
 		<< "  " << squaredDeconvolutionIndex
+		<< "  " << outputIntervalIndex
 		<< "  " << round(bandStartFrequency*1e-6)
 		<< "-" << round(bandEndFrequency*1e-6);
 	

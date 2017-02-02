@@ -48,7 +48,7 @@ void GenericClean::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& modelSet,
 	else if(this->_mGain != 1.0) {
 		Logger::Info << "Major iteration threshold reached global threshold of " << this->_threshold << ": final major iteration.\n";
 	}
-		
+	
 	if(_useClarkOptimization)
 	{
 		size_t startIteration = _iterationNumber;

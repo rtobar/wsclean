@@ -67,6 +67,8 @@ public:
 	bool autoDeconvolutionThreshold, autoMask;
 	double autoDeconvolutionThresholdSigma, autoMaskSigma;
 	bool rmsBackground;
+	double rmsBackgroundWindow;
+	enum RMSBackgroundMethod { RMSWindow, RMSAndMinimumWindow } rmsBackgroundMethod;
 	size_t deconvolutionIterationCount;
 	bool allowNegativeComponents, stopOnNegativeComponents;
 	bool useMultiscale, useClarkOptimization, squaredJoins, forceDynamicJoin;
@@ -169,6 +171,8 @@ inline WSCleanSettings::WSCleanSettings() :
 	autoDeconvolutionThresholdSigma(0.0),
 	autoMaskSigma(0.0),
 	rmsBackground(false),
+	rmsBackgroundWindow(25.0),
+	rmsBackgroundMethod(RMSWindow),
 	deconvolutionIterationCount(0),
 	allowNegativeComponents(true), 
 	stopOnNegativeComponents(false),

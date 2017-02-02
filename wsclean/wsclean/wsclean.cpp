@@ -1296,7 +1296,7 @@ void WSClean::makeImagingTable(size_t outputIntervalIndex)
 			for(size_t outChannelIndex=0; outChannelIndex!=_settings.channelsOut; ++outChannelIndex)
 			{
 				ImagingTableEntry freqTemplate;
-				makeImagingTableEntry(_inputChannelFrequencies, outChannelIndex, freqTemplate);
+				makeImagingTableEntry(_inputChannelFrequencies, outputIntervalIndex, outChannelIndex, freqTemplate);
 				
 				size_t localJGI = joinedGroupIndex;
 				addPolarizationsToImagingTable(localJGI, squaredGroupIndex, outChannelIndex, freqTemplate);
@@ -1309,7 +1309,7 @@ void WSClean::makeImagingTable(size_t outputIntervalIndex)
 			for(size_t outChannelIndex=0; outChannelIndex!=_settings.channelsOut; ++outChannelIndex)
 			{
 				ImagingTableEntry freqTemplate;
-				makeImagingTableEntry(_inputChannelFrequencies, outChannelIndex, freqTemplate);
+				makeImagingTableEntry(_inputChannelFrequencies, outputIntervalIndex, outChannelIndex, freqTemplate);
 				
 				addPolarizationsToImagingTable(joinedGroupIndex, squaredGroupIndex, outChannelIndex, freqTemplate);
 			}
@@ -1319,7 +1319,7 @@ void WSClean::makeImagingTable(size_t outputIntervalIndex)
 	_imagingTable.Print();
 }
 
-void WSClean::makeImagingTableEntry(const std::vector<OrderedChannel>& channels, size_t outChannelIndex, ImagingTableEntry& entry)
+void WSClean::makeImagingTableEntry(const std::vector<OrderedChannel>& channels, size_t outIntervalIndex, size_t outChannelIndex, ImagingTableEntry& entry)
 {
 	size_t startCh, width;
 	if(_settings.endChannel != 0)
@@ -1343,6 +1343,7 @@ void WSClean::makeImagingTableEntry(const std::vector<OrderedChannel>& channels,
 	entry.highestFrequency = channels[chHighIndex].Frequency();
 	entry.bandStartFrequency = entry.lowestFrequency - channels[chLowIndex].Width()*0.5;
 	entry.bandEndFrequency = entry.highestFrequency + channels[chHighIndex].Width()*0.5;
+	entry.outputIntervalIndex = outIntervalIndex;
 	
 	entry.msData.resize(_settings.filenames.size());
 	for(size_t msIndex=0; msIndex!=_settings.filenames.size(); ++msIndex)

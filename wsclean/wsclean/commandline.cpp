@@ -210,6 +210,10 @@ void CommandLine::printHelp()
 		"-rms-background\n"
 		"   Instead of using a single RMS for auto thresholding/masking, use a spatially varying\n"
 		"   RMS image.\n"
+		"-rms-background-window\n"
+		"   Size of window for creating the RMS background map, in number of PSFs. Default: 25 psfs.\n"
+		"-rms-background-method\n"
+		"   Either 'rms' (default, uses sliding window RMS) or 'rms-with-min' (use max(window rms,1.5/5window min)).\n"
 		"-gain <gain>\n"
 		"   Cleaning gain: Ratio of peak that will be subtracted in each iteration. Default: 0.1\n"
 		"-mgain <gain>\n"
@@ -494,6 +498,24 @@ int CommandLine::Run(int argc, char* argv[])
 		else if(param == "rms-background")
 		{
 			settings.rmsBackground = true;
+		}
+		else if(param == "rms-background-window")
+		{
+			++argi;
+			settings.rmsBackground = true;
+			settings.rmsBackgroundWindow = atof(argv[argi]);
+		}
+		else if(param == "rms-background-method")
+		{
+			++argi;
+			std::string method = argv[argi];
+			settings.rmsBackground = true;
+			if(method == "rms")
+				settings.rmsBackgroundMethod = WSCleanSettings::RMSWindow;
+			else if(method == "rms-with-min")
+				settings.rmsBackgroundMethod = WSCleanSettings::RMSAndMinimumWindow;
+			else
+				throw std::runtime_error("Unknown RMS background method specified");
 		}
 		else if(param == "datacolumn")
 		{
