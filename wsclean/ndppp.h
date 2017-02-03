@@ -18,6 +18,30 @@ public:
 		Application::Run("makesourcedb in=" + input + " out=" + destination + " format='<'");
 	}
 	
+	static void WriteHeader(std::ostream& stream, double refFrequency)
+	{
+		stream << "# (Name, Type, Ra, Dec, I, Q, U, V, ReferenceFrequency='" << refFrequency << "', SpectralIndex, MajorAxis, MinorAxis, Orientation) = format\n\n";
+	}
+	
+	static void WritePointComponent(std::ostream& stream, const std::string& name, long double ra, long double dec, double i, double q, double u, double v, double freq, double si)
+	{
+		stream << name << ",POINT,"
+			<< RaDecCoord::RAToString(ra, ':') << ','
+			<< RaDecCoord::DecToString(dec, '.') << ','
+			<< i << ',' << q << ',' << u << ',' << v << ','
+			<< freq << ",[" << si << "],,,\n";
+	}
+	
+	static void WriteGausssianComponent(std::ostream& stream, const std::string& name, long double ra, long double dec, double i, double q, double u, double v, double freq, double si, double maj, double min, double posangle)
+	{
+		stream << name << ",GAUSSIAN,"
+			<< RaDecCoord::RAToString(ra, ':') << ','
+			<< RaDecCoord::DecToString(dec, '.') << ','
+			<< i << ',' << q << ',' << u << ',' << v << ','
+			<< freq << ",[" << si << "],"
+			<< maj << ',' << min << ',' << posangle << "\n";
+	}
+	
 	static void SaveSkyModel(const std::string& destination, const Model& model, bool convertClustersToPatches)
 	{
 		std::ofstream file(destination);

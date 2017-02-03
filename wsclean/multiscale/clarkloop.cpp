@@ -205,3 +205,11 @@ void ClarkLoop::UpdateAutoMask(bool* mask) const
 			mask[_clarkModel.FullIndex(px)] = true;
 	}
 }
+
+void ClarkLoop::UpdateComponentImage(double* image) const
+{
+	for(size_t px=0; px!=_clarkModel.size(); ++px)
+	{
+		image[_clarkModel.FullIndex(px)] += _clarkModel.Model()[0][px];
+	}
+}

@@ -30,6 +30,8 @@ public:
 	const DeconvolutionAlgorithm& GetAlgorithm() const { return *_cleanAlgorithm; }
 	
 	bool IsInitialized() const { return _cleanAlgorithm != 0; }
+	
+	void SaveComponentList(const class ImagingTable& table, long double phaseCentreRA, long double phaseCentreDec) const;
 private:
 	void calculateDeconvolutionFrequencies(const ImagingTable& groupTable, ao::uvector<double>& frequencies);
 	

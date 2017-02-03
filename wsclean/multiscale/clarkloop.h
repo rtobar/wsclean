@@ -138,6 +138,8 @@ public:
 	
 	void UpdateAutoMask(bool* mask) const;
 	
+	void UpdateComponentImage(double* image) const;
+	
 private:
 	void findPeakPositions(ImageSet& convolvedResidual);
 	

@@ -97,6 +97,11 @@ public:
 	{
 		MakeShapeFunction(scaleSizeInPixels, output, n, std::min(_width, _height), _shape);
 	}
+	
+	static double GaussianSigma(double scaleSizeInPixels)
+	{
+		return scaleSizeInPixels * (3.0 / 16.0);
+	}
 private:
 	size_t _width, _height;
 	enum Shape _shape;
@@ -115,7 +120,7 @@ private:
 	
 	static void makeGaussianFunction(double scaleSizeInPixels, ao::uvector<double>& output, size_t& n, size_t maxN)
 	{
-		double sigma = scaleSizeInPixels * (3.0 / 16.0);
+		double sigma = GaussianSigma(scaleSizeInPixels);
 		n = int(ceil(sigma * 5.0 / 2.0)) * 2 + 1;
 		if(n > maxN)
 		{

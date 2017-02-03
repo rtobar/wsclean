@@ -10,8 +10,10 @@
 #include "../casamaskreader.h"
 #include "../fitsreader.h"
 #include "../image.h"
+#include "../ndppp.h"
 #include "../rmsimage.h"
 
+#include "../wsclean/imagefilename.h"
 #include "../wsclean/imagingtable.h"
 #include "../wsclean/wscleansettings.h"
 
@@ -172,6 +174,7 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 		algorithm->SetMultiscaleNormalizeResponse(_settings.multiscaleNormalizeResponse);
 		algorithm->SetMultiscaleGain(_settings.multiscaleGain);
 		algorithm->SetShape(_settings.multiscaleShapeFunction);
+		algorithm->SetTrackComponents(_settings.saveComponentList);
 	}
 	else
 	{
@@ -238,4 +241,52 @@ void Deconvolution::calculateDeconvolutionFrequencies(const ImagingTable& groupT
 	}
 	for(size_t i=0; i!=deconvolutionChannels; ++i)
 		frequencies[i] /= weights[i];
+}
+
+void Deconvolution::SaveComponentList(const class ImagingTable& table, long double phaseCentreRA, long double phaseCentreDec) const
+{
+	const ImagingTableEntry& entry = table.Front();
+	std::string filename = ImageFilename::GetPrefix(_settings, entry.polarization, entry.outputChannelIndex, entry.outputIntervalIndex, false) + "-components.txt";
+	std::ofstream file(filename);
+	const double frequency = entry.CentralFrequency();
+	NDPPP::WriteHeader(file, frequency);
+	if(_settings.useMultiscale)
+	{
+		MultiScaleAlgorithm& algorithm = static_cast<MultiScaleAlgorithm&>(*_cleanAlgorithm.get());
+		for(size_t scaleIndex=0; scaleIndex!=algorithm.ScaleCount(); ++scaleIndex)
+		{
+			size_t componentIndex = 0;
+			const double
+				scale = algorithm.ScaleSize(scaleIndex),
+				// Using the FWHM formula for a Gaussian
+				fwhm = 2.0L * sqrtl(2.0L * logl(2.0L)) * MultiScaleTransforms::GaussianSigma(scale),
+				scaleFWHML = fwhm * _pixelScaleX * (180.0*60.0*60.0/ M_PI),
+				scaleFWHMM = fwhm * _pixelScaleY * (180.0*60.0*60.0/ M_PI);
+			const Image& componentImage = algorithm.ScaleComponentImage(scaleIndex);
+			Image::const_iterator iter = componentImage.begin();
+			for(size_t y=0; y!=_imgHeight; ++y)
+			{
+				for(size_t x=0; x!=_imgWidth; ++x)
+				{
+					if(*iter != 0.0)
+					{
+						long double l, m;
+						ImageCoordinates::XYToLM<long double>(x, y, _pixelScaleX, _pixelScaleY, _imgWidth, _imgHeight, l, m);
+						long double ra, dec;
+						ImageCoordinates::LMToRaDec(l, m, phaseCentreRA, phaseCentreDec, ra, dec);
+						std::ostringstream name;
+						name << 's' << scaleIndex << 'c' << componentIndex;
+						if(scale == 0.0)
+							NDPPP::WritePointComponent(file, name.str(), ra, dec, *iter, 0, 0, 0, frequency, 0.0);
+						else {
+							NDPPP::WriteGausssianComponent(file, name.str(), ra, dec, *iter, 0, 0, 0, frequency, 0.0, scaleFWHML, scaleFWHMM, 0.0);
+						}
+						++componentIndex;
+					}
+					++iter;
+				}
+			}
+		}
+	}
+	else throw std::runtime_error("Saving a component list is currently only implemented for multi-scale clean");
 }

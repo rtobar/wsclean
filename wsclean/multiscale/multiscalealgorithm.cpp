@@ -20,7 +20,7 @@ MultiScaleAlgorithm::MultiScaleAlgorithm(ImageBufferAllocator& allocator, double
 	_multiscaleNormalizeResponse(false),
 	_scaleShape(MultiScaleTransforms::TaperedQuadraticShape),
 	_trackPerScaleMasks(false), _usePerScaleMasks(false),
-	_fastSubMinorLoop(true)
+	_fastSubMinorLoop(true), _trackComponents(false)
 {
 }
 
@@ -79,6 +79,12 @@ void MultiScaleAlgorithm::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& mo
 		_scaleMasks.resize(_scaleInfos.size());
 		for(size_t s=0; s!=_scaleInfos.size(); ++s)
 			_scaleMasks[s].assign(_width*_height, false);
+	}
+	if(_trackComponents && _scaleComponentImages.empty())
+	{
+		_scaleComponentImages.resize(_scaleInfos.size());
+		for(Image& image : _scaleComponentImages)
+			image = Image(_width, _height, 0.0, _allocator);
 	}
 	
 	ImageBufferAllocator::Ptr scratch, scratchB, integratedScratch;
@@ -193,9 +199,12 @@ void MultiScaleAlgorithm::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& mo
 				clarkLoop.CorrectResidualDirty(scratch.data(), scratchB.data(), integratedScratch.data(), imageIndex, dirtySet[imageIndex],  psf);
 				
 				clarkLoop.GetFullIndividualModel(imageIndex, scratch.data());
-				if(_trackPerScaleMasks && imageIndex==0)
+				if(imageIndex==0)
 				{
-					clarkLoop.UpdateAutoMask(_scaleMasks[scaleWithPeak].data());
+					if(_trackPerScaleMasks)
+						clarkLoop.UpdateAutoMask(_scaleMasks[scaleWithPeak].data());
+					if(_trackComponents)
+						clarkLoop.UpdateComponentImage(_scaleComponentImages[scaleWithPeak].data());
 				}
 				if(_scaleInfos[scaleWithPeak].scale != 0.0)
 					_tools->MultiScaleTransform(&msTransforms, ao::uvector<double*>{scratch.data()}, integratedScratch.data(), _scaleInfos[scaleWithPeak].scale);
@@ -475,6 +484,10 @@ void MultiScaleAlgorithm::addComponentToModel(double* model, size_t scaleWithPea
 	if(_trackPerScaleMasks)
 	{
 		_scaleMasks[scaleWithPeak][x + _width*y] = true;
+	}
+	if(_trackComponents)
+	{
+		_scaleComponentImages[scaleWithPeak][x + _width*y] += componentGain;
 	}
 }
 

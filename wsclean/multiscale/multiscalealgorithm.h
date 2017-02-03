@@ -31,6 +31,9 @@ public:
 		_trackPerScaleMasks = trackPerScaleMasks;
 		_usePerScaleMasks = usePerScaleMasks; 
 	}
+	void SetTrackComponents(bool trackComponents) {
+		_trackComponents = trackComponents;
+	}
 	void SetUseFastSubMinorLoop(bool fastSubMinorLoop) {
 		_fastSubMinorLoop = fastSubMinorLoop;
 	}
@@ -49,6 +52,18 @@ public:
 	void SetShape(MultiScaleTransforms::Shape shape)
 	{
 		_scaleShape = shape;
+	}
+	size_t ScaleCount() const
+	{
+		return _scaleInfos.size();
+	}
+	const Image& ScaleComponentImage(size_t scaleIndex) const 
+	{
+		return _scaleComponentImages[scaleIndex];
+	}
+	double ScaleSize(size_t scaleIndex) const
+	{
+		return _scaleInfos[scaleIndex].scale; 
 	}
 private:
 	class ImageBufferAllocator& _allocator;
@@ -86,8 +101,9 @@ private:
 	std::vector<MultiScaleAlgorithm::ScaleInfo> _scaleInfos;
 	ao::uvector<double> _manualScaleList;
 	
-	bool _trackPerScaleMasks, _usePerScaleMasks, _fastSubMinorLoop;
+	bool _trackPerScaleMasks, _usePerScaleMasks, _fastSubMinorLoop, _trackComponents;
 	std::vector<ao::uvector<bool>> _scaleMasks;
+	std::vector<Image> _scaleComponentImages;
 
 	void initializeScaleInfo();
 	void convolvePSFs(std::unique_ptr<ImageBufferAllocator::Ptr[]>& convolvedPSFs, const double* psf, double* tmp, bool isIntegrated);

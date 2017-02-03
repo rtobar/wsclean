@@ -699,6 +699,10 @@ void WSClean::runIndependentGroup(const ImagingTable& groupTable)
 		
 		for(size_t joinedIndex=0; joinedIndex!=groupTable.EntryCount(); ++joinedIndex)
 			saveRestoredImagesForGroup(groupTable[joinedIndex]);
+		if(_settings.saveComponentList)
+		{
+			_deconvolution.SaveComponentList(groupTable, _gridder->PhaseCentreRA(), _gridder->PhaseCentreDec());
+		}
 	}
 	
 	_imageAllocator.ReportStatistics();
