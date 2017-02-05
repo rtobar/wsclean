@@ -203,7 +203,8 @@ void ThreadedDeconvolutionTools::FindMultiScalePeak(MultiScaleTransforms* msTran
 			{
 				ThreadResult* result = 0;
 				_resultLanes[thr]->read(result);
-				results[resultIndex].value = static_cast<FindMultiScalePeakResult*>(result)->value;
+				results[resultIndex].normalizedValue = static_cast<FindMultiScalePeakResult*>(result)->normalizedValue;
+				results[resultIndex].unnormalizedValue = static_cast<FindMultiScalePeakResult*>(result)->unnormalizedValue;
 				results[resultIndex].x = static_cast<FindMultiScalePeakResult*>(result)->x;
 				results[resultIndex].y = static_cast<FindMultiScalePeakResult*>(result)->y;
 				results[resultIndex].rms = static_cast<FindMultiScalePeakResult*>(result)->rms;
@@ -218,7 +219,8 @@ void ThreadedDeconvolutionTools::FindMultiScalePeak(MultiScaleTransforms* msTran
 	{
 		ThreadResult* result = 0;
 		_resultLanes[thr]->read(result);
-		results[resultIndex].value = static_cast<FindMultiScalePeakResult*>(result)->value;
+		results[resultIndex].unnormalizedValue = static_cast<FindMultiScalePeakResult*>(result)->unnormalizedValue;
+		results[resultIndex].normalizedValue = static_cast<FindMultiScalePeakResult*>(result)->normalizedValue;
 		results[resultIndex].x = static_cast<FindMultiScalePeakResult*>(result)->x;
 		results[resultIndex].y = static_cast<FindMultiScalePeakResult*>(result)->y;
 		results[resultIndex].rms = static_cast<FindMultiScalePeakResult*>(result)->rms;
@@ -244,20 +246,22 @@ ThreadedDeconvolutionTools::ThreadResult* ThreadedDeconvolutionTools::FindMultiS
 	if(rmsFactorImage->empty())
 	{
 		if(mask == 0)
-			result->value = SimpleClean::FindPeak(image, width, height, result->x, result->y, allowNegativeComponents, 0, height, horBorderSize, vertBorderSize);
+			result->unnormalizedValue = SimpleClean::FindPeak(image, width, height, result->x, result->y, allowNegativeComponents, 0, height, horBorderSize, vertBorderSize);
 		else
-			result->value = SimpleClean::FindPeakWithMask(image, width, height, result->x, result->y, allowNegativeComponents, 0, height, mask, horBorderSize, vertBorderSize);
+			result->unnormalizedValue = SimpleClean::FindPeakWithMask(image, width, height, result->x, result->y, allowNegativeComponents, 0, height, mask, horBorderSize, vertBorderSize);
+		
+		result->normalizedValue = result->unnormalizedValue;
 	}
 	else {
 		for(size_t i=0; i!=rmsFactorImage->size(); ++i)
 			scratch[i] = image[i] * (*rmsFactorImage)[i];
 		
 		if(mask == 0)
-			result->value = SimpleClean::FindPeak(scratch, width, height, result->x, result->y, allowNegativeComponents, 0, height, horBorderSize, vertBorderSize);
+			result->unnormalizedValue = SimpleClean::FindPeak(scratch, width, height, result->x, result->y, allowNegativeComponents, 0, height, horBorderSize, vertBorderSize);
 		else
-			result->value = SimpleClean::FindPeakWithMask(scratch, width, height, result->x, result->y, allowNegativeComponents, 0, height, mask, horBorderSize, vertBorderSize);
+			result->unnormalizedValue = SimpleClean::FindPeakWithMask(scratch, width, height, result->x, result->y, allowNegativeComponents, 0, height, mask, horBorderSize, vertBorderSize);
 		
-		result->value = result->value / (*rmsFactorImage)[result->x + result->y * width];
+		result->normalizedValue = result->unnormalizedValue / (*rmsFactorImage)[result->x + result->y * width];
 	}
 	return result;
 }

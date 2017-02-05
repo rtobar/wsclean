@@ -16,7 +16,7 @@ public:
 	
 	struct PeakData
 	{
-		double value, rms;
+		double normalizedValue, unnormalizedValue, rms;
 		size_t x, y;
 	};
 	
@@ -42,7 +42,7 @@ private:
 	struct ThreadResult {
 	};
 	struct FindMultiScalePeakResult : public ThreadResult {
-		double value, rms;
+		double unnormalizedValue, normalizedValue, rms;
 		size_t x, y;
 	};
 	

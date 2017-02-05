@@ -1,5 +1,6 @@
 #include "genericclean.h"
-#include "../multiscale/clarkloop.h"
+
+#include "clarkloop.h"
 
 #include "../lane.h"
 
@@ -16,8 +17,6 @@ GenericClean::GenericClean(ImageBufferAllocator& allocator, bool clarkOptimizati
 
 void GenericClean::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& modelSet, const ao::uvector<const double*>& psfs, size_t width, size_t height, bool& reachedMajorThreshold)
 {
-	Logger::Debug << "Running dynamically-joined clean algorithm.\n";
-	
 	const size_t iterationCounterAtStart = _iterationNumber;
 	if(_stopOnNegativeComponent)
 		_allowNegativeComponents = true;
@@ -154,6 +153,6 @@ double GenericClean::findPeak(const double* image, double* scratch, size_t& x, s
 			maxValue = SimpleClean::FindPeak(scratch, _width, _height, x, y, _allowNegativeComponents, 0, _height, _cleanBorderRatio);
 		else
 			maxValue = SimpleClean::FindPeakWithMask(scratch, _width, _height, x, y, _allowNegativeComponents, 0, _height, _cleanMask, _cleanBorderRatio);
-		return maxValue / _rmsFactorImage[x + y*_width];
+		return maxValue;
 	}
 }

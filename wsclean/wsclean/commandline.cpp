@@ -508,6 +508,12 @@ int CommandLine::Run(int argc, char* argv[])
 			settings.rmsBackground = true;
 			settings.rmsBackgroundWindow = atof(argv[argi]);
 		}
+		else if(param == "rms-background-image")
+		{
+			++argi;
+			settings.rmsBackground = true;
+			settings.rmsBackgroundImage = argv[argi];
+		}
 		else if(param == "rms-background-method")
 		{
 			++argi;

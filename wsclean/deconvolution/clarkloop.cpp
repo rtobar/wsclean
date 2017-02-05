@@ -1,6 +1,7 @@
 #include "clarkloop.h"
 
 #include "../deconvolution/spectralfitter.h"
+#include "../deconvolution/componentlist.h"
 
 #include "../fftconvolver.h"
 #include "../image.h"
@@ -30,10 +31,6 @@ size_t ClarkModel::GetMaxComponent(double* scratch, double& maxValue) const
 			maxComponent = i;
 			maxValue = value;
 		}
-	}
-	if(!_rmsFactorImage.empty())
-	{
-		maxValue = scratch[maxComponent] / _rmsFactorImage[maxComponent];
 	}
 	return maxComponent;
 }
@@ -199,17 +196,34 @@ void ClarkLoop::CorrectResidualDirty(double* scratchA, double* scratchB, double*
 
 void ClarkLoop::UpdateAutoMask(bool* mask) const
 {
-	for(size_t px=0; px!=_clarkModel.size(); ++px)
+	for(size_t imageIndex=0; imageIndex!=_clarkModel.Model().size(); ++imageIndex)
 	{
-		if(_clarkModel.Model()[0][px] != 0.0)
-			mask[_clarkModel.FullIndex(px)] = true;
+		const double* image = _clarkModel.Model()[imageIndex];
+		for(size_t px=0; px!=_clarkModel.size(); ++px)
+		{
+			if(image[px] != 0.0)
+				mask[_clarkModel.FullIndex(px)] = true;
+		}
 	}
 }
 
-void ClarkLoop::UpdateComponentImage(double* image) const
+void ClarkLoop::UpdateComponentList(class ComponentList& list, size_t scaleIndex) const
 {
+	ao::uvector<double> values(_clarkModel.Model().size());
 	for(size_t px=0; px!=_clarkModel.size(); ++px)
 	{
-		image[_clarkModel.FullIndex(px)] += _clarkModel.Model()[0][px];
+		bool isNonZero = false;
+		for(size_t imageIndex=0; imageIndex!=_clarkModel.Model().size(); ++imageIndex)
+		{
+			values[imageIndex] = _clarkModel.Model()[imageIndex][px];
+			if(values[imageIndex] != 0.0)
+				isNonZero = true;
+		}
+		if(isNonZero)
+		{
+			size_t posIndex = _clarkModel.FullIndex(px);
+			size_t x = posIndex % _width, y = posIndex / _width;
+			list.Add(x, y, scaleIndex, values.data());
+		}
 	}
 }

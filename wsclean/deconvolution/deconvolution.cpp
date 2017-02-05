@@ -45,7 +45,21 @@ void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedM
 	residualSet.GetLinearIntegrated(integrated.data());
 	double stddev = integrated.StdDevFromMAD();
 	Logger::Info << "Estimated standard deviation of background noise: " << stddev << " Jy\n";
-	if(_settings.rmsBackground)
+	if(!_settings.rmsBackgroundImage.empty())
+	{
+		Image rmsImage(_imgWidth, _imgHeight, *_imageAllocator);
+		FitsReader reader(_settings.rmsBackgroundImage);
+		reader.Read(rmsImage.data());
+		// Normalize the RMS image
+		stddev = rmsImage.Min();
+		Logger::Info << "Lowest RMS in image: " << stddev << '\n';
+		if(stddev <= 0.0)
+			throw std::runtime_error("RMS image can only contain values > 0, but contains values <= 0.0");
+		for(double& value : rmsImage)
+			value = stddev / value;
+		_cleanAlgorithm->SetRMSFactorImage(std::move(rmsImage));
+	}
+	else if(_settings.rmsBackground)
 	{
 		Image rmsImage;
 		// TODO this should use full beam parameters
@@ -58,10 +72,11 @@ void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedM
 				RMSImage::MakeWithNegativityLimit(rmsImage, integrated, _settings.rmsBackgroundWindow, _beamSize, _beamSize, 0.0, _pixelScaleX, _pixelScaleY);
 				break;
 		}
-		// We normalize the RMS image relative to the threshold so that Jy remains Jy.
-		double minRMS = rmsImage.Min();
-		Logger::Info << "Lowest RMS in image: " << minRMS << '\n';
-		rmsImage *= 1.0 / minRMS;
+		// Normalize the RMS image relative to the threshold so that Jy remains Jy.
+		stddev = rmsImage.Min();
+		Logger::Info << "Lowest RMS in image: " << stddev << '\n';
+		for(double& value : rmsImage)
+			value = stddev / value;
 		_cleanAlgorithm->SetRMSFactorImage(std::move(rmsImage));
 	}
 	if(_settings.autoMask && !_autoMaskIsFinished)
@@ -118,8 +133,6 @@ void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedM
 	}
 	
 	residualSet.AssignAndStore(*_residualImages);
-	
-	SpectralFitter fitter(_settings.spectralFittingMode, _settings.spectralFittingTerms);
 	modelSet.InterpolateAndStore(*_modelImages, _cleanAlgorithm->Fitter());
 }
 
@@ -210,8 +223,7 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 				_cleanMask[i] = maskData[i]!=0.0;
 		}
 		_cleanAlgorithm->SetCleanMask(_cleanMask.data());
-	}
-	else if(!_settings.casaDeconvolutionMask.empty())
+	} else if(!_settings.casaDeconvolutionMask.empty())
 	{
 		if(_cleanMask.empty())
 		{
@@ -245,48 +257,10 @@ void Deconvolution::calculateDeconvolutionFrequencies(const ImagingTable& groupT
 
 void Deconvolution::SaveComponentList(const class ImagingTable& table, long double phaseCentreRA, long double phaseCentreDec) const
 {
-	const ImagingTableEntry& entry = table.Front();
-	std::string filename = ImageFilename::GetPrefix(_settings, entry.polarization, entry.outputChannelIndex, entry.outputIntervalIndex, false) + "-components.txt";
-	std::ofstream file(filename);
-	const double frequency = entry.CentralFrequency();
-	NDPPP::WriteHeader(file, frequency);
 	if(_settings.useMultiscale)
 	{
 		MultiScaleAlgorithm& algorithm = static_cast<MultiScaleAlgorithm&>(*_cleanAlgorithm.get());
-		for(size_t scaleIndex=0; scaleIndex!=algorithm.ScaleCount(); ++scaleIndex)
-		{
-			size_t componentIndex = 0;
-			const double
-				scale = algorithm.ScaleSize(scaleIndex),
-				// Using the FWHM formula for a Gaussian
-				fwhm = 2.0L * sqrtl(2.0L * logl(2.0L)) * MultiScaleTransforms::GaussianSigma(scale),
-				scaleFWHML = fwhm * _pixelScaleX * (180.0*60.0*60.0/ M_PI),
-				scaleFWHMM = fwhm * _pixelScaleY * (180.0*60.0*60.0/ M_PI);
-			const Image& componentImage = algorithm.ScaleComponentImage(scaleIndex);
-			Image::const_iterator iter = componentImage.begin();
-			for(size_t y=0; y!=_imgHeight; ++y)
-			{
-				for(size_t x=0; x!=_imgWidth; ++x)
-				{
-					if(*iter != 0.0)
-					{
-						long double l, m;
-						ImageCoordinates::XYToLM<long double>(x, y, _pixelScaleX, _pixelScaleY, _imgWidth, _imgHeight, l, m);
-						long double ra, dec;
-						ImageCoordinates::LMToRaDec(l, m, phaseCentreRA, phaseCentreDec, ra, dec);
-						std::ostringstream name;
-						name << 's' << scaleIndex << 'c' << componentIndex;
-						if(scale == 0.0)
-							NDPPP::WritePointComponent(file, name.str(), ra, dec, *iter, 0, 0, 0, frequency, 0.0);
-						else {
-							NDPPP::WriteGausssianComponent(file, name.str(), ra, dec, *iter, 0, 0, 0, frequency, 0.0, scaleFWHML, scaleFWHMM, 0.0);
-						}
-						++componentIndex;
-					}
-					++iter;
-				}
-			}
-		}
+		algorithm.GetComponentList().Write(algorithm, _settings, _pixelScaleX, _pixelScaleY, phaseCentreRA, phaseCentreDec);
 	}
 	else throw std::runtime_error("Saving a component list is currently only implemented for multi-scale clean");
 }

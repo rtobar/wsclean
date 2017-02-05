@@ -8,6 +8,7 @@
 
 #include "../uvector.h"
 
+#include "../deconvolution/componentlist.h"
 #include "../deconvolution/imageset.h"
 #include "../deconvolution/deconvolutionalgorithm.h"
 
@@ -57,9 +58,9 @@ public:
 	{
 		return _scaleInfos.size();
 	}
-	const Image& ScaleComponentImage(size_t scaleIndex) const 
+	ComponentList& GetComponentList() 
 	{
-		return _scaleComponentImages[scaleIndex];
+		return *_componentList;
 	}
 	double ScaleSize(size_t scaleIndex) const
 	{
@@ -81,7 +82,9 @@ private:
 		ScaleInfo() :
 			scale(0.0), psfPeak(0.0),
 			kernelPeak(0.0), biasFactor(0.0),
-			gain(0.0), maxImageValue(0.0),
+			gain(0.0),
+			maxNormalizedImageValue(0.0),
+			maxUnnormalizedImageValue(0.0),
 			rms(0.0),
 			maxImageValueX(0), maxImageValueY(0),
 			isActive(false),
@@ -92,7 +95,11 @@ private:
 		double scale;
 		double psfPeak, kernelPeak, biasFactor, gain;
 		
-		double maxImageValue, rms;
+		/**
+		 * The difference between the normalized and unnormalized value is
+		 * that the unnormalized value is relative to the RMS factor.
+		 */
+		double maxNormalizedImageValue, maxUnnormalizedImageValue, rms;
 		size_t maxImageValueX, maxImageValueY;
 		bool isActive;
 		size_t nComponentsCleaned;
@@ -103,7 +110,7 @@ private:
 	
 	bool _trackPerScaleMasks, _usePerScaleMasks, _fastSubMinorLoop, _trackComponents;
 	std::vector<ao::uvector<bool>> _scaleMasks;
-	std::vector<Image> _scaleComponentImages;
+	std::unique_ptr<ComponentList> _componentList;
 
 	void initializeScaleInfo();
 	void convolvePSFs(std::unique_ptr<ImageBufferAllocator::Ptr[]>& convolvedPSFs, const double* psf, double* tmp, bool isIntegrated);
@@ -113,7 +120,7 @@ private:
 	void measureComponentValues(ao::uvector<double>& componentValues, size_t scaleIndex, ImageSet& imageSet);
 	void addComponentToModel(double* model, size_t scaleWithPeak, double componentValue);
 	
-	double findPeakDirect(const double *image, double* scratch, size_t &x, size_t &y, size_t scaleIndex);
+	void findPeakDirect(const double *image, double* scratch, size_t scaleIndex);
 	
 	double* getConvolvedPSF(size_t psfIndex, size_t scaleIndex, const ao::uvector<const double*>& psfs, double* scratch, const std::unique_ptr<std::unique_ptr<ImageBufferAllocator::Ptr[]>[]>& convolvedPSFs);
 	

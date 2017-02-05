@@ -729,7 +729,7 @@ public:
 			memmove(const_cast<iterator>(position)+1, position, (_end - position) * sizeof(Tp));
 			++_end;
 		}
-		*const_cast<iterator>(position) = Tp(std::forward<Args...>(args...));
+		*const_cast<iterator>(position) = Tp(std::forward<Args>(args)...);
 		return const_cast<iterator>(position);
 	}
 	
@@ -742,7 +742,7 @@ public:
 	{
 		if(_end == _endOfStorage)
 			enlarge(enlarge_size(1));
-		*_end = Tp(std::forward<Args...>(args...));
+		*_end = Tp(std::forward<Args>(args)...);
 		++_end;
 	}
 	

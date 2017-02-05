@@ -76,6 +76,7 @@ class ModelComponent
 		std::string ToString() const
 		{
 			std::stringstream s;
+			s.precision(15);
 			s << "  component {\n";
 			switch(_type)
 			{

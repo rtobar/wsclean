@@ -43,6 +43,9 @@ public:
 	void AddPosition(size_t x, size_t y)
 	{ _positions.push_back(std::make_pair(x, y)); }
 	
+	/**
+	 * Return number of selected pixels.
+	 */
 	size_t size() const { return _positions.size(); }
 	
 	void MakeSets(const ImageSet& templateSet);
@@ -138,7 +141,7 @@ public:
 	
 	void UpdateAutoMask(bool* mask) const;
 	
-	void UpdateComponentImage(double* image) const;
+	void UpdateComponentList(class ComponentList& list, size_t scaleIndex) const;
 	
 private:
 	void findPeakPositions(ImageSet& convolvedResidual);

@@ -81,6 +81,7 @@ public:
 	
 	double deconvolutionBorderRatio;
 	std::string fitsDeconvolutionMask, casaDeconvolutionMask;
+	std::string rmsBackgroundImage;
 	bool useMoreSaneDeconvolution, useIUWTDeconvolution, iuwtSNRTest;
 	std::string moreSaneLocation, moreSaneArgs;
 	ao::uvector<double> moreSaneSigmaLevels;
