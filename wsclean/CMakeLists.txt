@@ -118,13 +118,13 @@ ENDIF("${isSystemDir}" STREQUAL "-1")
 
 add_library(wsclean-object OBJECT
   casamaskreader.cpp dftpredictionalgorithm.cpp fftconvolver.cpp fftresampler.cpp fftwmultithreadenabler.cpp fitsiochecker.cpp fitsreader.cpp fitswriter.cpp image.cpp imageweights.cpp modelrenderer.cpp multibanddata.cpp nlplfitter.cpp polynomialfitter.cpp progressbar.cpp rmsimage.cpp stopwatch.cpp
-  deconvolution/deconvolution.cpp deconvolution/deconvolutionalgorithm.cpp deconvolution/genericclean.cpp deconvolution/imageset.cpp deconvolution/moresane.cpp deconvolution/simpleclean.cpp deconvolution/spectralfitter.cpp
+  deconvolution/clarkloop.cpp deconvolution/componentlist.cpp deconvolution/deconvolution.cpp deconvolution/deconvolutionalgorithm.cpp deconvolution/genericclean.cpp deconvolution/imageset.cpp deconvolution/moresane.cpp deconvolution/simpleclean.cpp deconvolution/spectralfitter.cpp
   interface/wscleaninterface.cpp
   iuwt/imageanalysis.cpp iuwt/iuwtdecomposition.cpp iuwt/iuwtdeconvolutionalgorithm.cpp iuwt/iuwtmask.cpp
   lofar/lbeamimagemaker.cpp
   model/model.cpp
   msproviders/averagingmsrowprovider.cpp msproviders/contiguousms.cpp msproviders/directmsrowprovider.cpp msproviders/msprovider.cpp msproviders/msrowprovider.cpp msproviders/partitionedms.cpp
-  multiscale/clarkloop.cpp multiscale/multiscalealgorithm.cpp multiscale/multiscaletransforms.cpp multiscale/threadeddeconvolutiontools.cpp
+  multiscale/multiscalealgorithm.cpp multiscale/multiscaletransforms.cpp multiscale/threadeddeconvolutiontools.cpp
   wsclean/commandline.cpp wsclean/imagingtable.cpp wsclean/logger.cpp wsclean/msgridderbase.cpp wsclean/wscfitswriter.cpp wsclean/wsclean.cpp
   wsclean/wscleansettings.cpp wsclean/wsmsgridder.cpp wsclean/wstackinggridder.cpp
 	${LBEAM_FILES} ${IDG_FILES})
