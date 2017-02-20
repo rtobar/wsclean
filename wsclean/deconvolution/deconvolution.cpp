@@ -45,39 +45,47 @@ void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedM
 	residualSet.GetLinearIntegrated(integrated.data());
 	double stddev = integrated.StdDevFromMAD();
 	Logger::Info << "Estimated standard deviation of background noise: " << stddev << " Jy\n";
-	if(!_settings.rmsBackgroundImage.empty())
+	if(_settings.autoMask && _autoMaskIsFinished)
 	{
-		Image rmsImage(_imgWidth, _imgHeight, *_imageAllocator);
-		FitsReader reader(_settings.rmsBackgroundImage);
-		reader.Read(rmsImage.data());
-		// Normalize the RMS image
-		stddev = rmsImage.Min();
-		Logger::Info << "Lowest RMS in image: " << stddev << '\n';
-		if(stddev <= 0.0)
-			throw std::runtime_error("RMS image can only contain values > 0, but contains values <= 0.0");
-		for(double& value : rmsImage)
-			value = stddev / value;
-		_cleanAlgorithm->SetRMSFactorImage(std::move(rmsImage));
+		// When we are in the second phase of automasking, don't use
+		// the RMS background anymore
+		_cleanAlgorithm->SetRMSFactorImage(Image());
 	}
-	else if(_settings.rmsBackground)
-	{
-		Image rmsImage;
-		// TODO this should use full beam parameters
-		switch(_settings.rmsBackground)
+	else {
+		if(!_settings.rmsBackgroundImage.empty())
 		{
-			case WSCleanSettings::RMSWindow:
-				RMSImage::Make(rmsImage, integrated, _settings.rmsBackgroundWindow, _beamSize, _beamSize, 0.0, _pixelScaleX, _pixelScaleY);
-				break;
-			case WSCleanSettings::RMSAndMinimumWindow:
-				RMSImage::MakeWithNegativityLimit(rmsImage, integrated, _settings.rmsBackgroundWindow, _beamSize, _beamSize, 0.0, _pixelScaleX, _pixelScaleY);
-				break;
+			Image rmsImage(_imgWidth, _imgHeight, *_imageAllocator);
+			FitsReader reader(_settings.rmsBackgroundImage);
+			reader.Read(rmsImage.data());
+			// Normalize the RMS image
+			stddev = rmsImage.Min();
+			Logger::Info << "Lowest RMS in image: " << stddev << '\n';
+			if(stddev <= 0.0)
+				throw std::runtime_error("RMS image can only contain values > 0, but contains values <= 0.0");
+			for(double& value : rmsImage)
+				value = stddev / value;
+			_cleanAlgorithm->SetRMSFactorImage(std::move(rmsImage));
 		}
-		// Normalize the RMS image relative to the threshold so that Jy remains Jy.
-		stddev = rmsImage.Min();
-		Logger::Info << "Lowest RMS in image: " << stddev << '\n';
-		for(double& value : rmsImage)
-			value = stddev / value;
-		_cleanAlgorithm->SetRMSFactorImage(std::move(rmsImage));
+		else if(_settings.rmsBackground)
+		{
+			Image rmsImage;
+			// TODO this should use full beam parameters
+			switch(_settings.rmsBackgroundMethod)
+			{
+				case WSCleanSettings::RMSWindow:
+					RMSImage::Make(rmsImage, integrated, _settings.rmsBackgroundWindow, _beamSize, _beamSize, 0.0, _pixelScaleX, _pixelScaleY);
+					break;
+				case WSCleanSettings::RMSAndMinimumWindow:
+					RMSImage::MakeWithNegativityLimit(rmsImage, integrated, _settings.rmsBackgroundWindow, _beamSize, _beamSize, 0.0, _pixelScaleX, _pixelScaleY);
+					break;
+			}
+			// Normalize the RMS image relative to the threshold so that Jy remains Jy.
+			stddev = rmsImage.Min();
+			Logger::Info << "Lowest RMS in image: " << stddev << '\n';
+			for(double& value : rmsImage)
+				value = stddev / value;
+			_cleanAlgorithm->SetRMSFactorImage(std::move(rmsImage));
+		}
 	}
 	if(_settings.autoMask && !_autoMaskIsFinished)
 		_cleanAlgorithm->SetThreshold(std::max(stddev * _settings.autoMaskSigma, _settings.deconvolutionThreshold));

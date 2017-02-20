@@ -93,6 +93,7 @@ void WSCFitsWriter::setChannelKeywords(const ImagingTableEntry& entry, const Out
 	_writer.SetExtraKeyword("WSCNWLAY", channelInfo.wGridSize);
 	_writer.SetExtraKeyword("WSCNVIS", channelInfo.visibilityCount);
 	_writer.SetExtraKeyword("WSCENVIS", channelInfo.effectiveVisibilityCount);
+	_writer.SetExtraKeyword("WSCVWSUM", channelInfo.visibilityWeightSum);
 	_writer.SetBeamInfo(
 		channelInfo.beamMaj,
 		channelInfo.beamMin,

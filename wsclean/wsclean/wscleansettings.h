@@ -49,7 +49,8 @@ public:
 	std::set<size_t> spectralWindows;
 	WeightMode weightMode;
 	std::string prefixName;
-	bool smallInversion, makePSF, makePSFOnly, isWeightImageSaved, isUVImageSaved, isDirtySaved, isGriddingImageSaved, dftPrediction, dftWithBeam;
+	bool smallInversion, makePSF, makePSFOnly, isWeightImageSaved, isUVImageSaved, isDirtySaved, isGriddingImageSaved;
+	bool dftPrediction, dftWithBeam;
 	std::string temporaryDirectory;
 	bool forceReorder, forceNoReorder, subtractModel, modelUpdateRequired, mfsWeighting;
 	bool normalizeForWeighting;

@@ -36,7 +36,8 @@ MSGridderBase::MSGridderBase() :
 	_denormalPhaseCentre(false),
 	_griddedVisibilityCount(0),
 	_totalWeight(0.0),
-	_maxGriddedWeight(0.0)
+	_maxGriddedWeight(0.0),
+	_visibilityWeightSum(0.0)
 {
 }
 
@@ -340,9 +341,10 @@ void MSGridderBase::readAndWeightVisibilities(MSProvider& msProvider, InversionR
 				double cumWeight = weight * *weightIter;
 				if(cumWeight != 0.0)
 				{
+					_visibilityWeightSum += *weightIter * 0.5;
 					++_griddedVisibilityCount;
 					_maxGriddedWeight = std::max(cumWeight, _maxGriddedWeight);
-					_totalWeight += cumWeight; // assumption: polarizations have equal weights
+					_totalWeight += cumWeight;
 				}
 				for(size_t p=0; p!=PolarizationCount; ++p)
 				{

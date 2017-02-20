@@ -56,6 +56,8 @@ void CommandLine::printHelp()
 		"-saveuv\n"
 		"   Save the gridded uv plane, i.e., the FFT of the residual image. The UV plane is complex, hence\n"
 		"   two images will be output: <prefix>-uv-real.fits and <prefix>-uv-imag.fits.\n"
+		"-save-uv-bins <psf limit>\n"
+		"   Saves a csv file with the gridded visibilities, including their weights.\n"
 		"-apply-primary-beam\n"
 		"   Calculate and apply the primary beam and save images for the Jones components, with weighting identical to the\n"
 		"   weighting as used by the imager. Only available for LOFAR.\n"

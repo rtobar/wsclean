@@ -1,5 +1,6 @@
 #include "wsclean.h"
 
+#include "binneduvoutput.h"
 #include "imageweightcache.h"
 #include "inversionalgorithm.h"
 #include "logger.h"
@@ -102,6 +103,7 @@ void WSClean::imagePSF(const ImagingTableEntry& entry)
 	_infoPerChannel[channelIndex].wGridSize = _gridder->WGridSize();
 	_infoPerChannel[channelIndex].visibilityCount = _gridder->GriddedVisibilityCount();
 	_infoPerChannel[channelIndex].effectiveVisibilityCount = _gridder->EffectiveGriddedVisibilityCount();
+	_infoPerChannel[channelIndex].visibilityWeightSum = _gridder->VisibilityWeightSum();
 		
 	if(_settings.isUVImageSaved)
 	{
@@ -1237,8 +1239,10 @@ void WSClean::saveUVImage(const double* image, PolarizationEnum pol, const Imagi
 		imagUV(_settings.trimmedImageWidth, _settings.trimmedImageHeight, _imageAllocator);
 	FFTResampler fft(_settings.trimmedImageWidth, _settings.trimmedImageHeight, _settings.trimmedImageWidth, _settings.trimmedImageHeight, 1, true);
 	fft.SingleFT(image, realUV.data(), imagUV.data());
-	realUV *= _infoPerChannel[entry.outputChannelIndex].normalizationFactor / sqrt(_settings.trimmedImageWidth * _settings.trimmedImageHeight);
-	imagUV *= _infoPerChannel[entry.outputChannelIndex].normalizationFactor / sqrt(_settings.trimmedImageWidth * _settings.trimmedImageHeight);
+	// There are two factors of 2 involved: one coming from
+	// SingleFT(), and one from the fact that normF excludes a factor of two.
+	realUV *= 4.0 * _infoPerChannel[entry.outputChannelIndex].normalizationFactor / sqrt(_settings.trimmedImageWidth * _settings.trimmedImageHeight);
+	imagUV *= 4.0 * _infoPerChannel[entry.outputChannelIndex].normalizationFactor / sqrt(_settings.trimmedImageWidth * _settings.trimmedImageHeight);
 	WSCFitsWriter writer(createWSCFitsWriter(entry, isImaginary));
 	writer.WriteUV(prefix+"-real.fits", realUV.data());
 	writer.WriteUV(prefix+"-imag.fits", imagUV.data());

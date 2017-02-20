@@ -21,6 +21,7 @@ public:
 	
 	Image(const Image&);
 	Image& operator=(const Image&);
+	Image& operator=(double value);
 	
 	Image(Image&& source);
 	Image& operator=(Image&& source);
@@ -70,6 +71,7 @@ public:
 	
 	static double MAD(const double* data, size_t size);
 	
+	double Sum() const;
 	double Average() const;
 	
 	double Min() const;
@@ -88,6 +90,12 @@ public:
 		for(size_t i=0; i!=size; ++i)
 			sum += data[i]*data[i];
 		return sqrt(sum/size);
+	}
+	
+	void Negate()
+	{
+		for(double& d : *this)
+			d = -d;
 	}
 private:
 	double* _data;

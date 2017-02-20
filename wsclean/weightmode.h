@@ -52,7 +52,7 @@ public:
 	void SetSuperWeight(double superWeight) { _superWeight = superWeight; }
 	void SetMode(const WeightMode& mode) { _mode = mode._mode; _briggsRobustness = mode._briggsRobustness; }
 	
-	bool RequiresGridding() const { return IsUniform() || IsBriggs(); }
+	bool RequiresGridding() const { return true; } // { IsUniform() || IsBriggs(); }
 	
 	std::string ToString() const 
 	{

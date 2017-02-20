@@ -20,8 +20,26 @@ public:
 		return NormalizeForWeighting() ? _totalWeight*0.5 : 1.0;
 	}
 	
+	/**
+	 * This is the sum of the weights as given by the measurement set, before the
+	 * image weighting is applied.
+	 */
+	double VisibilityWeightSum() const { return _visibilityWeightSum; }
+	/**
+	 * The number of visibilities that were gridded.
+	 */
 	size_t GriddedVisibilityCount() const { return _griddedVisibilityCount; }
+	/**
+	 * The maximum weight, after having applied the imaging weighting.
+	 */
 	double MaxGriddedWeight() const { return _maxGriddedWeight; }
+	/**
+	 * The effective number of visibilities, taking into account imaging weighting
+	 * and visibility weighting. This number is relative to the "best" visibility:
+	 * if one visibility with a weight of 10 and 5 visibilities with
+	 * a weight of 4 were gridded, the effective number of visibilities is
+	 * (10 + 5 x 4) / 10 = 3
+	 */
 	double EffectiveGriddedVisibilityCount() const { return totalWeight()/MaxGriddedWeight(); }
 	
 	static void GetPhaseCentreInfo(casacore::MeasurementSet& ms, size_t fieldId, double& ra, double& dec, double& dl, double& dm);
@@ -121,7 +139,9 @@ private:
 	bool _denormalPhaseCentre;
 	
 	size_t _griddedVisibilityCount;
-	double _totalWeight, _maxGriddedWeight;
+	double _totalWeight;
+	double _maxGriddedWeight;
+	double _visibilityWeightSum;
 };
 
 #endif

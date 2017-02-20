@@ -208,7 +208,11 @@ void ImageWeights::FinishGridding()
 		break;
 		case WeightMode::NaturalWeighted:
 		{
-			_grid.assign(_imageWidth*_imageHeight/2, 1.0);
+			for(ao::uvector<double>::iterator i=_grid.begin(); i!=_grid.end(); ++i)
+			{
+				if(*i != 0.0)
+					*i = 1.0;
+			}
 		}
 		break;
 	}

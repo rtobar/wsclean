@@ -56,6 +56,13 @@ Image& Image::operator=(const Image& source)
 	return *this;
 }
 
+Image& Image::operator=(double value)
+{
+	for(double& v : *this)
+		v = value;
+	return *this;
+}
+
 Image::Image(Image&& source) :
 	_data(source._data),
 	_width(source._width),
@@ -157,12 +164,17 @@ void Image::Untrim(double* output, size_t outWidth, size_t outHeight, const doub
 	}
 }
 
-double Image::Average() const
+double Image::Sum() const
 {
 	double sum = 0.0;
 	for(const double& v : *this)
 		sum += v;
-	return sum / size();
+	return sum;
+}
+
+double Image::Average() const
+{
+	return Sum() / size();
 }
 
 double Image::Min() const
