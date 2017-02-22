@@ -61,7 +61,7 @@ public:
 		{
 			Logger::Info << " == Constructing primary beam ==\n";
 			
-			// TODO Find out what array is used in the (first) measurement set
+			// TODO Find out what telescope array is used in the (first) measurement set
 			
 			size_t size = _settings.trimmedImageWidth * _settings.trimmedImageHeight;
 			for(size_t i=0; i!=8; ++i)
