@@ -16,6 +16,7 @@ public:
 	typedef FluxMap::const_iterator const_iterator;
 	typedef FluxMap::reverse_iterator reverse_iterator;
 	typedef FluxMap::const_reverse_iterator const_reverse_iterator;
+	typedef FluxMap::value_type value_type;
 		
 	MeasuredSED()
 	{ }

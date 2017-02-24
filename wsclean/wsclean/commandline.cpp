@@ -979,6 +979,8 @@ int CommandLine::Run(int argc, char* argv[])
 		else if(param == "use-idg")
 		{
 			settings.useIDG = true;
+			settings.polarizations.clear();
+			settings.polarizations.insert(Polarization::Instrumental);
 		}
 		else if(param == "no-dirty")
 		{
