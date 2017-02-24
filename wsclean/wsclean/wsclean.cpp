@@ -1448,7 +1448,5 @@ WSCFitsWriter WSClean::createWSCFitsWriter(const ImagingTableEntry& entry, bool 
 
 WSCFitsWriter WSClean::createWSCFitsWriter(const ImagingTableEntry& entry, PolarizationEnum polarization, bool isImaginary) const
 {
-	WSCFitsWriter writer(createWSCFitsWriter(entry, isImaginary));
-	writer.SetPolarization(polarization);
-	return writer;
+	return WSCFitsWriter(entry, polarization, isImaginary, _settings, _deconvolution, _majorIterationNr, *_gridder, _commandLine, _infoPerChannel[entry.outputChannelIndex]);
 }

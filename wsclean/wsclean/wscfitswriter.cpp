@@ -13,7 +13,18 @@ WSCFitsWriter::WSCFitsWriter(const ImagingTableEntry& entry, bool isImaginary, c
 	_filenamePrefix = ImageFilename::GetPrefix(settings, entry.polarization, entry.outputChannelIndex, entry.outputIntervalIndex, isImaginary);
 	setGridderKeywords(settings, gridder);
 	SetSettingsKeywords(settings, commandLine);
-	setChannelKeywords(entry, channelInfo);
+	setChannelKeywords(entry, entry.polarization, channelInfo);
+	setDeconvolutionKeywords(settings);
+	if(deconvolution.IsInitialized())
+		setDeconvolutionResultKeywords(deconvolution.GetAlgorithm().IterationNumber(), majorIterationNr);
+}
+
+WSCFitsWriter::WSCFitsWriter(const ImagingTableEntry& entry, PolarizationEnum polarization, bool isImaginary, const WSCleanSettings& settings, const class Deconvolution& deconvolution, size_t majorIterationNr, const MSGridderBase& gridder, const std::string& commandLine, const OutputChannelInfo& channelInfo)
+{
+	_filenamePrefix = ImageFilename::GetPrefix(settings, polarization, entry.outputChannelIndex, entry.outputIntervalIndex, isImaginary);
+	setGridderKeywords(settings, gridder);
+	SetSettingsKeywords(settings, commandLine);
+	setChannelKeywords(entry, polarization, channelInfo);
 	setDeconvolutionKeywords(settings);
 	if(deconvolution.IsInitialized())
 		setDeconvolutionResultKeywords(deconvolution.GetAlgorithm().IterationNumber(), majorIterationNr);
@@ -80,7 +91,7 @@ void WSCFitsWriter::setDeconvolutionResultKeywords(size_t minorIterationNr, size
 	_writer.SetExtraKeyword("WSCMAJOR", majorIterationNr);
 }
 
-void WSCFitsWriter::setChannelKeywords(const ImagingTableEntry& entry, const OutputChannelInfo& channelInfo)
+void WSCFitsWriter::setChannelKeywords(const ImagingTableEntry& entry, PolarizationEnum polarization, const OutputChannelInfo& channelInfo)
 {
 	const double
 		bandStart = entry.bandStartFrequency,
@@ -98,7 +109,7 @@ void WSCFitsWriter::setChannelKeywords(const ImagingTableEntry& entry, const Out
 		channelInfo.beamMaj,
 		channelInfo.beamMin,
 		channelInfo.beamPA);
-	_writer.SetPolarization(entry.polarization);
+	_writer.SetPolarization(polarization);
 }
 
 void WSCFitsWriter::copyWSCleanKeywords(FitsReader& reader)

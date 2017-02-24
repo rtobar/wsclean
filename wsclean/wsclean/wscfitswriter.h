@@ -16,6 +16,8 @@ class WSCFitsWriter
 public:
 	WSCFitsWriter(const ImagingTableEntry& entry, bool isImaginary, const WSCleanSettings& settings, const class Deconvolution& deconvolution, size_t majorIterationNr, const class MSGridderBase& gridder, const std::string& commandLine, const OutputChannelInfo& channelInfo);
 	
+	WSCFitsWriter(const ImagingTableEntry& entry, PolarizationEnum polarization, bool isImaginary, const WSCleanSettings& settings, const class Deconvolution& deconvolution, size_t majorIterationNr, const class MSGridderBase& gridder, const std::string& commandLine, const OutputChannelInfo& channelInfo);
+	
 	explicit WSCFitsWriter(FitsReader& templateReader);
 	
 	FitsWriter& Writer() { return _writer; }
@@ -25,11 +27,6 @@ public:
 	void WriteUV(const std::string& suffix, const double* image);
 	
 	void WritePSF(const std::string& fullname, const double* image);
-	
-	void SetPolarization(PolarizationEnum polarization)
-	{
-		_writer.SetPolarization(polarization);
-	}
 	
 	/**
 	 * Restore an elliptical beam using a FFT deconvolution directly from images.
@@ -46,7 +43,7 @@ private:
 	
 	void setDeconvolutionResultKeywords(size_t minorIterationNr, size_t majorIterationNr);
 	
-	void setChannelKeywords(const ImagingTableEntry& entry, const OutputChannelInfo& channelInfo);
+	void setChannelKeywords(const ImagingTableEntry& entry, PolarizationEnum polarization, const OutputChannelInfo& channelInfo);
 	
 	void copyWSCleanKeywords(class FitsReader& reader);
 	
