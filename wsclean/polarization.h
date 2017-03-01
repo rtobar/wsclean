@@ -186,6 +186,7 @@ public:
 			case RL: return "RL";
 			case LR: return "LR";
 			case LL: return "LL";
+			case Instrumental: return "instr";
 			default: return "";
 		}
 	}
@@ -206,6 +207,7 @@ public:
 			case RL: return "RL";
 			case LR: return "LR";
 			case LL: return "LL";
+			case Instrumental: return "instrumental";
 			default: return "Unknown polarization";
 		}
 	}

@@ -9,14 +9,27 @@ BOOST_AUTO_TEST_CASE( fit )
 {
 	PolynomialFitter fitter;
 	ao::uvector<double> terms;
-	fitter.AddDataPoint(0.0, 0.0);
-	fitter.AddDataPoint(1.0, 0.0);
-	fitter.AddDataPoint(2.0, 1.0);
-	fitter.AddDataPoint(3.0, 2.0);
+	fitter.AddDataPoint(0.0, 0.0, 1.0);
+	fitter.AddDataPoint(1.0, 0.0, 1.0);
+	fitter.AddDataPoint(2.0, 1.0, 1.0);
+	fitter.AddDataPoint(3.0, 2.0, 1.0);
 	fitter.Fit(terms, 2);
 	
 	BOOST_CHECK_CLOSE_FRACTION(terms[0], -0.3, 1e-3);
 	BOOST_CHECK_CLOSE_FRACTION(terms[1], 0.7, 1e-3);
+}
+
+BOOST_AUTO_TEST_CASE( fit_weighted )
+{
+	PolynomialFitter fitter;
+	ao::uvector<double> terms;
+	fitter.AddDataPoint(0.0, 0.0, 1.5);
+	fitter.AddDataPoint(1.0, 0.0, 1.5);
+	fitter.AddDataPoint(2.0, 1.0, 0.5);
+	fitter.AddDataPoint(3.0, 1.0, 0.5);
+	fitter.Fit(terms, 1);
+	
+	BOOST_CHECK_CLOSE_FRACTION(terms[0], 0.25, 1e-3);
 }
 
 BOOST_AUTO_TEST_CASE( evaluate )

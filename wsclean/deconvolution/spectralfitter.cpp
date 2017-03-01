@@ -2,6 +2,9 @@
 
 #include "../polynomialfitter.h"
 #include "../nlplfitter.h"
+
+#include "../wsclean/logger.h"
+
 #include <limits>
 
 void SpectralFitter::FitAndEvaluate(double* values) const
@@ -23,7 +26,10 @@ void SpectralFitter::Fit(ao::uvector<double>& terms, const double* values) const
 			PolynomialFitter fitter;
 			double refFreq = ReferenceFrequency();
 			for(size_t i=0; i!=_frequencies.size(); ++i)
-				fitter.AddDataPoint(_frequencies[i] / refFreq, values[i]);
+			{
+				Logger::Debug << _weights[i] << '\n';
+				fitter.AddDataPoint(_frequencies[i] / refFreq, values[i], _weights[i]);
+			}
 			
 			fitter.Fit(terms, _nTerms);
 		} break;

@@ -35,9 +35,10 @@ public:
 	
 	double Evaluate(const ao::uvector<double>& terms, double frequency) const;
 	
-	void SetFrequencies(const double* frequencies, size_t n)
+	void SetFrequencies(const double* frequencies, const double* weights, size_t n)
 	{
 		_frequencies.assign(frequencies, frequencies+n);
+		_weights.assign(weights, weights+n);
 	}
 	
 	size_t NTerms() const { return _nTerms; }
@@ -48,7 +49,7 @@ public:
 private:
 	enum SpectralFittingMode _mode;
 	size_t _nTerms;
-	ao::uvector<double> _frequencies;
+	ao::uvector<double> _frequencies, _weights;
 };
 
 #endif

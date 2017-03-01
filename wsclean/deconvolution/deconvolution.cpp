@@ -212,9 +212,9 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 	_cleanAlgorithm->SetThreadCount(threadCount);
 	_cleanAlgorithm->SetSpectralFittingMode(_settings.spectralFittingMode, _settings.spectralFittingTerms);
 	
-	ao::uvector<double> frequencies;
-	calculateDeconvolutionFrequencies(groupTable, frequencies);
-	_cleanAlgorithm->InitializeFrequencies(frequencies);
+	ao::uvector<double> frequencies, weights;
+	calculateDeconvolutionFrequencies(groupTable, frequencies, weights);
+	_cleanAlgorithm->InitializeFrequencies(frequencies, weights);
 	
 	if(!_settings.fitsDeconvolutionMask.empty())
 	{
@@ -246,21 +246,25 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 	}
 }
 
-void Deconvolution::calculateDeconvolutionFrequencies(const ImagingTable& groupTable, ao::uvector<double>& frequencies)
+void Deconvolution::calculateDeconvolutionFrequencies(const ImagingTable& groupTable, ao::uvector<double>& frequencies, ao::uvector<double>& weights)
 {
 	size_t deconvolutionChannels = _settings.deconvolutionChannelCount;
 	if(deconvolutionChannels == 0) deconvolutionChannels = _summedCount;
 	frequencies.assign(deconvolutionChannels, 0.0);
-	ao::uvector<size_t> weights(deconvolutionChannels, 0);
+	weights.assign(deconvolutionChannels, 0.0);
+	ao::uvector<size_t> counts(deconvolutionChannels, 0);
 	for(size_t i=0; i!=_summedCount; ++i)
 	{
-		double freq = groupTable.GetSquaredGroup(i)[0].CentralFrequency();
+		const ImagingTableEntry& entry = groupTable.GetSquaredGroup(i)[0];
+		double freq = entry.CentralFrequency();
 		size_t deconvolutionChannel = i * deconvolutionChannels / _summedCount;
 		frequencies[deconvolutionChannel] += freq;
-		weights[deconvolutionChannel]++;
+		Logger::Debug << "Weight: " << entry.imageWeight << '\n';
+		weights[deconvolutionChannel] += entry.imageWeight;
+		counts[deconvolutionChannel]++;
 	}
 	for(size_t i=0; i!=deconvolutionChannels; ++i)
-		frequencies[i] /= weights[i];
+		frequencies[i] /= counts[i];
 }
 
 void Deconvolution::SaveComponentList(const class ImagingTable& table, long double phaseCentreRA, long double phaseCentreDec) const

@@ -61,7 +61,7 @@ void WSClean::multiplyImage(double factor, double* image) const
 		image[i] *= factor;
 }
 
-void WSClean::imagePSF(const ImagingTableEntry& entry)
+void WSClean::imagePSF(ImagingTableEntry& entry)
 {
 	size_t channelIndex = entry.outputChannelIndex;
 	Logger::Info.Flush();
@@ -94,11 +94,12 @@ void WSClean::imagePSF(const ImagingTableEntry& entry)
 	
 	double bMaj, bMin, bPA;
 	determineBeamSize(bMaj, bMin, bPA, _gridder->ImageRealResult(), _gridder->BeamSize());
+	entry.imageWeight = _gridder->ImageWeight();
 	_infoPerChannel[channelIndex].theoreticBeamSize = _gridder->BeamSize();
 	_infoPerChannel[channelIndex].beamMaj = bMaj;
 	_infoPerChannel[channelIndex].beamMin = bMin;
 	_infoPerChannel[channelIndex].beamPA = bPA;
-	_infoPerChannel[channelIndex].weight = _gridder->ImageWeight();
+	_infoPerChannel[channelIndex].weight = entry.imageWeight;
 	_infoPerChannel[channelIndex].normalizationFactor = _gridder->NormalizationFactor();
 	_infoPerChannel[channelIndex].wGridSize = _gridder->WGridSize();
 	_infoPerChannel[channelIndex].visibilityCount = _gridder->GriddedVisibilityCount();
@@ -456,7 +457,8 @@ void WSClean::RunClean()
 		
 		for(size_t groupIndex=0; groupIndex!=_imagingTable.IndependentGroupCount(); ++groupIndex)
 		{
-			runIndependentGroup(_imagingTable.GetIndependentGroup(groupIndex));
+			ImagingTable group = _imagingTable.GetIndependentGroup(groupIndex);
+			runIndependentGroup(group);
 		}
 
 		// Needs to be destructed before image allocator, or image allocator will report error caused by leaked memory
@@ -618,7 +620,7 @@ bool WSClean::selectChannels(MSSelection& selection, size_t msIndex, size_t data
 	}
 }
 
-void WSClean::runIndependentGroup(const ImagingTable& groupTable)
+void WSClean::runIndependentGroup(ImagingTable& groupTable)
 {
 	WSCFitsWriter writer(createWSCFitsWriter(groupTable.Front(), false));
 	_modelImages.Initialize(writer.Writer(), _settings.polarizations.size(), _settings.channelsOut, _settings.prefixName + "-model", _imageAllocator);
@@ -630,7 +632,7 @@ void WSClean::runIndependentGroup(const ImagingTable& groupTable)
 		
 	for(size_t joinedIndex=0; joinedIndex!=groupTable.EntryCount(); ++joinedIndex)
 	{
-		const ImagingTableEntry& entry = groupTable[joinedIndex];
+		ImagingTableEntry& entry = groupTable[joinedIndex];
 		runFirstInversion(entry);
 	}
 	
@@ -973,7 +975,7 @@ void WSClean::clearCurMSProviders()
 	_currentPolMSes.clear();
 }
 
-void WSClean::runFirstInversion(const ImagingTableEntry& entry)
+void WSClean::runFirstInversion(ImagingTableEntry& entry)
 {
 	initializeCurMSProviders(entry);
 	initializeImageWeights(entry);
@@ -1014,7 +1016,8 @@ void WSClean::runFirstInversion(const ImagingTableEntry& entry)
 		// the info for this channel
 		if(isFirstPol)
 		{
-			_infoPerChannel[entry.outputChannelIndex].weight = _gridder->ImageWeight();
+			entry.imageWeight = _gridder->ImageWeight();
+			_infoPerChannel[entry.outputChannelIndex].weight = entry.imageWeight;
 			// If no PSF is made, also set the beam size. If the PSF was made, these would already be set
 			// after imaging the PSF.
 			if(!doMakePSF)

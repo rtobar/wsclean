@@ -15,19 +15,16 @@ ImagingTableEntry::ImagingTableEntry() :
 	squaredDeconvolutionIndex(0),
 	joinedGroupIndex(0),
 	imageCount(0),
-	tmpFilePrefix()
+	tmpFilePrefix(),
+	imageWeight(0.0)
 {
 }
 
 ImagingTable ImagingTable::GetIndependentGroup(size_t index) const
 {
 	ImagingTable table;
-	const std::vector<ImagingTableEntry*>& entries = _independentGroupLookup[index];
-	for(std::vector<ImagingTableEntry*>::const_iterator e=entries.begin();
-			e!=entries.end(); ++e)
-	{
-		table._entries.push_back(**e);
-	}
+	const std::vector<ImagingTableEntryPtr>& entries = _independentGroupLookup[index];
+	table._entries = entries;
 	table.Update();
 	return table;
 }
@@ -35,12 +32,8 @@ ImagingTable ImagingTable::GetIndependentGroup(size_t index) const
 ImagingTable ImagingTable::GetSquaredGroup(size_t index) const
 {
 	ImagingTable table;
-	const std::vector<ImagingTableEntry*>& entries = _squaredGroupLookup[index];
-	for(std::vector<ImagingTableEntry*>::const_iterator e=entries.begin();
-			e!=entries.end(); ++e)
-	{
-		table._entries.push_back(**e);
-	}
+	const std::vector<ImagingTableEntryPtr>& entries = _squaredGroupLookup[index];
+	table._entries = entries;
 	table.Update();
 	return table;
 }
@@ -81,7 +74,7 @@ void ImagingTable::printIndependentGroup(bool isFinal)
 			else
 				Logger::Info << "| ";
 			Logger::Info << "J-";
-			Logger::Info << table._entries[j].ToString() << '\n';
+			Logger::Info << table._entries[j]->ToString() << '\n';
 		}
 		if(isFinal && isSecondFinal)
 			Logger::Info << '\n';
@@ -117,17 +110,16 @@ void ImagingTable::updateIndependentGroupLookup()
 {
 	_independentGroupLookup.clear();
 	std::map<size_t, size_t> indexToLookupSet;
-	for(std::vector<ImagingTableEntry>::iterator e=_entries.begin();
-			e!=_entries.end(); ++e)
+	for(ImagingTableEntryPtr e : _entries)
 	{
 		size_t groupIndex = e->joinedGroupIndex;
 		if(indexToLookupSet.count(groupIndex) == 0)
 		{
 			indexToLookupSet.insert(std::make_pair(groupIndex, _independentGroupLookup.size()));
-			_independentGroupLookup.push_back(std::vector<ImagingTableEntry*>(1, &*e));
+			_independentGroupLookup.push_back(std::vector<ImagingTableEntryPtr>(1, e));
 		}
 		else {
-			_independentGroupLookup[indexToLookupSet[groupIndex]].push_back(&*e);
+			_independentGroupLookup[indexToLookupSet[groupIndex]].push_back(e);
 		}
 	}
 }
@@ -136,17 +128,16 @@ void ImagingTable::updateSquaredGroupLookup()
 {
 	_squaredGroupLookup.clear();
 	std::map<size_t, size_t> indexToLookupSet;
-	for(std::vector<ImagingTableEntry>::iterator e=_entries.begin();
-			e!=_entries.end(); ++e)
+	for(ImagingTableEntryPtr e : _entries)
 	{
 		size_t groupIndex = e->squaredDeconvolutionIndex;
 		if(indexToLookupSet.count(groupIndex) == 0)
 		{
 			indexToLookupSet.insert(std::make_pair(groupIndex, _squaredGroupLookup.size()));
-			_squaredGroupLookup.push_back(std::vector<ImagingTableEntry*>(1, &*e));
+			_squaredGroupLookup.push_back(std::vector<ImagingTableEntryPtr>(1, e));
 		}
 		else {
-			_squaredGroupLookup[indexToLookupSet[groupIndex]].push_back(&*e);
+			_squaredGroupLookup[indexToLookupSet[groupIndex]].push_back(e);
 		}
 	}
 }
@@ -154,13 +145,12 @@ void ImagingTable::updateSquaredGroupLookup()
 void ImagingTable::updateImageLookup()
 {
 	_imageLookup.clear();
-	for(std::vector<ImagingTableEntry>::iterator e=_entries.begin();
-			e!=_entries.end(); ++e)
+	for(ImagingTableEntryPtr e : _entries)
 	{
 		bool isImaginary = false; 
 		for(size_t i=0; i!=e->imageCount; ++i)
 		{
-			_imageLookup.push_back(std::make_pair(&*e, isImaginary));
+			_imageLookup.push_back(std::make_pair(e, isImaginary));
 			isImaginary = true;
 		}
 	}

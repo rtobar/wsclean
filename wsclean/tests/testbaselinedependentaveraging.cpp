@@ -1,5 +1,4 @@
 #include <boost/test/unit_test.hpp>
-#include <boost/test/data/test_case.hpp>
 
 #include "../msproviders/averagingmsrowprovider.h"
 #include "../msproviders/directmsrowprovider.h"

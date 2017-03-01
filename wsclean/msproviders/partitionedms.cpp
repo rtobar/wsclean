@@ -306,7 +306,11 @@ struct PartitionFiles
 PartitionedMS::Handle PartitionedMS::Partition(const string& msPath, const std::vector<ChannelRange>& channels, MSSelection& selection, const string& dataColumnName, bool includeModel, bool initialModelRequired, const WSCleanSettings& settings)
 {
 	const bool modelUpdateRequired = settings.modelUpdateRequired;
-	const std::set<PolarizationEnum> polsOut = settings.polarizations;
+	std::set<PolarizationEnum> polsOut;
+	if(settings.useIDG)
+		polsOut.insert(Polarization::Instrumental);
+	else
+		polsOut = settings.polarizations;
 	const std::string& temporaryDirectory = settings.temporaryDirectory;
 	
 	size_t channelParts = channels.size();
@@ -384,6 +388,7 @@ PartitionedMS::Handle PartitionedMS::Partition(const string& msPath, const std::
 	}
 	
 	// Write actual data
+	size_t polarizationsPerFile = settings.useIDG ? 4 : 1;
 	std::vector<std::complex<float>> dataBuffer(polarizationCount * channelCount);
 	std::vector<float> weightBuffer(polarizationCount * channelCount);
 	
@@ -430,20 +435,20 @@ PartitionedMS::Handle PartitionedMS::Partition(const string& msPath, const std::
 				{
 					PartitionFiles& f = files[fileIndex];
 					copyWeightedData(dataBuffer.data(), partStartCh, partEndCh, msPolarizations, dataArray, weightSpectrumArray, flagArray, *p);
-					f.data->write(reinterpret_cast<char*>(dataBuffer.data()), (partEndCh - partStartCh) * sizeof(std::complex<float>));
+					f.data->write(reinterpret_cast<char*>(dataBuffer.data()), (partEndCh - partStartCh) * sizeof(std::complex<float>) * polarizationsPerFile);
 					if(!f.data->good())
 						throw std::runtime_error("Error writing to temporary data file");
 					
 					if(initialModelRequired)
 					{
 						copyWeightedData(dataBuffer.data(), partStartCh, partEndCh, msPolarizations, modelArray, weightSpectrumArray, flagArray, *p);
-						f.model->write(reinterpret_cast<char*>(dataBuffer.data()), (partEndCh - partStartCh) * sizeof(std::complex<float>));
+						f.model->write(reinterpret_cast<char*>(dataBuffer.data()), (partEndCh - partStartCh) * sizeof(std::complex<float>) * polarizationsPerFile);
 						if(!f.model->good())
 							throw std::runtime_error("Error writing to temporary data file");
 					}
 					
 					copyWeights(weightBuffer.data(), partStartCh, partEndCh, msPolarizations, dataArray, weightSpectrumArray, flagArray, *p);
-					f.weight->write(reinterpret_cast<char*>(weightBuffer.data()), (partEndCh - partStartCh) * sizeof(float));
+					f.weight->write(reinterpret_cast<char*>(weightBuffer.data()), (partEndCh - partStartCh) * sizeof(float) * polarizationsPerFile);
 					if(!f.weight->good())
 						throw std::runtime_error("Error writing to temporary weights file");
 					++fileIndex;
@@ -511,7 +516,7 @@ PartitionedMS::Handle PartitionedMS::Partition(const string& msPath, const std::
 				const size_t selectedRowCount = selectedRowCountPerSpwIndex[selectedDataDescIds[channels[part].dataDescId]];
 				for(size_t i=0; i!=selectedRowCount; ++i)
 				{
-					modelFile.write(reinterpret_cast<char*>(dataBuffer.data()), header.channelCount * sizeof(std::complex<float>));
+					modelFile.write(reinterpret_cast<char*>(dataBuffer.data()), header.channelCount * sizeof(std::complex<float>) * polarizationsPerFile);
 					progress2->SetProgress(part*selectedRowCount + i, channelParts*selectedRowCount);
 				}
 			}

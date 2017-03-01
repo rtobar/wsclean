@@ -81,9 +81,9 @@ public:
 		_spectralFitter.SetMode(mode, nTerms);
 	}
 	
-	void InitializeFrequencies(const ao::uvector<double>& frequencies)
+	void InitializeFrequencies(const ao::uvector<double>& frequencies, const ao::uvector<double>& weights)
 	{
-		_spectralFitter.SetFrequencies(frequencies.data(), frequencies.size());
+		_spectralFitter.SetFrequencies(frequencies.data(), weights.data(), frequencies.size());
 	}
 	
 	const SpectralFitter& Fitter() const { return _spectralFitter; }

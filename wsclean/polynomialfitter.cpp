@@ -17,14 +17,16 @@ void PolynomialFitter::Fit(ao::uvector<double>& terms, size_t nTerms)
 		
 	gsl_matrix* xData = gsl_matrix_alloc(n, nTerms);
 	gsl_matrix* cov = gsl_matrix_alloc(nTerms, nTerms);
+	gsl_vector* wData = gsl_vector_alloc(n);
 	gsl_vector* yData = gsl_vector_alloc(n);
 	gsl_vector* resultTerms = gsl_vector_alloc(nTerms);
 	double chisq;
 	
 	for(size_t i=0; i!=n; ++i)
 	{
-		double x = _dataPoints[i].first;
-		double y = _dataPoints[i].second;
+		double x = _dataPoints[i][0];
+		double y = _dataPoints[i][1];
+		double w = _dataPoints[i][2];
 		
 		double f = 1.0;
 		gsl_matrix_set(xData, i, 0, f);
@@ -34,9 +36,10 @@ void PolynomialFitter::Fit(ao::uvector<double>& terms, size_t nTerms)
 			gsl_matrix_set(xData, i, j, f);
 		}
 		gsl_vector_set(yData, i, y);
+		gsl_vector_set(wData, i, w);
 	}
 	
-	int result = gsl_multifit_linear(xData, yData, resultTerms, cov, &chisq, workspace);
+	int result = gsl_multifit_wlinear(xData, wData, yData, resultTerms, cov, &chisq, workspace);
 	
 	for(size_t j=0; j!=nTerms; ++j)
 	{

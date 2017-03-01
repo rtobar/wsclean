@@ -3,14 +3,16 @@
 
 #include "uvector.h"
 
+#include <array>
+
 class PolynomialFitter
 {
 public:
 	void Clear() { _dataPoints.clear(); }
 	
-	void AddDataPoint(double x, double y)
+	void AddDataPoint(double x, double y, double w)
 	{
-		_dataPoints.push_back(std::make_pair(x, y));
+		_dataPoints.emplace_back(std::array<double,3>({x, y, w}));
 	}
 	
 	void Fit(ao::uvector<double>& terms, size_t nTerms);
@@ -28,7 +30,7 @@ public:
 	}
 	
 private:
-	ao::uvector<std::pair<double,double>> _dataPoints;
+	ao::uvector<std::array<double,3>> _dataPoints;
 };
 
 #endif

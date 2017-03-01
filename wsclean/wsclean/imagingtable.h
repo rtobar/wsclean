@@ -74,6 +74,13 @@ public:
 	{
 		return 0.5 * (bandStartFrequency + bandEndFrequency);
 	}
+	
+	/**
+	 * A number that scales with the estimated inverse-variance of the image. It can be used when
+	 * averaging images or fitting functions through the images to get the optimal sensitivity.
+	 * It is set after the first inversion.
+	 */
+	double imageWeight;
 };
 
 class ImagingTable
@@ -100,11 +107,11 @@ public:
 	
 	ImagingTableEntry& operator[](size_t index)
 	{
-		return _entries[index];
+		return *_entries[index];
 	}
 	const ImagingTableEntry& operator[](size_t index) const
 	{
-		return _entries[index];
+		return *_entries[index];
 	}
 	
 	size_t ImageCount() const
@@ -118,8 +125,8 @@ public:
 	
 	ImagingTableEntry& AddEntry()
 	{
-		_entries.push_back(ImagingTableEntry());
-		return _entries.back();
+		_entries.emplace_back(new ImagingTableEntry());
+		return *_entries.back();
 	}
 	
 	void Update()
@@ -131,8 +138,8 @@ public:
 	
 	void Print();
 	
-	ImagingTableEntry& Front() { return _entries.front(); }
-	const ImagingTableEntry& Front() const { return _entries.front(); }
+	ImagingTableEntry& Front() { return *_entries.front(); }
+	const ImagingTableEntry& Front() const { return *_entries.front(); }
 	
 private:
 	void printIndependentGroup(bool isFinal);
@@ -140,11 +147,12 @@ private:
 	void updateSquaredGroupLookup();
 	void updateImageLookup();
 	
-	std::vector<ImagingTableEntry> _entries;
+	typedef std::shared_ptr<ImagingTableEntry> ImagingTableEntryPtr;
+	std::vector<ImagingTableEntryPtr> _entries;
 	
-	std::vector<std::vector<ImagingTableEntry*>> _independentGroupLookup;
-	std::vector<std::vector<ImagingTableEntry*>> _squaredGroupLookup;
-	std::vector<std::pair<ImagingTableEntry*,bool>> _imageLookup;
+	std::vector<std::vector<ImagingTableEntryPtr>> _independentGroupLookup;
+	std::vector<std::vector<ImagingTableEntryPtr>> _squaredGroupLookup;
+	std::vector<std::pair<ImagingTableEntryPtr,bool>> _imageLookup;
 };
 
 #endif

@@ -35,11 +35,11 @@ public:
 	
 	void RunPredict();
 private:
-	void runIndependentGroup(const ImagingTable& groupTable);
+	void runIndependentGroup(ImagingTable& groupTable);
 	void saveRestoredImagesForGroup(const ImagingTableEntry& tableEntry) const;
 	void predictGroup(const ImagingTable& imagingGroup);
 	
-	void runFirstInversion(const ImagingTableEntry& entry);
+	void runFirstInversion(ImagingTableEntry& entry);
 	void prepareInversionAlgorithm(PolarizationEnum polarization);
 	
 	void performReordering(bool isPredictMode);
@@ -61,7 +61,7 @@ private:
 	class ImageWeightCache* createWeightCache();
 	
 	void multiplyImage(double factor, double* image) const;
-	void imagePSF(const ImagingTableEntry& entry);
+	void imagePSF(ImagingTableEntry& entry);
 	void imageGridding();
 	void imageMainFirst(PolarizationEnum polarization, size_t channelIndex);
 	void imageMainNonFirst(PolarizationEnum polarization, size_t channelIndex);
