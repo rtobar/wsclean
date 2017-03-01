@@ -44,7 +44,7 @@ else
 		mkdir build
 		cd build
 		cmake ../
-		make -j 4
+		make -j 4 && make check -j 4
 		cat ../wscversion.h
 		cd ..
 
@@ -53,6 +53,6 @@ else
 		mkdir build
 		cd build
 		cmake ../ -DCMAKE_PREFIX_PATH="/home/anoko/Software/LOFAR-install"
-		make -j 4
+		make -j 4 && make check -j 4
 		cd ..
 fi
