@@ -8,22 +8,22 @@
 
 BOOST_AUTO_TEST_SUITE(fits_date_obs_time)
 
-const std::pair<std::string, double> timeValues[] = {
-	{"2013-08-22T00:00:00.0", 0.0},
-	{"2013-08-22T00:00:00.1", 0.1/60/60/24},
-	{"2013-08-22T00:00:00.9", 0.9/60/60/24},
-	{"2013-08-22T00:00:59.9", 59.9/60/60/24},
-	{"2013-08-22T00:59:59.9", (59.9/60 + 59)/60/24},
-	{"2013-08-22T23:59:59.9", ((59.9/60 + 59)/60 + 23)/24},
-	{"2013-08-22T23:59:59.9", ((59.99/60 + 59)/60 + 23)/24},
-	{"2013-08-22T00:00:00.0", 1.0},
-	{"2013-08-22T14:00:16.0", (((16 - 0.00000000000069)/60 + 00)/60 + 14)/24}
+const std::pair<std::string, long double> timeValues[] = {
+	{"2013-08-22T00:00:00.0", 0.0L},
+	{"2013-08-22T00:00:00.1", 0.1L/60.0L/60.0L/24.0L},
+	{"2013-08-22T00:00:00.9", 0.9L/60.0L/60.0L/24.0L},
+	{"2013-08-22T00:00:59.9", 59.9L/60.0L/60.0L/24.0L},
+	{"2013-08-22T00:59:59.9", (59.9L/60.0L + 59.0L)/60.0L/24.0L},
+	{"2013-08-22T23:59:59.9", ((59.9L/60.0L + 59.0L)/60.0L + 23.0L)/24.0L},
+	{"2013-08-22T23:59:59.9", ((59.99L/60.0L + 59.0L)/60.0L + 23.0L)/24.0L},
+	{"2013-08-22T00:00:00.0", 1.0L},
+	{"2013-08-22T14:00:16.0", (((16.0L - 0.00000000000069L)/60.0L + 00.0L)/60.0L + 14.0L)/24.0L}
 };
 
 BOOST_DATA_TEST_CASE( functionMJDToHMS, boost::unit_test::data::xrange(std::end(timeValues)-std::begin(timeValues)) )
 {
 	const std::string& str = timeValues[sample].first;
-	double mjd = timeValues[sample].second;
+	long double mjd = timeValues[sample].second;
 
 	int hour, min, sec, dsec;
 	FitsWriter::MJDToHMS(mjd, hour, min, sec, dsec);
