@@ -134,8 +134,7 @@ void ImageWeights::Grid(MSProvider& msProvider, const MSSelection& selection)
 {
 	if(_isGriddingFinished)
 		throw std::runtime_error("Grid() called after a call to FinishGridding()");
-	if(msProvider.Polarization() == Polarization::Instrumental)
-		throw std::runtime_error("Gridding instrumental polarizations has not been implemented yet -- turn MFS weighting off");
+	size_t polCount = (msProvider.Polarization() == Polarization::Instrumental) ? 4 : 1;
 	if(_weightMode.RequiresGridding())
 	{
 		const MultiBandData bandData(msProvider.MS().spectralWindow(), msProvider.MS().dataDescription());
@@ -167,7 +166,7 @@ void ImageWeights::Grid(MSProvider& msProvider, const MSSelection& selection)
 					u = uInM / curBand.ChannelWavelength(ch),
 					v = vInM / curBand.ChannelWavelength(ch);
 				Grid(u, v, *weightIter);
-				++weightIter;
+				weightIter += polCount;
 			}
 			
 			msProvider.NextRow();
