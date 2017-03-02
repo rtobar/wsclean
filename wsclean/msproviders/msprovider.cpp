@@ -430,7 +430,7 @@ void MSProvider::reverseCopyData(casacore::Array<std::complex<float>>& dest, siz
 			{
 				*dataIter = source[chp];
 			}
-			dataIter += polCount;
+			dataIter++;
 		}
 	}
 	else if(Polarization::TypeToIndex(polSource, polsDest, polIndex)) {

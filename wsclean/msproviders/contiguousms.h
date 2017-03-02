@@ -21,38 +21,40 @@ public:
 	
 	ContiguousMS& operator=(const ContiguousMS&) = delete;
 	
-	virtual casacore::MeasurementSet &MS()   { return _ms; }
+	virtual casacore::MeasurementSet &MS() final override { return _ms; }
 	
-	virtual size_t RowId() const   { return _rowId; }
+	virtual size_t RowId() const final override { return _rowId; }
 	
-	virtual bool CurrentRowAvailable()  ;
+	virtual bool CurrentRowAvailable() final override;
 	
-	virtual void NextRow()  ;
+	virtual void NextRow() final override;
 	
-	virtual void Reset()  ;
+	virtual void Reset() final override;
 	
-	virtual void ReadMeta(double& u, double& v, double& w, size_t& dataDescId)  ;
+	virtual void ReadMeta(double& u, double& v, double& w, size_t& dataDescId) final override;
 	
-	virtual void ReadMeta(double& u, double& v, double& w, size_t& dataDescId, size_t& antenna1, size_t& antenna2);
+	virtual void ReadMeta(double& u, double& v, double& w, size_t& dataDescId, size_t& antenna1, size_t& antenna2) final override;
 	
-	virtual void ReadData(std::complex<float>* buffer)  ;
+	virtual void ReadData(std::complex<float>* buffer) final override;
 	
-	virtual void ReadModel(std::complex<float>* buffer)  ;
+	virtual void ReadModel(std::complex<float>* buffer) final override;
 	
-	virtual void WriteModel(size_t rowId, std::complex<float>* buffer)  ;
+	virtual void WriteModel(size_t rowId, std::complex<float>* buffer) final override;
 	
-	virtual void ReadWeights(float* buffer)  ;
+	virtual void ReadWeights(float* buffer) final override;
 	
-	virtual void ReadWeights(std::complex<float>* buffer)  ;
+	virtual void ReadWeights(std::complex<float>* buffer) final override;
 	
-	virtual void ReopenRW()  
+	virtual void ReopenRW() final override 
 	{
 		_ms.reopenRW();
 	}
 	
-	virtual double StartTime()  ;
+	virtual double StartTime() final override;
 	
-	virtual void MakeIdToMSRowMapping(std::vector<size_t>& idToMSRow)  ;
+	virtual void MakeIdToMSRowMapping(std::vector<size_t>& idToMSRow) final override;
+	
+	virtual PolarizationEnum Polarization() final override { return _polOut; }
 private:
 	size_t _row, _rowId;
 	size_t _timestep;

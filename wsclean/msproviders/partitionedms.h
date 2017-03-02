@@ -41,37 +41,39 @@ public:
 	PartitionedMS(const PartitionedMS&) = delete;
 	PartitionedMS& operator=(const PartitionedMS&) = delete;
 	
-	virtual casacore::MeasurementSet &MS()   { openMS(); return *_ms; }
+	virtual casacore::MeasurementSet &MS() final override { openMS(); return *_ms; }
 	
-	virtual size_t RowId() const   { return _currentRow; }
+	virtual size_t RowId() const final override { return _currentRow; }
 	
-	virtual bool CurrentRowAvailable()  ;
+	virtual bool CurrentRowAvailable() final override;
 	
-	virtual void NextRow()  ;
+	virtual void NextRow() final override;
 	
-	virtual void Reset()  ;
+	virtual void Reset() final override;
 	
-	virtual void ReadMeta(double& u, double& v, double& w, size_t& dataDescId)  ;
+	virtual void ReadMeta(double& u, double& v, double& w, size_t& dataDescId) final override;
 	
-	virtual void ReadMeta(double& u, double& v, double& w, size_t& dataDescId, size_t& antenna1, size_t& antenna2);
+	virtual void ReadMeta(double& u, double& v, double& w, size_t& dataDescId, size_t& antenna1, size_t& antenna2) final override;
 	
-	virtual void ReadData(std::complex<float>* buffer)  ;
+	virtual void ReadData(std::complex<float>* buffer) final override;
 	
-	virtual void ReadModel(std::complex<float>* buffer)  ;
+	virtual void ReadModel(std::complex<float>* buffer) final override;
 	
-	virtual void WriteModel(size_t rowId, std::complex<float>* buffer)  ;
+	virtual void WriteModel(size_t rowId, std::complex<float>* buffer) final override;
 	
-	virtual void ReadWeights(float* buffer)  ;
+	virtual void ReadWeights(float* buffer) final override;
 	
-	virtual void ReadWeights(std::complex<float>* buffer)  ;
+	virtual void ReadWeights(std::complex<float>* buffer) final override;
 	
-	virtual void ReopenRW()   { }
+	virtual void ReopenRW() final override{ }
 	
-	virtual double StartTime()   { return _metaHeader.startTime; }
+	virtual double StartTime() final override { return _metaHeader.startTime; }
+	
+	virtual void MakeIdToMSRowMapping(std::vector<size_t>& idToMSRow) final override;
+	
+	virtual PolarizationEnum Polarization() final override { return _polarization; }
 	
 	static Handle Partition(const string& msPath, const std::vector<ChannelRange>& channels, class MSSelection& selection, const string& dataColumnName, bool includeModel, bool initialModelRequired, const class WSCleanSettings& settings);
-	
-	virtual void MakeIdToMSRowMapping(std::vector<size_t>& idToMSRow)  ;
 	
 	class Handle {
 	public:
@@ -130,6 +132,7 @@ private:
 	ao::uvector<float> _weightBuffer;
 	ao::uvector<std::complex<float>> _modelBuffer;
 	int _fd;
+	PolarizationEnum _polarization;
 	
 	struct MetaHeader
 	{

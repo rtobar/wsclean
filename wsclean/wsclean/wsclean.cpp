@@ -322,7 +322,8 @@ void WSClean::initializeMFSImageWeights()
 					bool hasSelection = selectChannels(partSelection, msIndex, dataDescId, subTable.Front());
 					if(hasSelection)
 					{
-						PartitionedMS msProvider(_partitionedMSHandles[msIndex], ms.bands[dataDescId].partIndex, entry.polarization, dataDescId);
+						PolarizationEnum pol = _settings.useIDG ? Polarization::Instrumental : entry.polarization;
+						PartitionedMS msProvider(_partitionedMSHandles[msIndex], ms.bands[dataDescId].partIndex, pol, dataDescId);
 						_imageWeightCache->Weights().Grid(msProvider, partSelection);
 					}
 				}
@@ -334,7 +335,8 @@ void WSClean::initializeMFSImageWeights()
 		{
 			for(size_t d=0; d!=_msBands[i].DataDescCount(); ++d)
 			{
-				ContiguousMS msProvider(_settings.filenames[i], _settings.dataColumnName, _globalSelection, *_settings.polarizations.begin(), d, _settings.deconvolutionMGain != 1.0);
+				PolarizationEnum pol = _settings.useIDG ? Polarization::Instrumental : *_settings.polarizations.begin();
+				ContiguousMS msProvider(_settings.filenames[i], _settings.dataColumnName, _globalSelection, pol, d, _settings.deconvolutionMGain != 1.0);
 				_imageWeightCache->Weights().Grid(msProvider,  _globalSelection);
 				Logger::Info << '.';
 				Logger::Info.Flush();
@@ -927,10 +929,11 @@ void WSClean::predictGroup(const ImagingTable& imagingGroup)
 
 MSProvider* WSClean::initializeMSProvider(const ImagingTableEntry& entry, const MSSelection& selection, size_t filenameIndex, size_t dataDescId)
 {
+	PolarizationEnum pol = _settings.useIDG ? Polarization::Instrumental : entry.polarization;
 	if(_doReorder)
-		return new PartitionedMS(_partitionedMSHandles[filenameIndex], entry.msData[filenameIndex].bands[dataDescId].partIndex, entry.polarization, dataDescId);
+		return new PartitionedMS(_partitionedMSHandles[filenameIndex], entry.msData[filenameIndex].bands[dataDescId].partIndex, pol, dataDescId);
 	else
-		return new ContiguousMS(_settings.filenames[filenameIndex], _settings.dataColumnName, selection, entry.polarization, dataDescId, _settings.deconvolutionMGain != 1.0);
+		return new ContiguousMS(_settings.filenames[filenameIndex], _settings.dataColumnName, selection, pol, dataDescId, _settings.deconvolutionMGain != 1.0);
 }
 
 void WSClean::initializeCurMSProviders(const ImagingTableEntry& entry)

@@ -188,7 +188,6 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 		IDGInversionRow rowData;
         
 		rowData.data = new std::complex<float>[curBand.ChannelCount()*4];
-        std::complex<float> *data4 = new std::complex<float>[curBand.ChannelCount()*4];
         
 		rowData.uvw[0] = uInMeters;
 		rowData.uvw[1] = -vInMeters;  // DEBUG vdtol, flip axis
@@ -198,17 +197,10 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 		rowData.timeIndex = timeIndex;
 		rowData.dataDescId = dataDescId;
 		
-		readAndWeightVisibilities<1>(*msData.msProvider, rowData, curBand, weightBuffer.data(), modelBuffer.data(), isSelected.data());
-        for(int ii = 0;ii < (int)curBand.ChannelCount(); ++ii)
-        {
-          data4[ii*4] = rowData.data[ii];
-          data4[ii*4+1] = 0.0;
-          data4[ii*4+2] = 0.0;
-          data4[ii*4+3] = rowData.data[ii];
-        }
+		readAndWeightVisibilities<4>(*msData.msProvider, rowData, curBand, weightBuffer.data(), modelBuffer.data(), isSelected.data());
         idg::GridderPlan* plan = _gridderPlans[rowData.dataDescId];
-        plan->grid_visibilities(timeIndex, antenna1Col(rowIndex), antenna2Col(rowIndex), rowData.uvw, data4);
-        delete[] data4;
+				// For debug, comment out next line to don't let IDG hang
+        plan->grid_visibilities(timeIndex, antenna1Col(rowIndex), antenna2Col(rowIndex), rowData.uvw, rowData.data);
         delete[] rowData.data;
 	}
 	_inversionLane.write_end();
@@ -341,6 +333,7 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 		row.dataDescId = dataDescId;
 		row.rowId = provRowId;
 		
+		// (For debug) comment this out to don't let IDG hang
 		_predictionCalcLane.write(row);
 		
 		lock.lock(); // lock for guard

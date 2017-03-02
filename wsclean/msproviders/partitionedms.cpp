@@ -39,7 +39,8 @@ PartitionedMS::PartitionedMS(const Handle& handle, size_t partIndex, Polarizatio
 	_currentRow(0),
 	_readPtrIsOk(true),
 	_metaPtrIsOk(true),
-	_weightPtrIsOk(true)
+	_weightPtrIsOk(true),
+	_polarization(polarization)
 {
 	_metaFile.read(reinterpret_cast<char*>(&_metaHeader), sizeof(MetaHeader));
 	std::vector<char> msPath(_metaHeader.filenameLength+1, char(0));
@@ -286,7 +287,6 @@ struct PartitionFiles
 		*weight,
 		*model;
 };
-
 
 /*
  * When partitioned:

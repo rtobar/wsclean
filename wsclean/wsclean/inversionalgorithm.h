@@ -200,7 +200,7 @@ class MeasurementSetGridder
 		/**
 		 * Deallocate any data that is no longer necessary, but all methods
 		 * will still return results from the imaging, with the exception of
-		 * except ImageReal/ImagResult() and GetGriddingCorrectionImage().
+		 * ImageReal/ImageResult() and GetGriddingCorrectionImage().
 		 */
 		virtual void FreeImagingData() {	}
 		

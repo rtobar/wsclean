@@ -48,7 +48,7 @@ void ImageWeights::Grid(casacore::MeasurementSet& ms, const MSSelection& selecti
 		casacore::IPosition modelShape = weightColumn.shape(0);
 		hasWeights = (modelShape == shape);
 	}
-		
+	
 	const size_t polarizationCount = shape[0];
 	
 	casacore::Array<casacore::Complex> dataArr(shape);
@@ -134,6 +134,8 @@ void ImageWeights::Grid(MSProvider& msProvider, const MSSelection& selection)
 {
 	if(_isGriddingFinished)
 		throw std::runtime_error("Grid() called after a call to FinishGridding()");
+	if(msProvider.Polarization() == Polarization::Instrumental)
+		throw std::runtime_error("Gridding instrumental polarizations has not been implemented yet -- turn MFS weighting off");
 	if(_weightMode.RequiresGridding())
 	{
 		const MultiBandData bandData(msProvider.MS().spectralWindow(), msProvider.MS().dataDescription());

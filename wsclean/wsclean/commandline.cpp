@@ -209,12 +209,12 @@ void CommandLine::printHelp()
 		"-auto-mask <sigma>\n"
 		"   Construct a mask from found components and when a threshold of sigma is reached, continue\n"
 		"   cleaning with the mask down to the normal threshold. \n"
-		"-rms-background\n"
+		"-local-rms / -rms-background\n"
 		"   Instead of using a single RMS for auto thresholding/masking, use a spatially varying\n"
 		"   RMS image.\n"
-		"-rms-background-window\n"
+		"-local-rms-window / -rms-background-window\n"
 		"   Size of window for creating the RMS background map, in number of PSFs. Default: 25 psfs.\n"
-		"-rms-background-method\n"
+		"-local-rms-method / -rms-background-method\n"
 		"   Either 'rms' (default, uses sliding window RMS) or 'rms-with-min' (use max(window rms,1.5/5window min)).\n"
 		"-gain <gain>\n"
 		"   Cleaning gain: Ratio of peak that will be subtracted in each iteration. Default: 0.1\n"
@@ -500,23 +500,29 @@ int CommandLine::Run(int argc, char* argv[])
 			settings.autoMask = true;
 			settings.autoMaskSigma = atof(argv[argi]);
 		}
-		else if(param == "rms-background")
+		else if(param == "local-rms" || param == "rms-background")
 		{
 			settings.rmsBackground = true;
+			if(param == "rms-background")
+				deprecated(param, "local-rms");
 		}
-		else if(param == "rms-background-window")
+		else if(param == "local-rms-window" || param == "rms-background-window")
 		{
 			++argi;
 			settings.rmsBackground = true;
 			settings.rmsBackgroundWindow = atof(argv[argi]);
+			if(param == "rms-background-window")
+				deprecated(param, "local-rms-window");
 		}
-		else if(param == "rms-background-image")
+		else if(param == "local-rms-image" || param == "rms-background-image")
 		{
 			++argi;
 			settings.rmsBackground = true;
 			settings.rmsBackgroundImage = argv[argi];
+			if(param == "rms-background-image")
+				deprecated(param, "local-rms-image");
 		}
-		else if(param == "rms-background-method")
+		else if(param == "local-rms-method" || param == "rms-background-method")
 		{
 			++argi;
 			std::string method = argv[argi];
@@ -527,6 +533,8 @@ int CommandLine::Run(int argc, char* argv[])
 				settings.rmsBackgroundMethod = WSCleanSettings::RMSAndMinimumWindow;
 			else
 				throw std::runtime_error("Unknown RMS background method specified");
+			if(param == "rms-background-method")
+				deprecated(param, "local-rms-method");
 		}
 		else if(param == "datacolumn")
 		{
@@ -1028,4 +1036,11 @@ int CommandLine::Run(int argc, char* argv[])
 			break;
 	}
 	return 0;
+}
+
+void CommandLine::deprecated(const std::string& param, const std::string& replacement)
+{
+	Logger::Warn
+	  << "!!! WARNING: Parameter \'-" << param << "\' is deprecated and will be removed in a future version of WSClean.\n"
+		<< "!!!          Use parameter \'-" << replacement << "\' instead.\n";
 }

@@ -60,6 +60,8 @@ public:
 	
 	virtual void MakeIdToMSRowMapping(std::vector<size_t>& idToMSRow) = 0;
 	
+	virtual PolarizationEnum Polarization() = 0;
+	
 	static std::vector<PolarizationEnum> GetMSPolarizations(casacore::MeasurementSet& ms);
 protected:
 	static void copyWeightedData(std::complex<float>* dest, size_t startChannel, size_t endChannel, const std::vector<PolarizationEnum>& polsIn, const casacore::Array<std::complex<float>>& data, const casacore::Array<float>& weights, const casacore::Array<bool>& flags, PolarizationEnum polOut);
