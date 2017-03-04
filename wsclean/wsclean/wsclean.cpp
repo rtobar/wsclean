@@ -571,10 +571,18 @@ void WSClean::RunPredict()
 		
 		if(_doReorder) performReordering(true);
 		
+		if(_settings.useIDG)
+			_gridder.reset(new IdgMsGridder());
+		else
+			_gridder.reset(new WSMSGridder(&_imageAllocator, _settings.threadCount, _settings.memFraction, _settings.absMemLimit));
+	
 		for(size_t groupIndex=0; groupIndex!=_imagingTable.SquaredGroupCount(); ++groupIndex)
 		{
 			predictGroup(_imagingTable.GetSquaredGroup(groupIndex));
 		}
+	
+		// Needs to be destructed before image allocator, or image allocator will report error caused by leaked memory
+		_gridder.reset();
 	}
 }
 
@@ -891,11 +899,6 @@ void WSClean::readEarlierModelImages(const ImagingTableEntry& entry)
 
 void WSClean::predictGroup(const ImagingTable& imagingGroup)
 {
-	if(_settings.useIDG)
-		_gridder.reset(new IdgMsGridder());
-	else
-		_gridder.reset(new WSMSGridder(&_imageAllocator, _settings.threadCount, _settings.memFraction, _settings.absMemLimit));
-	
 	_modelImages.Initialize(
 		createWSCFitsWriter(imagingGroup.Front(), false).Writer(),
 		_settings.polarizations.size(), 1, _settings.prefixName + "-model", _imageAllocator
@@ -922,9 +925,6 @@ void WSClean::predictGroup(const ImagingTable& imagingGroup)
 	Logger::Info << "Inversion: " << _inversionWatch.ToString() << ", prediction: " << _predictingWatch.ToString() << ", cleaning: " << _deconvolutionWatch.ToString() << '\n';
 	
 	_settings.prefixName = rootPrefix;
-	
-	// Needs to be destructed before image allocator, or image allocator will report error caused by leaked memory
-	_gridder.reset();
 }
 
 MSProvider* WSClean::initializeMSProvider(const ImagingTableEntry& entry, const MSSelection& selection, size_t filenameIndex, size_t dataDescId)
