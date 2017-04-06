@@ -383,6 +383,9 @@ int CommandLine::Run(int argc, char* argv[])
 #ifdef HAVE_LOFAR_BEAM
 			Logger::Info << "LOFAR beam is available.\n";
 #endif
+#ifdef HAVE_IDG
+			Logger::Info << "IDG is available.\n";
+#endif
 			return 0;
 		}
 		else if(param == "help")
