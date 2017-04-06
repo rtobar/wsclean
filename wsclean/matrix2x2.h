@@ -217,17 +217,17 @@ public:
 		e2 = trHalf - term;
 		if(matrix[2] != 0.0)
 		{
-			vec1[0] = e1 - matrix[3];
-			vec1[1] = matrix[2];
-			vec2[0] = e2 - matrix[3];
-			vec2[1] = matrix[2];
+			vec1[0] = matrix[3] - e1;
+			vec1[1] = -matrix[2];
+			vec2[0] = matrix[3] - e2;
+			vec2[1] = -matrix[2];
 		}
 		else if(matrix[1] != 0.0)
 		{
-			vec1[0] = matrix[1];
-			vec1[1] = e1 - matrix[0];
-			vec2[0] = matrix[1];
-			vec2[1] = e2 - matrix[0];
+			vec1[0] = -matrix[1];
+			vec1[1] = matrix[0] - e1;
+			vec2[0] = -matrix[1];
+			vec2[1] = matrix[0] - e2;
 		}
 		else {
 			vec1[0] = 1.0;

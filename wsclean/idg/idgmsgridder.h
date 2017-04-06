@@ -6,7 +6,7 @@
 #include "../wsclean/msgridderbase.h"
 
 //#include "interface.h"
-#include <idg.h>
+#include <idg-api.h>
 
 #include "../lane.h"
 #include "../uvector.h"
@@ -30,8 +30,6 @@ public:
 	
 	virtual double* ImageImaginaryResult();
 	
-	virtual double BeamSize() const { return 0.0; }
-	
 	virtual void GetGriddingCorrectionImage(double* image) const;
 	
 	virtual bool HasGriddingCorrectionImage() const;
@@ -41,7 +39,7 @@ private:
 		return 1; // TODO
 	}
 		
-	void constructGridders(const MultiBandData& selectedBands, size_t nStations, bool constructDegridders);
+// 	void constructGridders(const MultiBandData& selectedBands, size_t nStations, bool constructDegridders);
 	
 	void gridMeasurementSet(MSGridderBase::MSData& msData);
 	void gridThreadFunction();
@@ -62,10 +60,8 @@ private:
 		size_t rowId;
 	};
 	
-	std::vector<idg::GridderPlan*> _gridderPlans;
-	std::vector<idg::DegridderPlan*> _degridderPlans;
+    std::unique_ptr<idg::api::BufferSet> _bufferset;
 	size_t _subgridSize;
-	ao::uvector<std::complex<double>> _grid;
 	ao::uvector<double> _image;
 	ao::uvector<float> _taper_subgrid;
 	ao::uvector<float> _taper_grid;
@@ -75,6 +71,9 @@ private:
 	MSProvider* _outputProvider;
 	MultiBandData _selectedBands;
 };
+
+void init_optimal_taper_1D(int subgridsize, int gridsize, float kernelsize, float padding, float* taper_subgrid, float* taper_grid);
+void init_optimal_gridding_taper_1D(int subgridsize, int gridsize, float kernelsize, float* taper_subgrid, float* taper_grid);
 
 #else
 

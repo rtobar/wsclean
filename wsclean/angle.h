@@ -30,6 +30,11 @@ inline std::string Angle::ToNiceString(double angleRad)
 {
 	std::ostringstream str;
 	double degAngle = angleRad * 180.0 / M_PI;
+	if(degAngle < 0.0)
+	{
+		str << "-";
+		degAngle = -degAngle;
+	}
 	if(degAngle >= 2.0)
 	{
 		str << round(degAngle*100.0)/100.0 << " deg";

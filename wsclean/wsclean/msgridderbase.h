@@ -19,6 +19,7 @@ public:
 	virtual double NormalizationFactor() const {
 		return NormalizeForWeighting() ? _totalWeight*0.5 : 1.0;
 	}
+	virtual double BeamSize() const { return _beamSize; }
 	
 	/**
 	 * This is the sum of the weights as given by the measurement set, before the

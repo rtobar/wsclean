@@ -22,22 +22,24 @@ public:
 		_posConstrained = positionOffsetConstrained;
 	}
 	
-	void Fit2DGaussianCentred(const double* image, size_t width, size_t height, double beamEst, double& beamMaj, double& beamMin, double& beamPA)
+	void Fit2DGaussianCentred(const double* image, size_t width, size_t height, double beamEst, double& beamMaj, double& beamMin, double& beamPA, bool verbose=false)
 	{
 		size_t prefSize = std::max<size_t>(10, std::ceil(beamEst*10.0));
 		if(prefSize%2 != 0) ++prefSize;
 		if(prefSize < width || prefSize < height)
 		{
-			size_t boxWidth  = std::min(prefSize, width);
-			size_t boxHeight = std::min(prefSize, height);
 			size_t nIter = 0;
 			bool boxWasLargeEnough;
 			do {
-				fit2DGaussianCentredInBox(image, width, height, beamEst, beamMaj, beamMin, beamPA, boxWidth, boxHeight);
+				size_t boxWidth  = std::min(prefSize, width);
+				size_t boxHeight = std::min(prefSize, height);
+				fit2DGaussianCentredInBox(image, width, height, beamEst, beamMaj, beamMin, beamPA, boxWidth, boxHeight, verbose);
+				if(verbose)
+					std::cout << "Fit result:" << beamMaj << " x " << beamMin << " px, " << beamPA << " (box was " << boxWidth << " x " << boxHeight << ")\n";
 				
 				boxWasLargeEnough =
-					(beamMaj*4.0 < boxWidth || width>=boxWidth) &&
-					(beamMaj*4.0 < boxHeight || height>=boxHeight);
+					(beamMaj*8.0 < boxWidth || boxWidth>=width) &&
+					(beamMaj*8.0 < boxHeight || boxHeight>=height);
 				if(!boxWasLargeEnough)
 				{
 					prefSize = std::max<size_t>(10, std::ceil(beamMaj*10.0));
@@ -47,7 +49,7 @@ public:
 			} while(!boxWasLargeEnough && nIter < 5);
 		}
 		else {
-			fit2DGaussianCentred(image, width, height, beamEst, beamMaj, beamMin, beamPA);
+			fit2DGaussianCentred(image, width, height, beamEst, beamMaj, beamMin, beamPA, verbose);
 		}
 	}
 	
@@ -117,7 +119,7 @@ private:
 	const double* _image;
 	size_t _width, _height, _scaleFactor;
 
-	void fit2DGaussianCentredInBox(const double* image, size_t width, size_t height, double beamEst, double& beamMaj, double& beamMin, double& beamPA, size_t boxWidth, size_t boxHeight)
+	void fit2DGaussianCentredInBox(const double* image, size_t width, size_t height, double beamEst, double& beamMaj, double& beamMin, double& beamPA, size_t boxWidth, size_t boxHeight, bool verbose)
 	{
 		size_t startX = (width-boxWidth)/2;
 		size_t startY = (height-boxHeight)/2;
@@ -127,7 +129,7 @@ private:
 			memcpy(&smallImage[(y-startY)*boxWidth], &image[y*width + startX], sizeof(double)*boxWidth);
 		}
 		
-		fit2DGaussianCentred(&smallImage[0], boxWidth, boxHeight, beamEst, beamMaj, beamMin, beamPA);
+		fit2DGaussianCentred(&smallImage[0], boxWidth, boxHeight, beamEst, beamMaj, beamMin, beamPA, verbose);
 	}
 	
 	void fit2DCircularGaussianCentredInBox(const double* image, size_t width, size_t height, double& beamSize, size_t boxWidth, size_t boxHeight)
@@ -151,7 +153,7 @@ private:
 	 * This function is typically used to find the beam-shape of the point-spread function.
 	 * The beam estimate is used as initial value for the minor and major shape.
 	 */
-	void fit2DGaussianCentred(const double* image, size_t width, size_t height, double beamEst, double& beamMaj, double& beamMin, double& beamPA)
+	void fit2DGaussianCentred(const double* image, size_t width, size_t height, double beamEst, double& beamMaj, double& beamMin, double& beamPA, bool verbose)
 	{
 		_width = width;
 		_height = height;
@@ -182,6 +184,8 @@ private:
 		int status;
 		size_t iter = 0;
 		do {
+			if(verbose)
+				std::cout << "Iteration " << iter << ": ";
 			iter++;
 			status = gsl_multifit_fdfsolver_iterate (solver);
 			
@@ -256,6 +260,8 @@ private:
 		double sx = gsl_vector_get(xvec, 0);
 		double sy = gsl_vector_get(xvec, 1);
 		double beta = gsl_vector_get(xvec, 2);
+		if(beta >= 1.0 || beta <= -1.0)
+			return GSL_EDOM;
 		const size_t width = fitter._width, height = fitter._height;
 		int xMid = width/2, yMid = height/2;
 		double scale = 1.0/fitter._scaleFactor;
@@ -274,7 +280,7 @@ private:
 				++dataIndex;
 			}
 		}
-		//std::cout << "sx=" << sx << ", sy=" << sy << ", beta=" << beta << ", err=" << errSum << '\n';
+		std::cout << "sx=" << sx << ", sy=" << sy << ", beta=" << beta << ", err=" << errSum << '\n';
 		return GSL_SUCCESS;
 	}
 	
@@ -284,7 +290,7 @@ private:
 	 */
 	static double err_centered(double val, double x, double y, double sx, double sy, double beta)
 	{
-		return exp(-x*x/(2.0*sx*sx) - beta*x*y/(sx*sy) - y*y/(2.0*sy*sy)) - val;
+		return exp(-x*x/(2.0*sx*sx) + beta*x*y/(sx*sy) - y*y/(2.0*sy*sy)) - val;
 	}
 	
 	static int fitting_func_circular_centered(const gsl_vector *xvec, void *data, gsl_vector *f)
@@ -341,10 +347,10 @@ private:
 			for(size_t xi=0; xi!=width; ++xi)
 			{
 				double x = (xi - xMid)*scale;
-				double expTerm = exp(-x*x/(2.0*sx*sx) - beta*x*y/(sx*sy) - y*y/(2.0*sy*sy));
+				double expTerm = exp(-x*x/(2.0*sx*sx) + beta*x*y/(sx*sy) - y*y/(2.0*sy*sy));
 				double dsx = (beta*x*y/(sx*sx*sy)+x*x/(sx*sx*sx)) * expTerm;
 				double dsy = (beta*x*y/(sy*sy*sx)+y*y/(sy*sy*sy)) * expTerm;
-				double dbeta = -x*y/(sx*sy) * expTerm;
+				double dbeta = x*y/(sx*sy) * expTerm;
 				gsl_matrix_set(J, dataIndex, 0, dsx);
 				gsl_matrix_set(J, dataIndex, 1, dsy);
 				gsl_matrix_set(J, dataIndex, 2, dbeta);
@@ -732,6 +738,7 @@ private:
 	
 	void convertShapeParameters(double sx, double sy, double beta, double& ellipseMaj, double& ellipseMin, double& ellipsePA)
 	{
+		std::cout << "conv sx=" << sx << ", sy=" << sy << ", beta=" << beta << '\n';
 		const long double sigmaToBeam = 2.0L * sqrtl(2.0L * logl(2.0L));
 		const double betaFact = 1.0 - beta*beta;
 		double cov[4];
@@ -740,10 +747,21 @@ private:
 		cov[2] = cov[1];
 		cov[3] = sy*sy / betaFact;
 		
+		double tr = cov[0] + cov[3];
+		double d = cov[0]*cov[3] - cov[1]*cov[2];
+		double term = sqrt(tr*tr*0.25-d);
+		std::cout << "sqrt(0.25 * " << tr << " * " << tr << " - " << d << ")=sqrt(" << (tr*tr*0.25-d) << ")=" << term << "\n";
+		
 		double e1, e2, vec1[2], vec2[2];
 		Matrix2x2::EigenValuesAndVectors(cov, e1, e2, vec1, vec2);
 		ellipseMaj = sqrt(std::fabs(e1)) * sigmaToBeam * _scaleFactor;
 		ellipseMin = sqrt(std::fabs(e2)) * sigmaToBeam * _scaleFactor;
+		if(ellipseMaj < ellipseMin)
+		{
+			std::swap(ellipseMaj, ellipseMin);
+			vec1[0] = vec2[0];
+			vec1[1] = vec2[1];
+		}
 		ellipsePA = atan2(vec1[0], vec1[1]);
 	}
 	

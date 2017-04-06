@@ -9,9 +9,10 @@ void ImageSet::LoadAndAverage(CachedImageSet& imageSet)
 	for(size_t i=0; i!=_images.size(); ++i)
 		assign(_images[i], 0.0);
 	
-	ImageBufferAllocator::Ptr scratch, weights;
+	ImageBufferAllocator::Ptr scratch;
 	_allocator.Allocate(_imageSize, scratch);
-	_allocator.Allocate(_imageSize, weights);
+	
+	ao::uvector<size_t> weights(_images.size(), 0.0);
 	size_t imgIndex = 0;
 	for(size_t sqIndex=0; sqIndex!=_imagingTable.SquaredGroupCount(); ++sqIndex)
 	{
@@ -26,9 +27,8 @@ void ImageSet::LoadAndAverage(CachedImageSet& imageSet)
 			for(size_t i=0; i!=e.imageCount; ++i)
 			{
 				imageSet.Load(scratch.data(), e.polarization, e.outputChannelIndex, i==1);
-				const double weight = e.imageWeight;
-				addFactor(_images[imgIndex], scratch.data(), weight);
-				weights[imgIndex] += weight;
+				add(_images[imgIndex], scratch.data());
+				weights[imgIndex]++;
 				++imgIndex;
 			}
 		}
