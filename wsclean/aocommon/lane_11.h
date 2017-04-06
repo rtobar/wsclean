@@ -55,6 +55,7 @@ namespace ao
  * {
  *   while(moreTasks)
  *     taskLane->write(nextTask());
+ *   taskLane->write_end();
  * }
  * 
  * void consumer(lane<Task>* taskLane)
@@ -78,12 +79,13 @@ namespace ao
  * methods are not: assignment, swap(), clear() and resize() can not
  * be called from a different thread while another thread is also
  * accessing the lane. The same holds obviously for the constructors
- * and destructor. This is chosen because these methods would always never
- * be called in parallel with other methods.
+ * and destructor. This is chosen because these methods should almost never
+ * be called in parallel with other methods, and hence it is not worth
+ * to increase every call with extra locks to make this possible.
  * 
  * With one reader and one writer, the order is guaranteed to be consistent.
- * With multiple readers or writers in combination with the multi-element
- * write or read functions, a stream of symbols might be interrupted. For
+ * With multiple readers or writers in combination with multi-element
+ * write or read functions, a sequence of symbols might be interrupted. For
  * example, if a multi-element write() won't fit completely in the buffer,
  * the thread will wait for free space. Another thread might get now write
  * access first, causing the single call to the multi-element write to be

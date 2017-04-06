@@ -473,7 +473,11 @@ void WSClean::RunClean()
 				bool psfWasMade = (_settings.deconvolutionIterationCount > 0 || _settings.makePSF || _settings.makePSFOnly) && pol == _settings.polarizations.begin();
 				
 				if(psfWasMade)
+				{
 					makeMFSImage("psf.fits", intervalIndex, *pol, false, true);
+					if(_settings.savePsfPb)
+						makeMFSImage("psf-pb.fits", intervalIndex, *pol, false, true);
+				}
 				
 				if(!(*pol == Polarization::YX && _settings.polarizations.count(Polarization::XY)!=0) && !_settings.makePSFOnly)
 				{
@@ -778,6 +782,8 @@ void WSClean::saveRestoredImagesForGroup(const ImagingTableEntry& tableEntry) co
 		{
 			ImageFilename imageName = ImageFilename(currentChannelIndex, tableEntry.outputIntervalIndex);
 			_primaryBeam->CorrectImages(writer.Writer(), imageName, "image", _imageAllocator);
+			if(_settings.savePsfPb)
+				_primaryBeam->CorrectImages(writer.Writer(), imageName, "psf", _imageAllocator);
 			if(_settings.deconvolutionIterationCount != 0)
 			{
 				_primaryBeam->CorrectImages(writer.Writer(), imageName, "residual", _imageAllocator);
@@ -1404,11 +1410,23 @@ void WSClean::fitBeamSize(double& bMaj, double& bMin, double& bPA, const double*
 	GaussianFitter beamFitter;
 	Logger::Info << "Fitting beam... ";
 	Logger::Info.Flush();
-	beamFitter.Fit2DGaussianCentred(
-		image,
-		_settings.trimmedImageWidth, _settings.trimmedImageHeight,
-		beamEstimate,
-		bMaj, bMin, bPA);
+	if(_settings.circularBeam)
+	{
+		bMaj = beamEstimate;
+		beamFitter.Fit2DCircularGaussianCentred(
+			image,
+			_settings.trimmedImageWidth, _settings.trimmedImageHeight,
+			bMaj);
+		bMin = bMaj;
+		bPA = 0.0;
+	}
+	else {
+		beamFitter.Fit2DGaussianCentred(
+			image,
+			_settings.trimmedImageWidth, _settings.trimmedImageHeight,
+			beamEstimate,
+			bMaj, bMin, bPA);
+	}
 	if(bMaj < 1.0) bMaj = 1.0;
 	if(bMin < 1.0) bMin = 1.0;
 	bMaj = bMaj*0.5*(_settings.pixelScaleX+_settings.pixelScaleY);
@@ -1428,12 +1446,6 @@ void WSClean::determineBeamSize(double& bMaj, double& bMin, double& bPA, const d
 		Logger::Info << "major=" << Angle::ToNiceString(bMaj) << ", minor=" <<
 		Angle::ToNiceString(bMin) << ", PA=" << Angle::ToNiceString(bPA) << ", theoretical=" <<
 		Angle::ToNiceString(theoreticBeam)<< ".\n";
-		
-		if(_settings.circularBeam)
-		{
-			bMin = bMaj;
-			bPA = 0.0;
-		}
 	}
 	else if(_settings.theoreticBeam) {
 		bMaj = theoreticBeam;

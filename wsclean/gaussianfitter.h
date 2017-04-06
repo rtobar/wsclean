@@ -51,6 +51,35 @@ public:
 		}
 	}
 	
+	void Fit2DCircularGaussianCentred(const double* image, size_t width, size_t height, double& beamSize)
+	{
+		size_t prefSize = std::max<size_t>(10, std::ceil(beamSize*10.0));
+		if(prefSize%2 != 0) ++prefSize;
+		if(prefSize < width || prefSize < height)
+		{
+			size_t boxWidth  = std::min(prefSize, width);
+			size_t boxHeight = std::min(prefSize, height);
+			size_t nIter = 0;
+			bool boxWasLargeEnough;
+			do {
+				fit2DCircularGaussianCentredInBox(image, width, height, beamSize, boxWidth, boxHeight);
+				
+				boxWasLargeEnough =
+					(beamSize*4.0 < boxWidth || width>=boxWidth) &&
+					(beamSize*4.0 < boxHeight || height>=boxHeight);
+				if(!boxWasLargeEnough)
+				{
+					prefSize = std::max<size_t>(10, std::ceil(beamSize*10.0));
+					if(prefSize%2 != 0) ++prefSize;
+				}
+				++nIter;
+			} while(!boxWasLargeEnough && nIter < 5);
+		}
+		else {
+			fit2DCircularGaussianCentred(image, width, height, beamSize);
+		}
+	}
+	
 	void Fit2DGaussianFull(const double* image, size_t width, size_t height, double& val, double& posX, double& posY, double& beamMaj, double& beamMin, double& beamPA, double* floorLevel = 0)
 	{
 		size_t prefSize = std::max<size_t>(10, std::ceil(beamMaj*10.0));
@@ -64,7 +93,7 @@ public:
 			size_t nIter = 0;
 			bool boxWasLargeEnough;
 			do {
-				fit2DGaussianFullInBox(image, width, height, val, posX, posY, beamMaj, beamMin, beamPA, floorLevel, xStart, xEnd, yStart, yEnd);
+				fit2DGaussianWithAmplitudeInBox(image, width, height, val, posX, posY, beamMaj, beamMin, beamPA, floorLevel, xStart, xEnd, yStart, yEnd);
 				
 				size_t boxWidth = xEnd - xStart;
 				size_t boxHeight = yEnd - yStart;
@@ -80,7 +109,7 @@ public:
 			} while(!boxWasLargeEnough && nIter < 5);
 		}
 		else {
-			fit2DGaussianFull(image, width, height, val, posX, posY, beamMaj, beamMin, beamPA, floorLevel);
+			fit2DGaussianWithAmplitude(image, width, height, val, posX, posY, beamMaj, beamMin, beamPA, floorLevel);
 		}
 	}
 	
@@ -101,6 +130,27 @@ private:
 		fit2DGaussianCentred(&smallImage[0], boxWidth, boxHeight, beamEst, beamMaj, beamMin, beamPA);
 	}
 	
+	void fit2DCircularGaussianCentredInBox(const double* image, size_t width, size_t height, double& beamSize, size_t boxWidth, size_t boxHeight)
+	{
+		size_t startX = (width-boxWidth)/2;
+		size_t startY = (height-boxHeight)/2;
+		ao::uvector<double> smallImage(boxWidth*boxHeight);
+		for(size_t y=startY; y!=(height+boxHeight)/2; ++y)
+		{
+			memcpy(&smallImage[(y-startY)*boxWidth], &image[y*width + startX], sizeof(double)*boxWidth);
+		}
+		
+		fit2DCircularGaussianCentred(&smallImage[0], boxWidth, boxHeight, beamSize);
+	}
+	
+	/**
+	 * This function performs a single fit of a Gaussian. The position of the Gaussian
+	 * is constrained to be in the centre of the image. The Gaussian is fitted such that
+	 * the squared residuals (data - model) are minimal.
+	 * 
+	 * This function is typically used to find the beam-shape of the point-spread function.
+	 * The beam estimate is used as initial value for the minor and major shape.
+	 */
 	void fit2DGaussianCentred(const double* image, size_t width, size_t height, double beamEst, double& beamMaj, double& beamMin, double& beamPA)
 	{
 		_width = width;
@@ -152,6 +202,54 @@ private:
 		convertShapeParameters(sx, sy, beta, beamMaj, beamMin, beamPA);
 	}
 	
+	void fit2DCircularGaussianCentred(const double* image, size_t width, size_t height, double& beamSize)
+	{
+		_width = width;
+		_height = height;
+		_image = image;
+		_scaleFactor = (width + height)/2;
+		
+		const gsl_multifit_fdfsolver_type *T = gsl_multifit_fdfsolver_lmsder;
+		gsl_multifit_fdfsolver *solver = gsl_multifit_fdfsolver_alloc (T, _width*_height, 1);
+		
+		gsl_multifit_function_fdf fdf;
+		fdf.f = &fitting_func_circular_centered;
+		fdf.df = &fitting_deriv_circular_centered;
+		fdf.fdf = &fitting_both_circular_centered;
+		fdf.n = _width*_height;
+		fdf.p = 1;
+		fdf.params = this;
+		
+		// Using the FWHM formula for a Gaussian:
+		const long double sigmaToBeam = 2.0L * sqrtl(2.0L * logl(2.0L));
+		double initialValsArray[1] = { beamSize/(_scaleFactor*double(sigmaToBeam)) };
+		gsl_vector_view initialVals = gsl_vector_view_array (initialValsArray, 1);
+		gsl_multifit_fdfsolver_set (solver, &fdf, &initialVals.vector);
+
+		int status;
+		size_t iter = 0;
+		do {
+			iter++;
+			status = gsl_multifit_fdfsolver_iterate (solver);
+			
+			if(status)
+				break;
+			
+			status = gsl_multifit_test_delta(solver->dx, solver->x, 1e-7, 1e-7);
+			
+		} while (status == GSL_CONTINUE && iter < 500);
+		
+		double
+			s = gsl_vector_get (solver->x, 0);			
+		gsl_multifit_fdfsolver_free(solver);
+		
+		convertShapeParameters(s, beamSize);
+	}
+	
+	/**
+	 * Fitting funcction for fit2DGaussianCentred(). Calculates the sum of the
+	 * squared errors(/residuals).
+	 */
 	static int fitting_func_centered(const gsl_vector *xvec, void *data, gsl_vector *f)
 	{
 		GaussianFitter& fitter=*static_cast<GaussianFitter*>(data);
@@ -180,15 +278,61 @@ private:
 		return GSL_SUCCESS;
 	}
 	
+	/**
+	 * Calculates the difference between a gaussian with the specified parameters
+	 * at position x,y and the given value.
+	 */
+	static double err_centered(double val, double x, double y, double sx, double sy, double beta)
+	{
+		return exp(-x*x/(2.0*sx*sx) - beta*x*y/(sx*sy) - y*y/(2.0*sy*sy)) - val;
+	}
+	
+	static int fitting_func_circular_centered(const gsl_vector *xvec, void *data, gsl_vector *f)
+	{
+		GaussianFitter& fitter=*static_cast<GaussianFitter*>(data);
+		double s = gsl_vector_get(xvec, 0);
+		const size_t width = fitter._width, height = fitter._height;
+		int xMid = width/2, yMid = height/2;
+		double scale = 1.0/fitter._scaleFactor;
+		
+		size_t dataIndex = 0;
+		double errSum = 0.0;
+		for(size_t yi=0; yi!=height; ++yi)
+		{
+			double y = (yi - yMid) * scale;
+			for(size_t xi=0; xi!=width; ++xi)
+			{
+				double x = (xi - xMid) * scale;
+				double e = err_circular_centered(fitter._image[dataIndex], x, y, s);
+				errSum += e*e;
+				gsl_vector_set(f, dataIndex, e);
+				++dataIndex;
+			}
+		}
+		return GSL_SUCCESS;
+	}
+	
+	/**
+	 * Calculates the difference between a gaussian with the specified parameters
+	 * at position x,y and the given value.
+	 */
+	static double err_circular_centered(double val, double x, double y, double s)
+	{
+		return exp((-x*x - y*y)/(2.0*s*s)) - val;
+	}
+	
+	/**
+	 * Derivative function belong with fit2DGaussianCentred().
+	 */
 	static int fitting_deriv_centered(const gsl_vector *xvec, void *data, gsl_matrix *J)
 	{
 		GaussianFitter& fitter=*static_cast<GaussianFitter*>(data);
-		double sx = gsl_vector_get(xvec, 0);
-		double sy = gsl_vector_get(xvec, 1);
-		double beta = gsl_vector_get(xvec, 2);
+		const double sx = gsl_vector_get(xvec, 0);
+		const double sy = gsl_vector_get(xvec, 1);
+		const double beta = gsl_vector_get(xvec, 2);
 		const size_t width = fitter._width, height = fitter._height;
-		int xMid = width/2, yMid = height/2;
-		double scale = 1.0 / fitter._scaleFactor;
+		const int xMid = width/2, yMid = height/2;
+		const double scale = 1.0 / fitter._scaleFactor;
 		
 		size_t dataIndex = 0;
 		for(size_t yi=0; yi!=height; ++yi)
@@ -210,6 +354,37 @@ private:
 		return GSL_SUCCESS;
 	}
 	
+	static int fitting_deriv_circular_centered(const gsl_vector *xvec, void *data, gsl_matrix *J)
+	{
+		GaussianFitter& fitter=*static_cast<GaussianFitter*>(data);
+		const double s = gsl_vector_get(xvec, 0);
+		const size_t width = fitter._width, height = fitter._height;
+		const int xMid = width/2, yMid = height/2;
+		const double scale = 1.0 / fitter._scaleFactor;
+		
+		size_t dataIndex = 0;
+		for(size_t yi=0; yi!=height; ++yi)
+		{
+			double y = (yi - yMid)*scale;
+			for(size_t xi=0; xi!=width; ++xi)
+			{
+				double x = (xi - xMid)*scale;
+				double expTerm = exp((-x*x - y*y)/(2.0*s*s));
+				// derivative of exp((-x*x - y*y)/(2.0*s*s)) to s
+				// = (-x*x - y*y)/2.0*-2/(s*s*s)
+				// = (-x*x - y*y)/(-s*s*s)
+				// = (x*x + y*y)/(s*s*s)
+				double ds = ((x*x + y*y)/(s*s*s)) * expTerm;
+				gsl_matrix_set(J, dataIndex, 0, ds);
+				++dataIndex;
+			}
+		}
+		return GSL_SUCCESS;
+	}
+	
+	/**
+	 * Squared error and derivative function together.
+	 */
 	static int fitting_both_centered(const gsl_vector *x, void *data, gsl_vector *f, gsl_matrix *J)
 	{
 		fitting_func_centered(x, data, f);
@@ -217,9 +392,11 @@ private:
 		return GSL_SUCCESS;
 	}
 	
-	static double err_centered(double val, double x, double y, double sx, double sy, double beta)
+	static int fitting_both_circular_centered(const gsl_vector *x, void *data, gsl_vector *f, gsl_matrix *J)
 	{
-		return exp(-x*x/(2.0*sx*sx) - beta*x*y/(sx*sy) - y*y/(2.0*sy*sy)) - val;
+		fitting_func_circular_centered(x, data, f);
+		fitting_deriv_circular_centered(x, data, J);
+		return GSL_SUCCESS;
 	}
 	
 	static double err_full(double val, double v, double x, double y, double sx, double sy, double beta)
@@ -227,7 +404,7 @@ private:
 		return exp(-x*x/(2.0*sx*sx) - beta*x*y/(sx*sy) - y*y/(2.0*sy*sy))*v - val;
 	}
 	
-	void fit2DGaussianFullInBox(const double* image, size_t width, size_t height, double& val, double& posX, double& posY, double& beamMaj, double& beamMin, double& beamPA, double* floorLevel, size_t xStart, size_t xEnd, size_t yStart, size_t yEnd)
+	void fit2DGaussianWithAmplitudeInBox(const double* image, size_t width, size_t height, double& val, double& posX, double& posY, double& beamMaj, double& beamMin, double& beamPA, double* floorLevel, size_t xStart, size_t xEnd, size_t yStart, size_t yEnd)
 	{
 		size_t boxWidth = xEnd - xStart;
 		size_t boxHeight = yEnd - yStart;
@@ -239,12 +416,16 @@ private:
 		
 		posX -= xStart;
 		posY -= yStart;
-		fit2DGaussianFull(&smallImage[0], boxWidth, boxHeight, val, posX, posY, beamMaj, beamMin, beamPA, floorLevel);
+		fit2DGaussianWithAmplitude(&smallImage[0], boxWidth, boxHeight, val, posX, posY, beamMaj, beamMin, beamPA, floorLevel);
 		posX += xStart;
 		posY += yStart;
 	}
 	
-	void fit2DGaussianFull(const double* image, size_t width, size_t height, double& val, double& posX, double& posY, double& beamMaj, double& beamMin, double& beamPA, double* floorLevel)
+	/**
+	 * Fits the position, size and amplitude of a Gaussian. If floorLevel is not
+	 * a nullptr, the floor (background level, or zero level) is fitted too. 
+	 */
+	void fit2DGaussianWithAmplitude(const double* image, size_t width, size_t height, double& val, double& posX, double& posY, double& beamMaj, double& beamMin, double& beamPA, double* floorLevel)
 	{
 		_width = width;
 		_height = height;
@@ -252,20 +433,26 @@ private:
 		_scaleFactor = (width + height)/2;
 		
 		if(floorLevel == 0)
-			fit2DGaussianFull(image, width, height, val, posX, posY, beamMaj, beamMin, beamPA);
+			fit2DGaussianWithAmplitude(image, width, height, val, posX, posY, beamMaj, beamMin, beamPA);
 		else
-			fit2DGaussianFullWithFloor(image, width, height, val, posX, posY, beamMaj, beamMin, beamPA, *floorLevel);
+			fit2DGaussianWithAmplitudeWithFloor(image, width, height, val, posX, posY, beamMaj, beamMin, beamPA, *floorLevel);
 	}
 	
-	void fit2DGaussianFull(const double* image, size_t width, size_t height, double& val, double& posX, double& posY, double& beamMaj, double& beamMin, double& beamPA)
+	/**
+	 * Like fit2DGaussianCentred(), but includes Gaussian centre X and Y position and
+	 * amplitude in the fitted parameters.
+	 * 
+	 * This function can typically be used for source fitting.
+	 */
+	void fit2DGaussianWithAmplitude(const double* image, size_t width, size_t height, double& val, double& posX, double& posY, double& beamMaj, double& beamMin, double& beamPA)
 	{
 		const gsl_multifit_fdfsolver_type *T = gsl_multifit_fdfsolver_lmsder;
 		gsl_multifit_fdfsolver *solver = gsl_multifit_fdfsolver_alloc (T, _width*_height, 6);
 		
 		gsl_multifit_function_fdf fdf;
-		fdf.f = &fitting_func_full;
-		fdf.df = &fitting_deriv_full;
-		fdf.fdf = &fitting_both_full;
+		fdf.f = &fitting_func_with_amplitude;
+		fdf.df = &fitting_deriv_with_amplitude;
+		fdf.fdf = &fitting_both_with_amplitude;
 		fdf.n = _width*_height;
 		fdf.p = 6;
 		fdf.params = this;
@@ -311,15 +498,19 @@ private:
 		convertShapeParameters(sx, sy, beta, beamMaj, beamMin, beamPA);
 	}
 	
-	void fit2DGaussianFullWithFloor(const double* image, size_t width, size_t height, double& val, double& posX, double& posY, double& beamMaj, double& beamMin, double& beamPA, double& floorLevel)
+	/**
+	 * Like fit2DGaussianWithAmplitude(), but includes floorLevel as fitted parameter.
+	 * Floor is the background/zero level on which the Gaussian resides.
+	 */
+	void fit2DGaussianWithAmplitudeWithFloor(const double* image, size_t width, size_t height, double& val, double& posX, double& posY, double& beamMaj, double& beamMin, double& beamPA, double& floorLevel)
 	{
 		const gsl_multifit_fdfsolver_type *T = gsl_multifit_fdfsolver_lmsder;
 		gsl_multifit_fdfsolver *solver = gsl_multifit_fdfsolver_alloc (T, _width*_height, 7);
 		
 		gsl_multifit_function_fdf fdf;
-		fdf.f = &fitting_func_floor;
-		fdf.df = &fitting_deriv_floor;
-		fdf.fdf = &fitting_both_floor;
+		fdf.f = &fitting_func_with_amplitude_and_floor;
+		fdf.df = &fitting_deriv_with_amplitude_and_floor;
+		fdf.fdf = &fitting_both_with_amplitude_and_floor;
 		fdf.n = _width*_height;
 		fdf.p = 7;
 		fdf.params = this;
@@ -367,7 +558,7 @@ private:
 		convertShapeParameters(sx, sy, beta, beamMaj, beamMin, beamPA);
 	}
 	
-	static int fitting_func_full(const gsl_vector *xvec, void *data, gsl_vector *f)
+	static int fitting_func_with_amplitude(const gsl_vector *xvec, void *data, gsl_vector *f)
 	{
 		GaussianFitter& fitter=*static_cast<GaussianFitter*>(data);
 		double
@@ -399,7 +590,7 @@ private:
 		return GSL_SUCCESS;
 	}
 	
-	static int fitting_deriv_full(const gsl_vector *xvec, void *data, gsl_matrix *J)
+	static int fitting_deriv_with_amplitude(const gsl_vector *xvec, void *data, gsl_matrix *J)
 	{
 		GaussianFitter& fitter=*static_cast<GaussianFitter*>(data);
 		const double scale = 1.0 / fitter._scaleFactor;
@@ -446,16 +637,14 @@ private:
 		return GSL_SUCCESS;
 	}
 	
-	static int fitting_both_full(const gsl_vector *x, void *data, gsl_vector *f, gsl_matrix *J)
+	static int fitting_both_with_amplitude(const gsl_vector *x, void *data, gsl_vector *f, gsl_matrix *J)
 	{
-		fitting_func_full(x, data, f);
-		fitting_deriv_full(x, data, J);
+		fitting_func_with_amplitude(x, data, f);
+		fitting_deriv_with_amplitude(x, data, J);
 		return GSL_SUCCESS;
 	}
 	
-	
-	
-	static int fitting_func_floor(const gsl_vector *xvec, void *data, gsl_vector *f)
+	static int fitting_func_with_amplitude_and_floor(const gsl_vector *xvec, void *data, gsl_vector *f)
 	{
 		GaussianFitter& fitter=*static_cast<GaussianFitter*>(data);
 		const double scale = 1.0/fitter._scaleFactor;
@@ -490,7 +679,7 @@ private:
 		return GSL_SUCCESS;
 	}
 	
-	static int fitting_deriv_floor(const gsl_vector *xvec, void *data, gsl_matrix *J)
+	static int fitting_deriv_with_amplitude_and_floor(const gsl_vector *xvec, void *data, gsl_matrix *J)
 	{
 		GaussianFitter& fitter=*static_cast<GaussianFitter*>(data);
 		double
@@ -534,37 +723,11 @@ private:
 		return GSL_SUCCESS;
 	}
 	
-	static int fitting_both_floor(const gsl_vector *x, void *data, gsl_vector *f, gsl_matrix *J)
+	static int fitting_both_with_amplitude_and_floor(const gsl_vector *x, void *data, gsl_vector *f, gsl_matrix *J)
 	{
-		fitting_func_floor(x, data, f);
-		fitting_deriv_floor(x, data, J);
+		fitting_func_with_amplitude_and_floor(x, data, f);
+		fitting_deriv_with_amplitude_and_floor(x, data, J);
 		return GSL_SUCCESS;
-	}
-	
-	static double dfdsx(double x, double y, double sx, double sy, double beta)
-	{
-		// f[x,y,sx,sy,beta]:=exp(-x*x/(2.0*sx*sx) - beta*x*y/(sx*sy) - y*y/(2.0*sy*sy));
-		// diff(f[x,y,sx,sy,beta],sx);
-		return (beta*x*y/(sx*sx*sy)+x*x/(sx*sx*sx)) * exp(-x*x/(2.0*sx*sx) - beta*x*y/(sx*sy) - y*y/(2.0*sy*sy));
-	}
-	
-	static double dfdbeta(double x, double y, double sx, double sy, double beta)
-	{
-		return x*y/(sx*sy) * exp(-x*x/(2.0*sx*sx) - beta*x*y/(sx*sy) - y*y/(2.0*sy*sy));
-	}
-	
-	static double dfdx(double x, double y, double sx, double sy, double beta)
-	{
-		// g[x,y,v,dx,dy,sx,sy,beta]:=v*exp(-(x+dx)*(x+dx)/(2.0*sx*sx) - beta*(x+dx)*(y+dy)/(sx*sy) - (y+dy)*(y+dy)/(2.0*sy*sy));
-		// diff(g[x,y,v,dx,dy,sx,sy,beta],dx);
-		return (-beta*y/(sx*sy) - x/(sx*sx)) *
-			exp(-x*x/(2.0*sx*sx) - beta*x*y/(sx*sy) - y*y/(2.0*sy*sy));
-	}
-	
-	static double dfdv(double x, double y, double sx, double sy, double beta)
-	{
-		// diff(g[x,y,v,dx,dy,sx,sy,beta],v);
-		return exp(-x*x/(2.0*sx*sx) - beta*x*y/(sx*sy) - y*y/(2.0*sy*sy));
 	}
 	
 	void convertShapeParameters(double sx, double sy, double beta, double& ellipseMaj, double& ellipseMin, double& ellipsePA)
@@ -582,6 +745,12 @@ private:
 		ellipseMaj = sqrt(std::fabs(e1)) * sigmaToBeam * _scaleFactor;
 		ellipseMin = sqrt(std::fabs(e2)) * sigmaToBeam * _scaleFactor;
 		ellipsePA = atan2(vec1[0], vec1[1]);
+	}
+	
+	void convertShapeParameters(double s, double& beamSize)
+	{
+		const long double sigmaToBeam = 2.0L * sqrtl(2.0L * logl(2.0L));
+		beamSize = s * sigmaToBeam * _scaleFactor;
 	}
 	
 	double _xInit, _yInit, _posConstrained;

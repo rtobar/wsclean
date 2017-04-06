@@ -46,7 +46,7 @@ class ModelComponent
 		bool HasSED() const { return _sed != 0; }
 		SpectralEnergyDistribution &SED() { return *_sed; }
 		const SpectralEnergyDistribution &SED() const { return *_sed; }
-		bool HasMeasuredSED() const { return dynamic_cast<MeasuredSED*>(&*_sed)!=0; }
+		bool HasMeasuredSED() const { return dynamic_cast<MeasuredSED*>(_sed.get())!=0; }
 		MeasuredSED& MSED() { return static_cast<MeasuredSED&>(*_sed); }
 		const MeasuredSED& MSED() const { return static_cast<const MeasuredSED&>(*_sed); }
 		long double L() const { return _l; }

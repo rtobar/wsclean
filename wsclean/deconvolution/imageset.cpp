@@ -9,13 +9,15 @@ void ImageSet::LoadAndAverage(CachedImageSet& imageSet)
 	for(size_t i=0; i!=_images.size(); ++i)
 		assign(_images[i], 0.0);
 	
-	ImageBufferAllocator::Ptr scratch;
+	ImageBufferAllocator::Ptr scratch, weights;
 	_allocator.Allocate(_imageSize, scratch);
-	
-	ao::uvector<size_t> weights(_images.size(), 0.0);
+	_allocator.Allocate(_imageSize, weights);
 	size_t imgIndex = 0;
 	for(size_t sqIndex=0; sqIndex!=_imagingTable.SquaredGroupCount(); ++sqIndex)
 	{
+		// The next loop iterates over the polarizations. The logic in the next loop
+		// makes sure that images of the same polarizations and that belong to the
+		// same deconvolution channel are averaged together.
 		size_t imgIndexForChannel = imgIndex;
 		ImagingTable subTable = _imagingTable.GetSquaredGroup(sqIndex);
 		for(size_t eIndex=0; eIndex!=subTable.EntryCount(); ++eIndex)
@@ -24,13 +26,16 @@ void ImageSet::LoadAndAverage(CachedImageSet& imageSet)
 			for(size_t i=0; i!=e.imageCount; ++i)
 			{
 				imageSet.Load(scratch.data(), e.polarization, e.outputChannelIndex, i==1);
-				add(_images[imgIndex], scratch.data());
-				weights[imgIndex]++;
+				const double weight = e.imageWeight;
+				addFactor(_images[imgIndex], scratch.data(), weight);
+				weights[imgIndex] += weight;
 				++imgIndex;
 			}
 		}
 		size_t thisChannelIndex = (sqIndex*_channelsInDeconvolution)/_imagingTable.SquaredGroupCount();
 		size_t nextChannelIndex = ((sqIndex+1)*_channelsInDeconvolution)/_imagingTable.SquaredGroupCount();
+		// If the next loaded image belongs to the same deconvolution channel as the previously
+		// loaded, they need to be averaged together.
 		if(thisChannelIndex == nextChannelIndex)
 			imgIndex = imgIndexForChannel;
 	}

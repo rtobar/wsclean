@@ -62,9 +62,11 @@ void CommandLine::printHelp()
 		"   Calculate and apply the primary beam and save images for the Jones components, with weighting identical to the\n"
 		"   weighting as used by the imager. Only available for LOFAR.\n"
 		"-reuse-primary-beam\n"
-		"   If a primary beam image exists on disk, reuse those images (not implemented yet).\n"
+		"   If a primary beam image exists on disk, reuse those images.\n"
 		"-use-differential-lofar-beam\n"
 		"   Assume the visibilities have already been beam-corrected for the reference direction.\n"
+		"-save-psf-pb\n"
+		"   When applying beam correction, also save the primary-beam corrected PSF image.\n"
 		"\n"
 		"  ** WEIGHTING OPTIONS **\n"
 		"-weight <weightmode>\n"
@@ -215,7 +217,7 @@ void CommandLine::printHelp()
 		"-local-rms-window / -rms-background-window\n"
 		"   Size of window for creating the RMS background map, in number of PSFs. Default: 25 psfs.\n"
 		"-local-rms-method / -rms-background-method\n"
-		"   Either 'rms' (default, uses sliding window RMS) or 'rms-with-min' (use max(window rms,1.5/5window min)).\n"
+		"   Either 'rms' (default, uses sliding window RMS) or 'rms-with-min' (use max(window rms, 0.3 x window min)).\n"
 		"-gain <gain>\n"
 		"   Cleaning gain: Ratio of peak that will be subtracted in each iteration. Default: 0.1\n"
 		"-mgain <gain>\n"
@@ -557,6 +559,10 @@ int CommandLine::Run(int argc, char* argv[])
 		else if(param == "use-differential-lofar-beam")
 		{
 			settings.useDifferentialLofarBeam = true;
+		}
+		else if(param == "save-psf-pb")
+		{
+			settings.savePsfPb = true;
 		}
 		else if(param == "negative")
 		{

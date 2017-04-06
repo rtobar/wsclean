@@ -29,6 +29,11 @@ public:
 		return GetPrefix(settings, _polarization, _channelIndex, _intervalIndex, _isImaginary);
 	}
 	
+	std::string GetPSFPrefix(const WSCleanSettings& settings) const
+	{
+		return GetPSFPrefix(settings, _channelIndex, _intervalIndex);
+	}
+	
 	std::string GetBeamPrefix(const WSCleanSettings& settings) const
 	{
 		return GetBeamPrefix(settings, _polarization, _channelIndex, _intervalIndex, _isImaginary);

@@ -109,7 +109,7 @@ public:
 	void CorrectImages(FitsWriter& writer, const ImageFilename& imageName, const std::string& filenameKind, ImageBufferAllocator& allocator)
 	{
 		load(imageName, allocator);
-		if(_settings.polarizations.size() == 1)
+		if(_settings.polarizations.size() == 1 || filenameKind == "psf")
 		{
 			PolarizationEnum pol = *_settings.polarizations.begin();
 			
@@ -117,13 +117,18 @@ public:
 			{
 				ImageFilename stokesIName(imageName);
 				stokesIName.SetPolarization(pol);
-				FitsReader reader(stokesIName.GetPrefix(_settings) + "-" + filenameKind + ".fits");
+				std::string prefix;
+				if(filenameKind == "psf")
+					prefix = stokesIName.GetPSFPrefix(_settings);
+				else
+					prefix = stokesIName.GetPrefix(_settings);
+				FitsReader reader(prefix + "-" + filenameKind + ".fits");
 				ImageBufferAllocator::Ptr image;
 				allocator.Allocate(reader.ImageWidth() * reader.ImageHeight(), image);
 				reader.Read(image.data());
 				
 				applyStokesI(image.data());
-				writer.Write(stokesIName.GetPrefix(_settings) + "-" + filenameKind + "-pb.fits", image.data());
+				writer.Write(prefix + "-" + filenameKind + "-pb.fits", image.data());
 			}
 			else {
 				throw std::runtime_error("Primary beam correction is requested, but this is not supported when imaging a single polarization that is not Stokes I. Either image all four polarizations or turn off beam correction.");

@@ -79,7 +79,7 @@ class ModelParser : private Tokenizer
 					parseComponent(component);
 					source.AddComponent(component);
 				}
-				else throw std::runtime_error("Unknown token");
+				else throw std::runtime_error(std::string("Unknown token ") + token);
 			}
 		}
 		
@@ -198,7 +198,7 @@ class ModelParser : private Tokenizer
 				else if(token == "beam-value") {
 					// ignore
 				}
-				else throw std::runtime_error("Unknown token");
+				else throw std::runtime_error(std::string("Unknown token ") + token);
 			}
 		}
 		
@@ -240,7 +240,7 @@ class ModelParser : private Tokenizer
 						terms.push_back(atof(token.c_str()));
 					}
 				}
-				else throw std::runtime_error("Unknown token");
+				else throw std::runtime_error(std::string("Unknown token ") + token);
 			}
 			if(!hasFrequency || !hasBrightness || terms.empty())
 				throw std::runtime_error("Incomplete SED specification");
