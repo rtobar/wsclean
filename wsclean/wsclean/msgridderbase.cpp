@@ -196,7 +196,10 @@ void MSGridderBase::initializeMeasurementSet(MSGridderBase::MSData& msData)
 	
 	initializePhaseCentre(ms, Selection(msData.msIndex).FieldId());
 	
-	calculateWLimits<1>(msData);
+	if (msProvider.Polarization() == Polarization::Instrumental)
+		calculateWLimits<4>(msData);
+	else
+		calculateWLimits<1>(msData);
 }
 
 void MSGridderBase::calculateOverallMetaData(const MSData* msDataVector)
