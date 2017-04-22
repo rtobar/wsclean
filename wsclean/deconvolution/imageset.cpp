@@ -208,9 +208,12 @@ void ImageSet::getSquareIntegratedWithNormalChannels(double* dest, double* scrat
 		}
 	}
 	else {
-		for(size_t sqIndex = 0; sqIndex!=_channelsInDeconvolution; ++sqIndex)
+		double weightSum = 0.0;
+		for(size_t chIndex = 0; chIndex!=_channelsInDeconvolution; ++chIndex)
 		{
-			ImagingTable subTable = _imagingTable.GetSquaredGroup(sqIndex);
+			ImagingTable subTable = _imagingTable.GetSquaredGroup(chIndex);
+			const double groupWeight = subTable.Front().imageWeight;
+			weightSum += groupWeight;
 			if(subTable.EntryCount() == 1)
 			{
 				const ImagingTableEntry& entry = subTable[0];
@@ -234,13 +237,13 @@ void ImageSet::getSquareIntegratedWithNormalChannels(double* dest, double* scrat
 				squareRoot(scratch);
 			}
 			
-			if(sqIndex == 0)
-				assign(dest, scratch);
+			if(chIndex == 0)
+				assignMultiply(dest, scratch, groupWeight);
 			else
-				add(dest, scratch);
+				addFactor(dest, scratch, groupWeight);
 		}
 		if(_channelsInDeconvolution > 0)
-			multiply(dest, 1.0/_channelsInDeconvolution);
+			multiply(dest, 1.0/weightSum);
 		else
 			assign(dest, 0.0);
 	}
@@ -274,25 +277,30 @@ void ImageSet::getSquareIntegratedWithSquaredChannels(double* dest) const
 
 void ImageSet::getLinearIntegratedWithNormalChannels(double* dest) const
 {
+	// TODO for performance: if channelcount=1 and subtable.size()=1, directly assign
+	// instead of first weighting and then dividing weights out.
 	size_t addIndex = 0;
+	double weightSum = 0.0;
 	for(size_t sqIndex = 0; sqIndex!=_channelsInDeconvolution; ++sqIndex)
 	{
 		ImagingTable subTable = _imagingTable.GetSquaredGroup(sqIndex);
+		const double groupWeight = subTable.Front().imageWeight;
+		weightSum += groupWeight;
 		for(size_t eIndex = 0; eIndex!=subTable.EntryCount(); ++eIndex)
 		{
 			const ImagingTableEntry& entry = subTable[eIndex];
 			size_t imageIndex = _tableIndexToImageIndex.find(entry.index)->second;
 			if(addIndex == 0)
-				assign(dest, _images[imageIndex]);
+				assignMultiply(dest, _images[imageIndex], groupWeight);
 			else
-				add(dest, _images[imageIndex]);
+				addFactor(dest, _images[imageIndex], groupWeight);
 			++addIndex;
 		}
 	}
 	if(_channelsInDeconvolution != 1)
 	{
 		if(_channelsInDeconvolution > 0)
-			multiply(dest, 1.0/double(_channelsInDeconvolution));
+			multiply(dest, 1.0/weightSum);
 		else
 			assign(dest, 0.0);
 	}

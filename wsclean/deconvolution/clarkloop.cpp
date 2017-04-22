@@ -66,6 +66,13 @@ double ClarkLoop::Run(ImageSet& convolvedResidual, const ao::uvector<const doubl
 		size_t
 			x = _clarkModel.X(maxComponent),
 			y = _clarkModel.Y(maxComponent);
+		/*
+		  Commented out because even in verbose mode this is a bit too verbose, but useful in case divergence occurs:
+		Logger::Debug << x << ", " << y << " " << maxValue << " -> ";
+		for(size_t imgIndex=0; imgIndex!=_clarkModel.Model().size(); ++imgIndex)
+		  Logger::Debug << componentValues[imgIndex] << ' ';
+		Logger::Debug << '\n';
+		*/
 		for(size_t imgIndex=0; imgIndex!=_clarkModel.Residual().size(); ++imgIndex)
 		{
 			double* image = _clarkModel.Residual()[imgIndex];

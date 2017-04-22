@@ -280,7 +280,7 @@ private:
 				++dataIndex;
 			}
 		}
-		std::cout << "sx=" << sx << ", sy=" << sy << ", beta=" << beta << ", err=" << errSum << '\n';
+    //std::cout << "sx=" << sx << ", sy=" << sy << ", beta=" << beta << ", err=" << errSum << '\n';
 		return GSL_SUCCESS;
 	}
 	
@@ -738,7 +738,7 @@ private:
 	
 	void convertShapeParameters(double sx, double sy, double beta, double& ellipseMaj, double& ellipseMin, double& ellipsePA)
 	{
-		std::cout << "conv sx=" << sx << ", sy=" << sy << ", beta=" << beta << '\n';
+		//std::cout << "conv sx=" << sx << ", sy=" << sy << ", beta=" << beta << '\n';
 		const long double sigmaToBeam = 2.0L * sqrtl(2.0L * logl(2.0L));
 		const double betaFact = 1.0 - beta*beta;
 		double cov[4];
@@ -750,7 +750,7 @@ private:
 		double tr = cov[0] + cov[3];
 		double d = cov[0]*cov[3] - cov[1]*cov[2];
 		double term = sqrt(tr*tr*0.25-d);
-		std::cout << "sqrt(0.25 * " << tr << " * " << tr << " - " << d << ")=sqrt(" << (tr*tr*0.25-d) << ")=" << term << "\n";
+		//std::cout << "sqrt(0.25 * " << tr << " * " << tr << " - " << d << ")=sqrt(" << (tr*tr*0.25-d) << ")=" << term << "\n";
 		
 		double e1, e2, vec1[2], vec2[2];
 		Matrix2x2::EigenValuesAndVectors(cov, e1, e2, vec1, vec2);

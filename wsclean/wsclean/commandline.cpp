@@ -267,8 +267,12 @@ void CommandLine::printHelp()
 		"   MoreSane --sigmalevel setting for each major loop iteration. Useful to start at high\n"
 		"   levels and go down with subsequent loops, e.g. 20,10,5\n"
 		"-save-component-list\n"
-		"   Saves the found clean components as a sky model. To do so, Gaussian shapes will be used\n"
-		"   during multi-scale cleaning.\n"
+		"   Saves the found clean components in a WSClean-specific text file. This parameter \n"
+    "   enables Gaussian shapes during multi-scale cleaning (-multiscale-shape gaussian).\n"
+    "   This parameter is deprecated: please use -save-source-list\n"
+    "-save-source-list\n"
+    "   Saves the found clean components as a BBS/NDPPP text sky model. This parameter \n"
+    "   enables Gaussian shapes during multi-scale cleaning (-multiscale-shape gaussian).\n"
 		"-cleanborder <percentage>\n"
 		"   Set the border size in which no cleaning is performed, in percentage of the width/height of the image.\n"
 		"   With an image size of 1000 and clean border of 1%, each border is 10 pixels. \n"
@@ -769,6 +773,12 @@ int CommandLine::Run(int argc, char* argv[])
 		else if(param == "save-component-list")
 		{
 			settings.saveComponentList = true;
+			settings.multiscaleShapeFunction = MultiScaleTransforms::GaussianShape;
+			deprecated(param, "save-source-list");
+		}
+		else if(param == "save-source-list")
+		{
+			settings.saveSourceList = true;
 			settings.multiscaleShapeFunction = MultiScaleTransforms::GaussianShape;
 		}
 		else if(param == "cleanborder")

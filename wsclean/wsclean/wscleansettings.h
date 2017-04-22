@@ -70,7 +70,7 @@ public:
 	bool rmsBackground;
 	double rmsBackgroundWindow;
 	enum RMSBackgroundMethod { RMSWindow, RMSAndMinimumWindow } rmsBackgroundMethod;
-	bool saveComponentList;
+	bool saveComponentList, saveSourceList;
 	size_t deconvolutionIterationCount;
 	bool allowNegativeComponents, stopOnNegativeComponents;
 	bool useMultiscale, useClarkOptimization, squaredJoins, forceDynamicJoin;
@@ -178,6 +178,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	rmsBackgroundWindow(25.0),
 	rmsBackgroundMethod(RMSWindow),
 	saveComponentList(false),
+	saveSourceList(false),
 	deconvolutionIterationCount(0),
 	allowNegativeComponents(true), 
 	stopOnNegativeComponents(false),

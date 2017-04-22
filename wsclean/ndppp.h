@@ -24,7 +24,14 @@ public:
 		stream << "# (Name, Type, Ra, Dec, I, Q, U, V, ReferenceFrequency='" << refFrequency << "', SpectralIndex, MajorAxis, MinorAxis, Orientation) = format\n\n";
 	}
 	
-	static void WriteHeaderForSpectralTerms(std::ostream& stream, double refFrequency, const std::string& spectralFunction)
+	static void WriteHeaderForSpectralTerms(std::ostream& stream, double refFrequency)
+	{
+		stream.precision(15);
+		stream
+			<< "Format = Name, Type, Ra, Dec, I, SpectralIndex, LogarithmicSI, ReferenceFrequency='" << refFrequency << "', MajorAxis, MinorAxis, Orientation\n";
+	}
+	
+	static void WriteOldHeaderForSpectralTerms(std::ostream& stream, double refFrequency, const std::string& spectralFunction)
 	{
 		stream.precision(15);
 		stream
@@ -58,7 +65,7 @@ public:
 		stream << ",,,\n";
 	}
 	
-	static void WriteGausssianComponent(std::ostream& stream, const std::string& name, long double ra, long double dec, double i, double q, double u, double v, double freq, const ao::uvector<double>& siTerms, double maj, double min, double posangle)
+	static void WriteGaussianComponent(std::ostream& stream, const std::string& name, long double ra, long double dec, double i, double q, double u, double v, double freq, const ao::uvector<double>& siTerms, double maj, double min, double posangle)
 	{
 		stream << name << ",GAUSSIAN,"
 			<< RaDecCoord::RAToString(ra, ':') << ','
@@ -69,7 +76,33 @@ public:
 		stream << "," << maj << ',' << min << ',' << posangle << "\n";
 	}
 	
-	static void WritePolynomialPointComponent(std::ostream& stream, const std::string& name, long double ra, long double dec, const ao::uvector<double>& polTerms)
+	static void WritePolynomialPointComponent(std::ostream& stream, const std::string& name, long double ra, long double dec, double i, bool useLogSI, const ao::uvector<double>& polTerms, double referenceFrequencyHz)
+	{
+		stream << name << ",POINT,"
+			<< RaDecCoord::RAToString(ra, ':') << ','
+			<< RaDecCoord::DecToString(dec, '.') << ','
+      << i << ',';
+		addSITerms(stream, polTerms);
+    stream
+      << "," << (useLogSI ? "true" : "false")
+      << "," << referenceFrequencyHz
+      << ",,,\n";
+	}
+	
+	static void WritePolynomialGaussianComponent(std::ostream& stream, const std::string& name, long double ra, long double dec, double i, bool useLogSI, const ao::uvector<double>& polTerms, double referenceFrequencyHz, double maj, double min, double posangle)
+	{
+		stream << name << ",GAUSSIAN,"
+			<< RaDecCoord::RAToString(ra, ':') << ','
+			<< RaDecCoord::DecToString(dec, '.') << ','
+			<< i << ',';
+		addSITerms(stream, polTerms);
+    stream
+      << "," << (useLogSI ? "true" : "false")
+      << "," << referenceFrequencyHz
+      << "," << maj << ',' << min << ',' << posangle << "\n";
+	}
+	
+	static void WriteOldPolynomialPointComponent(std::ostream& stream, const std::string& name, long double ra, long double dec, const ao::uvector<double>& polTerms)
 	{
 		stream << name << ",POINT,"
 			<< RaDecCoord::RAToString(ra, ':') << ','
@@ -78,7 +111,7 @@ public:
 		stream << ",,,\n";
 	}
 	
-	static void WritePolynomialGausssianComponent(std::ostream& stream, const std::string& name, long double ra, long double dec, const ao::uvector<double>& polTerms, double maj, double min, double posangle)
+	static void WriteOldPolynomialGaussianComponent(std::ostream& stream, const std::string& name, long double ra, long double dec, const ao::uvector<double>& polTerms, double maj, double min, double posangle)
 	{
 		stream << name << ",GAUSSIAN,"
 			<< RaDecCoord::RAToString(ra, ':') << ','

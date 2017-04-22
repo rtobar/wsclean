@@ -240,6 +240,12 @@ private:
 		memcpy(lhs, rhs.data(), sizeof(double) * _imageSize);
 	}
 	
+	void assignMultiply(double* lhs, const double* rhs, double factor) const
+	{
+		for(size_t i=0; i!=_imageSize; ++i)
+			lhs[i] = rhs[i] * factor;
+	}
+	
 	void assign(double* image, double value) const
 	{
 		for(size_t i=0; i!=_imageSize; ++i)

@@ -32,6 +32,7 @@ public:
 	bool IsInitialized() const { return _cleanAlgorithm != 0; }
 	
 	void SaveComponentList(const class ImagingTable& table, long double phaseCentreRA, long double phaseCentreDec) const;
+	void SaveSourceList(const class ImagingTable& table, long double phaseCentreRA, long double phaseCentreDec) const;
 private:
 	void calculateDeconvolutionFrequencies(const ImagingTable& groupTable, ao::uvector<double>& frequencies, ao::uvector<double>& weights);
 	

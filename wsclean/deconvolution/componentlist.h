@@ -30,6 +30,8 @@ public:
 			MergeDuplicates();
 	}
 	
+	void WriteOldFormat(const class MultiScaleAlgorithm& multiscale, const class WSCleanSettings& settings, long double pixelScaleX, long double pixelScaleY, long double phaseCentreRA, long double phaseCentreDec);
+	
 	void Write(const class MultiScaleAlgorithm& multiscale, const class WSCleanSettings& settings, long double pixelScaleX, long double pixelScaleY, long double phaseCentreRA, long double phaseCentreDec);
 	
 	void MergeDuplicates()

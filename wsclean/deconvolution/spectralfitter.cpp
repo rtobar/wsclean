@@ -27,8 +27,7 @@ void SpectralFitter::Fit(ao::uvector<double>& terms, const double* values) const
 			double refFreq = ReferenceFrequency();
 			for(size_t i=0; i!=_frequencies.size(); ++i)
 			{
-				Logger::Debug << _weights[i] << '\n';
-				fitter.AddDataPoint(_frequencies[i] / refFreq, values[i], _weights[i]);
+				fitter.AddDataPoint(_frequencies[i] / refFreq - 1.0, values[i], _weights[i]);
 			}
 			
 			fitter.Fit(terms, _nTerms);
@@ -56,7 +55,7 @@ void SpectralFitter::Evaluate(double* values, const ao::uvector<double>& terms) 
 		case PolynomialSpectralFitting: {
 			double refFreq = ReferenceFrequency();
 			for(size_t i=0; i!=_frequencies.size(); ++i) {
-				double newValue = PolynomialFitter::Evaluate(_frequencies[i] / refFreq, terms);
+				double newValue = PolynomialFitter::Evaluate(_frequencies[i] / refFreq - 1.0, terms);
 				//std::cout << values[i] << "->" << newValue << ' ';
 				values[i] = newValue;
 			}
@@ -86,7 +85,7 @@ double SpectralFitter::Evaluate(const ao::uvector<double>& terms, double frequen
 			throw std::runtime_error("Something is inconsistent: can't evaluate terms at frequency without fitting");
 			
 		case PolynomialSpectralFitting:
-			return PolynomialFitter::Evaluate(frequency / ReferenceFrequency(), terms);
+			return PolynomialFitter::Evaluate(frequency / ReferenceFrequency() - 1.0, terms);
 		
 		case LogPolynomialSpectralFitting:
 			return NonLinearPowerLawFitter::Evaluate(frequency, terms, ReferenceFrequency());

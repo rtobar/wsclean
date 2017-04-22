@@ -721,6 +721,10 @@ void WSClean::runIndependentGroup(ImagingTable& groupTable)
 		{
 			_deconvolution.SaveComponentList(groupTable, _gridder->PhaseCentreRA(), _gridder->PhaseCentreDec());
 		}
+		if(_settings.saveSourceList)
+    {
+			_deconvolution.SaveSourceList(groupTable, _gridder->PhaseCentreRA(), _gridder->PhaseCentreDec());
+    }
 	}
 	
 	_imageAllocator.ReportStatistics();
