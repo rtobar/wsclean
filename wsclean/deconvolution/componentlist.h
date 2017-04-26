@@ -30,8 +30,6 @@ public:
 			MergeDuplicates();
 	}
 	
-	void WriteOldFormat(const class MultiScaleAlgorithm& multiscale, const class WSCleanSettings& settings, long double pixelScaleX, long double pixelScaleY, long double phaseCentreRA, long double phaseCentreDec);
-	
 	void Write(const class MultiScaleAlgorithm& multiscale, const class WSCleanSettings& settings, long double pixelScaleX, long double pixelScaleY, long double phaseCentreRA, long double phaseCentreDec);
 	
 	void MergeDuplicates()
@@ -53,6 +51,8 @@ public:
 		for(size_t f=0; f!=_nFrequencies; ++f)
 			values[f] = _listPerScale[scaleIndex].values[index * _nFrequencies + f];
 	}
+	
+	void CorrectForBeam();
 private:
 	struct Position {
 		Position(size_t _x, size_t _y) :

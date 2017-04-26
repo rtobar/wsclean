@@ -747,9 +747,9 @@ private:
 		cov[2] = cov[1];
 		cov[3] = sy*sy / betaFact;
 		
-		double tr = cov[0] + cov[3];
-		double d = cov[0]*cov[3] - cov[1]*cov[2];
-		double term = sqrt(tr*tr*0.25-d);
+		//double tr = cov[0] + cov[3];
+		//double d = cov[0]*cov[3] - cov[1]*cov[2];
+		//double term = sqrt(tr*tr*0.25-d);
 		//std::cout << "sqrt(0.25 * " << tr << " * " << tr << " - " << d << ")=sqrt(" << (tr*tr*0.25-d) << ")=" << term << "\n";
 		
 		double e1, e2, vec1[2], vec2[2];

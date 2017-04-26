@@ -165,6 +165,36 @@ public:
 		clear();
 	}
 	
+	void BeginCorrection(const ImageFilename& imageName, ImageBufferAllocator& allocator)
+	{
+		load(imageName, allocator);
+	}
+	
+	/**
+	 * Call BeginCorrection() before using this method.
+	 */
+	double GetUnpolarizedCorrectionFactor(size_t x, size_t y)
+	{
+		size_t index = y * _settings.trimmedImageWidth + x;
+		MC2x2 val, squared;
+		val[0] = std::complex<double>(_beamImages[0][index], _beamImages[1][index]);
+		val[1] = std::complex<double>(_beamImages[2][index], _beamImages[3][index]);
+		val[2] = std::complex<double>(_beamImages[4][index], _beamImages[5][index]);
+		val[3] = std::complex<double>(_beamImages[6][index], _beamImages[7][index]);
+		MC2x2::ATimesHermB(squared, val, val);
+		double value;
+		if(squared.Invert())
+			value = 0.5 * (squared[0].real() + squared[3].real());
+		else
+			value = std::numeric_limits<double>::quiet_NaN();
+		return value;
+	}
+	
+	void EndCorrection()
+	{
+		clear();
+	}
+	
 	void AddMS(class MSProvider* msProvider, const MSSelection& selection)
 	{
 		_msProviders.push_back(std::make_pair(msProvider, selection));

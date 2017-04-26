@@ -67,6 +67,9 @@ void WSCleanSettings::Validate() const
 	if(savePsfPb && !applyPrimaryBeam)
 		throw std::runtime_error("You can not save the primary-beam corrected PSF without enabling primary beam correction: add -apply-primary-beam to your commandline.");
 	
+	if(saveSourceList && (polarizations.size()!=1 || (*polarizations.begin())!=Polarization::StokesI))
+		throw std::runtime_error("Saving a source list currently only works for Stokes I imaging");
+	
 	checkPolarizations();
 }
 

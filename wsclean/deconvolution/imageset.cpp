@@ -277,28 +277,32 @@ void ImageSet::getSquareIntegratedWithSquaredChannels(double* dest) const
 
 void ImageSet::getLinearIntegratedWithNormalChannels(double* dest) const
 {
-	// TODO for performance: if channelcount=1 and subtable.size()=1, directly assign
-	// instead of first weighting and then dividing weights out.
-	size_t addIndex = 0;
-	double weightSum = 0.0;
-	for(size_t sqIndex = 0; sqIndex!=_channelsInDeconvolution; ++sqIndex)
+	if(_channelsInDeconvolution == 1 && _imagingTable.GetSquaredGroup(0).EntryCount() == 1)
 	{
-		ImagingTable subTable = _imagingTable.GetSquaredGroup(sqIndex);
-		const double groupWeight = subTable.Front().imageWeight;
-		weightSum += groupWeight;
-		for(size_t eIndex = 0; eIndex!=subTable.EntryCount(); ++eIndex)
+		ImagingTable subTable = _imagingTable.GetSquaredGroup(0);
+		const ImagingTableEntry& entry = subTable[0];
+		size_t imageIndex = _tableIndexToImageIndex.find(entry.index)->second;
+		assign(dest, _images[imageIndex]);
+  }
+	else {
+		size_t addIndex = 0;
+		double weightSum = 0.0;
+		for(size_t sqIndex = 0; sqIndex!=_channelsInDeconvolution; ++sqIndex)
 		{
-			const ImagingTableEntry& entry = subTable[eIndex];
-			size_t imageIndex = _tableIndexToImageIndex.find(entry.index)->second;
-			if(addIndex == 0)
-				assignMultiply(dest, _images[imageIndex], groupWeight);
-			else
-				addFactor(dest, _images[imageIndex], groupWeight);
-			++addIndex;
+			ImagingTable subTable = _imagingTable.GetSquaredGroup(sqIndex);
+			const double groupWeight = subTable.Front().imageWeight;
+			weightSum += groupWeight;
+			for(size_t eIndex = 0; eIndex!=subTable.EntryCount(); ++eIndex)
+			{
+				const ImagingTableEntry& entry = subTable[eIndex];
+				size_t imageIndex = _tableIndexToImageIndex.find(entry.index)->second;
+				if(addIndex == 0)
+					assignMultiply(dest, _images[imageIndex], groupWeight);
+				else
+					addFactor(dest, _images[imageIndex], groupWeight);
+				++addIndex;
+			}
 		}
-	}
-	if(_channelsInDeconvolution != 1)
-	{
 		if(_channelsInDeconvolution > 0)
 			multiply(dest, 1.0/weightSum);
 		else

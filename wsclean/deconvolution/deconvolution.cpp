@@ -195,7 +195,7 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 		algorithm->SetMultiscaleNormalizeResponse(_settings.multiscaleNormalizeResponse);
 		algorithm->SetMultiscaleGain(_settings.multiscaleGain);
 		algorithm->SetShape(_settings.multiscaleShapeFunction);
-		algorithm->SetTrackComponents(_settings.saveComponentList || _settings.saveSourceList);
+		algorithm->SetTrackComponents(_settings.saveSourceList);
 	}
 	else
 	{
@@ -265,16 +265,6 @@ void Deconvolution::calculateDeconvolutionFrequencies(const ImagingTable& groupT
 	}
 	for(size_t i=0; i!=deconvolutionChannels; ++i)
 		frequencies[i] /= counts[i];
-}
-
-void Deconvolution::SaveComponentList(const class ImagingTable& table, long double phaseCentreRA, long double phaseCentreDec) const
-{
-	if(_settings.useMultiscale)
-	{
-		MultiScaleAlgorithm& algorithm = static_cast<MultiScaleAlgorithm&>(*_cleanAlgorithm.get());
-		algorithm.GetComponentList().WriteOldFormat(algorithm, _settings, _pixelScaleX, _pixelScaleY, phaseCentreRA, phaseCentreDec);
-	}
-	else throw std::runtime_error("Saving a component list is currently only implemented for multi-scale clean");
 }
 
 void Deconvolution::SaveSourceList(const class ImagingTable& table, long double phaseCentreRA, long double phaseCentreDec) const
