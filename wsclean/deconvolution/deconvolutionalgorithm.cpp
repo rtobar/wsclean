@@ -111,24 +111,6 @@ void DeconvolutionAlgorithm::RemoveNaNsInPSF(double* psf, size_t width, size_t h
 	}
 }
 
-/*void DeconvolutionAlgorithm::CalculateFastCleanPSFSize(size_t& psfWidth, size_t& psfHeight, size_t imageWidth, size_t imageHeight)
-{
-	// With 2048 x 2048, the subtraction is already so quick that it is not really required to make the psf smaller
-	if(imageWidth <= 2048)
-		psfWidth = imageWidth;
-	else if(imageWidth <= 4096)
-		psfWidth = 2048;
-	else
-		psfWidth = imageWidth / 2;
-	
-	if(imageHeight <= 2048)
-		psfHeight = imageHeight;
-	else if(imageHeight <= 4096)
-		psfHeight = 2048;
-	else
-		psfHeight = imageHeight / 2;
-}*/
-
 void DeconvolutionAlgorithm::PerformSpectralFit(double* values)
 {
 	_spectralFitter.FitAndEvaluate(values);
