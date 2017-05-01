@@ -3,6 +3,8 @@
 
 #include "../wsclean/cachedimageset.h"
 #include "../wsclean/logger.h"
+#include "../wsclean/primarybeam.h"
+#include "../wsclean/primarybeamimageset.h"
 
 void ImageSet::LoadAndAverage(CachedImageSet& imageSet)
 {
@@ -12,6 +14,7 @@ void ImageSet::LoadAndAverage(CachedImageSet& imageSet)
 	ImageBufferAllocator::Ptr scratch;
 	_allocator.Allocate(_imageSize, scratch);
 	
+	/// TODO : use real weights of images
 	ao::uvector<size_t> weights(_images.size(), 0.0);
 	size_t imgIndex = 0;
 	for(size_t sqIndex=0; sqIndex!=_imagingTable.SquaredGroupCount(); ++sqIndex)
@@ -52,6 +55,7 @@ void ImageSet::LoadAndAveragePSFs(CachedImageSet& psfSet, vector<ao::uvector<dou
 	ImageBufferAllocator::Ptr scratch;
 	_allocator.Allocate(_imageSize, scratch);
 	
+	/// TODO : use real weights of images
 	ao::uvector<size_t> weights(_channelsInDeconvolution, 0.0);
 	for(size_t sqIndex=0; sqIndex!=_imagingTable.SquaredGroupCount(); ++sqIndex)
 	{
@@ -65,6 +69,35 @@ void ImageSet::LoadAndAveragePSFs(CachedImageSet& psfSet, vector<ao::uvector<dou
 	
 	for(size_t chIndex=0; chIndex!=ChannelsInDeconvolution(); ++chIndex)
 		multiply(psfImages[chIndex].data(), 1.0/double(weights[chIndex]));
+}
+
+void ImageSet::LoadAveragePrimaryBeam(PrimaryBeamImageSet& beamImages, const WSCleanSettings& settings, size_t imageIndex)
+{
+	beamImages.SetToZero();
+	
+	ImageBufferAllocator::Ptr scratch;
+	_allocator.Allocate(_imageSize, scratch);
+	
+	/// TODO : use real weights of images
+	size_t count = 0;
+	PrimaryBeam pb(settings);
+	for(size_t sqIndex=0; sqIndex!=_imagingTable.SquaredGroupCount(); ++sqIndex)
+	{
+		size_t curImageIndex = (sqIndex*_channelsInDeconvolution)/_imagingTable.SquaredGroupCount();
+		if(curImageIndex == imageIndex)
+		{
+			ImagingTable subTable = _imagingTable.GetSquaredGroup(sqIndex);
+			const ImagingTableEntry& e = subTable.Front();
+			ImageFilename filename(e.outputChannelIndex, e.outputIntervalIndex);
+			
+			PrimaryBeamImageSet scratch(settings.trimmedImageWidth, settings.trimmedImageHeight, _allocator);
+			pb.Load(scratch, filename);
+			beamImages += scratch;
+			
+			count++;
+		}
+	}
+	beamImages *= (1.0 / double(count));
 }
 
 void ImageSet::InterpolateAndStore(CachedImageSet& imageSet, const SpectralFitter& fitter)

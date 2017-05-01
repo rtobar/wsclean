@@ -762,7 +762,7 @@ private:
 			vec1[0] = vec2[0];
 			vec1[1] = vec2[1];
 		}
-		ellipsePA = atan2(vec1[0], vec1[1]);
+		ellipsePA = -atan2(vec1[0], vec1[1]);
 	}
 	
 	void convertShapeParameters(double s, double& beamSize)

@@ -271,8 +271,14 @@ void Deconvolution::SaveSourceList(const class ImagingTable& table, long double 
 {
 	if(_settings.useMultiscale)
 	{
-		MultiScaleAlgorithm& algorithm = static_cast<MultiScaleAlgorithm&>(*_cleanAlgorithm.get());
+		MultiScaleAlgorithm& algorithm = static_cast<MultiScaleAlgorithm&>(*_cleanAlgorithm);
 		algorithm.GetComponentList().Write(algorithm, _settings, _pixelScaleX, _pixelScaleY, phaseCentreRA, phaseCentreDec);
 	}
-	else throw std::runtime_error("Saving a source list is currently only implemented for multi-scale clean");
+	else {
+		_imageAllocator->FreeUnused();
+		ImageSet modelSet(&table, *_imageAllocator, _settings.deconvolutionChannelCount, _settings.squaredJoins, _imgWidth, _imgHeight);
+		modelSet.LoadAndAverage(*_modelImages);
+		ComponentList componentList(_imgWidth, _imgHeight, modelSet);
+		componentList.WriteSingleScale(*_cleanAlgorithm, _settings, _pixelScaleX, _pixelScaleY, phaseCentreRA, phaseCentreDec);
+	}
 }

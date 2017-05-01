@@ -7,6 +7,7 @@
 #include "../uvector.h"
 #include "../wsclean/imagingtable.h"
 #include "../wsclean/imagebufferallocator.h"
+#include "../wsclean/primarybeamimageset.h"
 
 #include <casacore/ms/MeasurementSets/MeasurementSet.h>
 #include <casacore/measures/Measures/MDirection.h>
@@ -47,7 +48,7 @@ public:
 		_phaseCentreDM = phaseCentreDM;
 	}
 	
-	void Make(std::vector<ImageBufferAllocator::Ptr>& beamImages);
+	void Make(PrimaryBeamImageSet& beamImages);
 	
 	void SetUseDifferentialBeam(bool useDifferentialBeam) {
 		_useDifferentialBeam = useDifferentialBeam;
@@ -79,7 +80,7 @@ private:
 		ao::uvector<double> _weights;
 	};
 	
-	void makeBeamForMS(std::vector<ImageBufferAllocator::Ptr>& beamImages, MSProvider& msProvider, const ImagingTableEntry::MSInfo& msInfo, const MSSelection& selection, double centralFrequency);
+	void makeBeamForMS(PrimaryBeamImageSet& beamImages, MSProvider& msProvider, const ImagingTableEntry::MSInfo& msInfo, const MSSelection& selection, double centralFrequency);
 
 	void makeBeamSnapshot(const std::vector<LOFAR::StationResponse::Station::Ptr>& stations, const ao::uvector<double>& weights, const WeightMatrix& baselineWeights, double** imgPtr, double time, double frequency, double subbandFrequency, const casacore::MeasFrame& frame);
 	

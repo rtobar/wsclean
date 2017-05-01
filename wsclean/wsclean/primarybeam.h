@@ -4,9 +4,10 @@
 #include <string>
 #include <boost/filesystem/operations.hpp>
 
-#include "imagingtable.h"
-#include "wscleansettings.h"
 #include "imagefilename.h"
+#include "imagingtable.h"
+#include "primarybeamimageset.h"
+#include "wscleansettings.h"
 
 #include "../polarization.h"
 
@@ -19,7 +20,6 @@ class PrimaryBeam
 {
 public:
 	PrimaryBeam(const WSCleanSettings& settings) :
-		_beamImages(8),
 		_settings(settings),
 		_phaseCentreRA(0.0), _phaseCentreDec(0.0), _phaseCentreDL(0.0), _phaseCentreDM(0.0)
 	{ }
@@ -63,15 +63,10 @@ public:
 			
 			// TODO Find out what telescope array is used in the (first) measurement set
 			
-			size_t size = _settings.trimmedImageWidth * _settings.trimmedImageHeight;
-			for(size_t i=0; i!=8; ++i)
-			{
-				allocator.Allocate(size, _beamImages[i]);
-				for(size_t j=0; j!=size; ++j)
-					_beamImages[i][j] = 0.0;
-			}
+			PrimaryBeamImageSet beamImages(_settings.trimmedImageWidth, _settings.trimmedImageHeight, allocator);
+			beamImages.SetToZero();
 			
-			makeLOFARImage(entry, imageWeightCache, allocator);
+			makeLOFARImage(beamImages, entry, imageWeightCache, allocator);
 		
 			// Save the beam images as fits files
 			PolarizationEnum
@@ -79,36 +74,42 @@ public:
 			FitsWriter writer;
 			writer.SetImageDimensions(_settings.trimmedImageWidth, _settings.trimmedImageHeight, _phaseCentreRA, _phaseCentreDec, _settings.pixelScaleX, _settings.pixelScaleY);
 			writer.SetPhaseCentreShift(_phaseCentreDL, _phaseCentreDM);
-			for(size_t i=0; i!=8; ++i) {
+			for(size_t i=0; i!=8; ++i)
+			{
 				PolarizationEnum p = linPols[i/2];
 				ImageFilename polName(imageName);
 				polName.SetPolarization(p);
 				polName.SetIsImaginary(i%2 != 0);
 				writer.SetPolarization(p);
 				writer.SetFrequency(entry.CentralFrequency(), entry.bandEndFrequency - entry.bandStartFrequency);
-				writer.Write<double>(polName.GetBeamPrefix(_settings) + ".fits", _beamImages[i].data());
+				writer.Write<double>(polName.GetBeamPrefix(_settings) + ".fits", beamImages[i].data());
 			}
 		}
-		clear();
 	}
 	
 	void CorrectImages(const ImageFilename& imageName, std::vector<double*>& images, ImageBufferAllocator& allocator)
 	{
-		load(imageName, allocator);
+		PrimaryBeamImageSet beamImages(_settings.trimmedImageWidth, _settings.trimmedImageHeight, allocator);
+		load(beamImages, imageName);
 		if(_settings.polarizations.size() == 1 && *_settings.polarizations.begin() == Polarization::StokesI)
 		{
-			applyStokesI(images[0]);
+			applyStokesI(images[0], beamImages);
 		}
 		else if(_settings.polarizations.size() == 4 && Polarization::HasFullStokesPolarization(_settings.polarizations))
 		{
-			applyFullStokes(images.data());
+			applyFullStokes(images.data(), beamImages);
 		}
-		clear();
+	}
+	
+	void Load(PrimaryBeamImageSet& beamImages, const ImageFilename& imageName)
+	{
+		load(beamImages, imageName);
 	}
 	
 	void CorrectImages(FitsWriter& writer, const ImageFilename& imageName, const std::string& filenameKind, ImageBufferAllocator& allocator)
 	{
-		load(imageName, allocator);
+		PrimaryBeamImageSet beamImages(_settings.trimmedImageWidth, _settings.trimmedImageHeight, allocator);
+		load(beamImages, imageName);
 		if(_settings.polarizations.size() == 1 || filenameKind == "psf")
 		{
 			PolarizationEnum pol = *_settings.polarizations.begin();
@@ -127,7 +128,7 @@ public:
 				allocator.Allocate(reader.ImageWidth() * reader.ImageHeight(), image);
 				reader.Read(image.data());
 				
-				applyStokesI(image.data());
+				applyStokesI(image.data(), beamImages);
 				writer.Write(prefix + "-" + filenameKind + "-pb.fits", image.data());
 			}
 			else {
@@ -148,8 +149,8 @@ public:
 				reader->Read(images[polIndex].data());
 			}
 			
-			double* imagePtrs[4] = {images[0].data(), images[1].data(), images[2].data(), images[3].data() };
-			applyFullStokes(imagePtrs);
+			double* imagePtrs[4] = { images[0].data(), images[1].data(), images[2].data(), images[3].data() };
+			applyFullStokes(imagePtrs, beamImages);
 			for(size_t polIndex = 0; polIndex != 4; ++polIndex)
 			{
 				PolarizationEnum pol = Polarization::IndexToStokes(polIndex);
@@ -162,71 +163,32 @@ public:
 		else {
 			throw std::runtime_error("Primary beam correction can only be performed on Stokes I or when imaging all four polarizations.");
 		}
-		clear();
-	}
-	
-	void BeginCorrection(const ImageFilename& imageName, ImageBufferAllocator& allocator)
-	{
-		load(imageName, allocator);
-	}
-	
-	/**
-	 * Call BeginCorrection() before using this method.
-	 */
-	double GetUnpolarizedCorrectionFactor(size_t x, size_t y)
-	{
-		size_t index = y * _settings.trimmedImageWidth + x;
-		MC2x2 val, squared;
-		val[0] = std::complex<double>(_beamImages[0][index], _beamImages[1][index]);
-		val[1] = std::complex<double>(_beamImages[2][index], _beamImages[3][index]);
-		val[2] = std::complex<double>(_beamImages[4][index], _beamImages[5][index]);
-		val[3] = std::complex<double>(_beamImages[6][index], _beamImages[7][index]);
-		MC2x2::ATimesHermB(squared, val, val);
-		double value;
-		if(squared.Invert())
-			value = 0.5 * (squared[0].real() + squared[3].real());
-		else
-			value = std::numeric_limits<double>::quiet_NaN();
-		return value;
-	}
-	
-	void EndCorrection()
-	{
-		clear();
 	}
 	
 	void AddMS(class MSProvider* msProvider, const MSSelection& selection)
 	{
 		_msProviders.push_back(std::make_pair(msProvider, selection));
 	}
-	
 private:
-	std::vector<ImageBufferAllocator::Ptr> _beamImages;
 	const WSCleanSettings& _settings;
 	std::vector<std::pair<MSProvider*, MSSelection>> _msProviders;
 	double _phaseCentreRA, _phaseCentreDec, _phaseCentreDL, _phaseCentreDM;
 	
-	void load(const ImageFilename& imageName, ImageBufferAllocator& allocator) {
+	void load(PrimaryBeamImageSet& beamImages, const ImageFilename& imageName) {
 		PolarizationEnum
 			linPols[4] = { Polarization::XX, Polarization::XY, Polarization::YX, Polarization::YY };
-		size_t size = _settings.trimmedImageWidth * _settings.trimmedImageHeight;
-		for(size_t i=0; i!=8; ++i) {
-			allocator.Allocate(size, _beamImages[i]);
+		for(size_t i=0; i!=8; ++i)
+		{
 			PolarizationEnum p = linPols[i/2];
 			ImageFilename polName(imageName);
 			polName.SetPolarization(p);
 			polName.SetIsImaginary(i%2 != 0);
 			FitsReader reader(polName.GetBeamPrefix(_settings) + ".fits");
-			reader.Read(_beamImages[i].data());
+			reader.Read(beamImages[i].data());
 		}
 	}
 	
-	void clear() {
-		for(size_t i=0; i!=8; ++i)
-			_beamImages[i].reset();
-	}
-	
-	void makeLOFARImage(const ImagingTableEntry& entry, const ImageWeightCache* imageWeightCache, ImageBufferAllocator& allocator)
+	void makeLOFARImage(PrimaryBeamImageSet& beamImages, const ImagingTableEntry& entry, const ImageWeightCache* imageWeightCache, ImageBufferAllocator& allocator)
 	{
 		LBeamImageMaker lbeam(&entry, &allocator);
 		for(size_t i=0; i!=_msProviders.size(); ++i)
@@ -234,10 +196,10 @@ private:
 		lbeam.SetUseDifferentialBeam(_settings.useDifferentialLofarBeam);
 		lbeam.SetImageDetails(_settings.trimmedImageWidth, _settings.trimmedImageHeight, _settings.pixelScaleX, _settings.pixelScaleY, _phaseCentreRA, _phaseCentreDec, _phaseCentreDL, _phaseCentreDM);
 		lbeam.SetImageWeight(imageWeightCache);
-		lbeam.Make(_beamImages);
+		lbeam.Make(beamImages);
 	}
 	
-	void applyStokesI(double* stokesI) const
+	void applyStokesI(double* stokesI, PrimaryBeamImageSet& beamImages) const
 	{
 		// If Iu is uncorrected and Ic is corrected:
 		// Iu = B Ic B^*
@@ -251,10 +213,10 @@ private:
 		for(size_t j=0; j!=size; ++j)
 		{
 			MC2x2 val, squared;
-			val[0] = std::complex<double>(_beamImages[0][j], _beamImages[1][j]);
-			val[1] = std::complex<double>(_beamImages[2][j], _beamImages[3][j]);
-			val[2] = std::complex<double>(_beamImages[4][j], _beamImages[5][j]);
-			val[3] = std::complex<double>(_beamImages[6][j], _beamImages[7][j]);
+			val[0] = std::complex<double>(beamImages[0][j], beamImages[1][j]);
+			val[1] = std::complex<double>(beamImages[2][j], beamImages[3][j]);
+			val[2] = std::complex<double>(beamImages[4][j], beamImages[5][j]);
+			val[3] = std::complex<double>(beamImages[6][j], beamImages[7][j]);
 			MC2x2::ATimesHermB(squared, val, val);
 			if(squared.Invert())
 				stokesI[j] = stokesI[j] * 0.5 * (squared[0].real() + squared[3].real());
@@ -263,16 +225,16 @@ private:
 		}
 	}
 	
-	void applyFullStokes(double* images[4]) const
+	void applyFullStokes(double* images[4], PrimaryBeamImageSet& beamImages) const
 	{
 		size_t size = _settings.trimmedImageWidth * _settings.trimmedImageHeight;
 		for(size_t j=0; j!=size; ++j)
 		{
 			MC2x2 beamVal;
-			beamVal[0] = std::complex<double>(_beamImages[0][j], _beamImages[1][j]);
-			beamVal[1] = std::complex<double>(_beamImages[2][j], _beamImages[3][j]);
-			beamVal[2] = std::complex<double>(_beamImages[4][j], _beamImages[5][j]);
-			beamVal[3] = std::complex<double>(_beamImages[6][j], _beamImages[7][j]);
+			beamVal[0] = std::complex<double>(beamImages[0][j], beamImages[1][j]);
+			beamVal[1] = std::complex<double>(beamImages[2][j], beamImages[3][j]);
+			beamVal[2] = std::complex<double>(beamImages[4][j], beamImages[5][j]);
+			beamVal[3] = std::complex<double>(beamImages[6][j], beamImages[7][j]);
 			if(beamVal.Invert())
 			{
 				double stokesVal[4] = { images[0][j], images[1][j], images[2][j], images[3][j] };

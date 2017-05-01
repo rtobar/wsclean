@@ -99,6 +99,8 @@ public:
 	
 	void LoadAndAveragePSFs(class CachedImageSet& psfSet, std::vector<ao::uvector<double>>& psfImages, PolarizationEnum psfPolarization);
 	
+	void LoadAveragePrimaryBeam(class PrimaryBeamImageSet& beamImages, const class WSCleanSettings& settings, size_t imageIndex);
+	
 	void InterpolateAndStore(class CachedImageSet& imageSet, const class SpectralFitter& fitter);
 	
 	void AssignAndStore(class CachedImageSet& imageSet);

@@ -45,18 +45,14 @@ using namespace LOFAR::StationResponse;
 
 static void dirToITRF(const casacore::MDirection& dir, casacore::MDirection::Convert& convert, vector3r_t& itrf);
 
-void LBeamImageMaker::Make(std::vector<ImageBufferAllocator::Ptr>& beamImages)
+void LBeamImageMaker::Make(PrimaryBeamImageSet& beamImages)
 {
 	_sampledWidth = _width / _undersample;
 	_sampledHeight = _width / _undersample;
 	_sPixelSizeX = _pixelSizeX * _undersample;
 	_sPixelSizeY = _pixelSizeX * _undersample;
 
-	for(size_t i=0; i!=8; ++i)
-	{
-		for(size_t j=0; j!=_width*_height; ++j)
-			beamImages[i][j] = 0.0;
-	}
+	beamImages.SetToZero();
 	
 	_totalWeightSum = 0.0;
 	
@@ -95,7 +91,7 @@ void LBeamImageMaker::Make(std::vector<ImageBufferAllocator::Ptr>& beamImages)
 	}
 }
 
-void LBeamImageMaker::makeBeamForMS(std::vector<ImageBufferAllocator::Ptr>& beamImages, MSProvider& msProvider, const ImagingTableEntry::MSInfo& msInfo, const MSSelection& selection, double centralFrequency)
+void LBeamImageMaker::makeBeamForMS(PrimaryBeamImageSet& beamImages, MSProvider& msProvider, const ImagingTableEntry::MSInfo& msInfo, const MSSelection& selection, double centralFrequency)
 {
 	/**
 		* Read some meta data from the measurement set

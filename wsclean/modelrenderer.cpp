@@ -57,7 +57,7 @@ void ModelRenderer::Restore(double* imageData, size_t imageWidth, size_t imageHe
 			
 			for(int y=yTop; y!=yBottom; ++y)
 			{
-				            double *imageDataPtr = imageData + y*imageWidth+xLeft;
+				double *imageDataPtr = imageData + y*imageWidth+xLeft;
 				for(int x=xLeft; x!=xRight; ++x)
 				{
 					long double l, m;
