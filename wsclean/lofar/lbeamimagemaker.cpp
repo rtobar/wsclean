@@ -2,7 +2,7 @@
 
 #ifndef HAVE_LOFAR_BEAM
 #include <stdexcept>
-void LBeamImageMaker::Make(std::vector<ImageBufferAllocator::Ptr>&)
+void LBeamImageMaker::Make(PrimaryBeamImageSet&)
 {
 	throw std::runtime_error("LOFAR beam imager maker called, but the software has been compiled without the LOFAR beam. Recompile your software and make sure that cmake finds the LOFAR station response library.");
 }
