@@ -62,6 +62,8 @@ void MultiScaleAlgorithm::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& mo
 	// (This excludes creating the convolved PSFs and double-convolved PSFs
 	//  at the appropriate moments).
 	
+	if(_stopOnNegativeComponent)
+		_allowNegativeComponents = true;
 	_width = width;
 	_height = height;
 	_convolutionWidth = ceil(_convolutionPadding * _width);
@@ -132,7 +134,10 @@ void MultiScaleAlgorithm::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& mo
 	//
 	// The minor iteration loop
 	//
-	while(_iterationNumber < MaxNIter() && std::fabs(_scaleInfos[scaleWithPeak].maxUnnormalizedImageValue * _scaleInfos[scaleWithPeak].biasFactor) > firstThreshold)
+	while(
+		_iterationNumber < MaxNIter() &&
+		std::fabs(_scaleInfos[scaleWithPeak].maxUnnormalizedImageValue * _scaleInfos[scaleWithPeak].biasFactor) > firstThreshold &&
+		(!StopOnNegativeComponents() || _scaleInfos[scaleWithPeak].maxUnnormalizedImageValue>=0.0) )
 	{
 		// Create double-convolved PSFs & individually convolved images for this scale
 		ao::uvector<double*> transformList;
@@ -171,6 +176,7 @@ void MultiScaleAlgorithm::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& mo
 			clarkLoop.SetThreshold(firstSubIterationThreshold / _scaleInfos[scaleWithPeak].biasFactor, subIterationGainThreshold / _scaleInfos[scaleWithPeak].biasFactor);
 			clarkLoop.SetGain(_scaleInfos[scaleWithPeak].gain);
 			clarkLoop.SetAllowNegativeComponents(AllowNegativeComponents());
+			clarkLoop.SetStopOnNegativeComponent(StopOnNegativeComponents());
 			const size_t
 				scaleBorder = size_t(ceil(_scaleInfos[scaleWithPeak].scale*0.5)),
 				horBorderSize = std::max<size_t>(round(width * _cleanBorderRatio), scaleBorder),
@@ -218,7 +224,10 @@ void MultiScaleAlgorithm::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& mo
 		}
 		else { // don't use the Clark optimization
 			ScaleInfo& maxScaleInfo = _scaleInfos[scaleWithPeak];
-			while(_iterationNumber < MaxNIter() && std::fabs(maxScaleInfo.maxUnnormalizedImageValue * maxScaleInfo.biasFactor) > firstSubIterationThreshold)
+			while(
+				_iterationNumber < MaxNIter() &&
+				std::fabs(maxScaleInfo.maxUnnormalizedImageValue * maxScaleInfo.biasFactor) > firstSubIterationThreshold &&
+				(!StopOnNegativeComponents() || _scaleInfos[scaleWithPeak].maxUnnormalizedImageValue>=0.0) )
 			{
 				ao::uvector<double> componentValues;
 				measureComponentValues(componentValues, scaleWithPeak, individualConvolvedImages);
@@ -266,8 +275,21 @@ void MultiScaleAlgorithm::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& mo
 		Logger::Info << "Iteration " << _iterationNumber << ", scale " << round(_scaleInfos[scaleWithPeak].scale) << " px : " << _scaleInfos[scaleWithPeak].maxUnnormalizedImageValue*_scaleInfos[scaleWithPeak].biasFactor << " Jy at " << _scaleInfos[scaleWithPeak].maxImageValueX << ',' << _scaleInfos[scaleWithPeak].maxImageValueY << '\n';
 	}
 	
-	reachedMajorThreshold =
-		_iterationNumber < MaxNIter() && std::fabs(_scaleInfos[scaleWithPeak].maxUnnormalizedImageValue * _scaleInfos[scaleWithPeak].biasFactor) > _threshold;
+	bool
+		maxIterReached = _iterationNumber >= MaxNIter(),
+		finalThresholdReached = std::fabs(_scaleInfos[scaleWithPeak].maxUnnormalizedImageValue * _scaleInfos[scaleWithPeak].biasFactor) <= _threshold,
+		negativeReached = StopOnNegativeComponents() && _scaleInfos[scaleWithPeak].maxUnnormalizedImageValue < 0.0;
+	
+	if(maxIterReached)
+		Logger::Info << "Cleaning finished because maximum number of iterations was reached.\n";
+	else if(finalThresholdReached)
+		Logger::Info << "Cleaning finished because the final threshold was reached.\n";
+	else if(negativeReached)
+		Logger::Info << "Cleaning finished because a negative component was found.\n";
+	else
+		Logger::Info << "Minor loop finished, continuing cleaning after inversion/prediction round.\n";
+	
+	reachedMajorThreshold = !maxIterReached && !finalThresholdReached && !negativeReached;
 }
 
 void MultiScaleAlgorithm::initializeScaleInfo()

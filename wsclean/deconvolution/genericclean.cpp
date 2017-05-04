@@ -56,6 +56,7 @@ void GenericClean::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& modelSet,
 		clarkLoop.SetThreshold(firstThreshold, firstThreshold*0.99);
 		clarkLoop.SetGain(Gain());
 		clarkLoop.SetAllowNegativeComponents(AllowNegativeComponents());
+		clarkLoop.SetStopOnNegativeComponent(StopOnNegativeComponents());
 		clarkLoop.SetSpectralFitter(&Fitter());
 		if(!_rmsFactorImage.empty())
 			clarkLoop.SetRMSFactorImage(_rmsFactorImage);

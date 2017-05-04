@@ -43,7 +43,7 @@ public:
 	double MGain() const { return _mGain; }
 	double CleanBorderRatio() const { return _cleanBorderRatio; }
 	bool AllowNegativeComponents() const { return _allowNegativeComponents; }
-	bool StopOnNegativeComponents() const { return _allowNegativeComponents; }
+	bool StopOnNegativeComponents() const { return _stopOnNegativeComponent; }
 	
 	void SetCleanMask(const bool* cleanMask) { _cleanMask = cleanMask; }
 	

@@ -86,6 +86,7 @@ public:
 		_horizontalBorder(0), _verticalBorder(0),
 		_currentIteration(0), _maxIterations(0),
 		_allowNegativeComponents(true),
+		_stopOnNegativeComponent(false),
 		_mask(0), _fitter(0),
 		_clarkModel(width, height),
 		_fluxCleaned(0.0)
@@ -110,6 +111,9 @@ public:
 	
 	void SetAllowNegativeComponents(bool allowNegativeComponents)
 	{ _allowNegativeComponents = allowNegativeComponents; }
+	
+	void SetStopOnNegativeComponent(bool stopOnNegativeComponent)
+	{ _stopOnNegativeComponent = stopOnNegativeComponent; }
 	
 	void SetSpectralFitter(const SpectralFitter* fitter) { _fitter = fitter; }
 	
@@ -150,7 +154,7 @@ private:
 	double _threshold, _consideredPixelThreshold, _gain;
 	size_t _horizontalBorder, _verticalBorder;
 	size_t _currentIteration, _maxIterations;
-	bool _allowNegativeComponents;
+	bool _allowNegativeComponents, _stopOnNegativeComponent;
 	const bool* _mask;
 	const SpectralFitter* _fitter;
 	ClarkModel _clarkModel;

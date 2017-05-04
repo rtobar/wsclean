@@ -407,7 +407,7 @@ private:
 	
 	static double err_full(double val, double v, double x, double y, double sx, double sy, double beta)
 	{
-		return exp(-x*x/(2.0*sx*sx) - beta*x*y/(sx*sy) - y*y/(2.0*sy*sy))*v - val;
+		return exp(-x*x/(2.0*sx*sx) + beta*x*y/(sx*sy) - y*y/(2.0*sy*sy))*v - val;
 	}
 	
 	void fit2DGaussianWithAmplitudeInBox(const double* image, size_t width, size_t height, double& val, double& posX, double& posY, double& beamMaj, double& beamMin, double& beamPA, double* floorLevel, size_t xStart, size_t xEnd, size_t yStart, size_t yEnd)
@@ -621,15 +621,16 @@ private:
 			double y = yc + (yi - yMid)*scale;
 			for(int xi=0; xi!=int(width); ++xi)
 			{
+				// TODO I night to go over the signs -- ds, dy, dsx, dsy in particular
 				double x = xc + (xi - xMid)*scale;
-				double expTerm = exp(-x*x/(2.0*sx*sx) - beta*x*y/(sx*sy) - y*y/(2.0*sy*sy));
+				double expTerm = exp(-x*x/(2.0*sx*sx) + beta*x*y/(sx*sy) - y*y/(2.0*sy*sy));
 				double dv = expTerm;
 				expTerm *= v;
 				double dx = (-beta*y/(sx*sy) - x/(sx*sx)) * expTerm;
 				double dy = (-beta*x/(sy*sx) - y/(sy*sy)) * expTerm;
 				double dsx = (beta*x*y/(sx*sx*sy)+x*x/(sx*sx*sx)) * expTerm;
 				double dsy = (beta*x*y/(sy*sy*sx)+y*y/(sy*sy*sy)) * expTerm;
-				double dbeta = -x*y/(sx*sy) * expTerm;
+				double dbeta = x*y/(sx*sy) * expTerm;
 				gsl_matrix_set(J, dataIndex, 0, dv);
 				gsl_matrix_set(J, dataIndex, 1, dx);
 				gsl_matrix_set(J, dataIndex, 2, dy);
@@ -706,14 +707,14 @@ private:
 			for(int xi=0; xi!=int(width); ++xi)
 			{
 				double x = xc + (xi - xMid)*scale;
-				double expTerm = exp(-x*x/(2.0*sx*sx) - beta*x*y/(sx*sy) - y*y/(2.0*sy*sy));
+				double expTerm = exp(-x*x/(2.0*sx*sx) + beta*x*y/(sx*sy) - y*y/(2.0*sy*sy));
 				double dv = expTerm;
 				expTerm *= v;
 				double dx = (-beta*y/(sx*sy) - x/(sx*sx)) * expTerm;
 				double dy = (-beta*x/(sy*sx) - y/(sy*sy)) * expTerm;
 				double dsx = (beta*x*y/(sx*sx*sy)+x*x/(sx*sx*sx)) * expTerm;
 				double dsy = (beta*x*y/(sy*sy*sx)+y*y/(sy*sy*sy)) * expTerm;
-				double dbeta = -x*y/(sx*sy) * expTerm;
+				double dbeta = x*y/(sx*sy) * expTerm;
 				double dfl = 1.0;
 				gsl_matrix_set(J, dataIndex, 0, dv);
 				gsl_matrix_set(J, dataIndex, 1, dx);

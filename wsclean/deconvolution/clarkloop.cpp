@@ -32,6 +32,7 @@ size_t ClarkModel::GetMaxComponent(double* scratch, double& maxValue) const
 			maxValue = value;
 		}
 	}
+	maxValue = scratch[maxComponent]; // If it was negative, make sure a negative value is returned
 	return maxComponent;
 }
 
@@ -50,7 +51,7 @@ double ClarkLoop::Run(ImageSet& convolvedResidual, const ao::uvector<const doubl
 	double maxValue;
 	size_t maxComponent = _clarkModel.GetMaxComponent(scratch.data(), maxValue, _allowNegativeComponents);
 		
-	while(std::fabs(maxValue) > _threshold && _currentIteration < _maxIterations)
+	while(std::fabs(maxValue) > _threshold && _currentIteration < _maxIterations && (!_stopOnNegativeComponent || maxValue>=0.0))
 	{
 		ao::uvector<double> componentValues(_clarkModel.Residual().size());
 		for(size_t imgIndex=0; imgIndex!=_clarkModel.Residual().size(); ++imgIndex)
