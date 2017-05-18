@@ -21,6 +21,7 @@ FitsReader::FitsReader(const FitsReader& source) :
 	_beamMajorAxisRad(source._beamMajorAxisRad), _beamMinorAxisRad(source._beamMinorAxisRad), _beamPositionAngle(source._beamPositionAngle),
 	_polarization(source._polarization),
 	_unit(source._unit),
+	_telescopeName(source._telescopeName), _observer(source._observer), _objectName(source._objectName),
 	_origin(source._origin), _originComment(source._originComment),
 	_history(source._history)
 {
@@ -61,6 +62,9 @@ FitsReader& FitsReader::operator=(const FitsReader& rhs)
 	_beamPositionAngle = rhs._beamPositionAngle;
 	_polarization = rhs._polarization;
 	_unit = rhs._unit;
+	_telescopeName = rhs._telescopeName;
+	_observer = rhs._observer;
+	_objectName = rhs._objectName;
 	_origin = rhs._origin;
 	_originComment = rhs._originComment;
 	_history = rhs._history;
@@ -264,6 +268,13 @@ void FitsReader::initialize()
 		_beamMinorAxisRad = 0.0;
 		_beamPositionAngle = 0.0;
 	}
+	
+	_telescopeName = std::string();
+	ReadStringKeyIfExists("TELESCOP", _telescopeName);
+	_observer = std::string();
+	ReadStringKeyIfExists("OBSERVER", _observer);
+	_objectName = std::string();
+	ReadStringKeyIfExists("OBJECT", _objectName);
 	
 	_origin = std::string();
 	_originComment = std::string();

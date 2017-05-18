@@ -1,6 +1,7 @@
 #include "commandline.h"
 
-#include "../angle.h"
+#include "../units/angle.h"
+
 #include "../numberlist.h"
 #include "../wscversion.h"
 

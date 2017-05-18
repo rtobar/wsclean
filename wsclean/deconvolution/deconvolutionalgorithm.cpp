@@ -1,6 +1,6 @@
 #include "deconvolutionalgorithm.h"
 
-#include "../imagecoordinates.h"
+#include "../units/imagecoordinates.h"
 #include "../system.h"
 
 #include "../model/modelsource.h"

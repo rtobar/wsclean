@@ -61,6 +61,18 @@ void FitsWriter::writeHeaders(fitsfile*& fptr, const std::string& filename, size
 	
 	fits_write_key(fptr, TDOUBLE, "EQUINOX", (void*) &equinox, "J2000", &status); checkStatus(status, filename);
 	fits_write_key(fptr, TSTRING, "BTYPE", (void*) "Intensity", "", &status); checkStatus(status, filename);
+	if(!_telescopeName.empty())
+	{
+		fits_write_key(fptr, TSTRING, "TELESCOP", (void*) _telescopeName.c_str(), "", &status); checkStatus(status, filename);
+	}
+	if(!_observer.empty())
+	{
+		fits_write_key(fptr, TSTRING, "OBSERVER", (void*) _observer.c_str(), "", &status); checkStatus(status, filename);
+	}
+	if(!_objectName.empty())
+	{
+		fits_write_key(fptr, TSTRING, "OBJECT", (void*) _objectName.c_str(), "", &status); checkStatus(status, filename);
+	}
 	fits_write_key(fptr, TSTRING, "ORIGIN", (void*) _origin.c_str(), _originComment.c_str(), &status); checkStatus(status, filename);
 	double phaseCentreRADeg = (_phaseCentreRA/M_PI)*180.0, phaseCentreDecDeg = (_phaseCentreDec/M_PI)*180.0;
 	double
@@ -269,6 +281,9 @@ void FitsWriter::SetMetadata(const FitsReader& reader)
 	}
 	_phaseCentreDL = reader.PhaseCentreDL();
 	_phaseCentreDM = reader.PhaseCentreDM();
+	_telescopeName = reader.TelescopeName();
+	_observer = reader.Observer();
+	_objectName = reader.ObjectName();
 	_origin = reader.Origin();
 	_originComment = reader.OriginComment();
 	_history = reader.History();

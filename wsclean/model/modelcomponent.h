@@ -4,8 +4,8 @@
 #include "spectralenergydistribution.h"
 #include "measuredsed.h"
 
-#include "../radeccoord.h"
-#include "../imagecoordinates.h"
+#include "../units/imagecoordinates.h"
+#include "../units/radeccoord.h"
 
 class ModelComponent
 {

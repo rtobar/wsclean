@@ -22,8 +22,6 @@ public:
 	
 	virtual double* ImageImaginaryResult() { doThrow(); return 0; }
 	
-	virtual double BeamSize() const { doThrow(); return 0.0; }
-	
 	virtual void GetGriddingCorrectionImage(double* image) const { doThrow(); }
 	
 	virtual bool HasGriddingCorrectionImage() const { doThrow(); return false; }

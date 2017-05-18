@@ -1,7 +1,7 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/test/data/test_case.hpp>
 
-#include "../radeccoord.h"
+#include "../units/radeccoord.h"
 
 BOOST_AUTO_TEST_SUITE(ra_dec_coord)
 

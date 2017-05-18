@@ -31,6 +31,7 @@ class FitsWriter : protected FitsIOChecker
 			_polarization(Polarization::StokesI),
 			_unit(JanskyPerBeam),
 			_isUV(false),
+			_telescopeName(), _observer(), _objectName(),
 			_origin("AO/WSImager"), _originComment("Imager written by Andre Offringa"),
 			_multiFPtr(0)
 		{
@@ -47,6 +48,7 @@ class FitsWriter : protected FitsIOChecker
 			_polarization(Polarization::StokesI),
 			_unit(JanskyPerBeam),
 			_isUV(false),
+			_telescopeName(), _observer(), _objectName(),
 			_origin("AO/WSImager"), _originComment("Imager written by Andre Offringa"),
 			_multiFPtr(0)
 		{
@@ -135,6 +137,18 @@ class FitsWriter : protected FitsIOChecker
 		{
 			_isUV = isUV;
 		}
+		void SetTelescopeName(const std::string& telescopeName)
+		{
+			_telescopeName = telescopeName;
+		}
+		void SetObserver(const std::string& observer)
+		{
+			_observer = observer;
+		}
+		void SetObjectName(const std::string& objectName)
+		{
+			_objectName = objectName;
+		}
 		void SetOrigin(const std::string& origin, const std::string& comment)
 		{
 			_origin = origin;
@@ -148,6 +162,7 @@ class FitsWriter : protected FitsIOChecker
 		{
 			_history.push_back(historyLine);
 		}
+
 		void SetMetadata(const class FitsReader& reader);
 		
 		double RA() const { return _phaseCentreRA; }
@@ -215,6 +230,7 @@ class FitsWriter : protected FitsIOChecker
 		PolarizationEnum _polarization;
 		Unit _unit;
 		bool _isUV;
+		std::string _telescopeName, _observer, _objectName;
 		std::string _origin, _originComment;
 		std::vector<std::string> _history;
 		std::map<std::string, std::string> _extraStringKeywords;

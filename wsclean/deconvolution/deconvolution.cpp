@@ -13,6 +13,8 @@
 #include "../ndppp.h"
 #include "../rmsimage.h"
 
+#include "../units/fluxdensity.h"
+
 #include "../wsclean/imagefilename.h"
 #include "../wsclean/imagingtable.h"
 #include "../wsclean/wscleansettings.h"
@@ -44,7 +46,7 @@ void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedM
 	Image integrated(_imgWidth, _imgHeight, *_imageAllocator);
 	residualSet.GetLinearIntegrated(integrated.data());
 	double stddev = integrated.StdDevFromMAD();
-	Logger::Info << "Estimated standard deviation of background noise: " << stddev << " Jy\n";
+	Logger::Info << "Estimated standard deviation of background noise: " << FluxDensity::ToNiceString(stddev) << '\n';
 	if(_settings.autoMask && _autoMaskIsFinished)
 	{
 		// When we are in the second phase of automasking, don't use
@@ -59,7 +61,7 @@ void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedM
 			reader.Read(rmsImage.data());
 			// Normalize the RMS image
 			stddev = rmsImage.Min();
-			Logger::Info << "Lowest RMS in image: " << stddev << '\n';
+			Logger::Info << "Lowest RMS in image: " << FluxDensity::ToNiceString(stddev) << '\n';
 			if(stddev <= 0.0)
 				throw std::runtime_error("RMS image can only contain values > 0, but contains values <= 0.0");
 			for(double& value : rmsImage)
@@ -81,7 +83,7 @@ void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedM
 			}
 			// Normalize the RMS image relative to the threshold so that Jy remains Jy.
 			stddev = rmsImage.Min();
-			Logger::Info << "Lowest RMS in image: " << stddev << '\n';
+			Logger::Info << "Lowest RMS in image: " << FluxDensity::ToNiceString(stddev) << '\n';
 			for(double& value : rmsImage)
 				value = stddev / value;
 			_cleanAlgorithm->SetRMSFactorImage(std::move(rmsImage));

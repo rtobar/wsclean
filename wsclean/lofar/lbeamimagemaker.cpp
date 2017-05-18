@@ -8,12 +8,13 @@ void LBeamImageMaker::Make(PrimaryBeamImageSet&)
 }
 #else
 
-#include "../angle.h"
+#include "../units/angle.h"
+
 #include "../banddata.h"
 #include "../fftresampler.h"
 #include "../fitsreader.h"
 #include "../fitswriter.h"
-#include "../imagecoordinates.h"
+#include "../units/imagecoordinates.h"
 #include "../imageweights.h"
 #include "../matrix2x2.h"
 #include "../progressbar.h"

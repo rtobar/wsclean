@@ -1,5 +1,5 @@
 #include "dftpredictionalgorithm.h"
-#include "imagecoordinates.h"
+#include "units/imagecoordinates.h"
 #include "matrix2x2.h"
 #include "model/model.h"
 #include "progressbar.h"

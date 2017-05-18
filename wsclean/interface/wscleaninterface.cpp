@@ -8,7 +8,8 @@
 
 #include <boost/thread/mutex.hpp>
 
-#include "../angle.h"
+#include "../units/angle.h"
+
 #include "../banddata.h"
 #include "../fitsreader.h"
 #include "../fitswriter.h"

@@ -9,7 +9,8 @@
 #include "primarybeam.h"
 #include "imagefilename.h"
 
-#include "../angle.h"
+#include "../units/angle.h"
+
 #include "../application.h"
 #include "../areaset.h"
 #include "../dftpredictionalgorithm.h"
@@ -1177,7 +1178,6 @@ void WSClean::renderMFSImage(size_t intervalIndex, PolarizationEnum pol, bool is
 	residualReader.Read(image.data());
 	modelReader.Read(modelImage.data());
 	
-	//ModelRenderer renderer(_fitsWriter.RA(), _fitsWriter.Dec(), _settings.pixelScaleX, _settings.pixelScaleY, _fitsWriter.PhaseCentreDL(), _fitsWriter.PhaseCentreDM());
 	double beamMaj = _infoForMFS.beamMaj;
 	double beamMin, beamPA;
 	std::string beamStr;

@@ -65,6 +65,9 @@ void WSCFitsWriter::setGridderKeywords(const WSCleanSettings& settings, const MS
 	_writer.SetDate(dateObs);
 	if(gridder.HasDenormalPhaseCentre())
 		_writer.SetPhaseCentreShift(gridder.PhaseCentreDL(), gridder.PhaseCentreDM());
+	_writer.SetTelescopeName(gridder.TelescopeName());
+	_writer.SetObserver(gridder.Observer());
+	_writer.SetObjectName(gridder.FieldName());
 	
 	/* This represents the weight of the image when averaging */
 	_writer.SetExtraKeyword("WSCIMGWG", gridder.ImageWeight());

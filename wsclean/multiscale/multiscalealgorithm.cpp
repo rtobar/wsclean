@@ -10,6 +10,8 @@
 
 #include "../wsclean/logger.h"
 
+#include "../units/fluxdensity.h"
+
 
 MultiScaleAlgorithm::MultiScaleAlgorithm(ImageBufferAllocator& allocator, double beamSize, double pixelScaleX, double pixelScaleY) :
 	_allocator(allocator),
@@ -36,11 +38,11 @@ MultiScaleAlgorithm::~MultiScaleAlgorithm()
 	for(size_t scaleIndex=0; scaleIndex!=_scaleInfos.size(); ++scaleIndex)
 	{
 		const ScaleInfo& scaleEntry = _scaleInfos[scaleIndex];
-		Logger::Info << "- Scale " << round(scaleEntry.scale) << " px, nr of components cleaned: " << scaleEntry.nComponentsCleaned << " (" << scaleEntry.totalFluxCleaned << " Jy)\n";
+		Logger::Info << "- Scale " << round(scaleEntry.scale) << " px, nr of components cleaned: " << scaleEntry.nComponentsCleaned << " (" << FluxDensity::ToNiceString(scaleEntry.totalFluxCleaned) << ")\n";
 		sumComponents += scaleEntry.nComponentsCleaned;
 		sumFlux += scaleEntry.totalFluxCleaned;
 	}
-	Logger::Info << "Total: " << sumComponents << " components (" << sumFlux << " Jy)\n";
+	Logger::Info << "Total: " << sumComponents << " components (" << FluxDensity::ToNiceString(sumFlux) << ")\n";
 }
 
 
@@ -119,8 +121,8 @@ void MultiScaleAlgorithm::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& mo
 	const double firstThreshold = std::max(_threshold, mGainThreshold);
 	
 	Logger::Info << "Starting multi-scale cleaning. Start peak="
-		<< _scaleInfos[scaleWithPeak].maxUnnormalizedImageValue * _scaleInfos[scaleWithPeak].biasFactor
-		<< " Jy, major iteration threshold=" << firstThreshold << "\n";
+		<< FluxDensity::ToNiceString(_scaleInfos[scaleWithPeak].maxUnnormalizedImageValue * _scaleInfos[scaleWithPeak].biasFactor)
+		<< ", major iteration threshold=" << FluxDensity::ToNiceString(firstThreshold) << "\n";
 	
 	std::unique_ptr<ImageBufferAllocator::Ptr[]> doubleConvolvedPSFs(
 		new ImageBufferAllocator::Ptr[dirtySet.PSFCount()]);
@@ -272,7 +274,7 @@ void MultiScaleAlgorithm::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& mo
 		findActiveScaleConvolvedMaxima(dirtySet, integratedScratch.data(), scratch.data(), false);
 		sortScalesOnMaxima(scaleWithPeak);
 		
-		Logger::Info << "Iteration " << _iterationNumber << ", scale " << round(_scaleInfos[scaleWithPeak].scale) << " px : " << _scaleInfos[scaleWithPeak].maxUnnormalizedImageValue*_scaleInfos[scaleWithPeak].biasFactor << " Jy at " << _scaleInfos[scaleWithPeak].maxImageValueX << ',' << _scaleInfos[scaleWithPeak].maxImageValueY << '\n';
+		Logger::Info << "Iteration " << _iterationNumber << ", scale " << round(_scaleInfos[scaleWithPeak].scale) << " px : " << FluxDensity::ToNiceString(_scaleInfos[scaleWithPeak].maxUnnormalizedImageValue*_scaleInfos[scaleWithPeak].biasFactor) << " at " << _scaleInfos[scaleWithPeak].maxImageValueX << ',' << _scaleInfos[scaleWithPeak].maxImageValueY << '\n';
 	}
 	
 	bool
@@ -429,7 +431,7 @@ void MultiScaleAlgorithm::findActiveScaleConvolvedMaxima(const ImageSet& imageSe
 			//double rmsBias = _scaleInfos[0].rms / scaleEntry.rms;
 			if(scaleIndex != 0)
 				Logger::Info << ", ";
-			Logger::Info << round(scaleEntry.scale) << ": " << scaleEntry.rms << " Jy";
+			Logger::Info << round(scaleEntry.scale) << ": " << FluxDensity::ToNiceString(scaleEntry.rms);
 			// This can be made an option later:
 			// scaleEntry.biasFactor = rmsBias;
 			// However, at large scales the RMS is not a good estimator of the significance, because

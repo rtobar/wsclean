@@ -4,8 +4,8 @@
 #include <vector>
 #include <string>
 
-#include "imagecoordinates.h"
-#include "radeccoord.h"
+#include "units/imagecoordinates.h"
+#include "units/radeccoord.h"
 
 class SkyAreaElement
 {

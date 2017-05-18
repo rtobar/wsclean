@@ -36,8 +36,6 @@ class WSMSGridder : public MSGridderBase
 				throw std::runtime_error("No imaginary result available for non-complex inversion");
 			return _gridder->ImaginaryImage();
 		}
-		virtual double BeamSize() const { return _beamSize; }
-		
 		virtual bool HasGriddingCorrectionImage() const { return GridMode() != NearestNeighbourGridding; }
 		virtual void GetGriddingCorrectionImage(double *image) const { _gridder->GetGriddingCorrectionImage(image); }
 		

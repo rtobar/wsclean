@@ -4,7 +4,7 @@
 
 #include "msproviders/msprovider.h"
 #include "fitswriter.h"
-#include "angle.h"
+#include "units/angle.h"
 #include "wsclean/logger.h"
 
 #include <cmath>

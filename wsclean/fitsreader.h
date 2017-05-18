@@ -49,6 +49,10 @@ class FitsReader : public FitsIOChecker
 		double BeamMinorAxisRad() const { return _beamMinorAxisRad; }
 		double BeamPositionAngle() const { return _beamPositionAngle; }
 		
+		const std::string& TelescopeName() const { return _telescopeName; }
+		const std::string& Observer() const { return _observer; }
+		const std::string& ObjectName() const { return _objectName; }
+		
 		const std::string& Origin() const { return _origin; }
 		const std::string& OriginComment() const { return _originComment; }
 		
@@ -88,6 +92,7 @@ class FitsReader : public FitsIOChecker
 		
 		PolarizationEnum _polarization;
 		FitsIOChecker::Unit _unit;
+		std::string _telescopeName, _observer, _objectName;
 		std::string _origin, _originComment;
 		std::vector<std::string> _history;
 };

@@ -4,7 +4,7 @@
 #include "fitsreader.h"
 #include "modelrenderer.h"
 #include "model/model.h"
-#include "imagecoordinates.h"
+#include "units/imagecoordinates.h"
 #include "uvector.h"
 #include "fftconvolver.h"
 
