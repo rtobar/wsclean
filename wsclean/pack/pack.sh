@@ -16,6 +16,7 @@ else
 		mkdir /tmp/wsclean/msproviders
 		mkdir /tmp/wsclean/multiscale
 		mkdir /tmp/wsclean/tests
+		mkdir /tmp/wsclean/units
 		mkdir /tmp/wsclean/wsclean
 		mkdir /tmp/wsclean/wsclean/examples
 		cd ..
@@ -31,6 +32,7 @@ else
 		cp -v msproviders/*.{h,cpp} /tmp/wsclean/msproviders
 		cp -v multiscale/*.{h,cpp} /tmp/wsclean/multiscale
 		cp -v tests/*.cpp /tmp/wsclean/tests
+		cp -v units/*.h /tmp/wsclean/units
 		cp -v wsclean/*.{h,cpp} /tmp/wsclean/wsclean
 		cp -v wsclean/examples/{Makefile,*.cpp} /tmp/wsclean/wsclean/examples/
 		cd /tmp
