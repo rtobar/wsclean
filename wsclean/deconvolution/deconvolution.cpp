@@ -17,6 +17,7 @@
 
 #include "../wsclean/imagefilename.h"
 #include "../wsclean/imagingtable.h"
+#include "../wsclean/primarybeam.h"
 #include "../wsclean/wscleansettings.h"
 
 Deconvolution::Deconvolution(const class WSCleanSettings& settings) :
@@ -112,7 +113,6 @@ void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedM
 			else
 				algorithm.SetAutoMaskMode(true, false);
 		}
-		algorithm.SetUseFastSubMinorLoop(_settings.multiscaleFastSubMinorLoop);
 	}
 	else {
 		if(_settings.autoMask && _autoMaskIsFinished)
@@ -140,6 +140,12 @@ void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedM
 		Logger::Info << "Auto-masking threshold reached; continuing next major iteration with deeper threshold and mask.\n";
 		_autoMaskIsFinished = true;
 		reachedMajorThreshold = true;
+	}
+	
+	if(_settings.majorIterationCount != 0 && majorIterationNr >= _settings.majorIterationCount)
+	{
+		reachedMajorThreshold = false;
+		Logger::Info << "Maximum number of major iterations was reached: not continuing deconvolution.\n";
 	}
 	
 	residualSet.AssignAndStore(*_residualImages);
@@ -198,6 +204,8 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 		algorithm->SetMultiscaleGain(_settings.multiscaleGain);
 		algorithm->SetShape(_settings.multiscaleShapeFunction);
 		algorithm->SetTrackComponents(_settings.saveSourceList);
+		algorithm->SetConvolutionPadding(_settings.multiscaleConvolutionPadding);
+		algorithm->SetUseFastSubMinorLoop(_settings.multiscaleFastSubMinorLoop);
 	}
 	else
 	{
@@ -271,16 +279,55 @@ void Deconvolution::calculateDeconvolutionFrequencies(const ImagingTable& groupT
 
 void Deconvolution::SaveSourceList(const class ImagingTable& table, long double phaseCentreRA, long double phaseCentreDec) const
 {
+	std::string filename = _settings.prefixName + "-sources.txt";
 	if(_settings.useMultiscale)
 	{
 		MultiScaleAlgorithm& algorithm = static_cast<MultiScaleAlgorithm&>(*_cleanAlgorithm);
-		algorithm.GetComponentList().Write(algorithm, _settings, _pixelScaleX, _pixelScaleY, phaseCentreRA, phaseCentreDec);
+		algorithm.GetComponentList().Write(filename, algorithm, _pixelScaleX, _pixelScaleY, phaseCentreRA, phaseCentreDec);
 	}
 	else {
 		_imageAllocator->FreeUnused();
 		ImageSet modelSet(&table, *_imageAllocator, _settings.deconvolutionChannelCount, _settings.squaredJoins, _imgWidth, _imgHeight);
 		modelSet.LoadAndAverage(*_modelImages);
 		ComponentList componentList(_imgWidth, _imgHeight, modelSet);
-		componentList.WriteSingleScale(*_cleanAlgorithm, _settings, _pixelScaleX, _pixelScaleY, phaseCentreRA, phaseCentreDec);
+		componentList.WriteSingleScale(filename, *_cleanAlgorithm, _pixelScaleX, _pixelScaleY, phaseCentreRA, phaseCentreDec);
+	}
+}
+
+void Deconvolution::SavePBSourceList(const class ImagingTable& table, long double phaseCentreRA, long double phaseCentreDec) const
+{
+	std::unique_ptr<ComponentList> list;
+	if(_settings.useMultiscale)
+	{
+		MultiScaleAlgorithm& algorithm = static_cast<MultiScaleAlgorithm&>(*_cleanAlgorithm);
+		list.reset(new ComponentList(algorithm.GetComponentList()));
+	}
+	else {
+		_imageAllocator->FreeUnused();
+		ImageSet modelSet(&table, *_imageAllocator, _settings.deconvolutionChannelCount, _settings.squaredJoins, _imgWidth, _imgHeight);
+		modelSet.LoadAndAverage(*_modelImages);
+		list.reset(new ComponentList(_imgWidth, _imgHeight, modelSet));
+	}
+	
+	for(size_t i=0; i!=table.SquaredGroupCount(); ++i)
+	{
+		const ImagingTableEntry entry = table.GetSquaredGroup(i).Front();
+		Logger::Debug << "Correcting source list of channel " << entry.outputChannelIndex << " for beam\n";
+		ImageFilename filename(entry.outputChannelIndex, entry.outputIntervalIndex);
+		filename.SetPolarization(entry.polarization);
+		PrimaryBeam pb(_settings);
+		PrimaryBeamImageSet beam(_imgWidth, _imgHeight, *_imageAllocator);
+		pb.Load(beam, filename);
+		list->CorrectForBeam(beam, entry.outputChannelIndex);
+	}
+	
+	std::string filename = _settings.prefixName + "-sources-pb.txt";
+	if(_settings.useMultiscale)
+	{
+		MultiScaleAlgorithm& algorithm = static_cast<MultiScaleAlgorithm&>(*_cleanAlgorithm);
+		list->Write(filename, algorithm, _pixelScaleX, _pixelScaleY, phaseCentreRA, phaseCentreDec);
+	}
+	else {
+		list->WriteSingleScale(filename, *_cleanAlgorithm, _pixelScaleX, _pixelScaleY, phaseCentreRA, phaseCentreDec);
 	}
 }

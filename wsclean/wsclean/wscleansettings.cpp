@@ -70,6 +70,9 @@ void WSCleanSettings::Validate() const
 	if(saveSourceList && (polarizations.size()!=1 || (*polarizations.begin())!=Polarization::StokesI))
 		throw std::runtime_error("Saving a source list currently only works for Stokes I imaging");
 	
+	if(saveSourceList && deconvolutionIterationCount==0)
+		throw std::runtime_error("A source list cannot be saved without cleaning");
+	
 	checkPolarizations();
 }
 

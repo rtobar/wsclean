@@ -721,6 +721,10 @@ void WSClean::runIndependentGroup(ImagingTable& groupTable)
 		if(_settings.saveSourceList)
     {
 			_deconvolution.SaveSourceList(groupTable, _gridder->PhaseCentreRA(), _gridder->PhaseCentreDec());
+			if(_settings.applyPrimaryBeam)
+			{
+				_deconvolution.SavePBSourceList(groupTable, _gridder->PhaseCentreRA(), _gridder->PhaseCentreDec());
+			}
     }
 	}
 	

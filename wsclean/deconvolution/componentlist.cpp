@@ -4,25 +4,25 @@
 
 #include "../wsclean/imagefilename.h"
 #include "../wsclean/imagingtable.h"
-#include "../wsclean/wscleansettings.h"
+#include "../wsclean/primarybeamimageset.h"
 
 #include "../multiscale/multiscalealgorithm.h"
 
-void ComponentList::Write(const MultiScaleAlgorithm& multiscale, const WSCleanSettings& settings, long double pixelScaleX, long double pixelScaleY, long double phaseCentreRA, long double phaseCentreDec)
+void ComponentList::Write(const std::string& filename, const MultiScaleAlgorithm& multiscale, long double pixelScaleX, long double pixelScaleY, long double phaseCentreRA, long double phaseCentreDec)
 {
 	ao::uvector<double> scaleSizes(_nScales);
 	for(size_t scaleIndex=0; scaleIndex!=_nScales; ++scaleIndex)
 		scaleSizes[scaleIndex] = multiscale.ScaleSize(scaleIndex);
-	write(multiscale, scaleSizes, settings, pixelScaleX, pixelScaleY, phaseCentreRA, phaseCentreDec);
+	write(filename, multiscale, scaleSizes, pixelScaleX, pixelScaleY, phaseCentreRA, phaseCentreDec);
 }
 
-void ComponentList::WriteSingleScale(const class DeconvolutionAlgorithm& algorithm, const class WSCleanSettings& settings, long double pixelScaleX, long double pixelScaleY, long double phaseCentreRA, long double phaseCentreDec)
+void ComponentList::WriteSingleScale(const std::string& filename, const class DeconvolutionAlgorithm& algorithm, long double pixelScaleX, long double pixelScaleY, long double phaseCentreRA, long double phaseCentreDec)
 {
 	ao::uvector<double> scaleSizes(1, 0);
-	write(algorithm, scaleSizes, settings, pixelScaleX, pixelScaleY, phaseCentreRA, phaseCentreDec);
+	write(filename, algorithm, scaleSizes, pixelScaleX, pixelScaleY, phaseCentreRA, phaseCentreDec);
 }
 
-void ComponentList::write(const class DeconvolutionAlgorithm& algorithm, const ao::uvector<double>& scaleSizes, const class WSCleanSettings& settings, long double pixelScaleX, long double pixelScaleY, long double phaseCentreRA, long double phaseCentreDec)
+void ComponentList::write(const std::string& filename, const class DeconvolutionAlgorithm& algorithm, const ao::uvector<double>& scaleSizes, long double pixelScaleX, long double pixelScaleY, long double phaseCentreRA, long double phaseCentreDec)
 {
 	if(_componentsAddedSinceLastMerge != 0)
 		MergeDuplicates();
@@ -31,7 +31,6 @@ void ComponentList::write(const class DeconvolutionAlgorithm& algorithm, const a
 	if(fitter.Mode() == NoSpectralFitting && _nFrequencies>1)
 		throw std::runtime_error("Can't write component list, because you have not specified a spectral fitting method. You probably want to add '-fit-spectral-pol'.");
 	
-	std::string filename = settings.prefixName + "-sources.txt";
 	std::ofstream file(filename);
   bool useLogSI = false;
 	switch(fitter.Mode())
@@ -91,8 +90,9 @@ void ComponentList::write(const class DeconvolutionAlgorithm& algorithm, const a
 
 void ComponentList::loadFromImageSet(ImageSet& imageSet, size_t scaleIndex)
 {
-	_listPerScale.clear();
 	_componentsAddedSinceLastMerge = 0;
+	_listPerScale[scaleIndex].positions.clear();
+	_listPerScale[scaleIndex].values.clear();
 	for(size_t y=0; y!=_height; ++y)
 	{
 		const size_t rowIndex = y*_width;
@@ -118,7 +118,18 @@ void ComponentList::loadFromImageSet(ImageSet& imageSet, size_t scaleIndex)
 	}
 }
 
-void ComponentList::CorrectForBeam()
+void ComponentList::CorrectForBeam(PrimaryBeamImageSet& beam, size_t channel)
 {
-  // TODO
+	if(_componentsAddedSinceLastMerge != 0)
+		MergeDuplicates();
+	
+  for(ScaleList& list : _listPerScale)
+	{
+		for(size_t i=0; i!=list.positions.size(); ++i)
+		{
+			const Position& pos = list.positions[i];
+			double& value = list.values[channel + i*_nFrequencies];
+			value *= beam.GetUnpolarizedCorrectionFactor(pos.x, pos.y);
+		}
+	}
 }

@@ -50,6 +50,10 @@ public:
 	{
 		_multiscaleNormalizeResponse = normResponse;
 	}
+	void SetConvolutionPadding(double padding)
+	{
+		_convolutionPadding = padding;
+	}
 	void SetShape(MultiScaleTransforms::Shape shape)
 	{
 		_scaleShape = shape;

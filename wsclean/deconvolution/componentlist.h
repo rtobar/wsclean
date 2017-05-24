@@ -49,9 +49,9 @@ public:
 			MergeDuplicates();
 	}
 	
-	void Write(const class MultiScaleAlgorithm& multiscale, const class WSCleanSettings& settings, long double pixelScaleX, long double pixelScaleY, long double phaseCentreRA, long double phaseCentreDec);
+	void Write(const std::string& filename, const class MultiScaleAlgorithm& multiscale, long double pixelScaleX, long double pixelScaleY, long double phaseCentreRA, long double phaseCentreDec);
 
-	void WriteSingleScale(const class DeconvolutionAlgorithm& algorithm, const class WSCleanSettings& settings, long double pixelScaleX, long double pixelScaleY, long double phaseCentreRA, long double phaseCentreDec);
+	void WriteSingleScale(const std::string& filename, const class DeconvolutionAlgorithm& algorithm, long double pixelScaleX, long double pixelScaleY, long double phaseCentreRA, long double phaseCentreDec);
 
 	void MergeDuplicates()
 	{
@@ -73,7 +73,8 @@ public:
 			values[f] = _listPerScale[scaleIndex].values[index * _nFrequencies + f];
 	}
 	
-	void CorrectForBeam();
+	void CorrectForBeam(class PrimaryBeamImageSet& beam, size_t channel);
+	
 private:
 	struct Position {
 		Position(size_t _x, size_t _y) :
@@ -92,7 +93,7 @@ private:
 		ao::uvector<Position> positions;
 	};
 	
-	void write(const class DeconvolutionAlgorithm& algorithm, const ao::uvector<double>& scaleSizes, const class WSCleanSettings& settings, long double pixelScaleX, long double pixelScaleY, long double phaseCentreRA, long double phaseCentreDec);
+	void write(const std::string& filename, const class DeconvolutionAlgorithm& algorithm, const ao::uvector<double>& scaleSizes, long double pixelScaleX, long double pixelScaleY, long double phaseCentreRA, long double phaseCentreDec);
 	
 	void loadFromImageSet(ImageSet& imageSet, size_t scaleIndex);
   

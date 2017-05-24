@@ -93,7 +93,7 @@ inline double FluxDensity::Parse(const std::string& s, const std::string& valueD
 	else if(unitStr=="njy" || unitStr=="nJy" || lUnitStr=="nanojansky")
 		return val*1e-9;
 	
-	throw std::runtime_error("Invalid unit specification in angle given for " + valueDescription);
+	throw std::runtime_error("Invalid unit specification in flux density given for " + valueDescription);
 }
 
 inline size_t FluxDensity::findNumberEnd(const std::string& s)

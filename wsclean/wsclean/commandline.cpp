@@ -1,6 +1,7 @@
 #include "commandline.h"
 
 #include "../units/angle.h"
+#include "../units/fluxdensity.h"
 
 #include "../numberlist.h"
 #include "../wscversion.h"
@@ -204,7 +205,10 @@ void CommandLine::printHelp()
 		"\n"
 		"  ** DECONVOLUTION OPTIONS **\n"
 		"-niter <niter>\n"
-		"   Maximum number of clean iterations to perform. Default: 0\n"
+		"   Maximum number of clean iterations to perform. Default: 0 (=no cleaning)\n"
+		"-nmiter <nmiter>\n"
+		"   Maximum number of major clean (inversion/prediction) iterations. Default: 20."
+		"   A value of 0 means no limit.\n"
 		"-threshold <threshold>\n"
 		"   Stopping clean thresholding in Jy. Default: 0.0\n"
 		"-auto-threshold <sigma>\n"
@@ -251,6 +255,8 @@ void CommandLine::printHelp()
 		"-multiscale-gain <gain>\n"
 		"   Size of step made in the subminor loop of multi-scale. Default currently 0.2, but shows sign of instability.\n"
 		"   A value of 0.1 might be more stable.\n"
+		"-multiscale-convolution-padding <padding>\n"
+		"   Size of zero-padding for convolutions during the multi-scale cleaning.\n"
 		"-no-multiscale-fast-subminor\n"
 		"   Disable the 'fast subminor loop' optimization, that will only search a part of the\n"
 		"   image during the multi-scale subminor loop. The optimization is on by default.\n"
@@ -489,10 +495,15 @@ int CommandLine::Run(int argc, char* argv[])
 			++argi;
 			settings.deconvolutionIterationCount = parse_size_t(argv[argi], "niter");
 		}
+		else if(param == "nmiter")
+		{
+			++argi;
+			settings.majorIterationCount = parse_size_t(argv[argi], "nmiter");
+		}
 		else if(param == "threshold")
 		{
 			++argi;
-			settings.deconvolutionThreshold = atof(argv[argi]);
+			settings.deconvolutionThreshold = FluxDensity::Parse(argv[argi], "threshold parameter", FluxDensity::Jansky);
 		}
 		else if(param == "auto-threshold")
 		{
@@ -752,6 +763,11 @@ int CommandLine::Run(int argc, char* argv[])
 			else if(shape == "gaussian")
 				settings.multiscaleShapeFunction = MultiScaleTransforms::GaussianShape;
 			else throw std::runtime_error("Unknown multiscale shape function given");
+		}
+		else if(param == "multiscale-convolution-padding")
+		{
+			++argi;
+			settings.multiscaleConvolutionPadding = atof(argv[argi]);
 		}
 		else if(param == "no-multiscale-fast-subminor")
 		{

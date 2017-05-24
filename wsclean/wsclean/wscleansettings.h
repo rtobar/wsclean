@@ -71,12 +71,13 @@ public:
 	double rmsBackgroundWindow;
 	enum RMSBackgroundMethod { RMSWindow, RMSAndMinimumWindow } rmsBackgroundMethod;
 	bool saveSourceList;
-	size_t deconvolutionIterationCount;
+	size_t deconvolutionIterationCount, majorIterationCount;
 	bool allowNegativeComponents, stopOnNegativeComponents;
 	bool useMultiscale, useClarkOptimization, squaredJoins, forceDynamicJoin;
 	bool multiscaleFastSubMinorLoop;
 	double multiscaleGain, multiscaleDeconvolutionScaleBias;
 	bool multiscaleNormalizeResponse;
+	double multiscaleConvolutionPadding;
 	ao::uvector<double> multiscaleScaleList;
 	MultiScaleTransforms::Shape multiscaleShapeFunction;
 	
@@ -179,6 +180,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	rmsBackgroundMethod(RMSWindow),
 	saveSourceList(false),
 	deconvolutionIterationCount(0),
+	majorIterationCount(20),
 	allowNegativeComponents(true), 
 	stopOnNegativeComponents(false),
 	useMultiscale(false),
@@ -189,6 +191,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	multiscaleGain(0.2),
 	multiscaleDeconvolutionScaleBias(0.6),
 	multiscaleNormalizeResponse(false),
+	multiscaleConvolutionPadding(1.1),
 	multiscaleScaleList(),
 	multiscaleShapeFunction(MultiScaleTransforms::TaperedQuadraticShape),
 	deconvolutionBorderRatio(0.05),
