@@ -249,7 +249,7 @@ void WStackingGridder::FinishInversionPass()
 
 void WStackingGridder::makeKernels()
 {
-	_griddingKernels.resize(_overSamplingFactor * _overSamplingFactor);
+	_griddingKernels.resize(_overSamplingFactor);
 	_1dKernel.resize(_kernelSize*_overSamplingFactor);
 	const double alpha = 8.6;
 	
@@ -265,24 +265,18 @@ void WStackingGridder::makeKernels()
 	}
 	
 	std::vector<std::vector<double>>::iterator gridKernelIter = _griddingKernels.begin();
-	for(size_t j=0; j!=_overSamplingFactor; ++j)
+	for(size_t i=0; i!=_overSamplingFactor; ++i)
 	{
-		for(size_t i=0; i!=_overSamplingFactor; ++i)
+		std::vector<double> &kernel = _griddingKernels[_overSamplingFactor - i - 1];
+		kernel.resize(_kernelSize);
+		std::vector<double>::iterator kernelValueIter = kernel.begin();
+		for(size_t x=0; x!=_kernelSize; ++x)
 		{
-			std::vector<double> &kernel = _griddingKernels[(_overSamplingFactor-j-1)*_overSamplingFactor + _overSamplingFactor - i - 1];
-			kernel.resize(_kernelSize * _kernelSize);
-			std::vector<double>::iterator kernelValueIter = kernel.begin();
-			for(size_t y=0; y!=_kernelSize; ++y)
-			{
-				for(size_t x=0; x!=_kernelSize; ++x)
-				{
-					size_t xIndex = x*_overSamplingFactor + i, yIndex = y*_overSamplingFactor + j;
-					*kernelValueIter = _1dKernel[xIndex] * _1dKernel[yIndex];
-					++kernelValueIter;
-				}
-			}
-			++gridKernelIter;
+			size_t xIndex = x*_overSamplingFactor + i;
+			*kernelValueIter = _1dKernel[xIndex];
+			++kernelValueIter;
 		}
+		++gridKernelIter;
 	}
 }
 
@@ -395,11 +389,12 @@ void WStackingGridder::AddDataSample(std::complex<float> sample, double uInLambd
 			int
 				x = round(xExact),
 				y = round(yExact),
-				xKernel = round((xExact - double(x)) * _overSamplingFactor),
-				yKernel = round((yExact - double(y)) * _overSamplingFactor);
-			xKernel = (xKernel + (_overSamplingFactor*3)/2) % _overSamplingFactor;
-			yKernel = (yKernel + (_overSamplingFactor*3)/2) % _overSamplingFactor;
-			std::vector<double> &kernel = _griddingKernels[xKernel + yKernel*_overSamplingFactor];
+				xKernelIndex = round((xExact - double(x)) * _overSamplingFactor),
+				yKernelIndex = round((yExact - double(y)) * _overSamplingFactor);
+			xKernelIndex = (xKernelIndex + (_overSamplingFactor*3)/2) % _overSamplingFactor;
+			yKernelIndex = (yKernelIndex + (_overSamplingFactor*3)/2) % _overSamplingFactor;
+			const std::vector<double>& xKernel = _griddingKernels[xKernelIndex];
+			const std::vector<double>& yKernel = _griddingKernels[yKernelIndex];
 			int mid = _kernelSize / 2;
 			if(x > -int(_width)/2 && y > -int(_height)/2 && x <= int(_width)/2 && y <= int(_height)/2)
 			{
@@ -408,31 +403,31 @@ void WStackingGridder::AddDataSample(std::complex<float> sample, double uInLambd
 				// Are we on the edge?
 				if(x < mid || x+mid+1 >= int(_width) || y < mid || y+mid+1 >= int(_height))
 				{
-					std::vector<double>::iterator kernelIter = kernel.begin();
 					for(size_t j=0; j!=_kernelSize; ++j)
 					{
+						const double yKernelValue = yKernel[j];
 						size_t cy = ((y+j+_height-mid) % _height) * _width;
 						for(size_t i=0; i!=_kernelSize; ++i)
 						{
 							size_t cx = (x+i+_width-mid) % _width;
 							std::complex<double> *uvRowPtr = &uvData[cx + cy];
-							*uvRowPtr += std::complex<double>(sample.real() * (*kernelIter), sample.imag() * (*kernelIter));
-							++kernelIter;
+							const double kernelValue = yKernelValue * xKernel[i];
+							*uvRowPtr += std::complex<double>(sample.real() * kernelValue, sample.imag() * kernelValue);
 						}
 					}
 				}
 				else {
 					x -= mid;
 					y -= mid;
-					std::vector<double>::iterator kernelIter = kernel.begin();
 					for(size_t j=0; j!=_kernelSize; ++j)
 					{
+						const double yKernelValue = yKernel[j];
 						std::complex<double> *uvRowPtr = &uvData[x + y*_width];
 						for(size_t i=0; i!=_kernelSize; ++i)
 						{
-							*uvRowPtr += std::complex<double>(sample.real() * (*kernelIter), sample.imag() * (*kernelIter));
+							const double kernelValue = yKernelValue * xKernel[i];
+							*uvRowPtr += std::complex<double>(sample.real() * kernelValue, sample.imag() * kernelValue);
 							++uvRowPtr;
-							++kernelIter;
 						}
 						++y;
 					}
@@ -485,11 +480,12 @@ void WStackingGridder::SampleDataSample(std::complex<double>& value, double uInL
 			int
 				x = round(xExact),
 				y = round(yExact),
-				xKernel = round((xExact - double(x)) * _overSamplingFactor),
-				yKernel = round((yExact - double(y)) * _overSamplingFactor);
-			xKernel = (xKernel + (_overSamplingFactor*3)/2) % _overSamplingFactor;
-			yKernel = (yKernel + (_overSamplingFactor*3)/2) % _overSamplingFactor;
-			std::vector<double> &kernel = _griddingKernels[xKernel + yKernel*_overSamplingFactor];
+				xKernelIndex = round((xExact - double(x)) * _overSamplingFactor),
+				yKernelIndex = round((yExact - double(y)) * _overSamplingFactor);
+			xKernelIndex = (xKernelIndex + (_overSamplingFactor*3)/2) % _overSamplingFactor;
+			yKernelIndex = (yKernelIndex + (_overSamplingFactor*3)/2) % _overSamplingFactor;
+			const std::vector<double> &xKernel = _griddingKernels[xKernelIndex];
+			const std::vector<double> &yKernel = _griddingKernels[yKernelIndex];
 			int mid = _kernelSize / 2;
 			if(x > -int(_width)/2 && y > -int(_height)/2 && x <= int(_width)/2 && y <= int(_height)/2)
 			{
@@ -498,31 +494,31 @@ void WStackingGridder::SampleDataSample(std::complex<double>& value, double uInL
 				// Are we on the edge?
 				if(x < mid || x+mid+1 >= int(_width) || y < mid || y+mid+1 >= int(_height))
 				{
-					std::vector<double>::iterator kernelIter = kernel.begin();
 					for(size_t j=0; j!=_kernelSize; ++j)
 					{
+						const double yKernelValue = yKernel[j];
 						size_t cy = ((y+j+_height-mid) % _height) * _width;
 						for(size_t i=0; i!=_kernelSize; ++i)
 						{
+							const double kernelValue = xKernel[i] * yKernelValue;
 							size_t cx = (x+i+_width-mid) % _width;
 							std::complex<double> *uvRowPtr = &uvData[cx + cy];
-							sample += std::complex<double>(uvRowPtr->real() * (*kernelIter), uvRowPtr->imag() * (*kernelIter));
-							++kernelIter;
+							sample += std::complex<double>(uvRowPtr->real() * kernelValue, uvRowPtr->imag() * kernelValue);
 						}
 					}
 				}
 				else {
 					x -= mid;
 					y -= mid;
-					std::vector<double>::iterator kernelIter = kernel.begin();
 					for(size_t j=0; j!=_kernelSize; ++j)
 					{
+						const double yKernelValue = yKernel[j];
 						std::complex<double> *uvRowPtr = &uvData[x + y*_width];
 						for(size_t i=0; i!=_kernelSize; ++i)
 						{
-							sample += std::complex<double>(uvRowPtr->real() * (*kernelIter), uvRowPtr->imag() * (*kernelIter));
+							const double kernelValue = xKernel[i] * yKernelValue;
+							sample += std::complex<double>(uvRowPtr->real() * kernelValue, uvRowPtr->imag() * kernelValue);
 							++uvRowPtr;
-							++kernelIter;
 						}
 						++y;
 					}

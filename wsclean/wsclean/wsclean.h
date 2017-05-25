@@ -76,6 +76,7 @@ private:
 	
 	void fitBeamSize(double& bMaj, double& bMin, double& bPA, const double* image, double beamEstimate) const;
 	void determineBeamSize(double& bMaj, double& bMin, double& bPA, const double* image, double theoreticBeam) const;
+	double minTheoreticalBeamSize(const ImagingTable& table) const;
 	
 	void makeBeam();
 	

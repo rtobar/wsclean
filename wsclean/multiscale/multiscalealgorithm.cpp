@@ -302,8 +302,7 @@ void MultiScaleAlgorithm::initializeScaleInfo()
 		{
 			size_t scaleIndex = 0;
 			double scale = _beamSizeInPixels * 2.0;
-			while(scale < std::min(_width, _height)*0.5)
-			{
+			do {
 				_scaleInfos.push_back(ScaleInfo());
 				ScaleInfo& newEntry = _scaleInfos.back();
 				if(scaleIndex == 0)
@@ -314,7 +313,7 @@ void MultiScaleAlgorithm::initializeScaleInfo()
 				
 				scale *= 2.0;
 				++scaleIndex;
-			}
+			} while(scale < std::min(_width, _height)*0.5);
 		}
 		else {
 			std::sort(_manualScaleList.begin(), _manualScaleList.end());

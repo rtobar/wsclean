@@ -635,6 +635,19 @@ bool WSClean::selectChannels(MSSelection& selection, size_t msIndex, size_t data
 	}
 }
 
+double WSClean::minTheoreticalBeamSize(const ImagingTable& table) const
+{
+	double beam = 0.0;
+	for(size_t i=0; i!=table.EntryCount(); ++i)
+	{
+		const ImagingTableEntry& e = table[i];
+		const OutputChannelInfo& info = _infoPerChannel[e.outputChannelIndex];
+		if(std::isfinite(info.theoreticBeamSize) && (info.theoreticBeamSize < beam || beam == 0.0))
+			beam = info.theoreticBeamSize;
+	}
+	return beam;
+}
+
 void WSClean::runIndependentGroup(ImagingTable& groupTable)
 {
 	WSCFitsWriter writer(createWSCFitsWriter(groupTable.Front(), false));
@@ -651,7 +664,7 @@ void WSClean::runIndependentGroup(ImagingTable& groupTable)
 		runFirstInversion(entry);
 	}
 	
-	_deconvolution.InitializeDeconvolutionAlgorithm(groupTable, *_settings.polarizations.begin(), &_imageAllocator, _settings.trimmedImageWidth, _settings.trimmedImageHeight, _settings.pixelScaleX, _settings.pixelScaleY, _settings.channelsOut, _gridder->BeamSize(), _settings.threadCount);
+	_deconvolution.InitializeDeconvolutionAlgorithm(groupTable, *_settings.polarizations.begin(), &_imageAllocator, _settings.trimmedImageWidth, _settings.trimmedImageHeight, _settings.pixelScaleX, _settings.pixelScaleY, minTheoreticalBeamSize(groupTable), _settings.threadCount);
 
 	if(!_settings.makePSFOnly)
 	{

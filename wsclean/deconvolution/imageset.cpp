@@ -336,7 +336,7 @@ void ImageSet::getLinearIntegratedWithNormalChannels(double* dest) const
 				++addIndex;
 			}
 		}
-		if(_channelsInDeconvolution > 0)
+		if(weightSum > 0.0)
 			multiply(dest, 1.0/weightSum);
 		else
 			assign(dest, 0.0);
