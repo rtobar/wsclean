@@ -33,6 +33,8 @@ public:
 			do {
 				size_t boxWidth  = std::min(prefSize, width);
 				size_t boxHeight = std::min(prefSize, height);
+				if(verbose)
+					std::cout << "Fit initial value:" << beamEst << "\n";
 				fit2DGaussianCentredInBox(image, width, height, beamEst, beamMaj, beamMin, beamPA, boxWidth, boxHeight, verbose);
 				if(verbose)
 					std::cout << "Fit result:" << beamMaj << " x " << beamMin << " px, " << beamPA << " (box was " << boxWidth << " x " << boxHeight << ")\n";
@@ -260,8 +262,6 @@ private:
 		double sx = gsl_vector_get(xvec, 0);
 		double sy = gsl_vector_get(xvec, 1);
 		double beta = gsl_vector_get(xvec, 2);
-		if(beta >= 1.0 || beta <= -1.0)
-			return GSL_EDOM;
 		const size_t width = fitter._width, height = fitter._height;
 		int xMid = width/2, yMid = height/2;
 		double scale = 1.0/fitter._scaleFactor;
@@ -621,7 +621,7 @@ private:
 			double y = yc + (yi - yMid)*scale;
 			for(int xi=0; xi!=int(width); ++xi)
 			{
-				// TODO I night to go over the signs -- ds, dy, dsx, dsy in particular
+				// TODO I need to go over the signs -- ds, dy, dsx, dsy in particular
 				double x = xc + (xi - xMid)*scale;
 				double expTerm = exp(-x*x/(2.0*sx*sx) + beta*x*y/(sx*sy) - y*y/(2.0*sy*sy));
 				double dv = expTerm;
@@ -755,15 +755,23 @@ private:
 		
 		double e1, e2, vec1[2], vec2[2];
 		Matrix2x2::EigenValuesAndVectors(cov, e1, e2, vec1, vec2);
-		ellipseMaj = sqrt(std::fabs(e1)) * sigmaToBeam * _scaleFactor;
-		ellipseMin = sqrt(std::fabs(e2)) * sigmaToBeam * _scaleFactor;
-		if(ellipseMaj < ellipseMin)
+		if(std::isfinite(e1))
 		{
-			std::swap(ellipseMaj, ellipseMin);
-			vec1[0] = vec2[0];
-			vec1[1] = vec2[1];
+			ellipseMaj = sqrt(std::fabs(e1)) * sigmaToBeam * _scaleFactor;
+			ellipseMin = sqrt(std::fabs(e2)) * sigmaToBeam * _scaleFactor;
+			if(ellipseMaj < ellipseMin)
+			{
+				std::swap(ellipseMaj, ellipseMin);
+				vec1[0] = vec2[0];
+				vec1[1] = vec2[1];
+			}
+			ellipsePA = -atan2(vec1[0], vec1[1]);
 		}
-		ellipsePA = -atan2(vec1[0], vec1[1]);
+		else {
+			ellipseMaj = sqrt(std::fabs(sx)) * sigmaToBeam * _scaleFactor;
+			ellipseMin = sqrt(std::fabs(sx)) * sigmaToBeam * _scaleFactor;
+			ellipsePA = 0.0;
+		}
 	}
 	
 	void convertShapeParameters(double s, double& beamSize)

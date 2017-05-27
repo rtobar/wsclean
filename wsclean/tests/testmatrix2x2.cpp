@@ -33,6 +33,16 @@ BOOST_AUTO_TEST_CASE( eigenvalue3 )
 	BOOST_CHECK_CLOSE(e2, -2.0, 1e-6);
 }
 
+BOOST_AUTO_TEST_CASE( eigenvalue4 )
+{
+	double unit[4] = { 0.0, 1.0, -1.0, 0.0 };
+	double e1, e2;
+	Matrix2x2::EigenValues(unit, e1, e2);
+	if(e1 < e2) std::swap(e1, e2);
+	BOOST_CHECK(!std::isfinite(e1));
+	BOOST_CHECK(!std::isfinite(e2));
+}
+
 BOOST_AUTO_TEST_CASE( eigenvector2 )
 {
 	double unit[4] = { 0.0, 1.0, -2.0, -3.0 };
