@@ -35,7 +35,7 @@ void GenericClean::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& modelSet,
 	_allocator.Allocate(width*height, integrated);
 	_allocator.Allocate(_convolutionWidth*_convolutionHeight, scratchA);
 	_allocator.Allocate(_convolutionWidth*_convolutionHeight, scratchB);
-	dirtySet.GetSquareIntegrated(integrated.data(), scratchA.data());
+	dirtySet.GetLinearIntegrated(integrated.data());
 	size_t componentX=0, componentY=0;
 	double maxValue = findPeak(integrated.data(), scratchA.data(), componentX, componentY);
 	Logger::Info << "Initial peak: " << peakDescription(integrated.data(), componentX, componentY) << '\n';
