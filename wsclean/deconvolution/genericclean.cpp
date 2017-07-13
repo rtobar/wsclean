@@ -73,7 +73,7 @@ void GenericClean::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& modelSet,
 		
 		_iterationNumber = clarkLoop.CurrentIteration();
 		
-		Logger::Info << "Performed " << (_iterationNumber - startIteration) << " / " << _iterationNumber << " iterations with Clark optimization in this major iteration.\n";
+		Logger::Info << "Performed " << _iterationNumber << " iterations in total, " << (_iterationNumber - startIteration) << " in this major iteration with Clark optimization.\n";
 		
 		for(size_t imageIndex=0; imageIndex!=dirtySet.size(); ++imageIndex)
 		{

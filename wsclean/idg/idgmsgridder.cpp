@@ -287,12 +287,12 @@ void IdgMsGridder::predictCalcThreadFunction()
 			std::cout << "computed " << available_row_ids.size() << " rows" << std::endl;
 			for(auto i : available_row_ids)
 			{
-				size_t rowid(i.first);
-				std::complex<float>* dataptr(i.second);
-				casacore::Array<std::complex<float>> modeldataArray(shape, dataptr, casacore::SHARE);
-
-				modelColumn.put(idToMSRow[rowid], modeldataArray);
-//				_outputProvider->WriteModel(i.first, i.second);
+				//size_t rowid(i.first);
+				//std::complex<float>* dataptr(i.second);
+				//casacore::Array<std::complex<float>> modeldataArray(shape, dataptr, casacore::SHARE);
+				//modelColumn.put(idToMSRow[rowid], modeldataArray);
+				
+				_outputProvider->WriteModel(i.first, i.second);
 			}
 			_bufferset->get_degridder(row.dataDescId)->finished_reading();
 			

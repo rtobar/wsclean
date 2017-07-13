@@ -15,9 +15,9 @@ public:
 	virtual double PhaseCentreDL() const final override { return _phaseCentreDL; }
 	virtual double PhaseCentreDM() const final override { return _phaseCentreDM; }
 	virtual bool HasDenormalPhaseCentre() const final override { return _denormalPhaseCentre; }
-	virtual double ImageWeight() const final override { return _totalWeight*0.5; }
+	virtual double ImageWeight() const final override { return _totalWeight*2.0; }
 	virtual double NormalizationFactor() const final override {
-		return NormalizeForWeighting() ? _totalWeight*0.5 : 1.0;
+		return NormalizeForWeighting() ? _totalWeight*2.0 : 1.0;
 	}
 	virtual double BeamSize() const final override { return _theoreticalBeamSize; }
 	

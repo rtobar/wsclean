@@ -57,9 +57,9 @@ public:
 		
 		// There are two factors of 2 involved: one coming from
 		// SingleFT(), and one from the fact that normF excludes a factor of two.
-		dirty *= 4.0 * normF * nVis / (2.0*sqrt(width * height) * vwSum);
-		psf *= 4.0 * normF * nVis / (2.0*sqrt(width * height) * vwSum);
-		uvCovPsf *= 4.0 * normFUVC * nVisUVC / (2.0*sqrt(width * height) * vwSumUVC);
+		dirty *= normF * nVis / (2.0*sqrt(width * height) * vwSum);
+		psf *= normF * nVis / (2.0*sqrt(width * height) * vwSum);
+		uvCovPsf *= normFUVC * nVisUVC / (2.0*sqrt(width * height) * vwSumUVC);
 		FFTResampler fft(width, height, width, height, 1, false);
 		fft.SingleFT(dirty.data(), realUV.data(), imagUV.data());
 		fft.SingleFT(psf.data(), realPsfUV.data(), imagPsfUV.data());

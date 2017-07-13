@@ -92,8 +92,10 @@ class ModelComponent
 			}
 				s << "\n    position "
 					<< RaDecCoord::RAToString(_posRA) << ' '
-					<< RaDecCoord::DecToString(_posDec) << '\n'
-					<< _sed->ToString() << "  }\n";
+					<< RaDecCoord::DecToString(_posDec) << '\n';
+			if(_sed)
+				s << _sed->ToString();
+			s << "  }\n";
 			return s.str();
 		}
 		

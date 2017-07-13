@@ -167,6 +167,7 @@ public:
 	std::string ToString() const
 	{
 		std::ostringstream s;
+		s.precision(15);
 		for(FluxMap::const_iterator i=_measurements.begin(); i!=_measurements.end(); ++i)
 		{
 			i->second.ToStream(s);

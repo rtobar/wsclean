@@ -1,6 +1,5 @@
 #include "wsclean.h"
 
-#include "binneduvoutput.h"
 #include "imageweightcache.h"
 #include "inversionalgorithm.h"
 #include "logger.h"
@@ -712,6 +711,13 @@ void WSClean::runIndependentGroup(ImagingTable& groupTable)
 								initializeImageWeights(sGroupTable[e]);
 			
 								predict(sGroupTable[e].polarization, currentChannelIndex);
+								clearCurMSProviders();
+							}
+							for(size_t e=0; e!=sGroupTable.EntryCount(); ++e)
+							{
+								prepareInversionAlgorithm(sGroupTable[e].polarization);
+								initializeCurMSProviders(sGroupTable[e]);
+								initializeImageWeights(sGroupTable[e]);
 								
 								imageMainNonFirst(sGroupTable[e].polarization, currentChannelIndex);
 								clearCurMSProviders();

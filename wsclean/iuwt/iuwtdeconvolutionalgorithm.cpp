@@ -838,12 +838,18 @@ void IUWTDeconvolutionAlgorithm::performSubImageFitSingle(IUWTDecomposition& iuw
 				
 				double factor = performSubImageComponentFitBoxed(iuwt, mask, area, subDirty, maskedDirty, psf, psfKernel, boxX1, boxY1, boxX2, boxY2);
 				
+				// if no fittedSubModel was given, we just need to store the factors. Otherwise,
+				// scale the deconvolved model and add it to the contaminated model.
 				if(fittedSubModel != 0)
 				{
-					for(std::vector<ImageAnalysis::Component2D>::const_iterator a=area.begin(); a!=area.end(); ++a)
+					const double integratedFactor = correctionFactors[componentIndex];
+					if(std::isfinite(factor) && std::isfinite(integratedFactor) && integratedFactor != 0.0)
 					{
-						size_t index = a->x + a->y*width;
-						fittedSubModel[index] += structureModel[index]*factor/correctionFactors[componentIndex];
+						for(std::vector<ImageAnalysis::Component2D>::const_iterator a=area.begin(); a!=area.end(); ++a)
+						{
+							size_t index = a->x + a->y*width;
+							fittedSubModel[index] += structureModel[index]*factor/integratedFactor;
+						}
 					}
 					++componentIndex;
 				}
