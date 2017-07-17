@@ -19,7 +19,7 @@ enum GridModeEnum {
 	/** Interpolate with a rectangular window. This will give the sharpest
 		* transition at the edge of the image, so will maximally attenuate objects
 		* just outside the image. However, objects further from the edge will not be
-		* as much attenuated compared to the KB window, which has much
+		* as much attenuated compared to the KB window, which has much deeper
 		* sidelobes further out.
 		*/
 	RectangularKernel

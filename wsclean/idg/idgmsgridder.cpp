@@ -269,9 +269,9 @@ void IdgMsGridder::predictCalcThreadFunction()
 	// read the first sample, exit if none is there
 	if (!_predictionCalcLane.read(row)) return;
 	
-	casacore::MeasurementSet ms = _outputProvider->MS();
-	casacore::ArrayColumn<casacore::Complex> modelColumn(ms, casacore::MS::columnName(casacore::MSMainEnums::MODEL_DATA));
-	const casacore::IPosition shape(modelColumn.shape(0));
+	//casacore::MeasurementSet ms = _outputProvider->MS();
+	//casacore::ArrayColumn<casacore::Complex> modelColumn(ms, casacore::MS::columnName(casacore::MSMainEnums::MODEL_DATA));
+	//const casacore::IPosition shape(modelColumn.shape(0));
 	vector<size_t> idToMSRow;
 	_outputProvider->MakeIdToMSRowMapping(idToMSRow);
 
