@@ -8,7 +8,7 @@
 class UnavailableGridder : public MSGridderBase
 {
 public:
-	UnavailableGridder() { doThrow(); }
+	UnavailableGridder(const WSCleanSettings&) { doThrow(); }
 	
 	virtual ~UnavailableGridder() { doThrow(); }
 	
