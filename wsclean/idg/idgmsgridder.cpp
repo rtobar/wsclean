@@ -94,8 +94,7 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 
 	_bufferset = std::unique_ptr<idg::api::BufferSet>(idg::api::BufferSet::create(
 		_proxyType, _buffersize, bands, nStations, 
-		width, _actualPixelSizeX, max_w, idg::api::BufferSetType::gridding));
-	_bufferset->set_max_nr_w_layers(_max_nr_w_layers);
+		width, _actualPixelSizeX, max_w, _max_nr_w_layers, idg::api::BufferSetType::gridding));
 	
 	casacore::ScalarColumn<int> antenna1Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA1));
 	casacore::ScalarColumn<int> antenna2Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA2));
@@ -220,8 +219,7 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 
 	_bufferset = std::unique_ptr<idg::api::BufferSet>(idg::api::BufferSet::create(
 		_proxyType, _buffersize, bands, nr_stations, 
-		width, _actualPixelSizeX, max_w, idg::api::BufferSetType::degridding));
-	_bufferset->set_max_nr_w_layers(_max_nr_w_layers);
+		width, _actualPixelSizeX, max_w, _max_nr_w_layers, idg::api::BufferSetType::degridding));
 	_bufferset->set_image(_image.data());
 
 	casacore::ScalarColumn<int> antenna1Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA1));
