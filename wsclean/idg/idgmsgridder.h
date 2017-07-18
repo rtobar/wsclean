@@ -16,7 +16,7 @@
 class IdgMsGridder : public MSGridderBase
 {
 public:
-	IdgMsGridder();
+	IdgMsGridder(const class WSCleanSettings& settings);
 	
 	virtual ~IdgMsGridder();
 	
@@ -70,6 +70,7 @@ private:
 	ao::lane<IDGRowForWriting> _predictionWriteLane;
 	MSProvider* _outputProvider;
 	MultiBandData _selectedBands;
+	const WSCleanSettings& _settings;
 };
 
 void init_optimal_taper_1D(int subgridsize, int gridsize, float kernelsize, float padding, float* taper_subgrid, float* taper_grid);

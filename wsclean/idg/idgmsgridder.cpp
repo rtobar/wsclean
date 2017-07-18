@@ -11,12 +11,14 @@
 #include <boost/thread/thread.hpp>
 
 #include "../wsclean/logger.h"
+#include "../wsclean/wscleansettings.h"
 
-IdgMsGridder::IdgMsGridder() :
+IdgMsGridder::IdgMsGridder(const WSCleanSettings& settings) :
 	_inversionLane(1024),
 	_predictionCalcLane(1024),
 	_predictionWriteLane(1024),
-	_outputProvider(nullptr)
+	_outputProvider(nullptr),
+	_settings(settings)
 { 
 	Logger::Info << "number of MS: " << MeasurementSetCount() << "\n";;
 }
@@ -145,7 +147,7 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 	// TODO needs to add, not replace, because gridMeasurementSet is called in a loop over measurement sets
 	_bufferset->finished();
 	_bufferset->get_image(_image.data());
-	//_bufferset.reset();
+	_bufferset.reset();
 }
 
 void IdgMsGridder::Predict(double* image)
@@ -161,16 +163,9 @@ void IdgMsGridder::Predict(double* image)
 	for(size_t i=0; i != width * height; ++i)
 		_image[i + polIndex*width*height] = image[i];
 
-	// Stokes V is always the last requested pol. So, only when Stokes V
-	// is requested, do the actual prediction. Since all pols are predicted at once by IDG,
-	// when Stokes I/Q/U prediction is requested, one waits until V is also predicted.
-	// Stokes V is always requested last
-	
-	// !! DOES NOT WORK because a new IdgMsGridder object is created for each polarization 
-	// (when wsclean is called with -predict option, not sure about predict step while cleaning)
-
-	// So now the  actual predict can happen
-	if (Polarization() == Polarization::StokesI)
+	// Stokes V is the last requested pol, unless only Stokes I is imaged. Only when the last
+	// polarization is requested, do the actual prediction.
+	if (Polarization() == Polarization::StokesV || (Polarization() == Polarization::StokesI && _settings.polarizations.size()==1))
 	{
 		// Do actual predict
 		std::vector<MSData> msDataVector;

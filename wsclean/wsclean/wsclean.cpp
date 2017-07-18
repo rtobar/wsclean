@@ -453,7 +453,7 @@ void WSClean::RunClean()
 			initializeMFSImageWeights();
 		
 		if(_settings.useIDG)
-			_gridder.reset(new IdgMsGridder());
+			_gridder.reset(new IdgMsGridder(_settings));
 		else
 			_gridder.reset(new WSMSGridder(&_imageAllocator, _settings.threadCount, _settings.memFraction, _settings.absMemLimit));
 		
@@ -576,7 +576,7 @@ void WSClean::RunPredict()
 		if(_doReorder) performReordering(true);
 		
 		if(_settings.useIDG)
-			_gridder.reset(new IdgMsGridder());
+			_gridder.reset(new IdgMsGridder(_settings));
 		else
 			_gridder.reset(new WSMSGridder(&_imageAllocator, _settings.threadCount, _settings.memFraction, _settings.absMemLimit));
 	

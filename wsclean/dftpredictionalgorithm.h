@@ -8,6 +8,7 @@
 #include "wsclean/imagebufferallocator.h"
 #include "lofar/lbeamevaluator.h"
 
+#include <cmath>
 #include <vector>
 #include <complex>
 
