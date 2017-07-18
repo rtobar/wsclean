@@ -1,5 +1,6 @@
 #ifndef DFT_PREDICTION_ALGORITHM_H
 #define DFT_PREDICTION_ALGORITHM_H
+
 #include "banddata.h"
 #include "matrix2x2.h"
 #include "polarization.h"
@@ -98,8 +99,9 @@ private:
 		double sigmaMin = minorAxis / (2.0L * sqrtl(2.0L * logl(2.0L)));
 		// Position angle is angle from North:
 		// (TODO this and next statements can be optimized to remove add)
-		double paSin, paCos;
-		sincos(positionAngle+0.5*M_PI, &paSin, &paCos);
+		double
+			paSin = std::sin(positionAngle+0.5*M_PI),
+			paCos = std::cos(positionAngle+0.5*M_PI);
 		// Make rotation matrix
 		long double transf[4];
 		transf[0] = paCos;
