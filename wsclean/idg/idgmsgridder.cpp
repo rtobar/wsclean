@@ -366,8 +366,8 @@ void IdgMsGridder::readConfiguration()
 	po::options_description desc("Options"); 
 	desc.add_options() 
 	("proxy", "idg proxy")
-	("max_nr_w_layers", "")
-	("buffersize", ""); 
+	("max_nr_w_layers", po::value<int>(), "")
+	("buffersize", po::value<int>(), ""); 
 
 	po::variables_map vm;
 	std::cout << "trying to open config file" << std::endl;
