@@ -88,7 +88,9 @@ void ModelRenderer::renderGaussianComponent(double* imageData, size_t imageWidth
 	// Make rotation matrix
 	long double transf[4];
 	// Position angle is angle from North: 
-	sincosl(gausPA+0.5*M_PI, &transf[2], &transf[0]);
+	long double angle = gausPA+0.5*M_PI;
+	transf[2] = sin(angle);
+	transf[0] = cos(angle);
 	transf[1] = -transf[2];
 	transf[3] = transf[0];
 	double sigmaMax = std::max(std::fabs(sigmaMaj * transf[0]), std::fabs(sigmaMaj * transf[1]));
@@ -179,7 +181,9 @@ void ModelRenderer::Restore(double* imageData, const double* modelData, size_t i
 		// Make rotation matrix
 		long double transf[4];
 		// Position angle is angle from North: 
-		sincosl(beamPA+0.5*M_PI, &transf[2], &transf[0]);
+		long double angle = beamPA+0.5*M_PI;
+		transf[2] = sin(angle);
+		transf[0] = cos(angle);
 		transf[1] = -transf[2];
 		transf[3] = transf[0];
 		double sigmaMax = std::max(std::fabs(sigmaMaj * transf[0]), std::fabs(sigmaMaj * transf[1]));

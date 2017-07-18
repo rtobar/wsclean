@@ -6,6 +6,7 @@
 #include "noisemsrowprovider.h"
 
 #include "../progressbar.h"
+#include "../system.h"
 
 #include "../wsclean/logger.h"
 #include "../wsclean/wscleansettings.h"
@@ -16,7 +17,6 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <string.h>
 
 #include <cstdio>
 #include <fstream>
@@ -69,10 +69,7 @@ PartitionedMS::PartitionedMS(const Handle& handle, size_t partIndex, Polarizatio
 			_modelFileMap = reinterpret_cast<char*>( mmap(NULL, length, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_NORESERVE, _fd, 0) );
 			if(_modelFileMap == MAP_FAILED)
 			{
-				int errsv = errno;
-				char buffer[1024];
-				const char* msg = strerror_r(errsv, buffer, 1024); 
-				
+				std::string msg = System::StrError(errno); 
 				_modelFileMap = 0;
 				throw std::runtime_error(std::string("Error creating memory map to temporary model file: mmap() returned MAP_FAILED with error message: ") + msg);
 			}

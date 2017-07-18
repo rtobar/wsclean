@@ -266,8 +266,9 @@ void DFTPredictionAlgorithm::predict(MC2x2& dest, double u, double v, double w, 
 {
 	double l = component.L(), m = component.M(), lmsqrt = component.LMSqrt();
 	double angle = 2.0*M_PI*(u*l + v*m + w*(lmsqrt-1.0));
-	double sinangleOverLMS, cosangleOverLMS;
-	sincos(angle, &sinangleOverLMS, &cosangleOverLMS);
+	double
+		sinangleOverLMS = sin(angle),
+		cosangleOverLMS = cos(angle);
 	MC2x2 appFlux;
 	if(_hasBeam)
 	{

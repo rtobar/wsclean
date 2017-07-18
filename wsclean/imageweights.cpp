@@ -191,7 +191,7 @@ void ImageWeights::FinishGridding()
 			for(ao::uvector<double>::const_iterator i=_grid.begin(); i!=_grid.end(); ++i)
 				avgW += *i * *i;
 			avgW /= _totalSum;
-			double numeratorSqrt = 5.0 * exp10(-_weightMode.BriggsRobustness());
+			double numeratorSqrt = 5.0 * pow(10.0, -_weightMode.BriggsRobustness());
 			double sSq = numeratorSqrt*numeratorSqrt / avgW;
 			for(ao::uvector<double>::iterator i=_grid.begin(); i!=_grid.end(); ++i)
 			{

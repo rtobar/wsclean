@@ -706,9 +706,10 @@ void WStackingGridder::projectOnImageAndCorrect(const std::complex<double> *sour
 			size_t xSrc = x + _width / 2;
 			if(xSrc >= _width) xSrc -= _width;
 			
-			double rad = twoPiW * *sqrtLMIter;
-			double s, c;
-			sincos(rad, &s, &c);
+			double
+				rad = twoPiW * *sqrtLMIter,
+				s = sin(rad),
+				c = cos(rad);
 			/*std::complex<double> val = std::complex<double>(
 				source->real() * c - source->imag() * s,
 				source->real() * s + source->imag() * c
@@ -780,9 +781,10 @@ void WStackingGridder::copyImageToLayerAndInverseCorrect(std::complex<double> *d
 			//size_t xSrc = x + _width / 2;
 			//if(xSrc >= _width) xSrc -= _width;
 			
-			double rad = twoPiW * *sqrtLMIter;
-			double s, c;
-			sincos(rad, &s, &c);
+			double
+				rad = twoPiW * *sqrtLMIter,
+				s = sin(rad),
+				c = cos(rad);
 			double realVal = dataReal[xDest + yDest*_width];
 			if(IsComplexImpl)
 			{

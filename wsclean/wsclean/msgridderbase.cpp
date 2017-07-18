@@ -388,9 +388,9 @@ void MSGridderBase::rotateVisibilities(const BandData& bandData, double shiftFac
 	for(unsigned ch=0; ch!=bandData.ChannelCount(); ++ch)
 	{
 		const double wShiftRad = shiftFactor / bandData.ChannelWavelength(ch);
-		double rotSinD, rotCosD;
-		sincos(wShiftRad, &rotSinD, &rotCosD);
-		float rotSin = rotSinD, rotCos = rotCosD;
+		float
+			rotSin = sin(wShiftRad),
+			rotCos = cos(wShiftRad);
 		std::complex<float> v = *dataIter;
 		*dataIter = std::complex<float>(
 			v.real() * rotCos  -  v.imag() * rotSin,

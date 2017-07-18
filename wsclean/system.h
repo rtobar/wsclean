@@ -6,6 +6,10 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sched.h>
+#include <string.h>
+
+#include <stdexcept>
+#include <string>
 
 class System
 {
@@ -33,6 +37,31 @@ class System
 
 			return count;
 #endif
+		}
+		
+	private:
+		static char* handle_strreturn(int value)
+		{
+			if(value != 0)
+				throw std::runtime_error("strerror_r() reported an error");
+			return 0;
+		}
+		static char* handle_strreturn(char* value)
+		{
+			return value;
+		}
+	public:
+		static std::string StrError(int errnum)
+		{
+			// Because strerror_r() has different return values on different platforms,
+			// two overloads of handle_strerror are used to make this compile and work
+			// in either case of int or char*.
+			char buffer[1024];
+			char* ret = handle_strreturn(strerror_r(errnum, buffer, 1024));
+			if(ret == 0)
+				return std::string(buffer);
+			else
+				return std::string(ret);
 		}
 };
 
