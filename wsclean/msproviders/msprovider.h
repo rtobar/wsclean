@@ -96,7 +96,7 @@ protected:
 	 */
 	static bool openWeightSpectrumColumn(casacore::MeasurementSet& ms, std::unique_ptr<casacore::ROArrayColumn<float>>& weightColumn, const casacore::IPosition& dataColumnShape);
 	
-	static void expandScalarWeights(const casa::Array<float>& weightScalarArray, casa::Array<float>& weightSpectrumArray)
+	static void expandScalarWeights(const casacore::Array<float>& weightScalarArray, casacore::Array<float>& weightSpectrumArray)
 	{
 		casacore::Array<float>::const_contiter src = weightScalarArray.cbegin();
 		for(casacore::Array<float>::contiter i=weightSpectrumArray.cbegin(); i!=weightSpectrumArray.cend(); ++i)

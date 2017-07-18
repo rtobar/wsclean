@@ -42,7 +42,7 @@ MSGridderBase::MSGridderBase() :
 {
 }
 
-void MSGridderBase::GetPhaseCentreInfo(casa::MeasurementSet& ms, size_t fieldId, double& ra, double& dec, double& dl, double& dm)
+void MSGridderBase::GetPhaseCentreInfo(casacore::MeasurementSet& ms, size_t fieldId, double& ra, double& dec, double& dl, double& dm)
 {
 	casacore::MSAntenna aTable = ms.antenna();
 	size_t antennaCount = aTable.nrow();
@@ -78,7 +78,7 @@ void MSGridderBase::initializePhaseCentre(casacore::MeasurementSet& ms, size_t f
 		Logger::Info << "Set has denormal phase centre: dl=" << _phaseCentreDL << ", dm=" << _phaseCentreDM << '\n';
 }
 
-void MSGridderBase::initializeBandData(casa::MeasurementSet& ms, MSGridderBase::MSData& msData)
+void MSGridderBase::initializeBandData(casacore::MeasurementSet& ms, MSGridderBase::MSData& msData)
 {
 	msData.bandData = MultiBandData(ms.spectralWindow(), ms.dataDescription());
 	if(Selection(msData.msIndex).HasChannelRange())

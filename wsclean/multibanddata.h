@@ -160,7 +160,7 @@ class MultiBandData
 		
 		size_t GetBandIndex(size_t dataDescId) const { return _dataDescToBand[dataDescId]; }
 		
-		std::set<size_t> GetUsedDataDescIds(casa::MeasurementSet& mainTable) const;
+		std::set<size_t> GetUsedDataDescIds(casacore::MeasurementSet& mainTable) const;
 		
 	private:
 		std::vector<size_t> _dataDescToBand;

@@ -36,6 +36,8 @@ void WSCleanSettings::Validate() const
 		{
 			throw std::runtime_error("When using IDG, it is only possible to either image Stokes I or to image all 4 Stokes polarizations: use -pol i or -pol iquv");
 		}
+		if(allStokes && !joinedPolarizationCleaning && deconvolutionIterationCount!=0)
+			throw std::runtime_error("Cleaning IDG images with multiple polarizations is only possible in joined polarization mode");
 	}
 	
 	if(baselineDependentAveragingInWavelengths != 0.0)

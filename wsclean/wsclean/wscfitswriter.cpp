@@ -19,7 +19,7 @@ WSCFitsWriter::WSCFitsWriter(const ImagingTableEntry& entry, bool isImaginary, c
 		setDeconvolutionResultKeywords(deconvolution.GetAlgorithm().IterationNumber(), majorIterationNr);
 }
 
-WSCFitsWriter::WSCFitsWriter(const ImagingTableEntry& entry, PolarizationEnum polarization, bool isImaginary, const WSCleanSettings& settings, const class Deconvolution& deconvolution, size_t majorIterationNr, const MSGridderBase& gridder, const std::string& commandLine, const OutputChannelInfo& channelInfo)
+WSCFitsWriter::WSCFitsWriter(const ImagingTableEntry& entry, PolarizationEnum polarization, bool isImaginary, const WSCleanSettings& settings, const Deconvolution& deconvolution, size_t majorIterationNr, const MSGridderBase& gridder, const std::string& commandLine, const OutputChannelInfo& channelInfo)
 {
 	_filenamePrefix = ImageFilename::GetPrefix(settings, polarization, entry.outputChannelIndex, entry.outputIntervalIndex, isImaginary);
 	setGridderKeywords(settings, gridder);

@@ -14,7 +14,7 @@ AveragingMSRowProvider::AveragingMSRowProvider(double nWavelengthsAveraging, con
 	casacore::ROArrayColumn<double> positionColumn(antennaTable, casacore::MSAntenna::columnName(casacore::MSAntennaEnums::POSITION));
 	std::vector<Pos> positions(_nAntennae);
 
-	casa::Array<double> posArr(casacore::IPosition(1, 3));
+	casacore::Array<double> posArr(casacore::IPosition(1, 3));
 	for(size_t i=0; i!=_nAntennae; ++i)
 	{
 		positionColumn.get(i, posArr);

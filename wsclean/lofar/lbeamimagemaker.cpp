@@ -113,7 +113,7 @@ void LBeamImageMaker::makeBeamForMS(PrimaryBeamImageSet& beamImages, MSProvider&
 		throw std::runtime_error("Set has multiple fields");
 	_delayDir = delayDirColumn(0);
 	
-	casacore::ROScalarMeasColumn<casa::MDirection> referenceDirColumn(fieldTable, casacore::MSField::columnName(casacore::MSFieldEnums::REFERENCE_DIR));
+	casacore::ROScalarMeasColumn<casacore::MDirection> referenceDirColumn(fieldTable, casacore::MSField::columnName(casacore::MSFieldEnums::REFERENCE_DIR));
 	_referenceDir = referenceDirColumn(0);
 	
 	if(fieldTable.tableDesc().isColumn("LOFAR_TILE_BEAM_DIR")) {

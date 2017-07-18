@@ -18,7 +18,7 @@ IdgMsGridder::IdgMsGridder() :
 	_predictionWriteLane(1024),
 	_outputProvider(nullptr)
 { 
-    Logger::Info << "number of MS: " << MeasurementSetCount() << "\n";;
+	Logger::Info << "number of MS: " << MeasurementSetCount() << "\n";;
 }
 
 IdgMsGridder::~IdgMsGridder()
@@ -27,7 +27,7 @@ IdgMsGridder::~IdgMsGridder()
 void IdgMsGridder::Invert()
 {
 	const size_t width = TrimWidth(), height = TrimHeight();
-    
+	
 	// Stokes I is always the first requested pol. So, only when Stokes I
 	// is requested, do the actual inversion. Since all pols are produced at once by IDG,
 	// when Stokes Q/U/V is requested, the result of earlier gridding is returned.
@@ -40,26 +40,27 @@ void IdgMsGridder::Invert()
 		
 		resetVisibilityCounters();
 
-        _image.resize(4 * width * height);
-        _image.assign(4 * width * height, 0.0);
-
+		_image.assign(4 * width * height, 0.0);
+		
 		for(size_t i=0; i!=MeasurementSetCount(); ++i)
 		{
-            // Adds the gridding result to _image member
+			// Adds the gridding result to _image member
 			gridMeasurementSet(msDataVector[i]);
 		}
 		
-        std::cout << "total weight: " << totalWeight() << std::endl;
-
-        // Normalize by total weight
-
-        for(size_t ii=0; ii != 4 * width * height; ++ii)
-        {
-            _image[ii] = _image[ii]/totalWeight();
-        }
-
-        // result is now in _image member
-        // Can be accessed by subsequent calls to ImageRealResult()
+		std::cout << "total weight: " << totalWeight() << std::endl;
+		
+		
+		// Normalize by total weight
+		
+		for(size_t ii=0; ii != 4 * width * height; ++ii)
+		{
+			_image[ii] = _image[ii]/totalWeight();
+		}
+		
+		// result is now in _image member
+		// Can be accessed by subsequent calls to ImageRealResult()
+		
 	}
 	else if(_image.empty()) {
 		throw std::runtime_error("IdgMsGridder::Invert() was called out of sequence");
@@ -117,20 +118,23 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 		msData.msProvider->ReadMeta(uInMeters, vInMeters, wInMeters, dataDescId);
 		const BandData& curBand(_selectedBands[dataDescId]);
 		IDGInversionRow rowData;
-        
+		
 		rowData.data = new std::complex<float>[curBand.ChannelCount()*4];
-        std::complex<float> *data4 = new std::complex<float>[curBand.ChannelCount()*4];
+		std::complex<float> *data4 = new std::complex<float>[curBand.ChannelCount()*4];
 
 		rowData.uvw[0] = uInMeters;
-		rowData.uvw[1] = -vInMeters;  // DEBUG vdtol, flip axis
-		rowData.uvw[2] = -wInMeters;  //
-        
+		rowData.uvw[1] = vInMeters;
+		rowData.uvw[2] = wInMeters;
+		
 		rowData.antenna1 = antenna1Col(rowIndex);
 		rowData.antenna2 = antenna2Col(rowIndex);
 		rowData.timeIndex = timeIndex;
 		rowData.dataDescId = dataDescId;
 		
 		readAndWeightVisibilities<4>(*msData.msProvider, rowData, curBand, weightBuffer.data(), modelBuffer.data(), isSelected.data());
+
+		rowData.uvw[1] = -vInMeters;  // DEBUG vdtol, flip axis
+		rowData.uvw[2] = -wInMeters;  //
 
 		_bufferset->get_gridder(rowData.dataDescId)->grid_visibilities(timeIndex, antenna1Col(rowIndex), antenna2Col(rowIndex), rowData.uvw, rowData.data);
 		delete[] data4;
@@ -141,7 +145,7 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 	// TODO needs to add, not replace, because gridMeasurementSet is called in a loop over measurement sets
 	_bufferset->finished();
 	_bufferset->get_image(_image.data());
-	_bufferset.reset();
+	//_bufferset.reset();
 }
 
 void IdgMsGridder::Predict(double* image)
@@ -150,13 +154,12 @@ void IdgMsGridder::Predict(double* image)
 
 	if (Polarization() == Polarization::StokesI)
 	{
-			_image.resize(4 * width * height);
-			_image.assign(4 * width * height, 0.0);
+		_image.assign(4 * width * height, 0.0);
 	}
 
 	size_t polIndex = Polarization::StokesToIndex(Polarization());
 	for(size_t i=0; i != width * height; ++i)
-			_image[i + polIndex*width*height] = image[i];
+		_image[i + polIndex*width*height] = image[i];
 
 	// Stokes V is always the last requested pol. So, only when Stokes V
 	// is requested, do the actual prediction. Since all pols are predicted at once by IDG,
@@ -175,7 +178,7 @@ void IdgMsGridder::Predict(double* image)
 
 		for(size_t i=0; i!=MeasurementSetCount(); ++i)
 		{
-				predictMeasurementSet(msDataVector[i]);
+			predictMeasurementSet(msDataVector[i]);
 		}
 	}
 }
@@ -184,7 +187,8 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 {
 	const size_t width = TrimWidth();
 	const float max_w = msData.maxW;
-	
+
+
 	msData.msProvider->ReopenRW();
 
 	_selectedBands = msData.SelectedBand();
@@ -324,7 +328,7 @@ double* IdgMsGridder::ImageRealResult()
 {
 	const size_t width = TrimWidth(), height = TrimHeight();
 	size_t polIndex = Polarization::StokesToIndex(Polarization());
-	return _image.data() + 	height*width*polIndex;
+	return _image.data() + height*width*polIndex;
 }
 
 double* IdgMsGridder::ImageImaginaryResult()

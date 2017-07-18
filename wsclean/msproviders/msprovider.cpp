@@ -713,7 +713,7 @@ vector<PolarizationEnum> MSProvider::GetMSPolarizations(casacore::MeasurementSet
 	return pols;
 }
 
-bool MSProvider::openWeightSpectrumColumn(casacore::MeasurementSet& ms, std::unique_ptr<casacore::ROArrayColumn<float>>& weightColumn, const casa::IPosition& dataColumnShape)
+bool MSProvider::openWeightSpectrumColumn(casacore::MeasurementSet& ms, std::unique_ptr<casacore::ROArrayColumn<float>>& weightColumn, const casacore::IPosition& dataColumnShape)
 {
 	bool isWeightDefined;
 	if(ms.isColumn(casacore::MSMainEnums::WEIGHT_SPECTRUM))

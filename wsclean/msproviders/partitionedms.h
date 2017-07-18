@@ -133,6 +133,7 @@ private:
 	ao::uvector<std::complex<float>> _modelBuffer;
 	int _fd;
 	PolarizationEnum _polarization;
+	size_t _polarizationCountInFile;
 	
 	struct MetaHeader
 	{
