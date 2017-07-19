@@ -1013,8 +1013,21 @@ int CommandLine::Run(int argc, char* argv[])
 		else if(param == "use-idg")
 		{
 			settings.useIDG = true;
+			settings.smallInversion = false;
 			//settings.polarizations.clear();
 			//settings.polarizations.insert(Polarization::Instrumental);
+		}
+		else if(param == "idg-mode")
+		{
+			++argi;
+			std::string mode = boost::algorithm::to_lower_copy(std::string(argv[argi]));
+			if(mode == "cpu")
+				settings.idgMode = WSCleanSettings::IDG_CPU;
+			else if(mode == "gpu")
+				settings.idgMode = WSCleanSettings::IDG_GPU;
+			else if(mode == "hybrid")
+				settings.idgMode = WSCleanSettings::IDG_HYBRID;
+			else throw std::runtime_error("Unknown IDG mode: " + mode);
 		}
 		else if(param == "no-dirty")
 		{

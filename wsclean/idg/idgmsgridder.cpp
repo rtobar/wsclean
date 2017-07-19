@@ -87,9 +87,7 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 	}
 
 	_bufferset = std::unique_ptr<idg::api::BufferSet>(idg::api::BufferSet::create(
-			idg::api::Type::CPU_OPTIMIZED, 
-//			idg::api::Type::HYBRID_CUDA_CPU_OPTIMIZED,
-			128, bands, nStations, 
+			idgType(), 128, bands, nStations, 
 			width, _actualPixelSizeX, max_w, idg::api::BufferSetType::gridding));
 	
 	casacore::ScalarColumn<int> antenna1Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA1));
@@ -178,6 +176,21 @@ void IdgMsGridder::Predict(double* image)
 	}
 }
 
+idg::api::Type IdgMsGridder::idgType() const
+{
+	switch(_settings.idgMode)
+	{
+		default:
+		case WSCleanSettings::IDG_CPU:
+			return idg::api::Type::CPU_OPTIMIZED;
+		case WSCleanSettings::IDG_GPU:
+			return idg::api::Type::CUDA_GENERIC;
+		case WSCleanSettings::IDG_HYBRID:
+			return idg::api::Type::HYBRID_CUDA_CPU_OPTIMIZED;
+	}
+}
+
+
 void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 {
 	const size_t width = TrimWidth();
@@ -199,9 +212,7 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 	}
 
 	_bufferset = std::unique_ptr<idg::api::BufferSet>(idg::api::BufferSet::create(
-			idg::api::Type::CPU_OPTIMIZED,
-//			idg::api::Type::HYBRID_CUDA_CPU_OPTIMIZED, 
-			128, bands, nr_stations, 
+			idgType(), 128, bands, nr_stations, 
 			width, _actualPixelSizeX, max_w, idg::api::BufferSetType::degridding));
 	_bufferset->set_image(_image.data());
 

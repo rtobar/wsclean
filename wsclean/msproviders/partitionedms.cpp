@@ -79,8 +79,8 @@ PartitionedMS::PartitionedMS(const Handle& handle, size_t partIndex, Polarizatio
 	_weightFile.open(partPrefix+"-w.tmp", std::ios::in);
 	if(!_weightFile.good())
 		throw std::runtime_error("Error opening temporary data file");
-	_weightBuffer.resize(_partHeader.channelCount);
-	_modelBuffer.resize(_partHeader.channelCount);
+	_weightBuffer.resize(_partHeader.channelCount * _polarizationCountInFile);
+	_modelBuffer.resize(_partHeader.channelCount * _polarizationCountInFile);
 }
 
 PartitionedMS::~PartitionedMS()
@@ -482,7 +482,7 @@ PartitionedMS::Handle PartitionedMS::Partition(const string& msPath, const std::
 	header.hasModel = includeModel;
 	header.hasWeights = true;
 	fileIndex = 0;
-	dataBuffer.assign(channelCount, 0.0);
+	dataBuffer.assign(channelCount * polarizationsPerFile, 0.0);
 	std::unique_ptr<ProgressBar> progress2;
 	if(includeModel && !initialModelRequired)
 		progress2.reset(new ProgressBar("Initializing model visibilities"));
