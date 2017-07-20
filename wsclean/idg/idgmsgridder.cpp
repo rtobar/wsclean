@@ -28,6 +28,8 @@ IdgMsGridder::~IdgMsGridder()
 
 void IdgMsGridder::Invert()
 {
+	// TODO IDG should make an image the size of ImageWidth(), which should later
+	// be trimmed to the trim dimensions. For now:
 	const size_t width = TrimWidth(), height = TrimHeight();
 	
 	// Stokes I is always the first requested pol. So, only when Stokes I
@@ -189,7 +191,6 @@ idg::api::Type IdgMsGridder::idgType() const
 			return idg::api::Type::HYBRID_CUDA_CPU_OPTIMIZED;
 	}
 }
-
 
 void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 {

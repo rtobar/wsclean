@@ -47,6 +47,8 @@ inline std::string FluxDensity::ToNiceString(double valueJansky)
 			str << round(valueJansky*1e8)/100.0 << " µJy";
 		else if(valueJansky >= 1e-9)
 			str << round (valueJansky*1e11)/100.0 << " nJy";
+		else
+			str << valueJansky << " Jy";
 		return str.str();
 	}
 }

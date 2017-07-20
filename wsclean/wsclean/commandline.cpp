@@ -519,23 +519,23 @@ int CommandLine::Run(int argc, char* argv[])
 		}
 		else if(param == "local-rms" || param == "rms-background")
 		{
-			settings.rmsBackground = true;
+			settings.localRMS = true;
 			if(param == "rms-background")
 				deprecated(param, "local-rms");
 		}
 		else if(param == "local-rms-window" || param == "rms-background-window")
 		{
 			++argi;
-			settings.rmsBackground = true;
-			settings.rmsBackgroundWindow = atof(argv[argi]);
+			settings.localRMS = true;
+			settings.localRMSWindow = atof(argv[argi]);
 			if(param == "rms-background-window")
 				deprecated(param, "local-rms-window");
 		}
 		else if(param == "local-rms-image" || param == "rms-background-image")
 		{
 			++argi;
-			settings.rmsBackground = true;
-			settings.rmsBackgroundImage = argv[argi];
+			settings.localRMS = true;
+			settings.localRMSImage = argv[argi];
 			if(param == "rms-background-image")
 				deprecated(param, "local-rms-image");
 		}
@@ -543,11 +543,11 @@ int CommandLine::Run(int argc, char* argv[])
 		{
 			++argi;
 			std::string method = argv[argi];
-			settings.rmsBackground = true;
+			settings.localRMS = true;
 			if(method == "rms")
-				settings.rmsBackgroundMethod = WSCleanSettings::RMSWindow;
+				settings.localRMSMethod = WSCleanSettings::RMSWindow;
 			else if(method == "rms-with-min")
-				settings.rmsBackgroundMethod = WSCleanSettings::RMSAndMinimumWindow;
+				settings.localRMSMethod = WSCleanSettings::RMSAndMinimumWindow;
 			else
 				throw std::runtime_error("Unknown RMS background method specified");
 			if(param == "rms-background-method")
@@ -1012,6 +1012,9 @@ int CommandLine::Run(int argc, char* argv[])
 		}
 		else if(param == "use-idg")
 		{
+#if !defined(HAVE_IDG)
+			throw std::runtime_error("WSClean was not compiled with IDG: to use it, install IDG and recompile WSClean");
+#endif
 			settings.useIDG = true;
 			settings.smallInversion = false;
 			//settings.polarizations.clear();

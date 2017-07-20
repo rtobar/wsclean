@@ -38,6 +38,12 @@ void GenericClean::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& modelSet,
 	dirtySet.GetLinearIntegrated(integrated.data());
 	size_t componentX=0, componentY=0;
 	double maxValue = findPeak(integrated.data(), scratchA.data(), componentX, componentY);
+	if(!std::isfinite(maxValue))
+	{
+		Logger::Info << "No peak found.\n";
+		reachedMajorThreshold = false;
+		return;
+	}
 	Logger::Info << "Initial peak: " << peakDescription(integrated.data(), componentX, componentY) << '\n';
 	double firstThreshold = this->_threshold;
 	double stopGainThreshold = std::fabs(maxValue)*(1.0-this->_mGain);

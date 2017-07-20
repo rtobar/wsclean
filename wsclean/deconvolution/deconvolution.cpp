@@ -55,10 +55,10 @@ void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedM
 		_cleanAlgorithm->SetRMSFactorImage(Image());
 	}
 	else {
-		if(!_settings.rmsBackgroundImage.empty())
+		if(!_settings.localRMSImage.empty())
 		{
 			Image rmsImage(_imgWidth, _imgHeight, *_imageAllocator);
-			FitsReader reader(_settings.rmsBackgroundImage);
+			FitsReader reader(_settings.localRMSImage);
 			reader.Read(rmsImage.data());
 			// Normalize the RMS image
 			stddev = rmsImage.Min();
@@ -66,27 +66,33 @@ void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedM
 			if(stddev <= 0.0)
 				throw std::runtime_error("RMS image can only contain values > 0, but contains values <= 0.0");
 			for(double& value : rmsImage)
-				value = stddev / value;
+			{
+				if(value != 0.0)
+					value = stddev / value;
+			}
 			_cleanAlgorithm->SetRMSFactorImage(std::move(rmsImage));
 		}
-		else if(_settings.rmsBackground)
+		else if(_settings.localRMS)
 		{
 			Image rmsImage;
 			// TODO this should use full beam parameters
-			switch(_settings.rmsBackgroundMethod)
+			switch(_settings.localRMSMethod)
 			{
 				case WSCleanSettings::RMSWindow:
-					RMSImage::Make(rmsImage, integrated, _settings.rmsBackgroundWindow, _beamSize, _beamSize, 0.0, _pixelScaleX, _pixelScaleY);
+					RMSImage::Make(rmsImage, integrated, _settings.localRMSWindow, _beamSize, _beamSize, 0.0, _pixelScaleX, _pixelScaleY);
 					break;
 				case WSCleanSettings::RMSAndMinimumWindow:
-					RMSImage::MakeWithNegativityLimit(rmsImage, integrated, _settings.rmsBackgroundWindow, _beamSize, _beamSize, 0.0, _pixelScaleX, _pixelScaleY);
+					RMSImage::MakeWithNegativityLimit(rmsImage, integrated, _settings.localRMSWindow, _beamSize, _beamSize, 0.0, _pixelScaleX, _pixelScaleY);
 					break;
 			}
 			// Normalize the RMS image relative to the threshold so that Jy remains Jy.
 			stddev = rmsImage.Min();
 			Logger::Info << "Lowest RMS in image: " << FluxDensity::ToNiceString(stddev) << '\n';
 			for(double& value : rmsImage)
-				value = stddev / value;
+			{
+				if(value != 0.0)
+					value = stddev / value;
+			}
 			_cleanAlgorithm->SetRMSFactorImage(std::move(rmsImage));
 		}
 	}

@@ -47,6 +47,9 @@ double ClarkLoop::Run(ImageSet& convolvedResidual, const ao::uvector<const doubl
 		_clarkModel.MakeRMSFactorImage(_rmsFactorImage);
 	Logger::Debug << "Number of components selected > " << _threshold << ": " << _clarkModel.size() << '\n';
 	
+	if(_clarkModel.size() == 0)
+		return std::numeric_limits<double>::quiet_NaN();
+	
 	ao::uvector<double> scratch(_clarkModel.size());
 	double maxValue;
 	size_t maxComponent = _clarkModel.GetMaxComponent(scratch.data(), maxValue, _allowNegativeComponents);

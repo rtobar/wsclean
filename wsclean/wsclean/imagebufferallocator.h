@@ -70,11 +70,11 @@ public:
 				++usedCount;
 				str << "Still used: buffer of " << i->size << '\n';
 			}
-			free(i->ptr);
+			// free(i->ptr); // We leave this allocated, so that e.g. valgrind can diagnose it as well.
 		}
 		if(usedCount != 0)
 		{
-			std::cerr << usedCount << " image buffer(s) were still in use when image buffer allocator was destroyed!\n";
+			std::cerr << usedCount << " image buffer(s) were still in use when image buffer allocator was destroyed!\n" << str.str();
 		}
 	}
 	

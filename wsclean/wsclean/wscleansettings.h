@@ -68,9 +68,9 @@ public:
 	double deconvolutionThreshold, deconvolutionGain, deconvolutionMGain;
 	bool autoDeconvolutionThreshold, autoMask;
 	double autoDeconvolutionThresholdSigma, autoMaskSigma;
-	bool rmsBackground;
-	double rmsBackgroundWindow;
-	enum RMSBackgroundMethod { RMSWindow, RMSAndMinimumWindow } rmsBackgroundMethod;
+	bool localRMS;
+	double localRMSWindow;
+	enum LocalRMSMethod { RMSWindow, RMSAndMinimumWindow } localRMSMethod;
 	bool saveSourceList;
 	size_t deconvolutionIterationCount, majorIterationCount;
 	bool allowNegativeComponents, stopOnNegativeComponents;
@@ -84,7 +84,7 @@ public:
 	
 	double deconvolutionBorderRatio;
 	std::string fitsDeconvolutionMask, casaDeconvolutionMask;
-	std::string rmsBackgroundImage;
+	std::string localRMSImage;
 	bool useMoreSaneDeconvolution, useIUWTDeconvolution, iuwtSNRTest;
 	std::string moreSaneLocation, moreSaneArgs;
 	ao::uvector<double> moreSaneSigmaLevels;
@@ -177,9 +177,9 @@ inline WSCleanSettings::WSCleanSettings() :
 	autoMask(false),
 	autoDeconvolutionThresholdSigma(0.0),
 	autoMaskSigma(0.0),
-	rmsBackground(false),
-	rmsBackgroundWindow(25.0),
-	rmsBackgroundMethod(RMSWindow),
+	localRMS(false),
+	localRMSWindow(25.0),
+	localRMSMethod(RMSWindow),
 	saveSourceList(false),
 	deconvolutionIterationCount(0),
 	majorIterationCount(20),

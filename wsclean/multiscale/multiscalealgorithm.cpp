@@ -28,6 +28,8 @@ MultiScaleAlgorithm::MultiScaleAlgorithm(ImageBufferAllocator& allocator, double
 	_trackPerScaleMasks(false), _usePerScaleMasks(false),
 	_fastSubMinorLoop(true), _trackComponents(false)
 {
+	if(!std::isfinite(_beamSizeInPixels) || _beamSizeInPixels<=0.0)
+		_beamSizeInPixels = 1;
 }
 
 MultiScaleAlgorithm::~MultiScaleAlgorithm()
@@ -115,7 +117,12 @@ void MultiScaleAlgorithm::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& mo
 	
 	size_t scaleWithPeak;
 	findActiveScaleConvolvedMaxima(dirtySet, integratedScratch.data(), scratch.data(), true);
-	sortScalesOnMaxima(scaleWithPeak);
+	if(!selectMaximumScale(scaleWithPeak))
+	{
+		Logger::Warn << "No peak found during multi-scale cleaning! Aborting deconvolution.\n";
+		reachedMajorThreshold = false;
+		return;
+	}
 	
 	double mGainThreshold = std::fabs(_scaleInfos[scaleWithPeak].maxUnnormalizedImageValue * _scaleInfos[scaleWithPeak].biasFactor) * (1.0 - _mGain);
 	const double firstThreshold = std::max(_threshold, mGainThreshold);
@@ -272,7 +279,7 @@ void MultiScaleAlgorithm::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& mo
 		activateScales(scaleWithPeak);
 		
 		findActiveScaleConvolvedMaxima(dirtySet, integratedScratch.data(), scratch.data(), false);
-		sortScalesOnMaxima(scaleWithPeak);
+		selectMaximumScale(scaleWithPeak);
 		
 		Logger::Info << "Iteration " << _iterationNumber << ", scale " << round(_scaleInfos[scaleWithPeak].scale) << " px : " << FluxDensity::ToNiceString(_scaleInfos[scaleWithPeak].maxUnnormalizedImageValue*_scaleInfos[scaleWithPeak].biasFactor) << " at " << _scaleInfos[scaleWithPeak].maxImageValueX << ',' << _scaleInfos[scaleWithPeak].maxImageValueY << '\n';
 	}
@@ -440,7 +447,7 @@ void MultiScaleAlgorithm::findActiveScaleConvolvedMaxima(const ImageSet& imageSe
 	}
 }
 
-void MultiScaleAlgorithm::sortScalesOnMaxima(size_t& scaleWithPeak)
+bool MultiScaleAlgorithm::selectMaximumScale(size_t& scaleWithPeak)
 {
 	// Find max component
 	std::map<double,size_t> peakToScaleMap;
@@ -455,19 +462,14 @@ void MultiScaleAlgorithm::sortScalesOnMaxima(size_t& scaleWithPeak)
 	}
 	if(peakToScaleMap.empty())
 	{
-		Logger::Warn << "No scale found with a peak!\n";
 		scaleWithPeak = size_t(-1);
+		return false;
 	}
 	else {
 		std::map<double,size_t>::const_reverse_iterator mapIter = peakToScaleMap.rbegin();
 		scaleWithPeak = mapIter->second;
+		return true;
 	}
-	//++mapIter;
-	//size_t runnerUp;
-	//if(mapIter != peakToScaleMap.rend())
-	//	runnerUp = mapIter->second;
-	//else
-	//	runnerUp = scaleWithPeak;
 }
 
 void MultiScaleAlgorithm::activateScales(size_t scaleWithLastPeak)
