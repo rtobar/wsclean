@@ -21,7 +21,7 @@ IdgMsGridder::IdgMsGridder(const WSCleanSettings& settings) :
 	_predictionCalcLane(1024),
 	_predictionWriteLane(1024),
 	_outputProvider(nullptr),
-	_settings(settings)
+	_settings(settings),
 	_proxyType(idg::api::Type::CPU_OPTIMIZED),
 	_buffersize(256),
 	_max_nr_w_layers(0)
