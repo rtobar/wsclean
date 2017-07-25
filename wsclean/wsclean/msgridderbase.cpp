@@ -109,6 +109,7 @@ void MSGridderBase::calculateWLimits(MSGridderBase::MSData& msData)
 	msData.maxW = 0.0;
 	msData.minW = 1e100;
 	msData.maxBaselineUVW = 0.0;
+	msData.maxBaselineInM = 0.0;
 	MultiBandData selectedBand = msData.SelectedBand();
 	std::vector<float> weightArray(selectedBand.MaxChannels() * NPolInMSProvider);
 	msData.msProvider->Reset();
@@ -145,6 +146,7 @@ void MSGridderBase::calculateWLimits(MSGridderBase::MSData& msData)
 							msData.maxW = std::max(msData.maxW, fabs(wInL));
 							msData.minW = std::min(msData.minW, fabs(wInL));
 							msData.maxBaselineUVW = std::max(msData.maxBaselineUVW, baselineInM / wavelength);
+							msData.maxBaselineInM = std::max(msData.maxBaselineInM, baselineInM);
 						}
 					}
 				}

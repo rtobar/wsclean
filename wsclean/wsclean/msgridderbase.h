@@ -61,7 +61,7 @@ protected:
 			MultiBandData bandData;
 			size_t startChannel, endChannel;
 			size_t matchingRows, totalRowsProcessed;
-			double minW, maxW, maxBaselineUVW;
+			double minW, maxW, maxBaselineUVW, maxBaselineInM;
 			size_t rowStart, rowEnd;
 		
 			MultiBandData SelectedBand() const { return MultiBandData(bandData, startChannel, endChannel); }
