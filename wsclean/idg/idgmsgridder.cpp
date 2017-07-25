@@ -23,8 +23,7 @@ IdgMsGridder::IdgMsGridder(const WSCleanSettings& settings) :
 	_outputProvider(nullptr),
 	_settings(settings),
 	_proxyType(idg::api::Type::CPU_OPTIMIZED),
-	_buffersize(256),
-	_max_nr_w_layers(0)
+	_buffersize(256)
 {
 	readConfiguration();
 	setIdgType();
@@ -35,8 +34,6 @@ IdgMsGridder::~IdgMsGridder()
 
 void IdgMsGridder::Invert()
 {
-	// TODO IDG should make an image the size of ImageWidth(), which should later
-	// be trimmed to the trim dimensions. For now:
 	const size_t width = TrimWidth(), height = TrimHeight();
 	
 	// Stokes I is always the first requested pol. So, only when Stokes I
@@ -81,6 +78,7 @@ void IdgMsGridder::Invert()
 void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 {
 	const size_t width = TrimWidth();
+	const float max_baseline = msData.maxBaselineInM;
 	const float max_w = msData.maxW;
 	_selectedBands = msData.SelectedBand();
 
@@ -97,7 +95,7 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 
 	_bufferset = std::unique_ptr<idg::api::BufferSet>(idg::api::BufferSet::create(
 		_proxyType, _buffersize, bands, nStations, 
-		width, _actualPixelSizeX, max_w, _max_nr_w_layers, idg::api::BufferSetType::gridding));
+		width, _actualPixelSizeX, max_baseline, max_w, _options, idg::api::BufferSetType::gridding));
 	
 	casacore::ScalarColumn<int> antenna1Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA1));
 	casacore::ScalarColumn<int> antenna2Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA2));
@@ -203,11 +201,12 @@ void IdgMsGridder::setIdgType()
 	}
 }
 
+
 void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 {
 	const size_t width = TrimWidth();
 	const float max_w = msData.maxW;
-
+	const float max_baseline = msData.maxBaselineInM;
 
 	msData.msProvider->ReopenRW();
 
@@ -225,7 +224,7 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 
 	_bufferset = std::unique_ptr<idg::api::BufferSet>(idg::api::BufferSet::create(
 		_proxyType, _buffersize, bands, nr_stations, 
-		width, _actualPixelSizeX, max_w, _max_nr_w_layers, idg::api::BufferSetType::degridding));
+		width, _actualPixelSizeX, max_baseline, max_w, _options, idg::api::BufferSetType::degridding));
 	_bufferset->set_image(_image.data());
 
 	casacore::ScalarColumn<int> antenna1Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA1));
@@ -409,6 +408,6 @@ void IdgMsGridder::readConfiguration()
 	}
 	if (vm.count("max_nr_w_layers")) 
 	{
-		_max_nr_w_layers = vm["max_nr_w_layers"].as<int>();
+		_options["max_nr_w_layers"] = vm["max_nr_w_layers"].as<int>();
 	}
 }
