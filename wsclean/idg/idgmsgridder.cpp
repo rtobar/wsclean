@@ -1,6 +1,7 @@
 #include "idgmsgridder.h"
 
 #include <cmath>
+#include <fstream>
 
 //#include "interface.h"
 //#include "dummygridder.h"
@@ -9,6 +10,8 @@
 #include "../msproviders/msprovider.h"
 
 #include <boost/thread/thread.hpp>
+#include <boost/program_options.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include "../wsclean/logger.h"
 #include "../wsclean/wscleansettings.h"
@@ -18,9 +21,12 @@ IdgMsGridder::IdgMsGridder(const WSCleanSettings& settings) :
 	_predictionCalcLane(1024),
 	_predictionWriteLane(1024),
 	_outputProvider(nullptr),
-	_settings(settings)
-{ 
-	Logger::Info << "number of MS: " << MeasurementSetCount() << "\n";;
+	_settings(settings),
+	_proxyType(idg::api::Type::CPU_OPTIMIZED),
+	_buffersize(256),
+	_max_nr_w_layers(0)
+{
+	readConfiguration();
 }
 
 IdgMsGridder::~IdgMsGridder()
@@ -89,8 +95,8 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 	}
 
 	_bufferset = std::unique_ptr<idg::api::BufferSet>(idg::api::BufferSet::create(
-			idgType(), 128, bands, nStations, 
-			width, _actualPixelSizeX, max_w, idg::api::BufferSetType::gridding));
+		_proxyType, _buffersize, bands, nStations, 
+		width, _actualPixelSizeX, max_w, _max_nr_w_layers, idg::api::BufferSetType::gridding));
 	
 	casacore::ScalarColumn<int> antenna1Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA1));
 	casacore::ScalarColumn<int> antenna2Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA2));
@@ -213,8 +219,8 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 	}
 
 	_bufferset = std::unique_ptr<idg::api::BufferSet>(idg::api::BufferSet::create(
-			idgType(), 128, bands, nr_stations, 
-			width, _actualPixelSizeX, max_w, idg::api::BufferSetType::degridding));
+		_proxyType, _buffersize, bands, nr_stations, 
+		width, _actualPixelSizeX, max_w, _max_nr_w_layers, idg::api::BufferSetType::degridding));
 	_bufferset->set_image(_image.data());
 
 	casacore::ScalarColumn<int> antenna1Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA1));
@@ -355,3 +361,49 @@ bool IdgMsGridder::HasGriddingCorrectionImage() const
 	return false; // For now (TODO)
 }
 
+void IdgMsGridder::readConfiguration()
+{
+	namespace po = boost::program_options; 
+	po::options_description desc("Options"); 
+	desc.add_options() 
+	("proxy", "idg proxy")
+	("max_nr_w_layers", po::value<int>(), "")
+	("buffersize", po::value<int>(), ""); 
+
+	po::variables_map vm;
+	std::cout << "trying to open config file" << std::endl;
+    std::ifstream ifs("idg.conf");
+	if (ifs.fail())
+	{
+		std::cout << "could not open config file" << std::endl;
+	}
+	else
+	{
+		std::cout << "reading config file" << std::endl;
+		try 
+		{ 
+			po::store(po::parse_config_file(ifs, desc), vm);
+		}
+		catch(po::error& e) 
+		{ 
+		} 
+	}
+	if (vm.count("proxy")) 
+	{
+		std::string proxy(vm["proxy"].as<string>());
+		boost::to_lower(proxy);
+		std::cout << "proxy = " << proxy << std::endl;
+		if (proxy == "cpu-optimized") _proxyType = idg::api::Type::CPU_OPTIMIZED;
+		if (proxy == "cpu-reference") _proxyType = idg::api::Type::CPU_REFERENCE;
+		if (proxy == "cuda-generic") _proxyType = idg::api::Type::CUDA_GENERIC;
+		if (proxy == "hybrid-cuda-cpu-optimized") _proxyType = idg::api::Type::HYBRID_CUDA_CPU_OPTIMIZED;
+	}
+	if (vm.count("buffersize")) 
+	{
+		_buffersize = vm["buffersize"].as<int>();
+	}
+	if (vm.count("max_nr_w_layers")) 
+	{
+		_max_nr_w_layers = vm["max_nr_w_layers"].as<int>();
+	}
+}
