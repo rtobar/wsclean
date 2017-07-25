@@ -7,6 +7,8 @@
 
 #include "../uvector.h"
 
+#include <boost/thread/thread.hpp>
+
 /**
  * This class implements a generalized version of Högbom clean. It performs a single-channel
  * or joined cleaning, depending on the number of images provided. It can use the Clark optimization
@@ -24,7 +26,7 @@ private:
 	double _convolutionPadding;
 	bool _useClarkOptimization;
 	
-	double findPeak(const double *image, double* scratch, size_t &x, size_t &y);
+	boost::optional<double> findPeak(const double *image, double* scratch, size_t &x, size_t &y);
 	
 	std::string peakDescription(const double* image, size_t& x, size_t& y);
 	

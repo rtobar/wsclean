@@ -16,7 +16,7 @@
 #include <iostream>
 #include <limits>
 
-double SimpleClean::FindPeakSimple(const double *image, size_t width, size_t height, size_t &x, size_t &y, bool allowNegativeComponents, size_t startY, size_t endY, size_t horizontalBorder, size_t verticalBorder)
+boost::optional<double> SimpleClean::FindPeakSimple(const double *image, size_t width, size_t height, size_t &x, size_t &y, bool allowNegativeComponents, size_t startY, size_t endY, size_t horizontalBorder, size_t verticalBorder)
 {
 	double peakMax = std::numeric_limits<double>::min();
 	size_t peakIndex = width * height;
@@ -32,14 +32,11 @@ double SimpleClean::FindPeakSimple(const double *image, size_t width, size_t hei
 		for(size_t xi=xiStart; xi!=xiEnd; ++xi)
 		{
 			double value = image[index];
-			if(std::isfinite(value))
+			if(allowNegativeComponents) value = std::fabs(value);
+			if(value > peakMax)
 			{
-				if(allowNegativeComponents) value = std::fabs(value);
-				if(value > peakMax)
-				{
-					peakIndex = index;
-					peakMax = std::fabs(value);
-				}
+				peakIndex = index;
+				peakMax = std::fabs(value);
 			}
 			++value;
 			++index;
@@ -48,7 +45,7 @@ double SimpleClean::FindPeakSimple(const double *image, size_t width, size_t hei
 	if(peakIndex == width * height)
 	{
 		x = width; y = height;
-		return std::numeric_limits<double>::quiet_NaN();
+		return boost::optional<double>();
 	}
 	else {
 		x = peakIndex % width;
@@ -57,7 +54,7 @@ double SimpleClean::FindPeakSimple(const double *image, size_t width, size_t hei
 	}
 }
 
-double SimpleClean::FindPeakWithMask(const double *image, size_t width, size_t height, size_t &x, size_t &y, bool allowNegativeComponents, size_t startY, size_t endY, const bool* cleanMask, size_t horizontalBorder, size_t verticalBorder)
+boost::optional<double> SimpleClean::FindPeakWithMask(const double *image, size_t width, size_t height, size_t &x, size_t &y, bool allowNegativeComponents, size_t startY, size_t endY, const bool* cleanMask, size_t horizontalBorder, size_t verticalBorder)
 {
 	double peakMax = std::numeric_limits<double>::min();
 	x = width; y = height;
@@ -74,29 +71,26 @@ double SimpleClean::FindPeakWithMask(const double *image, size_t width, size_t h
 		for(size_t xi=xiStart; xi!=xiEnd; ++xi)
 		{
 			double value = *imgIter;
-			if(std::isfinite(value))
+			if(allowNegativeComponents) value = std::fabs(value);
+			if(value > peakMax && *cleanMaskPtr)
 			{
-				if(allowNegativeComponents) value = std::fabs(value);
-				if(value > peakMax && *cleanMaskPtr)
-				{
-					x = xi;
-					y = yi;
-					peakMax = std::fabs(value);
-				}
+				x = xi;
+				y = yi;
+				peakMax = std::fabs(value);
 			}
 			++imgIter;
 			++cleanMaskPtr;
 		}
 	}
 	if(y == height)
-		return std::numeric_limits<double>::quiet_NaN();
+		return boost::optional<double>();
 	else
 		return image[x + y*width];
 }
 
 #if defined __AVX__ && defined USE_INTRINSICS && !defined FORCE_NON_AVX
 template<bool AllowNegativeComponent>
-double SimpleClean::FindPeakAVX(const double *image, size_t width, size_t height, size_t &x, size_t &y, size_t startY, size_t endY, size_t horizontalBorder, size_t verticalBorder)
+boost::optional<double> SimpleClean::FindPeakAVX(const double *image, size_t width, size_t height, size_t& x, size_t& y, size_t startY, size_t endY, size_t horizontalBorder, size_t verticalBorder)
 {
 	double peakMax = std::numeric_limits<double>::min();
 	size_t peakIndex = 0;
@@ -155,9 +149,9 @@ double SimpleClean::FindPeakAVX(const double *image, size_t width, size_t height
 }
 
 template
-double SimpleClean::FindPeakAVX<false>(const double *image, size_t width, size_t height, size_t &x, size_t &y, size_t startY, size_t endY, size_t horizontalBorder, size_t verticalBorder);
+boost::optional<double> SimpleClean::FindPeakAVX<false>(const double *image, size_t width, size_t height, size_t &x, size_t &y, size_t startY, size_t endY, size_t horizontalBorder, size_t verticalBorder);
 template
-double SimpleClean::FindPeakAVX<true>(const double *image, size_t width, size_t height, size_t &x, size_t &y, size_t startY, size_t endY, size_t horizontalBorder, size_t verticalBorder);
+boost::optional<double> SimpleClean::FindPeakAVX<true>(const double *image, size_t width, size_t height, size_t &x, size_t &y, size_t startY, size_t endY, size_t horizontalBorder, size_t verticalBorder);
 #else
 #warning "Not using AVX optimized version of FindPeak()!"
 #endif // __AVX__

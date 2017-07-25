@@ -103,7 +103,8 @@ private:
 		 * The difference between the normalized and unnormalized value is
 		 * that the unnormalized value is relative to the RMS factor.
 		 */
-		double maxNormalizedImageValue, maxUnnormalizedImageValue, rms;
+		double maxNormalizedImageValue, maxUnnormalizedImageValue;
+		double rms;
 		size_t maxImageValueX, maxImageValueY;
 		bool isActive;
 		size_t nComponentsCleaned;

@@ -37,8 +37,8 @@ void GenericClean::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& modelSet,
 	_allocator.Allocate(_convolutionWidth*_convolutionHeight, scratchB);
 	dirtySet.GetLinearIntegrated(integrated.data());
 	size_t componentX=0, componentY=0;
-	double maxValue = findPeak(integrated.data(), scratchA.data(), componentX, componentY);
-	if(!std::isfinite(maxValue))
+	boost::optional<double> maxValue = findPeak(integrated.data(), scratchA.data(), componentX, componentY);
+	if(!maxValue)
 	{
 		Logger::Info << "No peak found.\n";
 		reachedMajorThreshold = false;
@@ -46,7 +46,7 @@ void GenericClean::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& modelSet,
 	}
 	Logger::Info << "Initial peak: " << peakDescription(integrated.data(), componentX, componentY) << '\n';
 	double firstThreshold = this->_threshold;
-	double stopGainThreshold = std::fabs(maxValue)*(1.0-this->_mGain);
+	double stopGainThreshold = std::fabs(*maxValue)*(1.0-this->_mGain);
 	if(stopGainThreshold > firstThreshold)
 	{
 		firstThreshold = stopGainThreshold;
@@ -99,7 +99,7 @@ void GenericClean::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& modelSet,
 
 		ao::uvector<double> peakValues(dirtySet.size());
 		
-		while(fabs(maxValue) > firstThreshold && this->_iterationNumber < this->_maxIter && !(maxValue<0.0 && this->_stopOnNegativeComponent))
+		while(maxValue && fabs(*maxValue) > firstThreshold && this->_iterationNumber < this->_maxIter && !(maxValue<0.0 && this->_stopOnNegativeComponent))
 		{
 			if(this->_iterationNumber <= 10 ||
 				(this->_iterationNumber <= 100 && this->_iterationNumber % 10 == 0) ||
@@ -130,25 +130,32 @@ void GenericClean::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& modelSet,
 			++this->_iterationNumber;
 		}
 	}
-	Logger::Info << "Stopped on peak " << FluxDensity::ToNiceString(maxValue) << ", because ";
-	bool
-		maxIterReached = _iterationNumber >= MaxNIter(),
-		finalThresholdReached = std::fabs(maxValue) <= _threshold || maxValue == 0.0,
-		negativeReached = maxValue<0.0 && this->_stopOnNegativeComponent,
-		mgainReached = std::fabs(maxValue) <= stopGainThreshold,
-		didWork = (_iterationNumber-iterationCounterAtStart)!=0;
-	
-	if(maxIterReached)
-		Logger::Info << "maximum number of iterations was reached.\n";
-	else if(finalThresholdReached)
-		Logger::Info << "the threshold was reached.\n";
-	else if(negativeReached)
-		Logger::Info << "a negative component was found.\n";
-	else if(!didWork)
-		Logger::Info << "no iterations could be performed.\n";
-	else
-		Logger::Info << "the minor-loop threshold was reached. Continuing cleaning after inversion/prediction round.\n";
-	reachedMajorThreshold = mgainReached && didWork && !negativeReached && !finalThresholdReached;
+	if(maxValue)
+	{
+		Logger::Info << "Stopped on peak " << FluxDensity::ToNiceString(*maxValue) << ", because ";
+		bool
+			maxIterReached = _iterationNumber >= MaxNIter(),
+			finalThresholdReached = std::fabs(*maxValue) <= _threshold || maxValue == 0.0,
+			negativeReached = maxValue<0.0 && this->_stopOnNegativeComponent,
+			mgainReached = std::fabs(*maxValue) <= stopGainThreshold,
+			didWork = (_iterationNumber-iterationCounterAtStart)!=0;
+		
+		if(maxIterReached)
+			Logger::Info << "maximum number of iterations was reached.\n";
+		else if(finalThresholdReached)
+			Logger::Info << "the threshold was reached.\n";
+		else if(negativeReached)
+			Logger::Info << "a negative component was found.\n";
+		else if(!didWork)
+			Logger::Info << "no iterations could be performed.\n";
+		else
+			Logger::Info << "the minor-loop threshold was reached. Continuing cleaning after inversion/prediction round.\n";
+		reachedMajorThreshold = mgainReached && didWork && !negativeReached && !finalThresholdReached;
+	}
+	else {
+		Logger::Info << "Deconvolution aborted.\n";
+		reachedMajorThreshold = false;
+	}
 }
 
 std::string GenericClean::peakDescription(const double* image, size_t& x, size_t& y)
@@ -160,7 +167,7 @@ std::string GenericClean::peakDescription(const double* image, size_t& x, size_t
 	return str.str();
 }
 
-double GenericClean::findPeak(const double* image, double* scratch, size_t& x, size_t& y)
+boost::optional<double> GenericClean::findPeak(const double* image, double* scratch, size_t& x, size_t& y)
 {
 	if(_rmsFactorImage.empty())
 	{
@@ -174,11 +181,9 @@ double GenericClean::findPeak(const double* image, double* scratch, size_t& x, s
 		{
 			scratch[i] = image[i] * _rmsFactorImage[i];
 		}
-		double maxValue;
 		if(_cleanMask == 0)
-			maxValue = SimpleClean::FindPeak(scratch, _width, _height, x, y, _allowNegativeComponents, 0, _height, _cleanBorderRatio);
+			return SimpleClean::FindPeak(scratch, _width, _height, x, y, _allowNegativeComponents, 0, _height, _cleanBorderRatio);
 		else
-			maxValue = SimpleClean::FindPeakWithMask(scratch, _width, _height, x, y, _allowNegativeComponents, 0, _height, _cleanMask, _cleanBorderRatio);
-		return maxValue;
+			return SimpleClean::FindPeakWithMask(scratch, _width, _height, x, y, _allowNegativeComponents, 0, _height, _cleanMask, _cleanBorderRatio);
 	}
 }

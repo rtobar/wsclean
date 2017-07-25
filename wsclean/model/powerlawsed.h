@@ -114,6 +114,21 @@ public:
 			_factors[p] = brightnessVector[p] / refBrightness;
 	}
 	
+	void SetFromStokesIFit(double referenceFrequency, const ao::uvector<double>& terms)
+	{
+		_referenceFrequency = referenceFrequency;
+		double refBrightness = terms[0];
+		if(refBrightness <= 0.0)
+			refBrightness = 1.0;
+		_terms.resize(terms.size());
+		_terms[0] = refBrightness;
+		for(size_t i=1; i!=terms.size(); ++i)
+			_terms[i] = terms[i];
+		_factors[0] = terms[0] / refBrightness;
+		for(size_t p=1; p!=4; ++p)
+			_factors[p] = 0.0;
+	}
+	
 	void GetData(double& referenceFrequency, double* brightnessVector, std::vector<double>& siTerms) const
 	{
 		referenceFrequency = _referenceFrequency;
@@ -123,6 +138,11 @@ public:
 		siTerms.resize(_terms.size()-1);
 		for(size_t i=0; i!=_terms.size()-1; ++i)
 			siTerms[i] = _terms[i+1];
+	}
+	
+	double NTerms() const
+	{
+		return _terms.size();
 	}
 	
 	void SetIsLogarithmic(bool isLogarithmic)

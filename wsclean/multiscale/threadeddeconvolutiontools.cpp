@@ -261,7 +261,13 @@ ThreadedDeconvolutionTools::ThreadResult* ThreadedDeconvolutionTools::FindMultiS
 		else
 			result->unnormalizedValue = SimpleClean::FindPeakWithMask(scratch, width, height, result->x, result->y, allowNegativeComponents, 0, height, mask, horBorderSize, vertBorderSize);
 		
-		result->normalizedValue = result->unnormalizedValue / (*rmsFactorImage)[result->x + result->y * width];
+		if(result->unnormalizedValue)
+		{
+			result->normalizedValue = (*result->unnormalizedValue) / (*rmsFactorImage)[result->x + result->y * width];
+		}
+		else {
+			result->normalizedValue = boost::optional<double>();
+		}
 	}
 	return result;
 }

@@ -6,6 +6,7 @@
 #include "../lane.h"
 #include "../uvector.h"
 
+#include <boost/optional/optional.hpp>
 #include <boost/thread/thread.hpp>
 
 class ThreadedDeconvolutionTools
@@ -16,7 +17,8 @@ public:
 	
 	struct PeakData
 	{
-		double normalizedValue, unnormalizedValue, rms;
+		boost::optional<double> normalizedValue, unnormalizedValue;
+		double rms;
 		size_t x, y;
 	};
 	
@@ -42,7 +44,8 @@ private:
 	struct ThreadResult {
 	};
 	struct FindMultiScalePeakResult : public ThreadResult {
-		double unnormalizedValue, normalizedValue, rms;
+		boost::optional<double> unnormalizedValue, normalizedValue;
+		double rms;
 		size_t x, y;
 	};
 	

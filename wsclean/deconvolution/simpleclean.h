@@ -5,6 +5,8 @@
 #include <cmath>
 #include <limits>
 
+#include <boost/optional/optional.hpp>
+
 #include "deconvolutionalgorithm.h"
 
 #ifdef __SSE__
@@ -20,13 +22,13 @@ class SimpleClean
 	public:
 		SimpleClean() = delete;
 		
-		static double FindPeakSimple(const double *image, size_t width, size_t height, size_t &x, size_t &y, bool allowNegativeComponents, size_t startY, size_t endY, size_t horizontalBorder, size_t verticalBorder);
+		static boost::optional<double> FindPeakSimple(const double *image, size_t width, size_t height, size_t &x, size_t &y, bool allowNegativeComponents, size_t startY, size_t endY, size_t horizontalBorder, size_t verticalBorder);
 		
 #if defined __AVX__ && defined USE_INTRINSICS && !defined FORCE_NON_AVX
 		template<bool AllowNegativeComponent>
-		static double FindPeakAVX(const double *image, size_t width, size_t height, size_t &x, size_t &y, size_t startY, size_t endY, size_t horizontalBorder, size_t verticalBorder);
+		static boost::optional<double> FindPeakAVX(const double *image, size_t width, size_t height, size_t &x, size_t &y, size_t startY, size_t endY, size_t horizontalBorder, size_t verticalBorder);
 		
-		static double FindPeakAVX(const double *image, size_t width, size_t height, size_t &x, size_t &y, bool allowNegativeComponents, size_t startY, size_t endY, size_t horizontalBorder, size_t verticalBorder)
+		static boost::optional<double> FindPeakAVX(const double *image, size_t width, size_t height, size_t &x, size_t &y, bool allowNegativeComponents, size_t startY, size_t endY, size_t horizontalBorder, size_t verticalBorder)
 		{
 			if(allowNegativeComponents)
 				return FindPeakAVX<true>(image, width, height, x, y, startY, endY, horizontalBorder, verticalBorder);
@@ -35,12 +37,12 @@ class SimpleClean
 		}
 #endif
 
-		static double FindPeak(const double *image, size_t width, size_t height, size_t &x, size_t &y, bool allowNegativeComponents, size_t startY, size_t endY, double borderRatio)
+		static boost::optional<double> FindPeak(const double *image, size_t width, size_t height, size_t &x, size_t &y, bool allowNegativeComponents, size_t startY, size_t endY, double borderRatio)
 		{
 			return FindPeak(image, width, height, x, y, allowNegativeComponents, startY, endY, round(width*borderRatio), round(height*borderRatio));
 		}
 
-		static double FindPeak(const double *image, size_t width, size_t height, size_t &x, size_t &y, bool allowNegativeComponents, size_t startY, size_t endY, size_t horizontalBorder, size_t verticalBorder)
+		static boost::optional<double> FindPeak(const double *image, size_t width, size_t height, size_t &x, size_t &y, bool allowNegativeComponents, size_t startY, size_t endY, size_t horizontalBorder, size_t verticalBorder)
 		{
 #if defined __AVX__ && defined USE_INTRINSICS && !defined FORCE_NON_AVX
 			return FindPeakAVX(image, width, height, x, y, allowNegativeComponents, startY, endY, horizontalBorder, verticalBorder);
@@ -49,14 +51,14 @@ class SimpleClean
 #endif
 		}
 
-		static double FindPeakWithMask(const double *image, size_t width, size_t height, size_t &x, size_t &y, bool allowNegativeComponents, const bool* cleanMask);
+		static boost::optional<double> FindPeakWithMask(const double *image, size_t width, size_t height, size_t &x, size_t &y, bool allowNegativeComponents, const bool* cleanMask);
 
-		static double FindPeakWithMask(const double *image, size_t width, size_t height, size_t &x, size_t &y, bool allowNegativeComponents, size_t startY, size_t endY, const bool* cleanMask, double borderRatio)
+		static boost::optional<double> FindPeakWithMask(const double *image, size_t width, size_t height, size_t &x, size_t &y, bool allowNegativeComponents, size_t startY, size_t endY, const bool* cleanMask, double borderRatio)
 		{
 			return FindPeakWithMask(image, width, height, x, y, allowNegativeComponents, startY, endY, cleanMask, round(width*borderRatio), round(height*borderRatio));
 		}
 		
-		static double FindPeakWithMask(const double *image, size_t width, size_t height, size_t &x, size_t &y, bool allowNegativeComponents, size_t startY, size_t endY, const bool* cleanMask, size_t horizontalBorder, size_t verticalBorder);
+		static boost::optional<double> FindPeakWithMask(const double *image, size_t width, size_t height, size_t &x, size_t &y, bool allowNegativeComponents, size_t startY, size_t endY, const bool* cleanMask, size_t horizontalBorder, size_t verticalBorder);
 		
 		static void SubtractImage(double *image, const double *psf, size_t width, size_t height, size_t x, size_t y, double factor);
 		

@@ -17,7 +17,7 @@ void Model::read(const char* filename)
 	ModelParser parser;
 	std::ifstream stream(filename);
 	if(!stream.good())
-		throw std::runtime_error("Could not open model");
+		throw std::runtime_error(std::string("Could not open model ") + filename);
 	parser.Parse(*this, stream);
 }
 

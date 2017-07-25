@@ -179,6 +179,12 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 	if(_summedCount == 0)
 		throw std::runtime_error("Nothing to clean");
 	
+	if(!std::isfinite(_beamSize))
+	{
+		Logger::Warn << "No proper beam size available in deconvolution!\n";
+		_beamSize = 0.0;
+	}
+	
 	ImagingTable firstSquaredGroup = groupTable.GetSquaredGroup(0);
 	_squaredCount = firstSquaredGroup.EntryCount();
 	_polarizations.clear();
