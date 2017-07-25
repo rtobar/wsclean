@@ -27,6 +27,7 @@ IdgMsGridder::IdgMsGridder(const WSCleanSettings& settings) :
 	_max_nr_w_layers(0)
 {
 	readConfiguration();
+	setIdgType();
 }
 
 IdgMsGridder::~IdgMsGridder()
@@ -184,17 +185,21 @@ void IdgMsGridder::Predict(double* image)
 	}
 }
 
-idg::api::Type IdgMsGridder::idgType() const
+void IdgMsGridder::setIdgType()
 {
 	switch(_settings.idgMode)
 	{
 		default:
+			return;
 		case WSCleanSettings::IDG_CPU:
-			return idg::api::Type::CPU_OPTIMIZED;
+			_proxyType = idg::api::Type::CPU_OPTIMIZED;
+			return;
 		case WSCleanSettings::IDG_GPU:
-			return idg::api::Type::CUDA_GENERIC;
+			_proxyType = idg::api::Type::CUDA_GENERIC;
+			return;
 		case WSCleanSettings::IDG_HYBRID:
-			return idg::api::Type::HYBRID_CUDA_CPU_OPTIMIZED;
+			_proxyType = idg::api::Type::HYBRID_CUDA_CPU_OPTIMIZED;
+			return;
 	}
 }
 

@@ -49,7 +49,7 @@ private:
 	void predictWriteThreadFunction(boost::mutex* mutex);
     void readConfiguration();
 	
-	idg::api::Type idgType() const;
+	void setIdgType();
 	
 	struct IDGInversionRow : public MSGridderBase::InversionRow {
 		size_t antenna1, antenna2, timeIndex;
