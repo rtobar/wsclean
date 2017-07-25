@@ -421,8 +421,8 @@ void MultiScaleAlgorithm::findActiveScaleConvolvedMaxima(const ImageSet& imageSe
 	for(size_t i=0; i!=results.size(); ++i)
 	{
 		ScaleInfo& scaleEntry = _scaleInfos[transformIndices[i]];
-		scaleEntry.maxNormalizedImageValue = results[i].normalizedValue.value_or(0.0);
-		scaleEntry.maxUnnormalizedImageValue = results[i].unnormalizedValue.value_or(0.0);
+		scaleEntry.maxNormalizedImageValue = get_optional_value_or(results[i].normalizedValue, 0.0);
+		scaleEntry.maxUnnormalizedImageValue = get_optional_value_or(results[i].unnormalizedValue, 0.0);
 		scaleEntry.maxImageValueX = results[i].x;
 		scaleEntry.maxImageValueY = results[i].y;
 		if(reportRMS)
@@ -549,9 +549,9 @@ void MultiScaleAlgorithm::findPeakDirect(const double* image, double* scratch, s
 	else
 		maxValue = SimpleClean::FindPeakWithMask(actualImage, _width, _height, scaleInfo.maxImageValueX, scaleInfo.maxImageValueY, _allowNegativeComponents, 0, _height, _cleanMask, horBorderSize, vertBorderSize);
 	
-	scaleInfo.maxUnnormalizedImageValue = maxValue.value_or(0.0);
+	scaleInfo.maxUnnormalizedImageValue = get_optional_value_or(maxValue, 0.0);
 	if(_rmsFactorImage.empty())
-		scaleInfo.maxNormalizedImageValue = maxValue.value_or(0.0);
+		scaleInfo.maxNormalizedImageValue = get_optional_value_or(maxValue, 0.0);
 	else
-		scaleInfo.maxNormalizedImageValue = maxValue.value_or(0.0) / _rmsFactorImage[scaleInfo.maxImageValueX + scaleInfo.maxImageValueY * _width];
+		scaleInfo.maxNormalizedImageValue = get_optional_value_or(maxValue, 0.0) / _rmsFactorImage[scaleInfo.maxImageValueX + scaleInfo.maxImageValueY * _width];
 }
