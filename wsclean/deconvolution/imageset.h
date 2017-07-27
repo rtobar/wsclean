@@ -25,6 +25,7 @@ public:
 		_images.assign(nImages, static_cast<double*>(0));
 		_imageIndexToPSFIndex.resize(nImages);
 		
+		initializePolFactor();
 		initializeIndices();
 	}
 	
@@ -42,6 +43,7 @@ public:
 		_images.assign(nImages, static_cast<double*>(0));
 		_imageIndexToPSFIndex.resize(nImages);
 		
+		initializePolFactor();
 		initializeIndices();
 		AllocateImages();
 	}
@@ -272,6 +274,12 @@ private:
 			image[i] = sqrt(image[i]);
 	}
 	
+	void squareRootMultiply(double* image, double factor) const
+	{
+		for(size_t i=0; i!=_imageSize; ++i)
+			image[i] = sqrt(image[i]) * factor;
+	}
+	
 	void addSquared(double* lhs, const double* rhs) const
 	{
 		for(size_t i=0; i!=_imageSize; ++i)
@@ -312,6 +320,22 @@ private:
 		}
 	}
 	
+	void initializePolFactor()
+	{
+		ImagingTable firstChannelGroup = _imagingTable.GetSquaredGroup(0);
+		std::set<PolarizationEnum> pols;
+		for(size_t i=0; i!=firstChannelGroup.EntryCount(); ++i)
+			pols.insert(firstChannelGroup[i].polarization);
+		bool isDual = pols.size()==2 && Polarization::HasDualPolarization(pols);
+		bool isFull = pols.size()==4 && (
+			Polarization::HasFullLinearPolarization(pols) ||
+			Polarization::HasFullCircularPolarization(pols));
+		if(isDual || isFull)
+			_polarizationNormalizationFactor = 0.5;
+		else
+			_polarizationNormalizationFactor = 1.0;
+	}
+	
 	void copySmallerPart(const double* input, double* output, size_t x1, size_t y1, size_t x2, size_t y2, size_t oldWidth) const
 	{
 		size_t newWidth = x2 - x1;
@@ -340,6 +364,7 @@ private:
 	const ImagingTable& _imagingTable;
 	std::map<size_t, size_t> _tableIndexToImageIndex;
 	ao::uvector<size_t> _imageIndexToPSFIndex;
+	double _polarizationNormalizationFactor;
 	ImageBufferAllocator& _allocator;
 };
 

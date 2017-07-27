@@ -228,6 +228,13 @@ public:
 			 polarizations.count(YX)>0 && polarizations.count(YY)>0);
 	}
 	
+	static bool HasFullCircularPolarization(const std::set<PolarizationEnum>& polarizations)
+	{
+		return
+			(polarizations.count(LL)>0 && polarizations.count(LR)>0 &&
+			 polarizations.count(RL)>0 && polarizations.count(RR)>0);
+	}
+	
 	static bool HasFullStokesPolarization(const std::set<PolarizationEnum>& polarizations)
 	{
 		return

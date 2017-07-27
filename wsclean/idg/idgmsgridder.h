@@ -76,7 +76,7 @@ private:
 	const WSCleanSettings& _settings;
 	idg::api::Type _proxyType;
 	int _buffersize;
-	idg::api::options_type _options;
+	int _max_nr_w_layers;
 };
 
 void init_optimal_taper_1D(int subgridsize, int gridsize, float kernelsize, float padding, float* taper_subgrid, float* taper_grid);
