@@ -53,7 +53,7 @@ public:
 	
 	virtual void ReadMeta(double& u, double& v, double& w, size_t& dataDescId) final override;
 	
-	virtual void ReadMeta(double& u, double& v, double& w, size_t& dataDescId, size_t& antenna1, size_t& antenna2) final override;
+	virtual void ReadMeta(MetaData& metaData) final override;
 	
 	virtual void ReadData(std::complex<float>* buffer) final override;
 	
@@ -143,8 +143,29 @@ private:
 	} _metaHeader;
 	struct MetaRecord
 	{
-		double u, v, w;
+		double u, v, w, time;
 		uint16_t antenna1, antenna2, dataDescId;
+		static constexpr size_t BINARY_SIZE = 8*4 + 2*3;
+		void read(std::istream& str)
+		{
+			str.read(reinterpret_cast<char*>(&u), sizeof(double));
+			str.read(reinterpret_cast<char*>(&v), sizeof(double));
+			str.read(reinterpret_cast<char*>(&w), sizeof(double));
+			str.read(reinterpret_cast<char*>(&time), sizeof(double));
+			str.read(reinterpret_cast<char*>(&antenna1), sizeof(uint16_t));
+			str.read(reinterpret_cast<char*>(&antenna2), sizeof(uint16_t));
+			str.read(reinterpret_cast<char*>(&dataDescId), sizeof(uint16_t));
+		}
+		void write(std::ostream& str) const
+		{
+			str.write(reinterpret_cast<const char*>(&u), sizeof(double));
+			str.write(reinterpret_cast<const char*>(&v), sizeof(double));
+			str.write(reinterpret_cast<const char*>(&w), sizeof(double));
+			str.write(reinterpret_cast<const char*>(&time), sizeof(double));
+			str.write(reinterpret_cast<const char*>(&antenna1), sizeof(uint16_t));
+			str.write(reinterpret_cast<const char*>(&antenna2), sizeof(uint16_t));
+			str.write(reinterpret_cast<const char*>(&dataDescId), sizeof(uint16_t));
+		}
 	};
 	struct PartHeader
 	{

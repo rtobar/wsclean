@@ -14,9 +14,9 @@ public:
 	_distribution(0.0, noiseStdDevJy)
 	{ }
 	
-	virtual void ReadData(DataArray& data, FlagArray& flags, WeightArray& weights, double& u, double& v, double& w, uint32_t& dataDescId, uint32_t& antenna1, uint32_t& antenna2)
+	virtual void ReadData(DataArray& data, FlagArray& flags, WeightArray& weights, double& u, double& v, double& w, uint32_t& dataDescId, uint32_t& antenna1, uint32_t& antenna2, double& time) final override
 	{
-		DirectMSRowProvider::ReadData(data, flags, weights, u, v, w, dataDescId, antenna1, antenna2);
+		DirectMSRowProvider::ReadData(data, flags, weights, u, v, w, dataDescId, antenna1, antenna2, time);
 		for(DataArray::contiter iter = data.cbegin(); iter != data.cend(); ++iter)
 		{
 			if(std::isfinite(iter->real()) && std::isfinite(iter->imag()))

@@ -121,17 +121,17 @@ bool AveragingMSRowProvider::processCurrentTimestep()
 			buffer.Initialize(bufferSize, requireModel());
 		
 		if(requireModel())
-			buffer.AddDataAndModel(bufferSize, _currentData.data(), _currentModel.data(), _currentFlags.data(), _currentWeights.data(), _currentUVWArray.data());
+			buffer.AddDataAndModel(bufferSize, _currentData.data(), _currentModel.data(), _currentFlags.data(), _currentWeights.data(), _currentUVWArray.data(), _currentTime);
 		else
-			buffer.AddData(bufferSize, _currentData.data(), _currentFlags.data(), _currentWeights.data(), _currentUVWArray.data());
+			buffer.AddData(bufferSize, _currentData.data(), _currentFlags.data(), _currentWeights.data(), _currentUVWArray.data(), _currentTime);
 		
 		bool foundFullBuffer = (buffer.AveragedDataCount() == avgFactor);
 		if(foundFullBuffer)
 		{
 			if(requireModel())
-				buffer.Get(bufferSize, _currentData.data(), _currentModel.data(), _currentFlags.data(), _currentWeights.data(), _currentUVWArray.data());
+				buffer.Get(bufferSize, _currentData.data(), _currentModel.data(), _currentFlags.data(), _currentWeights.data(), _currentUVWArray.data(), _currentTime);
 			else
-				buffer.Get(bufferSize, _currentData.data(), _currentFlags.data(), _currentWeights.data(), _currentUVWArray.data());
+				buffer.Get(bufferSize, _currentData.data(), _currentFlags.data(), _currentWeights.data(), _currentUVWArray.data(), _currentTime);
 			buffer.Reset(bufferSize);
 		}
 		return foundFullBuffer;
@@ -168,9 +168,9 @@ void AveragingMSRowProvider::NextRow()
 		{
 			size_t bufferSize = DataShape()[0] * DataShape()[1];
 			if(requireModel())
-				buffer->Get(bufferSize, _currentData.data(), _currentModel.data(), _currentFlags.data(), _currentWeights.data(), _currentUVWArray.data());
+				buffer->Get(bufferSize, _currentData.data(), _currentModel.data(), _currentFlags.data(), _currentWeights.data(), _currentUVWArray.data(), _currentTime);
 			else
-				buffer->Get(bufferSize, _currentData.data(), _currentFlags.data(), _currentWeights.data(), _currentUVWArray.data());
+				buffer->Get(bufferSize, _currentData.data(), _currentFlags.data(), _currentWeights.data(), _currentUVWArray.data(), _currentTime);
 			
 			size_t elementIndex = _flushPosition-1;
 			size_t spwCount = selectedDataDescIds().size();
@@ -183,7 +183,7 @@ void AveragingMSRowProvider::NextRow()
 	}
 }
 
-void AveragingMSRowProvider::ReadData(MSRowProvider::DataArray& data, MSRowProvider::FlagArray& flags, MSRowProvider::WeightArray& weights, double& u, double& v, double& w, uint32_t& dataDescId, uint32_t& antenna1, uint32_t& antenna2)
+void AveragingMSRowProvider::ReadData(MSRowProvider::DataArray& data, MSRowProvider::FlagArray& flags, MSRowProvider::WeightArray& weights, double& u, double& v, double& w, uint32_t& dataDescId, uint32_t& antenna1, uint32_t& antenna2, double& time)
 {
 	size_t bufferSize = DataShape()[0] * DataShape()[1];
 	memcpy(data.data(), _currentData.data(), bufferSize*sizeof(std::complex<float>));
@@ -195,6 +195,7 @@ void AveragingMSRowProvider::ReadData(MSRowProvider::DataArray& data, MSRowProvi
 	dataDescId = _averagedDataDescId;
 	antenna1 = _averagedAntenna1Index;
 	antenna2 = _averagedAntenna2Index;
+	time = _currentTime;
 }
 
 void AveragingMSRowProvider::ReadModel(MSRowProvider::DataArray& model)

@@ -122,7 +122,7 @@ void PartitionedMS::NextRow()
 			_readPtrIsOk = true;
 		
 		if(_metaPtrIsOk)
-			_metaFile.seekg(sizeof(MetaRecord), std::ios::cur);
+			_metaFile.seekg(MetaRecord::BINARY_SIZE, std::ios::cur);
 		else
 			_metaPtrIsOk = true;
 		
@@ -135,31 +135,32 @@ void PartitionedMS::NextRow()
 void PartitionedMS::ReadMeta(double& u, double& v, double& w, size_t& dataDescId)
 {
 	if(!_metaPtrIsOk)
-		_metaFile.seekg(-sizeof(MetaRecord), std::ios::cur);
+		_metaFile.seekg(-MetaRecord::BINARY_SIZE, std::ios::cur);
 	_metaPtrIsOk = false;
 	
 	MetaRecord record;
-	_metaFile.read(reinterpret_cast<char*>(&record), sizeof(MetaRecord));
+	record.read(_metaFile);
 	u = record.u;
 	v = record.v;
 	w = record.w;
 	dataDescId = record.dataDescId;
 }
 
-void PartitionedMS::ReadMeta(double& u, double& v, double& w, size_t& dataDescId, size_t& antenna1, size_t& antenna2)
+void PartitionedMS::ReadMeta(MetaData& metaData)
 {
 	if(!_metaPtrIsOk)
-		_metaFile.seekg(-sizeof(MetaRecord), std::ios::cur);
+		_metaFile.seekg(-MetaRecord::BINARY_SIZE, std::ios::cur);
 	_metaPtrIsOk = false;
 	
 	MetaRecord record;
-	_metaFile.read(reinterpret_cast<char*>(&record), sizeof(MetaRecord));
-	u = record.u;
-	v = record.v;
-	w = record.w;
-	dataDescId = record.dataDescId;
-	antenna1 = record.antenna1;
-	antenna2 = record.antenna2;
+	record.read(_metaFile);
+	metaData.uInM = record.u;
+	metaData.vInM = record.v;
+	metaData.wInM = record.w;
+	metaData.dataDescId = record.dataDescId;
+	metaData.antenna1 = record.antenna1;
+	metaData.antenna2 = record.antenna2;
+	metaData.time = record.time;
 }
 
 void PartitionedMS::ReadData(std::complex<float>* buffer)
@@ -403,16 +404,18 @@ PartitionedMS::Handle PartitionedMS::Partition(const string& msPath, const std::
 		MetaRecord meta;
 		memset(&meta, 0, sizeof(MetaRecord));
 
+		double time;
 		uint32_t dataDescId, antenna1, antenna2;
-		rowProvider->ReadData(dataArray, flagArray, weightSpectrumArray, meta.u, meta.v, meta.w, dataDescId, antenna1, antenna2);
+		rowProvider->ReadData(dataArray, flagArray, weightSpectrumArray, meta.u, meta.v, meta.w, dataDescId, antenna1, antenna2, time);
 		meta.dataDescId = dataDescId;
 		meta.antenna1 = antenna1;
 		meta.antenna2 = antenna2;
+		meta.time = time;
 		size_t spwIndex = selectedDataDescIds[meta.dataDescId];
 		++selectedRowCountPerSpwIndex[spwIndex];
 		++selectedRowsTotal;
 		std::ofstream& metaFile = *metaFiles[spwIndex];
-		metaFile.write(reinterpret_cast<char*>(&meta), sizeof(MetaRecord));
+		meta.write(metaFile);
 		if(!metaFile.good())
 			throw std::runtime_error("Error writing to temporary file");
 		

@@ -136,17 +136,18 @@ void ContiguousMS::ReadMeta(double& u, double& v, double& w, size_t& dataDescId)
 	dataDescId = _dataDescId;
 }
 
-void ContiguousMS::ReadMeta(double& u, double& v, double& w, size_t& dataDescId, size_t& antenna1, size_t& antenna2)
+void ContiguousMS::ReadMeta(MetaData& metaData)
 {
 	readMeta();
 	
 	casacore::Vector<double> uvwArray = _uvwColumn(_row);
-	u = uvwArray(0);
-	v = uvwArray(1);
-	w = uvwArray(2);
-	dataDescId = _dataDescId;
-	antenna1 = _antenna1Column(_row);
-	antenna2 = _antenna2Column(_row);
+	metaData.uInM = uvwArray(0);
+	metaData.vInM = uvwArray(1);
+	metaData.wInM = uvwArray(2);
+	metaData.dataDescId = _dataDescId;
+	metaData.antenna1 = _antenna1Column(_row);
+	metaData.antenna2 = _antenna2Column(_row);
+	metaData.time = _timeColumn(_row);
 }
 
 void ContiguousMS::ReadData(std::complex<float>* buffer)

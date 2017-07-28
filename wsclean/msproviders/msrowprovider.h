@@ -32,7 +32,7 @@ public:
 	
 	virtual void NextRow();
 	
-	virtual void ReadData(DataArray& data, FlagArray& flags, WeightArray& weights, double& u, double& v, double& w, uint32_t& dataDescId, uint32_t& antenna1, uint32_t& antenna2) = 0;
+	virtual void ReadData(DataArray& data, FlagArray& flags, WeightArray& weights, double& u, double& v, double& w, uint32_t& dataDescId, uint32_t& antenna1, uint32_t& antenna2, double& time) = 0;
 	
 	virtual void ReadModel(DataArray& model) = 0;
 	

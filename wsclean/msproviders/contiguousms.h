@@ -7,6 +7,7 @@
 #include "../multibanddata.h"
 
 #include <casacore/ms/MeasurementSets/MeasurementSet.h>
+
 #include <casacore/tables/Tables/ArrayColumn.h>
 #include <casacore/tables/Tables/ScalarColumn.h>
 
@@ -33,7 +34,7 @@ public:
 	
 	virtual void ReadMeta(double& u, double& v, double& w, size_t& dataDescId) final override;
 	
-	virtual void ReadMeta(double& u, double& v, double& w, size_t& dataDescId, size_t& antenna1, size_t& antenna2) final override;
+	virtual void ReadMeta(MetaData& metaData) final override;
 	
 	virtual void ReadData(std::complex<float>* buffer) final override;
 	

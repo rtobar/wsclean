@@ -27,6 +27,13 @@ class MSProvider
 public:
 	friend class MSRowProvider;
 	friend class DirectMSRowProvider;
+	
+	struct MetaData
+	{
+		double uInM, vInM, wInM;
+		size_t dataDescId, antenna1, antenna2;
+		double time;
+	};
 
 	virtual ~MSProvider() { }
 	
@@ -42,7 +49,7 @@ public:
 	
 	virtual void ReadMeta(double& u, double& v, double& w, size_t& dataDescId) = 0;
 	
-	virtual void ReadMeta(double& u, double& v, double& w, size_t& dataDescId, size_t& antenna1, size_t& antenna2) = 0;
+	virtual void ReadMeta(MetaData& metaData) = 0;
 	
 	virtual void ReadData(std::complex<float>* buffer) = 0;
 	
