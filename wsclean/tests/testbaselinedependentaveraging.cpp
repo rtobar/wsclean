@@ -28,11 +28,11 @@ BOOST_AUTO_TEST_CASE( noAveraging )
 		MSRowProvider::WeightArray weightsAvg(shape), weightsDirect(shape);
 		while(!avgProvider.AtEnd() && !directProvider.AtEnd() && nRow<nAnt*(nAnt-1)/2 * 10)
 		{
-			double uA, vA, wA, uD, vD, wD;
+			double uA, vA, wA, timeA, uD, vD, wD, timeD;
 			uint32_t a1A=1337, a2A=1338, a1D=1339, a2D=1340;
 			uint32_t descA=1341, descD=1342;
-			avgProvider.ReadData(dataArrayAvg, flagArrayAvg, weightsAvg, uA, vA, wA, descA, a1A, a2A);
-			directProvider.ReadData(dataArrayDirect, flagArrayDirect, weightsDirect, uD, vD, wD, descD, a1D, a2D);
+			avgProvider.ReadData(dataArrayAvg, flagArrayAvg, weightsAvg, uA, vA, wA, descA, a1A, a2A, timeA);
+			directProvider.ReadData(dataArrayDirect, flagArrayDirect, weightsDirect, uD, vD, wD, descD, a1D, a2D, timeD);
 					
 			for(size_t p=0; p!=4; ++p)
 			{
