@@ -56,7 +56,7 @@ class WSMSGridder : public MSGridderBase
 		struct PredictionWorkItem
 		{
 			double u, v, w;
-			std::complex<float> *data;
+			std::unique_ptr<std::complex<float>[]> data;
 			size_t rowId, dataDescId;
 		};
 		

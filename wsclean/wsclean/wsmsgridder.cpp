@@ -288,10 +288,10 @@ void WSMSGridder::predictMeasurementSet(MSData &msData)
 		newItem.v = vs[i];
 		newItem.w = ws[i];
 		newItem.dataDescId = dataIds[i];
-		newItem.data = new std::complex<float>[selectedBandData[dataIds[i]].ChannelCount()];
+		newItem.data.reset(new std::complex<float>[selectedBandData[dataIds[i]].ChannelCount()]);
 		newItem.rowId = rowIds[i];
 				
-		bufferedCalcLane.write(newItem);
+		bufferedCalcLane.write(std::move(newItem));
 	}
 	if(Verbose())
 		Logger::Info << "Rows that were required: " << rowsProcessed << '/' << msData.matchingRows << '\n';
@@ -310,9 +310,9 @@ void WSMSGridder::predictCalcThread(ao::lane<PredictionWorkItem>* inputLane, ao:
 	PredictionWorkItem item;
 	while(inputLane->read(item))
 	{
-		_gridder->SampleData(item.data, item.dataDescId, item.u, item.v, item.w);
+		_gridder->SampleData(item.data.get(), item.dataDescId, item.u, item.v, item.w);
 		
-		writeBuffer.write(item);
+		writeBuffer.write(std::move(item));
 	}
 }
 
@@ -322,8 +322,7 @@ void WSMSGridder::predictWriteThread(ao::lane<PredictionWorkItem>* predictionWor
 	PredictionWorkItem workItem;
 	while(buffer.read(workItem))
 	{
-		msData->msProvider->WriteModel(workItem.rowId, workItem.data);
-		delete[] workItem.data;
+		msData->msProvider->WriteModel(workItem.rowId, workItem.data.get());
 	}
 }
 

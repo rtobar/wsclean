@@ -281,10 +281,10 @@ string PartitionedMS::getMetaFilename(const string& msPathStr, const std::string
 // should be private but is not allowed on older compilers
 struct PartitionFiles
 {
-	std::ofstream
-		*data,
-		*weight,
-		*model;
+	std::unique_ptr<std::ofstream>
+		data,
+		weight,
+		model;
 };
 
 /*
@@ -338,10 +338,10 @@ PartitionedMS::Handle PartitionedMS::Partition(const string& msPath, const std::
 		{
 			PartitionFiles& f = files[fileIndex];
 			std::string partPrefix = getPartPrefix(msPath, part, p, channels[part].dataDescId, temporaryDirectory);
-			f.data = new std::ofstream(partPrefix + ".tmp");
-			f.weight = new std::ofstream(partPrefix + "-w.tmp");
+			f.data.reset(new std::ofstream(partPrefix + ".tmp"));
+			f.weight.reset(new std::ofstream(partPrefix + "-w.tmp"));
 			if(initialModelRequired)
-				f.model = new std::ofstream(partPrefix + "-m.tmp");
+				f.model.reset(new std::ofstream(partPrefix + "-m.tmp"));
 			f.data->seekp(sizeof(PartHeader), std::ios::beg);
 			
 			++fileIndex;
@@ -502,10 +502,9 @@ PartitionedMS::Handle PartitionedMS::Partition(const string& msPath, const std::
 			if(!f.data->good())
 				throw std::runtime_error("Error writing to temporary data file");
 			
-			delete f.data;
-			delete f.weight;
-			if(initialModelRequired)
-				delete f.model;
+			f.data.reset();
+			f.weight.reset();
+			f.model.reset();
 			++fileIndex;
 			
 			// If model is requested, fill model file with zeros

@@ -48,6 +48,7 @@ void PolynomialFitter::Fit(ao::uvector<double>& terms, size_t nTerms)
 
 	gsl_vector_free(resultTerms);
 	gsl_vector_free(yData);
+	gsl_vector_free(wData);
 	
 	gsl_matrix_free(cov);
 	gsl_matrix_free(xData);
