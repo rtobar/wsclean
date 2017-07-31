@@ -34,6 +34,12 @@ IdgMsGridder::~IdgMsGridder()
 
 void IdgMsGridder::Invert()
 {
+	// TODO IDG should internally trim to the given size.
+	// The untrimmedWidth/untrimmedHeight is the size including padding
+	// The width/height is the trimmed size after removing the padding
+	// (feel free to rename variables).
+	// Same logic applied to Predict().
+	const size_t untrimmedWidth = ImageWidth(), untrimmedHeight = ImageHeight();
 	const size_t width = TrimWidth(), height = TrimHeight();
 	
 	// Stokes I is always the first requested pol. So, only when Stokes I
@@ -157,6 +163,8 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 
 void IdgMsGridder::Predict(double* image)
 {
+	// TODO IDG should internally trim to the given size.
+	const size_t untrimmedWidth = ImageWidth(), untrimmedHeight = ImageHeight();
 	const size_t width = TrimWidth(), height = TrimHeight();
 
 	if (Polarization() == Polarization::StokesI)
