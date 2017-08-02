@@ -83,7 +83,11 @@ void ModelRenderer::renderGaussianComponent(double* imageData, size_t imageWidth
 	// ...And this is not accurate, as the correlation between beam and source PA has
 	// to be taken into account
 	if(normalizeIntegratedFlux)
-		flux /= 2.0L * M_PI * sigmaMaj * sigmaMin / (minPixelScale * minPixelScale);
+	{
+		double factor = 2.0L * M_PI * sigmaMaj * sigmaMin / (minPixelScale * minPixelScale);
+		if(factor > 1.0)
+			flux /= factor;
+	}
 	
 	// Make rotation matrix
 	long double transf[4];

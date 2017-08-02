@@ -91,4 +91,33 @@ BOOST_AUTO_TEST_CASE( fit_circular )
 	BOOST_CHECK_CLOSE_FRACTION(fitMajor, 4.0, 1e-4);
 }
 
+BOOST_AUTO_TEST_CASE( fit_small_beam )
+{
+	const size_t
+		width = 64,
+		height = 64;
+	ImageBufferAllocator allocator;
+	Image restored(width, height, 0.0, allocator);
+	PowerLawSED sed(150.0e6, 1.0);
+	ModelComponent component;
+	component.SetPosDec(0.0);
+	component.SetPosRA(0.0);
+	component.SetSED(sed);
+	ModelSource source;
+	source.AddComponent(component);
+	Model model;
+	model.AddSource(source);
+	long double pixelScale = 1 /*amin*/ * (M_PI/180.0/60.0);
+	long double beamMaj = 4*pixelScale, beamMin = 0.5*pixelScale, beamPA = 0.0;
+	long double estimatedBeamPx = 1.0; // this is on purpose way off
+	ModelRenderer renderer(0.0, 0.0, pixelScale, pixelScale);
+	renderer.Restore(restored.data(), width, height, model, beamMaj, beamMin, beamPA, 100e6, 200e6, Polarization::StokesI);
+	
+	GaussianFitter fitter;
+	double fitMajor = estimatedBeamPx, fitMinor = estimatedBeamPx, fitPA = 0.0;
+	fitter.Fit2DGaussianCentred(restored.data(), width, height, estimatedBeamPx, fitMajor, fitMinor, fitPA, false);
+	
+	BOOST_CHECK_CLOSE_FRACTION(fitMinor, 0.5, 1e-4);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

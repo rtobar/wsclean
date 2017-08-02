@@ -45,33 +45,25 @@ public:
 		
 		initializePolFactor();
 		initializeIndices();
-		AllocateImages();
+		allocateImages();
 	}
 	
 	~ImageSet()
 	{
-		for(ao::uvector<double*>::iterator img=_images.begin();
-				img!=_images.end(); ++img)
-			_allocator.Free(*img);
+		free();
 	}
 	
 	void AllocateImages()
 	{
-		for(ao::uvector<double*>::iterator img=_images.begin();
-				img!=_images.end(); ++img)
-		{
-			*img = _allocator.Allocate(_imageSize);
-		}
+		free();
+		allocateImages();
 	}
 	
 	void AllocateImages(size_t width, size_t height)
 	{
+		free();
 		_imageSize = width*height;
-		for(ao::uvector<double*>::iterator img=_images.begin();
-				img!=_images.end(); ++img)
-		{
-			*img = _allocator.Allocate(_imageSize);
-		}
+		allocateImages();
 	}
 	
 	double* Release(size_t imageIndex)
@@ -234,6 +226,25 @@ public:
 		return _squareJoinedChannels; 
 	}
 private:
+	ImageSet(const ImageSet&) = delete;
+	ImageSet& operator=(const ImageSet&) = delete;
+		
+	void allocateImages()
+	{
+		for(ao::uvector<double*>::iterator img=_images.begin();
+				img!=_images.end(); ++img)
+		{
+			*img = _allocator.Allocate(_imageSize);
+		}
+	}
+	
+	void free()
+	{
+		for(ao::uvector<double*>::iterator img=_images.begin();
+				img!=_images.end(); ++img)
+			_allocator.Free(*img);
+	}
+		
 	void assign(double* lhs, const double* rhs) const
 	{
 		memcpy(lhs, rhs, sizeof(double) * _imageSize);

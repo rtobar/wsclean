@@ -224,7 +224,7 @@ void PartitionedMS::ReadWeights(std::complex<float>* buffer)
 	float* displacedBuffer = reinterpret_cast<float*>(buffer)+_partHeader.channelCount * _polarizationCountInFile;
 	_weightFile.read(reinterpret_cast<char*>(displacedBuffer), _partHeader.channelCount * _polarizationCountInFile * sizeof(float));
 	_weightPtrIsOk = false;
-	copyRealToComplex(buffer, displacedBuffer, _partHeader.channelCount);
+	copyRealToComplex(buffer, displacedBuffer, _partHeader.channelCount * _polarizationCountInFile);
 }
 
 void PartitionedMS::ReadWeights(float* buffer)

@@ -35,9 +35,11 @@ public:
 		
 private:
 	
-	void SetSettingsKeywords(const WSCleanSettings& settings, const std::string& commandLine);
+	void setSettingsKeywords(const WSCleanSettings& settings, const std::string& commandLine);
 	
-	void setGridderKeywords(const WSCleanSettings& settings, const class MSGridderBase& gridder);
+	void setGridderConfiguration(const WSCleanSettings& settings, const class MSGridderBase& gridder);
+	
+	void setGridderKeywords(const class MSGridderBase& gridder);
 	
 	void setDeconvolutionKeywords(const WSCleanSettings& settings);
 	

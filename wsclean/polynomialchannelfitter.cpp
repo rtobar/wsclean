@@ -40,4 +40,12 @@ void PolynomialChannelFitter::Fit(ao::uvector<double>& terms, size_t nTerms)
 	{
 		terms[j] = gsl_vector_get(c, j);
 	}
+	
+	gsl_matrix_free(x);
+	gsl_vector_free(c);
+	gsl_vector_free(y);
+	
+	gsl_matrix_free(cov);
+	
+	gsl_multifit_linear_free(work);
 }

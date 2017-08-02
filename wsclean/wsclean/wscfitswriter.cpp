@@ -5,14 +5,16 @@
 
 #include "../fitsreader.h"
 #include "../modelrenderer.h"
+#include "../wscversion.h"
 
 #include "../deconvolution/deconvolution.h"
 
 WSCFitsWriter::WSCFitsWriter(const ImagingTableEntry& entry, bool isImaginary, const WSCleanSettings& settings, const class Deconvolution& deconvolution, size_t majorIterationNr, const MSGridderBase& gridder, const std::string& commandLine, const OutputChannelInfo& channelInfo)
 {
 	_filenamePrefix = ImageFilename::GetPrefix(settings, entry.polarization, entry.outputChannelIndex, entry.outputIntervalIndex, isImaginary);
-	setGridderKeywords(settings, gridder);
-	SetSettingsKeywords(settings, commandLine);
+	setGridderConfiguration(settings, gridder);
+	setSettingsKeywords(settings, commandLine);
+	setGridderKeywords(gridder);
 	setChannelKeywords(entry, entry.polarization, channelInfo);
 	setDeconvolutionKeywords(settings);
 	if(deconvolution.IsInitialized())
@@ -22,8 +24,9 @@ WSCFitsWriter::WSCFitsWriter(const ImagingTableEntry& entry, bool isImaginary, c
 WSCFitsWriter::WSCFitsWriter(const ImagingTableEntry& entry, PolarizationEnum polarization, bool isImaginary, const WSCleanSettings& settings, const Deconvolution& deconvolution, size_t majorIterationNr, const MSGridderBase& gridder, const std::string& commandLine, const OutputChannelInfo& channelInfo)
 {
 	_filenamePrefix = ImageFilename::GetPrefix(settings, polarization, entry.outputChannelIndex, entry.outputIntervalIndex, isImaginary);
-	setGridderKeywords(settings, gridder);
-	SetSettingsKeywords(settings, commandLine);
+	setGridderConfiguration(settings, gridder);
+	setSettingsKeywords(settings, commandLine);
+	setGridderKeywords(gridder);
 	setChannelKeywords(entry, polarization, channelInfo);
 	setDeconvolutionKeywords(settings);
 	if(deconvolution.IsInitialized())
@@ -35,10 +38,12 @@ WSCFitsWriter::WSCFitsWriter(FitsReader& templateReader) : _writer(templateReade
 	copyWSCleanKeywords(templateReader);
 }
 
-void WSCFitsWriter::SetSettingsKeywords(const WSCleanSettings& settings, const std::string& commandLine)
+void WSCFitsWriter::setSettingsKeywords(const WSCleanSettings& settings, const std::string& commandLine)
 {
 	_writer.SetOrigin("WSClean", "W-stacking imager written by Andre Offringa");
 	_writer.AddHistory(commandLine);
+	_writer.SetExtraKeyword("WSCVERSI", WSCLEAN_VERSION_STR);
+	_writer.SetExtraKeyword("WSCVDATE", WSCLEAN_VERSION_DATE);
 	if(settings.endChannel != 0)
 	{
 		_writer.SetExtraKeyword("WSCCHANS", settings.startChannel);
@@ -52,7 +57,7 @@ void WSCFitsWriter::SetSettingsKeywords(const WSCleanSettings& settings, const s
 	_writer.SetExtraKeyword("WSCFIELD", settings.fieldId);
 }
 
-void WSCFitsWriter::setGridderKeywords(const WSCleanSettings& settings, const MSGridderBase& gridder)
+void WSCFitsWriter::setGridderConfiguration(const WSCleanSettings& settings, const MSGridderBase& gridder)
 {
 	double
 		ra = gridder.PhaseCentreRA(),
@@ -68,7 +73,10 @@ void WSCFitsWriter::setGridderKeywords(const WSCleanSettings& settings, const MS
 	_writer.SetTelescopeName(gridder.TelescopeName());
 	_writer.SetObserver(gridder.Observer());
 	_writer.SetObjectName(gridder.FieldName());
-	
+}
+
+void WSCFitsWriter::setGridderKeywords(const MSGridderBase& gridder)
+{
 	/* This represents the weight of the image when averaging */
 	_writer.SetExtraKeyword("WSCIMGWG", gridder.ImageWeight());
 	/* This is the normalization factor that was applied. The factor is useful
@@ -118,13 +126,13 @@ void WSCFitsWriter::setChannelKeywords(const ImagingTableEntry& entry, Polarizat
 void WSCFitsWriter::copyWSCleanKeywords(FitsReader& reader)
 {
 	const size_t
-		N_STRKEYWORDS=2, N_DBLKEYWORDS=18;
+		N_STRKEYWORDS=4, N_DBLKEYWORDS=20;
 	const char* strKeywords[N_STRKEYWORDS] =
-		{ "WSCDATAC", "WSCWEIGH" };
+		{ "WSCVERSI", "WSCVDATE", "WSCDATAC", "WSCWEIGH" };
 	const char* dblKeywords[N_DBLKEYWORDS] =
 		{ "WSCIMGWG", "WSCNWLAY", "WSCGKRNL", "WSCCHANS", "WSCCHANE", "WSCTIMES", "WSCTIMEE", "WSCFIELD",
-			"WSCNITER", "WSCTHRES", "WSCGAIN", "WSCMGAIN", "WSCNEGCM", "WSCNEGST",
-			"WSCMINOR", "WSCMAJOR", "WSCNVIS", "WSCENVIS"
+			"WSCNITER", "WSCNORMF", "WSCTHRES", "WSCGAIN" , "WSCMGAIN", "WSCNEGCM", "WSCNEGST",
+			"WSCMINOR", "WSCMAJOR", "WSCNVIS" , "WSCENVIS", "WSCVWSUM"
 		};
 	for(size_t i=0; i!=N_STRKEYWORDS; ++i)
 		_writer.CopyStringKeywordIfExists(reader, strKeywords[i]);

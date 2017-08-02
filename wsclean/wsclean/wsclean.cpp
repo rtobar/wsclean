@@ -1450,8 +1450,6 @@ void WSClean::fitBeamSize(double& bMaj, double& bMin, double& bPA, const double*
 			beamEstimate,
 			bMaj, bMin, bPA);
 	}
-	if(bMaj < 1.0) bMaj = 1.0;
-	if(bMin < 1.0) bMin = 1.0;
 	bMaj = bMaj*0.5*(_settings.pixelScaleX+_settings.pixelScaleY);
 	bMin = bMin*0.5*(_settings.pixelScaleX+_settings.pixelScaleY);
 }

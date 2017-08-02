@@ -70,7 +70,9 @@ public:
 				++usedCount;
 				str << "Still used: buffer of " << i->size << '\n';
 			}
-			// free(i->ptr); // We leave this allocated, so that e.g. valgrind can diagnose it as well.
+			// In case of leak, leave this allocated so that e.g. valgrind can diagnose it as well.
+			if(!i->isFirstHalfUsed && !i->isSecondHalfUsed)
+				free(i->ptr);
 		}
 		if(usedCount != 0)
 		{
