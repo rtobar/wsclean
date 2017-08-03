@@ -188,10 +188,6 @@ class MeasurementSetGridder
 		virtual bool HasDenormalPhaseCentre() const { return false; }
 		virtual double PhaseCentreDL() const = 0;
 		virtual double PhaseCentreDM() const = 0;
-//		virtual double HighestFrequencyChannel() const = 0;
-//		virtual double LowestFrequencyChannel() const = 0;
-//		virtual double BandStart() const = 0;
-//		virtual double BandEnd() const = 0;
 		virtual double BeamSize() const = 0;
 		virtual double StartTime() const = 0;
 		virtual double ImageWeight() const = 0;

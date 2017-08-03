@@ -32,6 +32,7 @@ MSGridderBase::MSGridderBase() :
 	_freqHigh(0.0), _freqLow(0.0),
 	_bandStart(0.0), _bandEnd(0.0),
 	_startTime(0.0),
+	_metaDataCache(nullptr),
 	_phaseCentreRA(0.0), _phaseCentreDec(0.0),
 	_phaseCentreDL(0.0), _phaseCentreDM(0.0),
 	_denormalPhaseCentre(false),
@@ -177,10 +178,13 @@ void MSGridderBase::initializeMSDataVector(std::vector<MSGridderBase::MSData>& m
 	
 	resetMetaData();
 	
+	bool hasCache = !_metaDataCache->msDataVector.empty();
+	if(!hasCache)
+		_metaDataCache->msDataVector.resize(MeasurementSetCount());
 	for(size_t i=0; i!=MeasurementSetCount(); ++i)
 	{
 		msDataVector[i].msIndex = i;
-		initializeMeasurementSet(msDataVector[i]);
+		initializeMeasurementSet(msDataVector[i], _metaDataCache->msDataVector[i], hasCache);
 	}
 	
 	calculateOverallMetaData(msDataVector.data());
@@ -201,7 +205,7 @@ void MSGridderBase::initializeMetaData(casacore::MeasurementSet& ms, size_t fiel
 	_fieldName = fieldNameColumn(fieldId);
 }
 
-void MSGridderBase::initializeMeasurementSet(MSGridderBase::MSData& msData)
+void MSGridderBase::initializeMeasurementSet(MSGridderBase::MSData& msData, MetaDataCache::Entry& cacheEntry, bool isCacheInitialized)
 {
 	MSProvider& msProvider = MeasurementSet(msData.msIndex);
 	msData.msProvider = &msProvider;
@@ -216,10 +220,23 @@ void MSGridderBase::initializeMeasurementSet(MSGridderBase::MSData& msData)
 	
 	initializeMetaData(ms, Selection(msData.msIndex).FieldId());
 	
-	if (msProvider.Polarization() == Polarization::Instrumental)
-		calculateWLimits<4>(msData);
-	else
-		calculateWLimits<1>(msData);
+	if(isCacheInitialized)
+	{
+		msData.maxW = cacheEntry.maxW;
+		msData.minW = cacheEntry.minW;
+		msData.maxBaselineUVW = cacheEntry.maxBaselineUVW;
+		msData.maxBaselineInM = cacheEntry.maxBaselineInM;
+	}
+	else {
+		if (msProvider.Polarization() == Polarization::Instrumental)
+			calculateWLimits<4>(msData);
+		else
+			calculateWLimits<1>(msData);
+		cacheEntry.maxW = msData.maxW;
+		cacheEntry.minW = msData.minW;
+		cacheEntry.maxBaselineUVW = msData.maxBaselineUVW;
+		cacheEntry.maxBaselineInM = msData.maxBaselineInM;
+	}
 }
 
 void MSGridderBase::calculateOverallMetaData(const MSData* msDataVector)

@@ -14,6 +14,7 @@
 #include "cachedimageset.h"
 #include "imagebufferallocator.h"
 #include "imagingtable.h"
+#include "msgridderbase.h"
 #include "outputchannelinfo.h"
 #include "wscfitswriter.h"
 #include "wscleansettings.h"
@@ -63,9 +64,9 @@ private:
 	void multiplyImage(double factor, double* image) const;
 	void imagePSF(ImagingTableEntry& entry);
 	void imageGridding();
-	void imageMainFirst(PolarizationEnum polarization, size_t channelIndex);
-	void imageMainNonFirst(PolarizationEnum polarization, size_t channelIndex);
-	void predict(PolarizationEnum polarization, size_t channelIndex);
+	void imageMainFirst(const ImagingTableEntry& entry);
+	void imageMainNonFirst(const ImagingTableEntry& entry);
+	void predict(const ImagingTableEntry& entry);
 	void dftPredict(const ImagingTable& squaredGroup);
 	
 	void makeMFSImage(const string& suffix, size_t intervalIndex, PolarizationEnum pol, bool isImaginary, bool isPSF = false);
@@ -104,6 +105,7 @@ private:
 	
 	std::vector<OutputChannelInfo> _infoPerChannel;
 	OutputChannelInfo _infoForMFS;
+	std::map<size_t, MSGridderBase::MetaDataCache> _msGridderMetaCache;
 	
 	std::unique_ptr<class MSGridderBase> _gridder;
 	std::unique_ptr<class ImageWeightCache> _imageWeightCache;

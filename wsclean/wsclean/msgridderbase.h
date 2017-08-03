@@ -50,6 +50,17 @@ public:
 	const std::string& Observer() const { return _observer; }
 	
 	const std::string& FieldName() const { return _fieldName; }
+	
+	struct MetaDataCache
+	{
+		struct Entry {
+			double minW, maxW, maxBaselineUVW, maxBaselineInM;
+		};
+		std::vector<Entry> msDataVector;
+	};
+	
+	void SetMetaDataCache(MetaDataCache* cache) { _metaDataCache = cache; }
+	
 protected:
 	struct MSData
 	{
@@ -70,7 +81,7 @@ protected:
 			
 			void operator=(const MSData &source);
 	};
-		
+
 	struct InversionRow
 	{
 		double uvw[3];
@@ -105,7 +116,7 @@ protected:
 	template<size_t NPolInMSProvider>
 	void calculateWLimits(MSGridderBase::MSData& msData);
 	
-	void initializeMeasurementSet(MSGridderBase::MSData& msData);
+	void initializeMeasurementSet(MSGridderBase::MSData& msData, MetaDataCache::Entry& cacheEntry, bool isCacheInitialized);
 	
 	void calculateOverallMetaData(const MSData* msDataVector);
 	
@@ -143,6 +154,7 @@ private:
 	double _freqHigh, _freqLow;
 	double _bandStart, _bandEnd;
 	double _startTime;
+	struct MetaDataCache* _metaDataCache;
 	
 	double _phaseCentreRA, _phaseCentreDec, _phaseCentreDL, _phaseCentreDM;
 	bool _denormalPhaseCentre;

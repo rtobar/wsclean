@@ -70,6 +70,7 @@ void WSClean::imagePSF(ImagingTableEntry& entry)
 	_gridder->SetDoImagePSF(true);
 	_gridder->SetDoSubtractModel(false);
 	_gridder->SetVerbose(_isFirstInversion);
+	_gridder->SetMetaDataCache(&_msGridderMetaCache[entry.index]);
 	_gridder->Invert();
 	
 	size_t centralIndex = _settings.trimmedImageWidth/2 + (_settings.trimmedImageHeight/2) * _settings.trimmedImageWidth;
@@ -132,42 +133,48 @@ void WSClean::imageGridding()
 	Logger::Info << "DONE\n";
 }
 
-void WSClean::imageMainFirst(PolarizationEnum polarization, size_t joinedChannelIndex)
+void WSClean::imageMainFirst(const ImagingTableEntry& entry)
 {
+	size_t joinedChannelIndex = entry.outputChannelIndex;
+	
 	Logger::Info.Flush();
 	Logger::Info << " == Constructing image ==\n";
 	_inversionWatch.Start();
 	_gridder->SetDoImagePSF(false);
 	_gridder->SetDoSubtractModel(_settings.subtractModel || _settings.continuedRun);
 	_gridder->SetVerbose(_isFirstInversion);
+	_gridder->SetMetaDataCache(&_msGridderMetaCache[entry.index]);
 	_gridder->Invert();
 	_inversionWatch.Pause();
 	_gridder->SetVerbose(false);
 	
 	multiplyImage(_infoPerChannel[joinedChannelIndex].psfNormalizationFactor, _gridder->ImageRealResult());
-	storeAndCombineXYandYX(_residualImages, polarization, joinedChannelIndex, false, _gridder->ImageRealResult());
-	if(Polarization::IsComplex(polarization))
+	storeAndCombineXYandYX(_residualImages, entry.polarization, joinedChannelIndex, false, _gridder->ImageRealResult());
+	if(Polarization::IsComplex(entry.polarization))
 	{
 		multiplyImage(_infoPerChannel[joinedChannelIndex].psfNormalizationFactor, _gridder->ImageImaginaryResult());
-		storeAndCombineXYandYX(_residualImages, polarization, joinedChannelIndex, true, _gridder->ImageImaginaryResult());
+		storeAndCombineXYandYX(_residualImages, entry.polarization, joinedChannelIndex, true, _gridder->ImageImaginaryResult());
 	}
 }
 
-void WSClean::imageMainNonFirst(PolarizationEnum polarization, size_t joinedChannelIndex)
+void WSClean::imageMainNonFirst(const ImagingTableEntry& entry)
 {
+	size_t joinedChannelIndex = entry.outputChannelIndex;
+	
 	Logger::Info.Flush();
 	Logger::Info << " == Constructing image ==\n";
 	_inversionWatch.Start();
 	_gridder->SetDoSubtractModel(true);
+	_gridder->SetMetaDataCache(&_msGridderMetaCache[entry.index]);
 	_gridder->Invert();
 	_inversionWatch.Pause();
 	
 	multiplyImage(_infoPerChannel[joinedChannelIndex].psfNormalizationFactor, _gridder->ImageRealResult());
-	storeAndCombineXYandYX(_residualImages, polarization, joinedChannelIndex, false, _gridder->ImageRealResult());
-	if(Polarization::IsComplex(polarization))
+	storeAndCombineXYandYX(_residualImages, entry.polarization, joinedChannelIndex, false, _gridder->ImageRealResult());
+	if(Polarization::IsComplex(entry.polarization))
 	{
 		multiplyImage(_infoPerChannel[joinedChannelIndex].psfNormalizationFactor, _gridder->ImageImaginaryResult());
-		storeAndCombineXYandYX(_residualImages, polarization, joinedChannelIndex, true, _gridder->ImageImaginaryResult());
+		storeAndCombineXYandYX(_residualImages, entry.polarization, joinedChannelIndex, true, _gridder->ImageImaginaryResult());
 	}
 }
 
@@ -197,7 +204,7 @@ void WSClean::storeAndCombineXYandYX(CachedImageSet& dest, PolarizationEnum pola
 	}
 }
 
-void WSClean::predict(PolarizationEnum polarization, size_t joinedChannelIndex)
+void WSClean::predict(const ImagingTableEntry& entry)
 {
 	Logger::Info.Flush();
 	Logger::Info << " == Converting model image to visibilities ==\n";
@@ -206,26 +213,27 @@ void WSClean::predict(PolarizationEnum polarization, size_t joinedChannelIndex)
 		*modelImageReal = _imageAllocator.Allocate(size),
 		*modelImageImaginary = 0;
 		
-	if(polarization == Polarization::YX)
+	if(entry.polarization == Polarization::YX)
 	{
-		_modelImages.Load(modelImageReal, Polarization::XY, joinedChannelIndex, false);
+		_modelImages.Load(modelImageReal, Polarization::XY, entry.outputChannelIndex, false);
 		modelImageImaginary = _imageAllocator.Allocate(size);
-		_modelImages.Load(modelImageImaginary, Polarization::XY, joinedChannelIndex, true);
+		_modelImages.Load(modelImageImaginary, Polarization::XY, entry.outputChannelIndex, true);
 		for(size_t i=0; i!=size; ++i)
 			modelImageImaginary[i] = -modelImageImaginary[i];
 	}
 	else {
-		_modelImages.Load(modelImageReal, polarization, joinedChannelIndex, false);
-		if(Polarization::IsComplex(polarization))
+		_modelImages.Load(modelImageReal, entry.polarization, entry.outputChannelIndex, false);
+		if(Polarization::IsComplex(entry.polarization))
 		{
 			modelImageImaginary = _imageAllocator.Allocate(size);
-			_modelImages.Load(modelImageImaginary, polarization, joinedChannelIndex, true);
+			_modelImages.Load(modelImageImaginary, entry.polarization, entry.outputChannelIndex, true);
 		}
 	}
 	
 	_predictingWatch.Start();
 	_gridder->SetAddToModel(false);
-	if(Polarization::IsComplex(polarization))
+	_gridder->SetMetaDataCache(&_msGridderMetaCache[entry.index]);
+	if(Polarization::IsComplex(entry.polarization))
 		_gridder->Predict(modelImageReal, modelImageImaginary);
 	else
 		_gridder->Predict(modelImageReal);
@@ -689,7 +697,6 @@ void WSClean::runIndependentGroup(ImagingTable& groupTable)
 					for(size_t sGroupIndex=0; sGroupIndex!=groupTable.SquaredGroupCount(); ++sGroupIndex)
 					{
 						const ImagingTable sGroupTable = groupTable.GetSquaredGroup(sGroupIndex);
-						size_t currentChannelIndex = sGroupTable.Front().outputChannelIndex;
 						if(_settings.dftPrediction)
 						{
 							dftPredict(sGroupTable);
@@ -699,7 +706,7 @@ void WSClean::runIndependentGroup(ImagingTable& groupTable)
 								initializeCurMSProviders(sGroupTable[e]);
 								initializeImageWeights(sGroupTable[e]);
 			
-								imageMainNonFirst(sGroupTable[e].polarization, currentChannelIndex);
+								imageMainNonFirst(sGroupTable[e]);
 								clearCurMSProviders();
 							}
 						}
@@ -710,7 +717,7 @@ void WSClean::runIndependentGroup(ImagingTable& groupTable)
 								initializeCurMSProviders(sGroupTable[e]);
 								initializeImageWeights(sGroupTable[e]);
 			
-								predict(sGroupTable[e].polarization, currentChannelIndex);
+								predict(sGroupTable[e]);
 								clearCurMSProviders();
 							}
 							for(size_t e=0; e!=sGroupTable.EntryCount(); ++e)
@@ -719,7 +726,7 @@ void WSClean::runIndependentGroup(ImagingTable& groupTable)
 								initializeCurMSProviders(sGroupTable[e]);
 								initializeImageWeights(sGroupTable[e]);
 								
-								imageMainNonFirst(sGroupTable[e].polarization, currentChannelIndex);
+								imageMainNonFirst(sGroupTable[e]);
 								clearCurMSProviders();
 							} // end of polarization loop
 						}
@@ -946,7 +953,7 @@ void WSClean::predictGroup(const ImagingTable& imagingGroup)
 		initializeCurMSProviders(entry);
 		initializeImageWeights(entry);
 
-		predict(entry.polarization, 0);
+		predict(entry);
 		
 		clearCurMSProviders();
 	} // end of polarization loop
@@ -1043,7 +1050,7 @@ void WSClean::runFirstInversion(ImagingTableEntry& entry)
 		_modelImages.SetFitsWriter(writer);
 		_residualImages.SetFitsWriter(writer);
 		
-		imageMainFirst(entry.polarization, entry.outputChannelIndex);
+		imageMainFirst(entry);
 		
 		// If this was the first polarization of this channel, we need to set
 		// the info for this channel
