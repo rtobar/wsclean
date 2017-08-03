@@ -301,8 +301,8 @@ void IdgMsGridder::predictCalcThreadFunction()
 	//casacore::MeasurementSet ms = _outputProvider->MS();
 	//casacore::ArrayColumn<casacore::Complex> modelColumn(ms, casacore::MS::columnName(casacore::MSMainEnums::MODEL_DATA));
 	//const casacore::IPosition shape(modelColumn.shape(0));
-	vector<size_t> idToMSRow;
-	_outputProvider->MakeIdToMSRowMapping(idToMSRow);
+	//vector<size_t> idToMSRow;
+	//_outputProvider->MakeIdToMSRowMapping(idToMSRow);
 
 	while(true)
 	{
