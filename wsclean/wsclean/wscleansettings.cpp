@@ -6,10 +6,10 @@ void WSCleanSettings::Validate() const
 {
 	if(mode == ImagingMode)
 	{
-		if(untrimmedImageWidth == 0 && untrimmedImageHeight == 0)
+		if(trimmedImageWidth == 0 && trimmedImageHeight == 0)
 			throw std::runtime_error("Image size has not been set");
 		
-		if(untrimmedImageWidth == 0 || untrimmedImageHeight == 0)
+		if(trimmedImageWidth == 0 || trimmedImageHeight == 0)
 			throw std::runtime_error("Invalid image size given: one of the dimensions was zero.");
 		
 		if(pixelScaleX == 0.0 && pixelScaleY == 0.0)
@@ -104,16 +104,15 @@ void WSCleanSettings::checkPolarizations() const
 	}
 }
 
-void WSCleanSettings::setDimensions()
+void WSCleanSettings::RecalculatePaddedDimensions()
 {
-	if(trimmedImageWidth==0 && trimmedImageHeight==0)
+	paddedImageWidth = (size_t) ceil(trimmedImageWidth * imagePadding);
+	paddedImageHeight = (size_t) ceil(trimmedImageHeight * imagePadding);
+	// Make the width and height divisable by four.
+	paddedImageWidth += (4-(paddedImageWidth%4))%4;
+	paddedImageHeight += (4-(paddedImageHeight%4))%4;
+	if(trimmedImageWidth!=0 && trimmedImageHeight!=0)
 	{
-		trimmedImageWidth = untrimmedImageWidth;
-		trimmedImageHeight = untrimmedImageHeight;
-	}
-	else if(trimmedImageWidth > untrimmedImageWidth || trimmedImageHeight > untrimmedImageHeight)
-	{
-		throw std::runtime_error("Error in specified trim dimensions: at least one dimension of the trimmed image is larger than in the untrimmed image");
+		Logger::Debug << "Using image size of " << trimmedImageWidth << " x " << trimmedImageHeight << ", padded to " << paddedImageWidth << " x " << paddedImageHeight << ".\n";
 	}
 }
-

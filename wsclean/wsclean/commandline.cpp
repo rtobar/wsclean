@@ -106,9 +106,9 @@ void CommandLine::printHelp()
 		"-name <image-prefix>\n"
 		"   Use image-prefix as prefix for output files. Default is 'wsclean'.\n"
 		"-size <width> <height>\n"
-		"   Set the image size in number of pixels.\n"
-		"-trim <width> <height>\n"
-		"   After inversion, trim the image to the given size. Default: no trimming.\n"
+		"   Set the output image size in number of pixels (without padding).\n"
+		"-padding <factor>\n"
+		"   Pad images by the given factor during inversion to avoid aliasing. Default: 1.2 (=20%).\n"
 		"-scale <pixel-scale>\n"
 		"   Scale of a pixel. Default unit is degrees, but can be specificied, e.g. -scale 20asec. Default: 0.01deg.\n"
 		"-predict\n"
@@ -276,8 +276,7 @@ void CommandLine::printHelp()
 		"   enables Gaussian shapes during multi-scale cleaning (-multiscale-shape gaussian).\n"
 		"-clean-border <percentage>\n"
 		"   Set the border size in which no cleaning is performed, in percentage of the width/height of the image.\n"
-		"   With an image size of 1000 and clean border of 1%, each border is 10 pixels. \n"
-		"   Default: 5 (%) when trim is not specified, 0% when trim was specified.\n"
+		"   With an image size of 1000 and clean border of 1%, each border is 10 pixels. Default: 0%\n"
 		"-fits-mask <mask>\n"
 		"   Use the specified fits-file as mask during cleaning.\n"
 		"-casa-mask <mask>\n"
@@ -376,7 +375,6 @@ int CommandLine::Run(int argc, char* argv[])
 	WSCleanSettings& settings = wsclean.Settings();
 	int argi = 1;
 	bool mfsWeighting = false, noMFSWeighting = false;
-	bool hasCleanBorder = false;
 	while(argi < argc && argv[argi][0] == '-')
 	{
 		const std::string param = argv[argi][1]=='-' ? (&argv[argi][2]) : (&argv[argi][1]);
@@ -453,17 +451,14 @@ int CommandLine::Run(int argc, char* argv[])
 			size_t
 				width = parse_size_t(argv[argi+1], "size"),
 				height = parse_size_t(argv[argi+2], "size");
-			settings.untrimmedImageWidth = width;
-			settings.untrimmedImageHeight = height;
+			settings.trimmedImageWidth = width;
+			settings.trimmedImageHeight = height;
 			argi += 2;
 		}
-		else if(param == "trim")
+		else if(param == "padding")
 		{
-			settings.trimmedImageWidth = parse_size_t(argv[argi+1], "trim");
-			settings.trimmedImageHeight = parse_size_t(argv[argi+2], "trim");
-			if(!hasCleanBorder)
-				settings.deconvolutionBorderRatio = 0;
-			argi += 2;
+			++argi;
+			settings.imagePadding = atof(argv[argi]);
 		}
 		else if(param == "scale")
 		{
@@ -826,7 +821,6 @@ int CommandLine::Run(int argc, char* argv[])
 		{
 			++argi;
 			settings.deconvolutionBorderRatio = atof(argv[argi])*0.01;
-			hasCleanBorder = true;
 			if(param == "cleanborder")
 				deprecated(param, "clean-border");
 		}

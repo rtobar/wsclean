@@ -21,11 +21,13 @@ public:
 	
 	void Validate() const;
 	
-	void Propogate() { setDimensions(); }
+	void Propogate() { RecalculatePaddedDimensions(); }
+	
+	void RecalculatePaddedDimensions();
 	
 	std::vector<std::string> filenames;
 	enum Mode { ImagingMode, PredictMode, RestoreMode } mode;
-	size_t untrimmedImageWidth, untrimmedImageHeight;
+	size_t paddedImageWidth, paddedImageHeight;
 	size_t trimmedImageWidth, trimmedImageHeight;
 	double imagePadding;
 	size_t widthForNWCalculation, heightForNWCalculation;
@@ -116,13 +118,12 @@ public:
 	
 private:
 	void checkPolarizations() const;
-	void setDimensions();
 };
 
 inline WSCleanSettings::WSCleanSettings() :
 	filenames(),
 	mode(ImagingMode),
-	untrimmedImageWidth(0), untrimmedImageHeight(0),
+	paddedImageWidth(0), paddedImageHeight(0),
 	trimmedImageWidth(0), trimmedImageHeight(0),
 	imagePadding(1.2),
 	widthForNWCalculation(0), heightForNWCalculation(0),
@@ -196,7 +197,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	multiscaleConvolutionPadding(1.1),
 	multiscaleScaleList(),
 	multiscaleShapeFunction(MultiScaleTransforms::TaperedQuadraticShape),
-	deconvolutionBorderRatio(0.05),
+	deconvolutionBorderRatio(0.0),
 	fitsDeconvolutionMask(),
 	casaDeconvolutionMask(),
 	useMoreSaneDeconvolution(false),

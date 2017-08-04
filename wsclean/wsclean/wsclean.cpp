@@ -360,8 +360,8 @@ void WSClean::initializeMFSImageWeights()
 void WSClean::prepareInversionAlgorithm(PolarizationEnum polarization)
 {
 	_gridder->SetGridMode(_settings.gridMode);
-	_gridder->SetImageWidth(_settings.untrimmedImageWidth);
-	_gridder->SetImageHeight(_settings.untrimmedImageHeight);
+	_gridder->SetImageWidth(_settings.paddedImageWidth);
+	_gridder->SetImageHeight(_settings.paddedImageHeight);
 	_gridder->SetTrimSize(_settings.trimmedImageWidth, _settings.trimmedImageHeight);
 	_gridder->SetNWSize(_settings.widthForNWCalculation, _settings.heightForNWCalculation);
 	_gridder->SetPixelSizeX(_settings.pixelScaleX);
@@ -541,7 +541,7 @@ ImageWeightCache* WSClean::createWeightCache()
 {
 	ImageWeightCache* cache = new ImageWeightCache(
 		_settings.weightMode,
-		_settings.untrimmedImageWidth, _settings.untrimmedImageHeight,
+		_settings.paddedImageWidth, _settings.paddedImageHeight,
 		_settings.pixelScaleX, _settings.pixelScaleY,
 		_settings.minUVInLambda, _settings.maxUVInLambda,
 		_settings.rankFilterLevel, _settings.rankFilterSize);
@@ -876,16 +876,11 @@ void WSClean::readEarlierModelImages(const ImagingTableEntry& entry)
 		std::string prefix = ImageFilename::GetPrefix(_settings, entry.polarization, entry.outputChannelIndex, entry.outputIntervalIndex, i==1);
 		FitsReader reader(prefix + "-model.fits");
 		Logger::Info << "Reading " << reader.Filename() << "...\n";
-		if(_settings.untrimmedImageWidth == 0 && _settings.untrimmedImageHeight == 0)
+		if(_settings.trimmedImageWidth == 0 && _settings.trimmedImageHeight == 0)
 		{
 			_settings.trimmedImageWidth = reader.ImageWidth();
 			_settings.trimmedImageHeight = reader.ImageHeight();
-			_settings.untrimmedImageWidth = (size_t) ceil(_settings.trimmedImageWidth * _settings.imagePadding);
-			_settings.untrimmedImageHeight = (size_t) ceil(_settings.trimmedImageHeight * _settings.imagePadding);
-			// Make the width and height divisable by four.
-			_settings.untrimmedImageWidth += (4-(_settings.untrimmedImageWidth%4))%4;
-			_settings.untrimmedImageHeight += (4-(_settings.untrimmedImageHeight%4))%4;
-			Logger::Debug << "Using image size of " << _settings.trimmedImageWidth << " x " << _settings.trimmedImageHeight << ", padded to " << _settings.untrimmedImageWidth << " x " << _settings.untrimmedImageHeight << ".\n";
+			_settings.RecalculatePaddedDimensions();
 		}
 		else if(reader.ImageWidth()!=_settings.trimmedImageWidth || reader.ImageHeight()!=_settings.trimmedImageHeight)
 			throw std::runtime_error("Inconsistent image size: dimensions of input image did not match.");
