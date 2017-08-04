@@ -1,3 +1,5 @@
+// kate: space-indent off; tab-width 4; indent-width 4; replace-tabs off; eol unix;
+
 #include "idgmsgridder.h"
 
 #include <cmath>
@@ -34,14 +36,14 @@ IdgMsGridder::~IdgMsGridder()
 
 void IdgMsGridder::Invert()
 {
-	// TODO IDG should internally trim to the given size.
-	// The untrimmedWidth/untrimmedHeight is the size including padding
-	// The width/height is the trimmed size after removing the padding
-	// (feel free to rename variables).
-	// Same logic applied to Predict().
 	const size_t untrimmedWidth = ImageWidth(), untrimmedHeight = ImageHeight();
 	const size_t width = TrimWidth(), height = TrimHeight();
-	
+
+	assert(width == height);
+	assert(untrimmedWidth == untrimmedHeight);
+
+	_options["padded_size"] = untrimmedWidth;
+
 	// Stokes I is always the first requested pol. So, only when Stokes I
 	// is requested, do the actual inversion. Since all pols are produced at once by IDG,
 	// when Stokes Q/U/V is requested, the result of earlier gridding is returned.
@@ -163,9 +165,13 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 
 void IdgMsGridder::Predict(double* image)
 {
-	// TODO IDG should internally trim to the given size.
 	const size_t untrimmedWidth = ImageWidth(), untrimmedHeight = ImageHeight();
 	const size_t width = TrimWidth(), height = TrimHeight();
+
+	assert(width == height);
+	assert(untrimmedWidth == untrimmedHeight);
+
+	_options["padded_size"] = untrimmedWidth;
 
 	if (Polarization() == Polarization::StokesI)
 	{
@@ -301,8 +307,8 @@ void IdgMsGridder::predictCalcThreadFunction()
 	//casacore::MeasurementSet ms = _outputProvider->MS();
 	//casacore::ArrayColumn<casacore::Complex> modelColumn(ms, casacore::MS::columnName(casacore::MSMainEnums::MODEL_DATA));
 	//const casacore::IPosition shape(modelColumn.shape(0));
-	//vector<size_t> idToMSRow;
-	//_outputProvider->MakeIdToMSRowMapping(idToMSRow);
+	vector<size_t> idToMSRow;
+	_outputProvider->MakeIdToMSRowMapping(idToMSRow);
 
 	while(true)
 	{
