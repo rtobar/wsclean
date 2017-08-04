@@ -282,7 +282,6 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 		row.dataDescId = dataDescId;
 		row.rowId = provRowId;
 		
-		// (For debug) comment this out to don't let IDG hang
 		_predictionCalcLane.write(row);
 		
 		lock.lock(); // lock for guard
@@ -304,12 +303,6 @@ void IdgMsGridder::predictCalcThreadFunction()
 	// read the first sample, exit if none is there
 	if (!_predictionCalcLane.read(row)) return;
 	
-	//casacore::MeasurementSet ms = _outputProvider->MS();
-	//casacore::ArrayColumn<casacore::Complex> modelColumn(ms, casacore::MS::columnName(casacore::MSMainEnums::MODEL_DATA));
-	//const casacore::IPosition shape(modelColumn.shape(0));
-	vector<size_t> idToMSRow;
-	_outputProvider->MakeIdToMSRowMapping(idToMSRow);
-
 	while(true)
 	{
 		bool isBufferFull = _bufferset->get_degridder(row.dataDescId)->request_visibilities(row.rowId, row.timeIndex, row.antenna1, row.antenna2, row.uvw);
@@ -322,11 +315,6 @@ void IdgMsGridder::predictCalcThreadFunction()
 			std::cout << "computed " << available_row_ids.size() << " rows" << std::endl;
 			for(auto i : available_row_ids)
 			{
-				//size_t rowid(i.first);
-				//std::complex<float>* dataptr(i.second);
-				//casacore::Array<std::complex<float>> modeldataArray(shape, dataptr, casacore::SHARE);
-				//modelColumn.put(idToMSRow[rowid], modeldataArray);
-				
 				_outputProvider->WriteModel(i.first, i.second);
 			}
 			_bufferset->get_degridder(row.dataDescId)->finished_reading();
