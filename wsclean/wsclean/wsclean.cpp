@@ -1287,7 +1287,7 @@ void WSClean::saveUVImage(const double* image, PolarizationEnum pol, const Imagi
 
 void WSClean::makeImagingTable(size_t outputIntervalIndex)
 {
-	std::set<OrderedChannel> channelSet;
+	std::set<ChannelInfo> channelSet;
 	double highestFreq = 0.0;
 	_msBands.assign(_settings.filenames.size(), MultiBandData());
 	for(size_t i=0; i!=_settings.filenames.size(); ++i)
@@ -1328,7 +1328,7 @@ void WSClean::makeImagingTable(size_t outputIntervalIndex)
 		str << "Parameter '-channelsout' was set to an invalid value: " << _settings.channelsOut << " output channels requested, but combined in all specified measurement sets, there are only " << channelSet.size() << " unique channels.";
 		throw std::runtime_error(str.str());
 	}
-	_inputChannelFrequencies = std::vector<OrderedChannel>(channelSet.begin(), channelSet.end());
+	_inputChannelFrequencies = std::vector<ChannelInfo>(channelSet.begin(), channelSet.end());
 	
 	size_t joinedGroupIndex = 0, squaredGroupIndex = 0;
 	_imagingTable.Clear();
@@ -1364,7 +1364,7 @@ void WSClean::makeImagingTable(size_t outputIntervalIndex)
 	_imagingTable.Print();
 }
 
-void WSClean::makeImagingTableEntry(const std::vector<OrderedChannel>& channels, size_t outIntervalIndex, size_t outChannelIndex, ImagingTableEntry& entry)
+void WSClean::makeImagingTableEntry(const std::vector<ChannelInfo>& channels, size_t outIntervalIndex, size_t outChannelIndex, ImagingTableEntry& entry)
 {
 	size_t startCh, width;
 	if(_settings.endChannel != 0)

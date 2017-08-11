@@ -71,35 +71,6 @@ void ImageSet::LoadAndAveragePSFs(CachedImageSet& psfSet, vector<ao::uvector<dou
 		multiply(psfImages[chIndex].data(), 1.0/double(weights[chIndex]));
 }
 
-void ImageSet::LoadAveragePrimaryBeam(PrimaryBeamImageSet& beamImages, const WSCleanSettings& settings, size_t imageIndex)
-{
-	beamImages.SetToZero();
-	
-	ImageBufferAllocator::Ptr scratch;
-	_allocator.Allocate(_imageSize, scratch);
-	
-	/// TODO : use real weights of images
-	size_t count = 0;
-	PrimaryBeam pb(settings);
-	for(size_t sqIndex=0; sqIndex!=_imagingTable.SquaredGroupCount(); ++sqIndex)
-	{
-		size_t curImageIndex = (sqIndex*_channelsInDeconvolution)/_imagingTable.SquaredGroupCount();
-		if(curImageIndex == imageIndex)
-		{
-			ImagingTable subTable = _imagingTable.GetSquaredGroup(sqIndex);
-			const ImagingTableEntry& e = subTable.Front();
-			ImageFilename filename(e.outputChannelIndex, e.outputIntervalIndex);
-			
-			PrimaryBeamImageSet scratch(settings.trimmedImageWidth, settings.trimmedImageHeight, _allocator);
-			pb.Load(scratch, filename);
-			beamImages += scratch;
-			
-			count++;
-		}
-	}
-	beamImages *= (1.0 / double(count));
-}
-
 void ImageSet::InterpolateAndStore(CachedImageSet& imageSet, const SpectralFitter& fitter)
 {
 	if(_channelsInDeconvolution == _imagingTable.SquaredGroupCount())

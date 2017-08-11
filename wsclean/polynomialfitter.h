@@ -29,6 +29,8 @@ public:
 		return val;
 	}
 	
+	size_t size() const { return _dataPoints.size(); }
+	
 private:
 	ao::uvector<std::array<double,3>> _dataPoints;
 };

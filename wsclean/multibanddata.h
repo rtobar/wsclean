@@ -158,8 +158,20 @@ class MultiBandData
 			return maxChannels;
 		}
 		
+		/**
+		 * Map a dataDescId to the corresponding band index.
+		 * @param dataDescId A dataDescId as e.g. used in a main table.
+		 * @returns The band index, which is equal to the row index in the spw
+		 * table that describes the band in a measurement set.
+		 */
 		size_t GetBandIndex(size_t dataDescId) const { return _dataDescToBand[dataDescId]; }
 		
+		/**
+		 * Compose a list of dataDescIds that are used in the measurement set.
+		 * "Used" here means it is references from the main table.
+		 * @param mainTable the measurement set.
+		 * @returns Set of used dataDescIds.
+		 */
 		std::set<size_t> GetUsedDataDescIds(casacore::MeasurementSet& mainTable) const;
 		
 	private:

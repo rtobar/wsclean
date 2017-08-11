@@ -283,7 +283,8 @@ class MC2x2
 public:
 	MC2x2() { }
 	MC2x2(const MC2x2& source) { Matrix2x2::Assign(_values, source._values); }
-	explicit MC2x2(const double source[4]) { Matrix2x2::Assign(_values, source); }
+	template<typename T>
+	explicit MC2x2(const T source[4]) { Matrix2x2::Assign(_values, source); }
 	MC2x2(double m00, double m01, double m10, double m11) {
 		_values[0] = m00; _values[1] = m01;
 		_values[2] = m10; _values[3] = m11;

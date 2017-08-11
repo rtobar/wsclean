@@ -41,7 +41,19 @@ public:
 		_weights.assign(weights, weights+n);
 	}
 	
+	double Frequency(size_t index) const
+	{
+		return _frequencies[index];
+	}
+	
+	double Weight(size_t index) const
+	{
+		return _weights[index];
+	}
+	
 	size_t NTerms() const { return _nTerms; }
+	
+	size_t NFrequencies() const { return _frequencies.size(); }
 	
 	double ReferenceFrequency() const {
 		return _frequencies[_frequencies.size()/2];

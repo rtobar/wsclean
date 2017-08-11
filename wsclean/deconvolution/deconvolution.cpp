@@ -306,6 +306,49 @@ void Deconvolution::SaveSourceList(const class ImagingTable& table, long double 
 	}
 }
 
+void Deconvolution::correctChannelForPB(ComponentList& list, const ImagingTableEntry& entry) const
+{
+	Logger::Debug << "Correcting source list of channel " << entry.outputChannelIndex << " for beam\n";
+	ImageFilename filename(entry.outputChannelIndex, entry.outputIntervalIndex);
+	filename.SetPolarization(entry.polarization);
+	PrimaryBeam pb(_settings);
+	PrimaryBeamImageSet beam(_imgWidth, _imgHeight, *_imageAllocator);
+	pb.Load(beam, filename);
+	list.CorrectForBeam(beam, entry.outputChannelIndex);
+}
+
+void Deconvolution::loadAveragePrimaryBeam(PrimaryBeamImageSet& beamImages, size_t imageIndex, const ImagingTable& table) const
+{
+	Logger::Debug << "Averaging beam for deconvolution channel " << imageIndex << "\n";
+	
+	beamImages.SetToZero();
+	
+	ImageBufferAllocator::Ptr scratch;
+	_imageAllocator->Allocate(_imgWidth*_imgHeight, scratch);
+	size_t deconvolutionChannels = _settings.deconvolutionChannelCount;
+	
+	/// TODO : use real weights of images
+	size_t count = 0;
+	PrimaryBeam pb(_settings);
+	for(size_t sqIndex=0; sqIndex!=table.SquaredGroupCount(); ++sqIndex)
+	{
+		size_t curImageIndex = (sqIndex*deconvolutionChannels)/table.SquaredGroupCount();
+		if(curImageIndex == imageIndex)
+		{
+			const ImagingTableEntry e = table.GetSquaredGroup(sqIndex).Front();
+			Logger::Debug << "Adding beam at " << e.CentralFrequency()*1e-6 << " MHz\n";
+			ImageFilename filename(e.outputChannelIndex, e.outputIntervalIndex);
+			
+			PrimaryBeamImageSet scratch(_settings.trimmedImageWidth, _settings.trimmedImageHeight, *_imageAllocator);
+			pb.Load(scratch, filename);
+			beamImages += scratch;
+			
+			count++;
+		}
+	}
+	beamImages *= (1.0 / double(count));
+}
+
 void Deconvolution::SavePBSourceList(const class ImagingTable& table, long double phaseCentreRA, long double phaseCentreDec) const
 {
 	std::unique_ptr<ComponentList> list;
@@ -321,16 +364,24 @@ void Deconvolution::SavePBSourceList(const class ImagingTable& table, long doubl
 		list.reset(new ComponentList(_imgWidth, _imgHeight, modelSet));
 	}
 	
-	for(size_t i=0; i!=table.SquaredGroupCount(); ++i)
+	if(_settings.deconvolutionChannelCount == 0 ||
+		_settings.deconvolutionChannelCount == table.SquaredGroupCount())
 	{
-		const ImagingTableEntry entry = table.GetSquaredGroup(i).Front();
-		Logger::Debug << "Correcting source list of channel " << entry.outputChannelIndex << " for beam\n";
-		ImageFilename filename(entry.outputChannelIndex, entry.outputIntervalIndex);
-		filename.SetPolarization(entry.polarization);
-		PrimaryBeam pb(_settings);
-		PrimaryBeamImageSet beam(_imgWidth, _imgHeight, *_imageAllocator);
-		pb.Load(beam, filename);
-		list->CorrectForBeam(beam, entry.outputChannelIndex);
+		// No beam averaging is required
+		for(size_t i=0; i!=table.SquaredGroupCount(); ++i)
+		{
+			const ImagingTableEntry entry = table.GetSquaredGroup(i).Front();
+			correctChannelForPB(*list, entry);
+		}
+	}
+	else {
+		for(size_t ch=0; ch!=_settings.deconvolutionChannelCount; ++ch)
+		{
+			PrimaryBeamImageSet beamImages(_imgWidth, _imgHeight, *_imageAllocator);
+			Logger::Debug << "Correcting source list of channel " << ch << " for averaged beam\n";
+			loadAveragePrimaryBeam(beamImages, ch, table);
+			list->CorrectForBeam(beamImages, ch);
+		}
 	}
 	
 	std::string filename = _settings.prefixName + "-sources-pb.txt";

@@ -38,6 +38,10 @@ public:
 private:
 	void calculateDeconvolutionFrequencies(const ImagingTable& groupTable, ao::uvector<double>& frequencies, ao::uvector<double>& weights);
 	
+	void correctChannelForPB(class ComponentList& list, const class ImagingTableEntry& entry) const;
+	
+	void loadAveragePrimaryBeam(class PrimaryBeamImageSet& beamImages, size_t imageIndex, const class ImagingTable& table) const;
+	
 	const class WSCleanSettings& _settings;
 	
 	std::unique_ptr<class DeconvolutionAlgorithm> _cleanAlgorithm;

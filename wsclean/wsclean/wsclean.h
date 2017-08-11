@@ -57,7 +57,7 @@ private:
 	void readEarlierModelImages(const ImagingTableEntry& entry);
 	
 	void makeImagingTable(size_t outputIntervalIndex);
-	void makeImagingTableEntry(const std::vector<OrderedChannel>& channels, size_t outIntervalIndex, size_t outChannelIndex, ImagingTableEntry& entry);
+	void makeImagingTableEntry(const std::vector<ChannelInfo>& channels, size_t outIntervalIndex, size_t outChannelIndex, ImagingTableEntry& entry);
 	void addPolarizationsToImagingTable(size_t& joinedGroupIndex, size_t& squaredGroupIndex, size_t outChannelIndex, const ImagingTableEntry& templateEntry);
 	class ImageWeightCache* createWeightCache();
 	
@@ -99,7 +99,7 @@ private:
 	
 	MSSelection _globalSelection;
 	std::string _commandLine;
-	std::vector<OrderedChannel> _inputChannelFrequencies;
+	std::vector<ChannelInfo> _inputChannelFrequencies;
 	
 	WSCleanSettings _settings;
 	

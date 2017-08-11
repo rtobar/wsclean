@@ -12,30 +12,67 @@
 
 #ifndef USE_DIRECT_ALLOCATOR
 
+/**
+ * The ImageBufferAllocator is a simple allocator for maintaining large memory chunks.
+ * 
+ * This class was made to avoid segmentation: it was found that wsclean initially used more
+ * memory than it had allocated, which was due to iteratively freeing and allocating
+ * large chunks, but because of intermediate small allocations the large chunks no longer
+ * fitted, and new memory was returned.
+ */
 class ImageBufferAllocator
 {
 public:
+	/** A unique smart pointer to an image buffer. */
 	class Ptr
 	{
 	public:
 		friend class ImageBufferAllocator;
+		/** Construct empty pointer */
 		Ptr()
 			: _data(nullptr), _allocator(nullptr) { }
+		/** Construct initialized pointer
+			* @param data databuffer
+			* @param allocator corresponding allocator
+			*/
 		Ptr(double* data, ImageBufferAllocator& allocator) 
 			: _data(data), _allocator(&allocator) { }
+			
+		Ptr(Ptr&& source)
+		  : _data(source._data), _allocator(source._allocator)
+		{
+			source._data = nullptr;
+			source._allocator = nullptr;
+		}
+		/** Destructor */
 		~Ptr()
 		{
 			reset();
 		}
+		Ptr& operator=(Ptr&& rhs)
+		{
+			reset(rhs._data, *rhs._allocator);
+			rhs._data = nullptr;
+			rhs._data = nullptr;
+			return *this;
+		}
+		/** Is the ptr set? */
 		operator bool() const { return _data != nullptr; }
+		/** @returns pointer to data */
 		double* data() const { return _data; }
+		/** @returns referece to data */ 
 		double& operator*() const { return *_data; }
+		/** Destructs buffer if set. */
 		void reset()
 		{
 			// We have to check for nullptr, because the _allocator might not be set.
 			if(_data != nullptr) _allocator->Free(_data);
 			_data = nullptr;
 		}
+		/** Destructs buffer if set and assign new contents.
+			* @param data databuffer
+			* @param allocator corresponding allocator
+			*/
 		void reset(double* data, ImageBufferAllocator& allocator)
 		{
 			// We have to check for nullptr, because the _allocator might not be set.
@@ -43,6 +80,7 @@ public:
 			_data = data;
 			_allocator = &allocator;
 		}
+		/** Retrieve image element with given index. */
 		double& operator[](size_t index) const { return _data[index]; }
 	private:
 		Ptr(const Ptr&) = delete;
