@@ -29,6 +29,8 @@ IdgMsGridder::IdgMsGridder(const WSCleanSettings& settings) :
 {
 	readConfiguration();
 	setIdgType();
+	_bufferset = std::unique_ptr<idg::api::BufferSet>(
+		idg::api::BufferSet::create(_proxyType));
 }
 
 IdgMsGridder::~IdgMsGridder()
@@ -56,8 +58,13 @@ void IdgMsGridder::Invert()
 		
 		resetVisibilityCounters();
 
-		_image.assign(4 * width * height, 0.0);
-		
+		double max_w = 0;
+		for(size_t i=0; i!=MeasurementSetCount(); ++i)
+		{
+			max_w = std::max(max_w, msDataVector[i].maxW);
+		}
+
+		_bufferset->init(width, _actualPixelSizeX, max_w, _options);
 		for(size_t i=0; i!=MeasurementSetCount(); ++i)
 		{
 			// Adds the gridding result to _image member
@@ -65,7 +72,8 @@ void IdgMsGridder::Invert()
 		}
 		
 		std::cout << "total weight: " << totalWeight() << std::endl;
-		
+        _image.assign(4 * width * height, 0.0);
+		_bufferset->get_image(_image.data());
 		
 		// Normalize by total weight
 		
@@ -86,25 +94,20 @@ void IdgMsGridder::Invert()
 void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 {
 	const size_t width = TrimWidth();
-	const float max_baseline = msData.maxBaselineInM;
-	const float max_w = msData.maxW;
 	_selectedBands = msData.SelectedBand();
 
 	// TODO for now we map the ms antennas directly to the gridder's antenna,
 	// including non-selected antennas. Later this can be made more efficient.
 	casacore::MeasurementSet& ms = msData.msProvider->MS();
-	size_t nStations = ms.antenna().nrow();
+	size_t nr_stations = ms.antenna().nrow();
 
 	std::vector<std::vector<double>> bands;
 	for(size_t i=0; i!=_selectedBands.BandCount(); ++i)
 	{
 		bands.push_back(std::vector<double>(_selectedBands[i].begin(), _selectedBands[i].end()));
 	}
-
-	_bufferset = std::unique_ptr<idg::api::BufferSet>(idg::api::BufferSet::create(
-		_proxyType, _buffersize, bands, nStations, 
-		width, _actualPixelSizeX, max_baseline, max_w, _options, idg::api::BufferSetType::gridding));
-	
+	float max_baseline = msData.maxBaselineInM;
+	_bufferset->init_buffers(_buffersize, bands, nr_stations, max_baseline, _options, idg::api::BufferSetType::gridding);
 	casacore::ScalarColumn<int> antenna1Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA1));
 	casacore::ScalarColumn<int> antenna2Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA2));
 	casacore::ScalarColumn<double> timeCol(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::TIME));
@@ -159,8 +162,6 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 	
 	// TODO needs to add, not replace, because gridMeasurementSet is called in a loop over measurement sets
 	_bufferset->finished();
-	_bufferset->get_image(_image.data());
-	_bufferset.reset();
 }
 
 void IdgMsGridder::Predict(double* image)
@@ -189,6 +190,15 @@ void IdgMsGridder::Predict(double* image)
 		// Do actual predict
 		std::vector<MSData> msDataVector;
 		initializeMSDataVector(msDataVector, 4);
+
+		double max_w = 0;
+		for(size_t i=0; i!=MeasurementSetCount(); ++i)
+		{
+			max_w = std::max(max_w, msDataVector[i].maxW);
+		}
+
+		_bufferset->init(width, _actualPixelSizeX, max_w, _options);
+		_bufferset->set_image(_image.data());
 
 		for(size_t i=0; i!=MeasurementSetCount(); ++i)
 		{
@@ -236,10 +246,7 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 		bands.push_back(std::vector<double>(_selectedBands[i].begin(), _selectedBands[i].end()));
 	}
 
-	_bufferset = std::unique_ptr<idg::api::BufferSet>(idg::api::BufferSet::create(
-		_proxyType, _buffersize, bands, nr_stations, 
-		width, _actualPixelSizeX, max_baseline, max_w, _options, idg::api::BufferSetType::degridding));
-	_bufferset->set_image(_image.data());
+	_bufferset->init_buffers(_buffersize, bands, nr_stations, max_baseline, _options, idg::api::BufferSetType::gridding);
 
 	casacore::ScalarColumn<int> antenna1Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA1));
 	casacore::ScalarColumn<int> antenna2Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA2));
