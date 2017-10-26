@@ -3,7 +3,6 @@
 #include "../wsclean/logger.h"
 
 #include <casacore/ms/MeasurementSets/MeasurementSet.h>
-#include <casacore/tables/Tables/ArrayColumn.h>
 #include <casacore/tables/Tables/ScalarColumn.h>
 #include <casacore/tables/Tables/ArrColDesc.h>
 
@@ -575,6 +574,51 @@ void MSProvider::reverseCopyData(casacore::Array<std::complex<float>>& dest, siz
 	}
 }
 
+void MSProvider::reverseCopyWeights(casacore::Array<float>& dest, size_t startChannel, size_t endChannel, const std::vector<PolarizationEnum> &polsDest, const float* source, PolarizationEnum polSource)
+{
+	size_t polCount = polsDest.size();
+	const size_t selectedChannelCount = endChannel - startChannel;
+	casacore::Array<float>::contiter dataIter = dest.cbegin() + startChannel * polCount;
+	
+	size_t polIndex;
+	if(polSource == Polarization::Instrumental)
+	{
+		std::copy(source, source+selectedChannelCount * polsDest.size(), dataIter);
+	}
+	else if(Polarization::TypeToIndex(polSource, polsDest, polIndex)) {
+		for(size_t ch=0; ch!=selectedChannelCount; ++ch)
+		{
+			*(dataIter+polIndex) = source[ch];
+			dataIter += polCount;
+		}
+	}
+	else {
+		switch(polSource) {
+			case Polarization::StokesI: {
+				size_t polIndexA=0, polIndexB=0;
+				bool hasXX = Polarization::TypeToIndex(Polarization::XX, polsDest, polIndexA);
+				bool hasYY = Polarization::TypeToIndex(Polarization::YY, polsDest, polIndexB);
+				if(!hasXX || !hasYY) {
+					Polarization::TypeToIndex(Polarization::RR, polsDest, polIndexA);
+					Polarization::TypeToIndex(Polarization::LL, polsDest, polIndexB);
+				}
+				for(size_t ch=0; ch!=selectedChannelCount; ++ch)
+				{
+					*(dataIter + polIndexA) = source[ch]; // XX = I (or rr = I)
+					*(dataIter + polIndexB) = source[ch]; // YY = I (or ll = I)
+					dataIter += polCount;
+				}
+			}
+			break;
+			case Polarization::StokesQ:
+			case Polarization::StokesU:
+			case Polarization::StokesV:
+			default:
+				throw std::runtime_error("Can't store weights in measurement set for this combination of polarizations (not implemented or conversion not possible)");
+		}
+	}
+}
+
 void MSProvider::getRowRange(casacore::MeasurementSet& ms, const MSSelection& selection, size_t& startRow, size_t& endRow)
 {
 	startRow = 0;
@@ -655,7 +699,7 @@ void MSProvider::getRowRangeAndIDMap(casacore::MeasurementSet& ms, const MSSelec
 
 void MSProvider::initializeModelColumn(casacore::MeasurementSet& ms)
 {
-	casacore::ROArrayColumn<casacore::Complex> dataColumn(ms, casacore::MS::columnName(casacore::MSMainEnums::DATA));
+	casacore::ArrayColumn<casacore::Complex> dataColumn(ms, casacore::MS::columnName(casacore::MSMainEnums::DATA));
 	if(ms.isColumn(casacore::MSMainEnums::MODEL_DATA))
 	{
 		casacore::ArrayColumn<casacore::Complex> modelColumn(ms, casacore::MS::columnName(casacore::MSMainEnums::MODEL_DATA));
@@ -678,6 +722,7 @@ void MSProvider::initializeModelColumn(casacore::MeasurementSet& ms)
 		}
 	}
 	else { //if(!_ms.isColumn(casacore::MSMainEnums::MODEL_DATA))
+		ms.reopenRW();
 		Logger::Info << "Adding model data column... ";
 		Logger::Info.Flush();
 		casacore::IPosition shape = dataColumn.shape(0);
@@ -699,6 +744,38 @@ void MSProvider::initializeModelColumn(casacore::MeasurementSet& ms)
 			modelColumn.put(row, zeroArray);
 		
 		Logger::Info << "DONE\n";
+	}
+}
+
+casacore::ArrayColumn<float> MSProvider::initializeImagingWeightColumn(casacore::MeasurementSet& ms)
+{
+	ms.reopenRW();
+	casacore::ArrayColumn<casacore::Complex> dataColumn(ms, casacore::MS::columnName(casacore::MSMainEnums::DATA));
+	if(ms.tableDesc().isColumn("IMAGING_WEIGHT_SPECTRUM"))
+	{
+		return casacore::ArrayColumn<float>(ms, "IMAGING_WEIGHT_SPECTRUM");
+	}
+	else {
+		Logger::Info << "Adding imaging weight spectrum column... ";
+		Logger::Info.Flush();
+		casacore::IPosition shape = dataColumn.shape(0);
+		casacore::ArrayColumnDesc<float> modelColumnDesc("IMAGING_WEIGHT_SPECTRUM", shape);
+		try {
+			ms.addColumn(modelColumnDesc, "StandardStMan", true, true);
+		} catch(std::exception& e)
+		{
+			ms.addColumn(modelColumnDesc, "StandardStMan", false, true);
+		}
+		
+		casacore::Array<float> zeroArray(shape);
+		for(casacore::Array<float>::contiter i=zeroArray.cbegin(); i!=zeroArray.cend(); ++i)
+			*i = 0.0;
+		
+		casacore::ArrayColumn<float> imgWColumn(ms, "IMAGING_WEIGHT_SPECTRUM");
+		for(size_t row=0; row!=ms.nrow(); ++row)
+			imgWColumn.put(row, zeroArray);
+		Logger::Info << "DONE\n";
+		return imgWColumn;
 	}
 }
 

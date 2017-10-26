@@ -93,15 +93,13 @@ public:
 	
 	void LoadAndAveragePSFs(class CachedImageSet& psfSet, std::vector<ao::uvector<double>>& psfImages, PolarizationEnum psfPolarization);
 	
-	void LoadAveragePrimaryBeam(class PrimaryBeamImageSet& beamImages, const class WSCleanSettings& settings, size_t imageIndex);
-	
 	void InterpolateAndStore(class CachedImageSet& imageSet, const class SpectralFitter& fitter);
 	
 	void AssignAndStore(class CachedImageSet& imageSet);
 	
 	/**
 	 * This function will calculate the integration over all images, squaring
-	 * images that are in the same square-image group. For example, with
+	 * images that are in the same squared-image group. For example, with
 	 * a squared group of [I, Q, ..] and another group [I2, Q2, ...], this
 	 * will calculate:
 	 * 

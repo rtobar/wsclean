@@ -1,7 +1,7 @@
 #include "wsclean.h"
 
 #include "imageweightcache.h"
-#include "inversionalgorithm.h"
+#include "measurementsetgridder.h"
 #include "logger.h"
 #include "wscfitswriter.h"
 #include "wsmsgridder.h"
@@ -71,6 +71,7 @@ void WSClean::imagePSF(ImagingTableEntry& entry)
 	_gridder->SetDoSubtractModel(false);
 	_gridder->SetVerbose(_isFirstInversion);
 	_gridder->SetMetaDataCache(&_msGridderMetaCache[entry.index]);
+	_gridder->SetStoreImagingWeights(_settings.writeImagingWeightSpectrumColumn);
 	_gridder->Invert();
 	
 	size_t centralIndex = _settings.trimmedImageWidth/2 + (_settings.trimmedImageHeight/2) * _settings.trimmedImageWidth;
@@ -144,6 +145,7 @@ void WSClean::imageMainFirst(const ImagingTableEntry& entry)
 	_gridder->SetDoSubtractModel(_settings.subtractModel || _settings.continuedRun);
 	_gridder->SetVerbose(_isFirstInversion);
 	_gridder->SetMetaDataCache(&_msGridderMetaCache[entry.index]);
+	_gridder->SetStoreImagingWeights(_settings.writeImagingWeightSpectrumColumn);
 	_gridder->Invert();
 	_inversionWatch.Pause();
 	_gridder->SetVerbose(false);
@@ -344,7 +346,7 @@ void WSClean::initializeMFSImageWeights()
 			for(size_t d=0; d!=_msBands[i].DataDescCount(); ++d)
 			{
 				PolarizationEnum pol = _settings.useIDG ? Polarization::Instrumental : *_settings.polarizations.begin();
-				ContiguousMS msProvider(_settings.filenames[i], _settings.dataColumnName, _globalSelection, pol, d, _settings.deconvolutionMGain != 1.0);
+				ContiguousMS msProvider(_settings.filenames[i], _settings.dataColumnName, _globalSelection, pol, d);
 				_imageWeightCache->Weights().Grid(msProvider,  _globalSelection);
 				Logger::Info << '.';
 				Logger::Info.Flush();
@@ -707,7 +709,7 @@ void WSClean::runIndependentGroup(ImagingTable& groupTable)
 								initializeImageWeights(sGroupTable[e]);
 			
 								imageMainNonFirst(sGroupTable[e]);
-								clearCurMSProviders();
+								_currentPolMSes.clear();
 							}
 						}
 						else {
@@ -718,7 +720,7 @@ void WSClean::runIndependentGroup(ImagingTable& groupTable)
 								initializeImageWeights(sGroupTable[e]);
 			
 								predict(sGroupTable[e]);
-								clearCurMSProviders();
+								_currentPolMSes.clear();
 							}
 							for(size_t e=0; e!=sGroupTable.EntryCount(); ++e)
 							{
@@ -727,7 +729,7 @@ void WSClean::runIndependentGroup(ImagingTable& groupTable)
 								initializeImageWeights(sGroupTable[e]);
 								
 								imageMainNonFirst(sGroupTable[e]);
-								clearCurMSProviders();
+								_currentPolMSes.clear();
 							} // end of polarization loop
 						}
 					} // end of joined channels loop
@@ -950,7 +952,7 @@ void WSClean::predictGroup(const ImagingTable& imagingGroup)
 
 		predict(entry);
 		
-		clearCurMSProviders();
+		_currentPolMSes.clear();
 	} // end of polarization loop
 	
 	_imageAllocator.ReportStatistics();
@@ -959,13 +961,13 @@ void WSClean::predictGroup(const ImagingTable& imagingGroup)
 	_settings.prefixName = rootPrefix;
 }
 
-MSProvider* WSClean::initializeMSProvider(const ImagingTableEntry& entry, const MSSelection& selection, size_t filenameIndex, size_t dataDescId)
+std::unique_ptr<MSProvider> WSClean::initializeMSProvider(const ImagingTableEntry& entry, const MSSelection& selection, size_t filenameIndex, size_t dataDescId)
 {
 	PolarizationEnum pol = _settings.useIDG ? Polarization::Instrumental : entry.polarization;
 	if(_doReorder)
-		return new PartitionedMS(_partitionedMSHandles[filenameIndex], entry.msData[filenameIndex].bands[dataDescId].partIndex, pol, dataDescId);
+		return std::unique_ptr<MSProvider>(new PartitionedMS(_partitionedMSHandles[filenameIndex], entry.msData[filenameIndex].bands[dataDescId].partIndex, pol, dataDescId));
 	else
-		return new ContiguousMS(_settings.filenames[filenameIndex], _settings.dataColumnName, selection, pol, dataDescId, _settings.deconvolutionMGain != 1.0);
+		return std::unique_ptr<MSProvider>(new ContiguousMS(_settings.filenames[filenameIndex], _settings.dataColumnName, selection, pol, dataDescId));
 }
 
 void WSClean::initializeCurMSProviders(const ImagingTableEntry& entry)
@@ -978,9 +980,10 @@ void WSClean::initializeCurMSProviders(const ImagingTableEntry& entry)
 			MSSelection selection(_globalSelection);
 			if(selectChannels(selection, i, d, entry))
 			{
-				MSProvider* msProvider = initializeMSProvider(entry, selection, i, d);
-				_gridder->AddMeasurementSet(msProvider, selection);
-				_currentPolMSes.push_back(msProvider);
+				std::unique_ptr<MSProvider> msProvider(
+					initializeMSProvider(entry, selection, i, d));
+				_gridder->AddMeasurementSet(msProvider.get(), selection);
+				_currentPolMSes.emplace_back(std::move(msProvider));
 			}
 		}
 	}
@@ -995,9 +998,9 @@ void WSClean::initializeMSProvidersForPB(const ImagingTableEntry& entry, Primary
 			MSSelection selection(_globalSelection);
 			if(selectChannels(selection, i, d, entry))
 			{
-				MSProvider* msProvider = initializeMSProvider(entry, selection, i, d);
-				pb.AddMS(msProvider, selection);
-				_currentPolMSes.push_back(msProvider);
+				std::unique_ptr<MSProvider> msProvider = initializeMSProvider(entry, selection, i, d);
+				pb.AddMS(msProvider.get(), selection);
+				_currentPolMSes.emplace_back(std::move(msProvider));
 			}
 		}
 	}
@@ -1005,8 +1008,6 @@ void WSClean::initializeMSProvidersForPB(const ImagingTableEntry& entry, Primary
 
 void WSClean::clearCurMSProviders()
 {
-	for(std::vector<MSProvider*>::iterator i=_currentPolMSes.begin(); i != _currentPolMSes.end(); ++i)
-		delete *i;
 	_currentPolMSes.clear();
 }
 
@@ -1035,7 +1036,7 @@ void WSClean::runFirstInversion(ImagingTableEntry& entry)
 		_primaryBeam->SetPhaseCentre(ra, dec, dl, dm);
 		ImageFilename imageName = ImageFilename(entry.outputChannelIndex, entry.outputIntervalIndex);
 		_primaryBeam->MakeBeamImages(imageName, entry, _imageWeightCache.get(), _imageAllocator);
-		clearCurMSProviders();
+		_currentPolMSes.clear();
 		initializeCurMSProviders(entry);
 	}
 		
@@ -1111,8 +1112,7 @@ void WSClean::runFirstInversion(ImagingTableEntry& entry)
 			}
 		}
 	}
-	
-	clearCurMSProviders();
+	_currentPolMSes.clear();
 }
 
 void WSClean::makeMFSImage(const string& suffix, size_t intervalIndex, PolarizationEnum pol, bool isImaginary, bool isPSF)

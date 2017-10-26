@@ -3,7 +3,7 @@
 #include <casacore/measures/Measures/MEpoch.h>
 #include <casacore/measures/TableMeasures/ScalarMeasColumn.h>
 
-ContiguousMS::ContiguousMS(const string& msPath, const std::string& dataColumnName, const MSSelection& selection, PolarizationEnum polOut, size_t dataDescId, bool includeModel) :
+ContiguousMS::ContiguousMS(const string& msPath, const std::string& dataColumnName, const MSSelection& selection, PolarizationEnum polOut, size_t dataDescId) :
 	_timestep(0),
 	_time(0.0),
 	_dataDescId(dataDescId),
@@ -29,6 +29,7 @@ ContiguousMS::ContiguousMS(const string& msPath, const std::string& dataColumnNa
 	const casacore::IPosition shape(_dataColumn.shape(0));
 	_dataArray = casacore::Array<std::complex<float>>(shape);
 	_weightSpectrumArray = casacore::Array<float>(shape);
+	_imagingWeightSpectrumArray = casacore::Array<float>(shape);
 	_flagArray = casacore::Array<bool>(shape);
 	_bandData = MultiBandData(_ms.spectralWindow(), _ms.dataDescription());
 	
@@ -256,6 +257,30 @@ void ContiguousMS::ReadWeights(float* buffer)
 		endChannel = _bandData[_dataDescId].ChannelCount();
 	}
 	copyWeights(buffer,  startChannel, endChannel, _inputPolarizations, _dataArray, _weightSpectrumArray, _flagArray, _polOut);
+}
+
+void ContiguousMS::WriteImagingWeights(size_t rowId, const float* buffer)
+{
+	if(_imagingWeightsColumn == nullptr)
+	{
+		_imagingWeightsColumn.reset(new casacore::ArrayColumn<float>(initializeImagingWeightColumn(_ms)));
+	}
+	size_t msRowId = _idToMSRow[rowId];
+	size_t dataDescId = _dataDescIdColumn(msRowId);
+	size_t startChannel, endChannel;
+	if(_selection.HasChannelRange())
+	{
+		startChannel = _selection.ChannelRangeStart();
+		endChannel = _selection.ChannelRangeEnd();
+	}
+	else {
+		startChannel = 0;
+		endChannel = _bandData[dataDescId].ChannelCount();
+	}
+	
+	_imagingWeightsColumn->get(msRowId, _imagingWeightSpectrumArray);
+	reverseCopyWeights(_imagingWeightSpectrumArray, startChannel, endChannel, _inputPolarizations, buffer, _polOut);
+	_imagingWeightsColumn->put(msRowId, _imagingWeightSpectrumArray);
 }
 
 void ContiguousMS::MakeIdToMSRowMapping(vector<size_t>& idToMSRow)

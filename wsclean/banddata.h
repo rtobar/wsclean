@@ -61,7 +61,7 @@ class BandData
 		/**
 		 * Construct an empty instance.
 		 */
-		BandData() : _channelCount(0), _channelFrequencies(0), _frequencyStep(0.0)
+		BandData() : _channelCount(0), _channelFrequencies(), _frequencyStep(0.0)
 		{
 		}
 		
@@ -91,13 +91,24 @@ class BandData
 		 * Copy constructor.
 		 * @param source Copied to the new banddata.
 		 */
-		BandData(const BandData& source) : _channelCount(source._channelCount), _frequencyStep(source._frequencyStep)
+		BandData(const BandData& source) :
+			_channelCount(source._channelCount),
+			_frequencyStep(source._frequencyStep)
 		{
-			_channelFrequencies = new double[_channelCount];
+			_channelFrequencies.reset(new double[_channelCount]);
 			for(size_t index = 0; index != _channelCount; ++index)
 			{
 				_channelFrequencies[index] = source._channelFrequencies[index];
 			}
+		}
+		
+		BandData(BandData&& source) noexcept :
+			_channelCount(source._channelCount),
+			_channelFrequencies(std::move(source._channelFrequencies)),
+			_frequencyStep(source._frequencyStep)
+		{
+			source._channelCount = 0;
+			source._frequencyStep = 0.0;
 		}
 		
 		/**
@@ -107,55 +118,69 @@ class BandData
 		 * @param endChannel End of range, exclusive.
 		 */
 		BandData(const BandData &source, size_t startChannel, size_t endChannel) :
-			_channelCount(endChannel - startChannel), _frequencyStep(source._frequencyStep)
+			_channelCount(endChannel - startChannel),
+			_frequencyStep(source._frequencyStep)
 		{
 			if(_channelCount == 0) throw std::runtime_error("No channels in set");
 			if(endChannel < startChannel) throw std::runtime_error("Invalid band specification");
+			_channelFrequencies.reset(new double[_channelCount]);
 			
-			_channelFrequencies = new double[_channelCount];
 			for(size_t index = 0; index != _channelCount; ++index)
 			{
 				_channelFrequencies[index] = source._channelFrequencies[index + startChannel];
 			}
 		}
 		
-		/** Destructor. */
-		~BandData()
+		/**
+		 * Construct a banddata from an array with channel infos.
+		 */
+		BandData(const std::vector<ChannelInfo>& channels)
 		{
-			delete[] _channelFrequencies;
+			initFromArray(channels);
 		}
 		
-		/** Assignment operator */
+		/** Copy assignment operator */
 		BandData operator=(const BandData& source)
 		{
 			_channelCount = source._channelCount;
 			_frequencyStep = source._frequencyStep;
 			if(_channelCount != 0)
 			{
-				_channelFrequencies = new double[_channelCount];
+				_channelFrequencies.reset(new double[_channelCount]);
 				for(size_t index = 0; index != _channelCount; ++index)
 				{
 					_channelFrequencies[index] = source._channelFrequencies[index];
 				}
 			}
 			else {
-				_channelFrequencies = 0;
+				_channelFrequencies = nullptr;
 			}
+			return *this;
+		}
+		
+		/** Move assignment operator */
+		BandData operator=(BandData&& source)
+		{
+			_channelCount = source._channelCount;
+			_frequencyStep = source._frequencyStep;
+			_channelFrequencies = std::move(source._channelFrequencies);
+			source._channelCount = 0;
+			source._frequencyStep = 0.0;
 			return *this;
 		}
 		
 		/** Iterator over frequencies, pointing to first channel */
 		double* begin()
-		{ return _channelFrequencies; }
+		{ return _channelFrequencies.get(); }
 		/** Iterator over frequencies, pointing past last channel */
 		double* end()
-		{ return _channelFrequencies+_channelCount; }
+		{ return _channelFrequencies.get()+_channelCount; }
 		/** Constant iterator over frequencies, pointing to first channel */
 		const double* begin() const
-		{ return _channelFrequencies; }
+		{ return _channelFrequencies.get(); }
 		/** Constant iterator over frequencies, pointing to last channel */
 		const double* end() const
-		{ return _channelFrequencies+_channelCount; }
+		{ return _channelFrequencies.get()+_channelCount; }
 		
 		/** Reverse iterator over frequencies, pointing to last channel */
 		std::reverse_iterator<double*> rbegin()
@@ -181,9 +206,8 @@ class BandData
 		void Set(size_t channelCount, const double* frequencies)
 		{
 			_channelCount = channelCount;
-			delete[] _channelFrequencies;
-			_channelFrequencies = new double[channelCount];
-			memcpy(_channelFrequencies, frequencies, sizeof(double)*channelCount);
+			_channelFrequencies.reset(new double[channelCount]);
+			std::copy(frequencies, frequencies + channelCount, _channelFrequencies.get());
 		}
 		
 		/** Retrieve number of channels in this band.
@@ -321,7 +345,7 @@ class BandData
 			chanFreqCol.get(bandIndex, channelFrequencies, true);
 			chanWidthCol.get(bandIndex, channelWidths, true);
 			
-			_channelFrequencies = new double[_channelCount];
+			_channelFrequencies.reset(new double[_channelCount]);
 			size_t index = 0;
 			for(casacore::Array<double>::const_iterator i=channelFrequencies.begin();
 					i != channelFrequencies.end(); ++i)
@@ -340,8 +364,23 @@ class BandData
 			_frequencyStep /= double(index);
 		}
 		
+		void initFromArray(const std::vector<ChannelInfo>& channels)
+		{
+			_channelCount = channels.size();
+			_channelFrequencies.reset(new double[_channelCount]);
+			size_t index = 0;
+			_frequencyStep = 0.0;
+			for(const ChannelInfo& channel : channels)
+			{
+				_channelFrequencies[index] = channel.Frequency();
+				_frequencyStep += channel.Width();
+				++index;
+			}
+			_frequencyStep /= double(index);
+		}
+		
 		size_t _channelCount;
-		double *_channelFrequencies;
+		std::unique_ptr<double[]> _channelFrequencies;
 		double _frequencyStep;
 };
 

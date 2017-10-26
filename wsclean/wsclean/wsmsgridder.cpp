@@ -352,15 +352,10 @@ void WSMSGridder::Invert()
 		if(Verbose()) Logger::Info << '\n';
 		else Logger::Info.Flush();
 		
-		//_inversionWorkLane.reset(new ao::lane<InversionWorkItem>(2048));
-		//set_lane_debug_name(*_inversionWorkLane, "Inversion work lane containing full row data");
-		
 		_gridder->StartInversionPass(pass);
 		
 		for(size_t i=0; i!=MeasurementSetCount(); ++i)
 		{
-			//_inversionWorkLane->clear();
-			
 			MSData& msData = msDataVector[i];
 			
 			const MultiBandData selectedBand(msData.SelectedBand());
@@ -369,10 +364,8 @@ void WSMSGridder::Invert()
 		
 			gridMeasurementSet(msData);
 			
-			//_inversionWorkLane->write_end();
 			finishInversionWorkThreads();
 		}
-		//_inversionWorkLane.reset();
 		
 		Logger::Info << "Fourier transforms...\n";
 		_gridder->FinishInversionPass();

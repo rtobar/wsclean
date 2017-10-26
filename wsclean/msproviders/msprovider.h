@@ -57,6 +57,8 @@ public:
 	
 	virtual void WriteModel(size_t rowId, std::complex<float>* buffer) = 0;
 	
+	virtual void WriteImagingWeights(size_t rowId, const float* buffer) = 0;
+	
 	virtual void ReadWeights(float* buffer) = 0;
 	
 	virtual void ReadWeights(std::complex<float>* buffer) = 0;
@@ -78,6 +80,8 @@ protected:
 	
 	static void reverseCopyData(casacore::Array<std::complex<float>>& dest, size_t startChannel, size_t endChannel, const std::vector<PolarizationEnum>& polsDest, const std::complex<float>* source, PolarizationEnum polSource);
 	
+	static void reverseCopyWeights(casacore::Array<float>& dest, size_t startChannel, size_t endChannel, const std::vector<PolarizationEnum> &polsDest, const float* source, PolarizationEnum polSource);
+	
 	static void getRowRange(casacore::MeasurementSet& ms, const MSSelection& selection, size_t& startRow, size_t& endRow);
 	
 	static void getRowRangeAndIDMap(casacore::MeasurementSet& ms, const MSSelection& selection, size_t& startRow, size_t& endRow, const std::set<size_t>& dataDescIdMap, vector<size_t>& idToMSRow);
@@ -94,6 +98,8 @@ protected:
 	}
 	
 	static void initializeModelColumn(casacore::MeasurementSet& ms);
+	
+	static casacore::ArrayColumn<float> initializeImagingWeightColumn(casacore::MeasurementSet& ms);
 	
 	/**
 	 * Make an arraycolumn object for the weight spectrum column if it exists and is valid.

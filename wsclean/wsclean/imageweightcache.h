@@ -1,7 +1,7 @@
 #ifndef IMAGE_WEIGHT_CACHE_H
 #define IMAGE_WEIGHT_CACHE_H
 
-#include "inversionalgorithm.h"
+#include "measurementsetgridder.h"
 #include "logger.h"
 
 #include "../imageweights.h"

@@ -101,6 +101,8 @@ void CommandLine::printHelp()
 		"-taper-edge-tukey <lambda>\n"
 		"   Taper the edge weights with a Tukey window. Lambda is the size of the Tukey transition. When -taper-edge\n"
 		"   is also specified, the Tukey transition starts inside the inner rectangle.\n"
+		"-store-imaging-weights\n"
+		"   Will store the imaging weights in a column named 'IMAGING_WEIGHT_SPECTRUM'.\n"
 		"\n"
 		"  ** INVERSION OPTIONS **\n"
 		"-name <image-prefix>\n"
@@ -758,6 +760,10 @@ int CommandLine::Run(int argc, char* argv[])
 		{
 			++argi;
 			settings.tukeyInnerTaperInLambda = atof(argv[argi]);
+		}
+		else if(param == "store-imaging-weights")
+		{
+			settings.writeImagingWeightSpectrumColumn = true;
 		}
 		else if(param == "multiscale")
 		{

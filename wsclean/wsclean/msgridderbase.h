@@ -1,13 +1,16 @@
 #ifndef MS_GRIDDER_BASE_H
 #define MS_GRIDDER_BASE_H
 
-#include "inversionalgorithm.h"
+#include "measurementsetgridder.h"
+
 #include "../multibanddata.h"
+#include "../uvector.h"
 
 class MSGridderBase : public MeasurementSetGridder
 {
 public:
 	MSGridderBase();
+	~MSGridderBase();
 	
 	virtual double StartTime() const final override { return _startTime; }
 	virtual double PhaseCentreRA() const final override { return _phaseCentreRA; }
@@ -85,7 +88,7 @@ protected:
 	struct InversionRow
 	{
 		double uvw[3];
-		size_t dataDescId;
+		size_t dataDescId, rowId;
 		std::complex<float>* data;
 	};
 		
@@ -164,6 +167,8 @@ private:
 	double _totalWeight;
 	double _maxGriddedWeight;
 	double _visibilityWeightSum;
+	
+	ao::uvector<float> _scratchWeights;
 };
 
 #endif

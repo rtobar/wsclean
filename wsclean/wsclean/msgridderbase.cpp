@@ -40,8 +40,10 @@ MSGridderBase::MSGridderBase() :
 	_totalWeight(0.0),
 	_maxGriddedWeight(0.0),
 	_visibilityWeightSum(0.0)
-{
-}
+{ }
+
+MSGridderBase::~MSGridderBase()
+{ }
 
 void MSGridderBase::GetPhaseCentreInfo(casacore::MeasurementSet& ms, size_t fieldId, double& ra, double& dec, double& dl, double& dm)
 {
@@ -320,6 +322,7 @@ void MSGridderBase::readAndWeightVisibilities(MSProvider& msProvider, InversionR
 	else {
 		msProvider.ReadData(rowData.data);
 	}
+	rowData.rowId = msProvider.RowId();
 	
 	if(DoSubtractModel())
 	{
@@ -345,56 +348,54 @@ void MSGridderBase::readAndWeightVisibilities(MSProvider& msProvider, InversionR
 	
 	switch(VisibilityWeightingMode())
 	{
-		case NormalVisibilityWeighting:
-			// The MS provider has already preweighted the
-			// visibilities for their weight, so we do not
-			// have to do anything.
-			break;
-		case SquaredVisibilityWeighting:
-			for(size_t chp=0; chp!=curBand.ChannelCount() * PolarizationCount; ++chp)
-				rowData.data[chp] *= weightBuffer[chp];
-			break;
-		case UnitVisibilityWeighting:
-			for(size_t chp=0; chp!=curBand.ChannelCount() * PolarizationCount; ++chp)
-			{
-				if(weightBuffer[chp] == 0.0)
-					rowData.data[chp] = 0.0;
-				else
-					rowData.data[chp] /= weightBuffer[chp];
-			}
-			break;
-	}
-	switch(Weighting().Mode())
-	{
-		case WeightMode::UniformWeighted:
-		case WeightMode::BriggsWeighted:
-		case WeightMode::NaturalWeighted:
+	case NormalVisibilityWeighting:
+		// The MS provider has already preweighted the
+		// visibilities for their weight, so we do not
+		// have to do anything.
+		break;
+	case SquaredVisibilityWeighting:
+		for(size_t chp=0; chp!=curBand.ChannelCount() * PolarizationCount; ++chp)
+			rowData.data[chp] *= weightBuffer[chp];
+		break;
+	case UnitVisibilityWeighting:
+		for(size_t chp=0; chp!=curBand.ChannelCount() * PolarizationCount; ++chp)
 		{
-			std::complex<float>* dataIter = rowData.data;
-			float* weightIter = weightBuffer;
-			for(size_t ch=0; ch!=curBand.ChannelCount(); ++ch)
-			{
-				double
-					u = rowData.uvw[0] / curBand.ChannelWavelength(ch),
-					v = rowData.uvw[1] / curBand.ChannelWavelength(ch),
-					weight = PrecalculatedWeightInfo()->GetWeight(u, v);
-				double cumWeight = weight * *weightIter;
-				if(cumWeight != 0.0)
-				{
-					_visibilityWeightSum += *weightIter * 0.5;
-					++_griddedVisibilityCount;
-					_maxGriddedWeight = std::max(cumWeight, _maxGriddedWeight);
-					_totalWeight += cumWeight;
-				}
-				for(size_t p=0; p!=PolarizationCount; ++p)
-				{
-					*dataIter *= weight;
-					++dataIter;
-					++weightIter;
-				}
-			}
-		} break;
+			if(weightBuffer[chp] == 0.0)
+				rowData.data[chp] = 0.0;
+			else
+				rowData.data[chp] /= weightBuffer[chp];
+		}
+		break;
 	}
+	
+	// Calculate imaging weights
+	std::complex<float>* dataIter = rowData.data;
+	float* weightIter = weightBuffer;
+	_scratchWeights.resize(curBand.ChannelCount());
+	for(size_t ch=0; ch!=curBand.ChannelCount(); ++ch)
+	{
+		double
+			u = rowData.uvw[0] / curBand.ChannelWavelength(ch),
+			v = rowData.uvw[1] / curBand.ChannelWavelength(ch),
+			weight = PrecalculatedWeightInfo()->GetWeight(u, v);
+		_scratchWeights[ch] = weight;
+		double cumWeight = weight * *weightIter;
+		if(cumWeight != 0.0)
+		{
+			_visibilityWeightSum += *weightIter * 0.5;
+			++_griddedVisibilityCount;
+			_maxGriddedWeight = std::max(cumWeight, _maxGriddedWeight);
+			_totalWeight += cumWeight;
+		}
+		for(size_t p=0; p!=PolarizationCount; ++p)
+		{
+			*dataIter *= weight;
+			++dataIter;
+			++weightIter;
+		}
+	}
+	if(StoreImagingWeights())
+		msProvider.WriteImagingWeights(rowData.rowId, _scratchWeights.data());
 }
 
 template void MSGridderBase::readAndWeightVisibilities<1>(MSProvider& msProvider, InversionRow& newItem, const BandData& curBand, float* weightBuffer, std::complex<float>* modelBuffer, const bool* isSelected);

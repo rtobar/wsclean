@@ -56,11 +56,12 @@ public:
 			rhs._data = nullptr;
 			return *this;
 		}
+		bool operator==(std::nullptr_t) const { return _data == nullptr; }
 		/** Is the ptr set? */
 		operator bool() const { return _data != nullptr; }
 		/** @returns pointer to data */
 		double* data() const { return _data; }
-		/** @returns referece to data */ 
+		/** @returns reference to data */ 
 		double& operator*() const { return *_data; }
 		/** Destructs buffer if set. */
 		void reset()

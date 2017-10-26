@@ -2,7 +2,7 @@
 #define WSCLEAN_SETTINGS_H
 
 #include "wstackinggridder.h"
-#include "inversionalgorithm.h"
+#include "measurementsetgridder.h"
 
 #include "../msselection.h"
 #include "../system.h"
@@ -52,6 +52,7 @@ public:
 	WeightMode weightMode;
 	std::string prefixName;
 	bool smallInversion, makePSF, makePSFOnly, isWeightImageSaved, isUVImageSaved, isDirtySaved, isGriddingImageSaved;
+	bool writeImagingWeightSpectrumColumn;
 	bool dftPrediction, dftWithBeam;
 	std::string temporaryDirectory;
 	bool forceReorder, forceNoReorder, subtractModel, modelUpdateRequired, mfsWeighting;
@@ -153,6 +154,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	prefixName("wsclean"),
 	smallInversion(true), makePSF(false), makePSFOnly(false), isWeightImageSaved(false),
 	isUVImageSaved(false), isDirtySaved(true), isGriddingImageSaved(false),
+	writeImagingWeightSpectrumColumn(false),
 	dftPrediction(false), dftWithBeam(false),
 	temporaryDirectory(),
 	forceReorder(false), forceNoReorder(false),

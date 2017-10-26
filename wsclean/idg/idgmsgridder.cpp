@@ -19,7 +19,9 @@
 #include "../wsclean/wscleansettings.h"
 
 IdgMsGridder::IdgMsGridder(const WSCleanSettings& settings) :
+	_inversionLane(1024),
 	_predictionCalcLane(1024),
+	_predictionWriteLane(1024),
 	_outputProvider(nullptr),
 	_settings(settings),
 	_proxyType(idg::api::Type::CPU_OPTIMIZED),
@@ -36,7 +38,7 @@ IdgMsGridder::~IdgMsGridder()
 
 void IdgMsGridder::Invert()
 {
-	const size_t untrimmedWidth = ImageWidth(); // untrimmedHeight = ImageHeight();
+	const size_t untrimmedWidth = ImageWidth(), untrimmedHeight = ImageHeight();
 	const size_t width = TrimWidth(), height = TrimHeight();
 
 	assert(width == height);
@@ -70,7 +72,7 @@ void IdgMsGridder::Invert()
 		}
 		
 		std::cout << "total weight: " << totalWeight() << std::endl;
-		_image.assign(4 * width * height, 0.0);
+        _image.assign(4 * width * height, 0.0);
 		_bufferset->get_image(_image.data());
 		
 		// Normalize by total weight
@@ -104,12 +106,13 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 	{
 		bands.push_back(std::vector<double>(_selectedBands[i].begin(), _selectedBands[i].end()));
 	}
-	const float max_baseline = msData.maxBaselineInM;
-
+	float max_baseline = msData.maxBaselineInM;
 	_bufferset->init_buffers(_buffersize, bands, nr_stations, max_baseline, _options, idg::api::BufferSetType::gridding);
 	casacore::ScalarColumn<int> antenna1Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA1));
 	casacore::ScalarColumn<int> antenna2Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA2));
 	casacore::ScalarColumn<double> timeCol(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::TIME));
+	
+	_inversionLane.clear();
 	
 	ao::uvector<float> weightBuffer(_selectedBands.MaxChannels()*4);
 	ao::uvector<std::complex<float>> modelBuffer(_selectedBands.MaxChannels()*4);
@@ -155,13 +158,15 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 		delete[] data4;
 		delete[] rowData.data;
 	}
+	_inversionLane.write_end();
 	
+	// TODO needs to add, not replace, because gridMeasurementSet is called in a loop over measurement sets
 	_bufferset->finished();
 }
 
 void IdgMsGridder::Predict(double* image)
 {
-	const size_t untrimmedWidth = ImageWidth(); // untrimmedHeight = ImageHeight();
+	const size_t untrimmedWidth = ImageWidth(), untrimmedHeight = ImageHeight();
 	const size_t width = TrimWidth(), height = TrimHeight();
 
 	assert(width == height);
@@ -248,8 +253,10 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 	casacore::ScalarColumn<double> timeCol(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::TIME));
 	
 	_predictionCalcLane.clear();
+	_predictionWriteLane.clear();
 	boost::mutex mutex;
 	boost::thread predictCalcThread(&IdgMsGridder::predictCalcThreadFunction, this);
+	boost::thread predictWriteThread(&IdgMsGridder::predictWriteThreadFunction, this, &mutex);
 
 	ao::uvector<std::complex<float>> buffer(_selectedBands.MaxChannels()*4);
 	std::vector<size_t> idToMSRow;
@@ -289,7 +296,9 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 	lock.unlock();
 	
 	_predictionCalcLane.write_end();
+	_predictionWriteLane.write_end();
 	
+	predictWriteThread.join();
 	predictCalcThread.join();
 	_bufferset.reset();
 }
@@ -321,6 +330,18 @@ void IdgMsGridder::predictCalcThreadFunction()
 			// we were computing because there were no more samples, return.
 			if (!isBufferFull) return;
 		}
+	}
+}
+
+void IdgMsGridder::predictWriteThreadFunction(boost::mutex* mutex)
+{
+	IDGRowForWriting row;
+	while(_predictionWriteLane.read(row))
+	{
+		boost::mutex::scoped_lock lock(*mutex);
+		// TODO we should not write visibilities that were outside the w-range
+// 		_outputProvider->WriteModel(row.rowId, row.data);
+		delete[] row.data;
 	}
 }
 

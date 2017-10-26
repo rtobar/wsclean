@@ -225,11 +225,10 @@ void DFTPredictionInput::ConvertApparentToAbsolute(casacore::MeasurementSet& ms)
 
 void DFTPredictionInput::InitializeFromModel(const Model& model, long double phaseCentreRA, long double phaseCentreDec, const BandData& band)
 {
-	for(Model::const_iterator s=model.begin(); s!=model.end(); ++s)
+	for(const ModelSource& s : model)
 	{
-		for(ModelSource::const_iterator c=s->begin(); c!=s->end(); ++c)
+		for(const ModelComponent& comp : s)
 		{
-			const ModelComponent& comp = *c;
 			long double l, m;
 			DFTPredictionComponent& component = AddComponent();
 			ImageCoordinates::RaDecToLM(comp.PosRA(), comp.PosDec(), phaseCentreRA, phaseCentreDec, l, m);

@@ -50,7 +50,8 @@ class MeasurementSetGridder
 			_overSamplingFactor(63),
 			_normalizeForWeighting(true),
 			_visibilityWeightingMode(NormalVisibilityWeighting),
-			_gridMode(KaiserBesselKernel)
+			_gridMode(KaiserBesselKernel),
+			_storeImagingWeights(false)
 		{
 		}
 		virtual ~MeasurementSetGridder()
@@ -90,6 +91,7 @@ class MeasurementSetGridder
 		double WLimit() const { return _wLimit; }
 		bool NormalizeForWeighting() const { return _normalizeForWeighting; }
 		enum VisibilityWeightingMode VisibilityWeightingMode() const { return _visibilityWeightingMode; }
+		bool StoreImagingWeights() const { return _storeImagingWeights; }
 		
 		void SetImageWidth(size_t imageWidth)
 		{
@@ -175,6 +177,10 @@ class MeasurementSetGridder
 		{
 			_visibilityWeightingMode = mode;
 		}
+		void SetStoreImagingWeights(bool storeImagingWeights)
+		{
+			_storeImagingWeights = storeImagingWeights;
+		}
 		
 		virtual void Invert() = 0;
 		
@@ -247,6 +253,7 @@ class MeasurementSetGridder
 		bool _normalizeForWeighting;
 		enum VisibilityWeightingMode _visibilityWeightingMode;
 		GridModeEnum _gridMode;
+		bool _storeImagingWeights;
 };
 
 #endif

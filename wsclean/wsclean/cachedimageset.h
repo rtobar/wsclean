@@ -12,20 +12,17 @@
 class CachedImageSet
 {
 public:
-	CachedImageSet() : _polCount(0), _freqCount(0), _allocator(0), _image(0)
-	{
-	}
+	CachedImageSet() : _polCount(0), _freqCount(0), _allocator(nullptr), _image()
+	{ }
 	
 	~CachedImageSet()
 	{
-		if(_allocator != 0)
-			_allocator->Free(_image);
-		
-		for(std::set<std::string>::const_iterator filenamePtr=_storedNames.begin(); filenamePtr!=_storedNames.end(); ++filenamePtr)
-		{
-			std::remove(filenamePtr->c_str());
-		}
+		for(const std::string& filename : _storedNames)
+			std::remove(filename.c_str());
 	}
+	
+	CachedImageSet(const CachedImageSet& source) = delete;
+	CachedImageSet& operator=(const CachedImageSet& source) = delete;
 	
 	void Initialize(const FitsWriter& writer, size_t polCount, size_t freqCount, const std::string& prefix, ImageBufferAllocator& allocator)
 	{
@@ -33,9 +30,7 @@ public:
 		_polCount = polCount;
 		_freqCount = freqCount;
 		_prefix = prefix;
-		if(_allocator != 0)
-			_allocator->Free(_image);
-		_image = 0;
+		_image.reset();
 		_allocator = &allocator;
 	}
 	
@@ -50,10 +45,10 @@ public:
 			throw std::runtime_error("Writer is not set.");
 		Logger::Debug << "Loading " << name(polarization, freqIndex, isImaginary) << '\n';
 		if(_polCount == 1 && _freqCount == 1)
-			if(_image == 0)
+			if(_image == nullptr)
 				throw std::runtime_error("Loading image before store");
 			else
-				memcpy(image, _image, _writer.Width() * _writer.Height() * sizeof(double));
+				std::copy(_image.data(), _image.data() + _writer.Width()*_writer.Height(), image);
 		else {
 			FitsReader reader(name(polarization, freqIndex, isImaginary));
 			reader.Read(image);
@@ -67,9 +62,12 @@ public:
 		Logger::Debug << "Storing " << name(polarization, freqIndex, isImaginary) << '\n';
 		if(_polCount == 1 && _freqCount == 1)
 		{
-			if(_image == 0)
-				_image = _allocator->Allocate(_writer.Width() * _writer.Height());
-			memcpy(_image, image, _writer.Width() * _writer.Height() * sizeof(double));
+			if(_image == nullptr)
+			{
+				_allocator->Allocate(_writer.Width() * _writer.Height(), _image);
+			}
+			std::copy(image, image + _writer.Width() * _writer.Height(), _image.data());
+			//memcpy(_image, image, _writer.Width() * _writer.Height() * sizeof(double));
 		}
 		else {
 			std::string n = name(polarization, freqIndex, isImaginary);
@@ -106,7 +104,7 @@ private:
 	std::string _prefix;
 	
 	ImageBufferAllocator* _allocator;
-	double *_image;
+	ImageBufferAllocator::Ptr _image;
 	std::set<std::string> _storedNames;
 };
 

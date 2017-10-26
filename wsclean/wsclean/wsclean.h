@@ -47,9 +47,10 @@ private:
 	
 	void initializeImageWeights(const ImagingTableEntry& entry);
 	void initializeMFSImageWeights();
-	MSProvider* initializeMSProvider(const ImagingTableEntry& entry, const MSSelection& selection, size_t filenameIndex, size_t dataDescId);
+	std::unique_ptr<MSProvider> initializeMSProvider(const ImagingTableEntry& entry, const MSSelection& selection, size_t filenameIndex, size_t dataDescId);
 	void initializeCurMSProviders(const ImagingTableEntry& entry);
 	void initializeMSProvidersForPB(const ImagingTableEntry& entry, class PrimaryBeam& pb);
+	[[ deprecated("Just clear it yourself") ]]
 	void clearCurMSProviders();
 	void storeAndCombineXYandYX(CachedImageSet& dest, PolarizationEnum polarization, size_t joinedChannelIndex, bool isImaginary, const double* image);
 	bool selectChannels(MSSelection& selection, size_t msIndex, size_t bandIndex, const ImagingTableEntry& entry);
@@ -116,7 +117,7 @@ private:
 	size_t _majorIterationNr;
 	CachedImageSet _psfImages, _modelImages, _residualImages;
 	std::vector<PartitionedMS::Handle> _partitionedMSHandles;
-	std::vector<MSProvider*> _currentPolMSes;
+	std::vector<std::unique_ptr<MSProvider>> _currentPolMSes;
 	std::vector<MultiBandData> _msBands;
 	Deconvolution _deconvolution;
 	ImagingTable _imagingTable;
