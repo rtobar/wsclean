@@ -246,7 +246,7 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 		bands.push_back(std::vector<double>(_selectedBands[i].begin(), _selectedBands[i].end()));
 	}
 
-	_bufferset->init_buffers(_buffersize, bands, nr_stations, max_baseline, _options, idg::api::BufferSetType::gridding);
+	_bufferset->init_buffers(_buffersize, bands, nr_stations, max_baseline, _options, idg::api::BufferSetType::degridding);
 
 	casacore::ScalarColumn<int> antenna1Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA1));
 	casacore::ScalarColumn<int> antenna2Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA2));
@@ -300,7 +300,6 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 	
 	predictWriteThread.join();
 	predictCalcThread.join();
-	_bufferset.reset();
 }
 
 void IdgMsGridder::predictCalcThreadFunction()
