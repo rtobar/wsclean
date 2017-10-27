@@ -4,6 +4,7 @@
 
 #include <cmath>
 #include <fstream>
+#include <thread>
 
 //#include "interface.h"
 //#include "dummygridder.h"
@@ -11,7 +12,6 @@
 
 #include "../msproviders/msprovider.h"
 
-#include <boost/thread/thread.hpp>
 #include <boost/program_options.hpp>
 #include <boost/algorithm/string.hpp>
 
@@ -19,9 +19,7 @@
 #include "../wsclean/wscleansettings.h"
 
 IdgMsGridder::IdgMsGridder(const WSCleanSettings& settings) :
-	_inversionLane(1024),
 	_predictionCalcLane(1024),
-	_predictionWriteLane(1024),
 	_outputProvider(nullptr),
 	_settings(settings),
 	_proxyType(idg::api::Type::CPU_OPTIMIZED),
@@ -38,11 +36,11 @@ IdgMsGridder::~IdgMsGridder()
 
 void IdgMsGridder::Invert()
 {
-	const size_t untrimmedWidth = ImageWidth(), untrimmedHeight = ImageHeight();
+	const size_t untrimmedWidth = ImageWidth();
 	const size_t width = TrimWidth(), height = TrimHeight();
 
 	assert(width == height);
-	assert(untrimmedWidth == untrimmedHeight);
+	assert(untrimmedWidth == ImageHeight());
 
 	_options["padded_size"] = untrimmedWidth;
 
@@ -72,7 +70,7 @@ void IdgMsGridder::Invert()
 		}
 		
 		std::cout << "total weight: " << totalWeight() << std::endl;
-        _image.assign(4 * width * height, 0.0);
+		_image.assign(4 * width * height, 0.0);
 		_bufferset->get_image(_image.data());
 		
 		// Normalize by total weight
@@ -93,7 +91,6 @@ void IdgMsGridder::Invert()
 
 void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 {
-	const size_t width = TrimWidth();
 	_selectedBands = msData.SelectedBand();
 
 	// TODO for now we map the ms antennas directly to the gridder's antenna,
@@ -106,71 +103,58 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 	{
 		bands.push_back(std::vector<double>(_selectedBands[i].begin(), _selectedBands[i].end()));
 	}
-	float max_baseline = msData.maxBaselineInM;
+	const float max_baseline = msData.maxBaselineInM;
+
 	_bufferset->init_buffers(_buffersize, bands, nr_stations, max_baseline, _options, idg::api::BufferSetType::gridding);
-	casacore::ScalarColumn<int> antenna1Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA1));
-	casacore::ScalarColumn<int> antenna2Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA2));
-	casacore::ScalarColumn<double> timeCol(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::TIME));
-	
-	_inversionLane.clear();
 	
 	ao::uvector<float> weightBuffer(_selectedBands.MaxChannels()*4);
 	ao::uvector<std::complex<float>> modelBuffer(_selectedBands.MaxChannels()*4);
 	ao::uvector<bool> isSelected(_selectedBands.MaxChannels()*4, true);
-	std::vector<size_t> idToMSRow;
-	msData.msProvider->MakeIdToMSRowMapping(idToMSRow);
+	ao::uvector<std::complex<float>> dataBuffer(_selectedBands.MaxChannels()*4);
 	// The gridder doesn't need to know the absolute time index; this value indexes relatively to where we
 	// start in the measurement set, and only increases when the time changes.
 	int timeIndex = -1;
 	double currentTime = -1.0;
 	for(msData.msProvider->Reset() ; msData.msProvider->CurrentRowAvailable() ; msData.msProvider->NextRow())
 	{
-		size_t rowIndex = idToMSRow[msData.msProvider->RowId()];
-		if(currentTime != timeCol(rowIndex))
+		MSProvider::MetaData metaData;
+		msData.msProvider->ReadMeta(metaData);
+		if(currentTime != metaData.time)
 		{
-			currentTime = timeCol(rowIndex);
+			currentTime = metaData.time;
 			timeIndex++;
 		}
-		size_t dataDescId;
-		double uInMeters, vInMeters, wInMeters;
-		msData.msProvider->ReadMeta(uInMeters, vInMeters, wInMeters, dataDescId);
-		const BandData& curBand(_selectedBands[dataDescId]);
+		const BandData& curBand(_selectedBands[metaData.dataDescId]);
 		IDGInversionRow rowData;
 		
-		rowData.data = new std::complex<float>[curBand.ChannelCount()*4];
-		std::complex<float> *data4 = new std::complex<float>[curBand.ChannelCount()*4];
-
-		rowData.uvw[0] = uInMeters;
-		rowData.uvw[1] = vInMeters;
-		rowData.uvw[2] = wInMeters;
+		rowData.data = dataBuffer.data();
+		rowData.uvw[0] = metaData.uInM;
+		rowData.uvw[1] = metaData.vInM;
+		rowData.uvw[2] = metaData.wInM;
 		
-		rowData.antenna1 = antenna1Col(rowIndex);
-		rowData.antenna2 = antenna2Col(rowIndex);
+		rowData.antenna1 = metaData.antenna1;
+		rowData.antenna2 = metaData.antenna2;
 		rowData.timeIndex = timeIndex;
-		rowData.dataDescId = dataDescId;
+		rowData.dataDescId = metaData.dataDescId;
 		
 		readAndWeightVisibilities<4>(*msData.msProvider, rowData, curBand, weightBuffer.data(), modelBuffer.data(), isSelected.data());
 
-		rowData.uvw[1] = -vInMeters;  // DEBUG vdtol, flip axis
-		rowData.uvw[2] = -wInMeters;  //
+		rowData.uvw[1] = -metaData.vInM;  // DEBUG vdtol, flip axis
+		rowData.uvw[2] = -metaData.wInM;  //
 
-		_bufferset->get_gridder(rowData.dataDescId)->grid_visibilities(timeIndex, antenna1Col(rowIndex), antenna2Col(rowIndex), rowData.uvw, rowData.data);
-		delete[] data4;
-		delete[] rowData.data;
+		_bufferset->get_gridder(rowData.dataDescId)->grid_visibilities(timeIndex, metaData.antenna1, metaData.antenna2, rowData.uvw, rowData.data);
 	}
-	_inversionLane.write_end();
 	
-	// TODO needs to add, not replace, because gridMeasurementSet is called in a loop over measurement sets
 	_bufferset->finished();
 }
 
 void IdgMsGridder::Predict(double* image)
 {
-	const size_t untrimmedWidth = ImageWidth(), untrimmedHeight = ImageHeight();
+	const size_t untrimmedWidth = ImageWidth();
 	const size_t width = TrimWidth(), height = TrimHeight();
 
 	assert(width == height);
-	assert(untrimmedWidth == untrimmedHeight);
+	assert(untrimmedWidth == ImageHeight());
 
 	_options["padded_size"] = untrimmedWidth;
 
@@ -228,8 +212,6 @@ void IdgMsGridder::setIdgType()
 
 void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 {
-	const size_t width = TrimWidth();
-	const float max_w = msData.maxW;
 	const float max_baseline = msData.maxBaselineInM;
 
 	msData.msProvider->ReopenRW();
@@ -248,57 +230,38 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 
 	_bufferset->init_buffers(_buffersize, bands, nr_stations, max_baseline, _options, idg::api::BufferSetType::gridding);
 
-	casacore::ScalarColumn<int> antenna1Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA1));
-	casacore::ScalarColumn<int> antenna2Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA2));
-	casacore::ScalarColumn<double> timeCol(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::TIME));
-	
 	_predictionCalcLane.clear();
-	_predictionWriteLane.clear();
-	boost::mutex mutex;
-	boost::thread predictCalcThread(&IdgMsGridder::predictCalcThreadFunction, this);
-	boost::thread predictWriteThread(&IdgMsGridder::predictWriteThreadFunction, this, &mutex);
+	std::thread predictCalcThread(&IdgMsGridder::predictCalcThreadFunction, this);
 
 	ao::uvector<std::complex<float>> buffer(_selectedBands.MaxChannels()*4);
-	std::vector<size_t> idToMSRow;
-	msData.msProvider->MakeIdToMSRowMapping(idToMSRow);
 	int timeIndex = -1;
 	double currentTime = -1.0;
-	// The mutex needs to be locked during the while-guard and other IO access
-	boost::mutex::scoped_lock lock(mutex);
 	for(msData.msProvider->Reset() ; msData.msProvider->CurrentRowAvailable() ; msData.msProvider->NextRow())
 	{
+		MSProvider::MetaData metaData;
+		msData.msProvider->ReadMeta(metaData);
 		size_t provRowId = msData.msProvider->RowId();
-		size_t msRowIndex = idToMSRow[provRowId];
-		if(currentTime != timeCol(msRowIndex))
+		if(currentTime != metaData.time)
 		{
-			currentTime = timeCol(msRowIndex);
+			currentTime = metaData.time;
 			timeIndex++;
 		}
-		size_t dataDescId;
-		double uInMeters, vInMeters, wInMeters;
-		msData.msProvider->ReadMeta(uInMeters, vInMeters, wInMeters, dataDescId);
-		lock.unlock();
 		
 		IDGPredictionRow row;
-		row.uvw[0] = uInMeters;
-		row.uvw[1] = -vInMeters;
-		row.uvw[2] = -wInMeters;
-		row.antenna1 = antenna1Col(msRowIndex);
-		row.antenna2 = antenna2Col(msRowIndex);
+		row.uvw[0] = metaData.uInM;
+		row.uvw[1] = -metaData.vInM;
+		row.uvw[2] = -metaData.wInM;
+		row.antenna1 = metaData.antenna1;
+		row.antenna2 = metaData.antenna2;
 		row.timeIndex = timeIndex;
-		row.dataDescId = dataDescId;
+		row.dataDescId = metaData.dataDescId;
 		row.rowId = provRowId;
 		
 		_predictionCalcLane.write(row);
-		
-		lock.lock(); // lock for guard
 	}
-	lock.unlock();
 	
 	_predictionCalcLane.write_end();
-	_predictionWriteLane.write_end();
 	
-	predictWriteThread.join();
 	predictCalcThread.join();
 	_bufferset.reset();
 }
@@ -330,18 +293,6 @@ void IdgMsGridder::predictCalcThreadFunction()
 			// we were computing because there were no more samples, return.
 			if (!isBufferFull) return;
 		}
-	}
-}
-
-void IdgMsGridder::predictWriteThreadFunction(boost::mutex* mutex)
-{
-	IDGRowForWriting row;
-	while(_predictionWriteLane.read(row))
-	{
-		boost::mutex::scoped_lock lock(*mutex);
-		// TODO we should not write visibilities that were outside the w-range
-// 		_outputProvider->WriteModel(row.rowId, row.data);
-		delete[] row.data;
 	}
 }
 

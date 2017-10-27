@@ -39,15 +39,12 @@ private:
 		return 1; // TODO
 	}
 		
-// 	void constructGridders(const MultiBandData& selectedBands, size_t nStations, bool constructDegridders);
-	
 	void gridMeasurementSet(MSGridderBase::MSData& msData);
 	void gridThreadFunction();
 	
 	void predictMeasurementSet(MSGridderBase::MSData& msData);
 	void predictCalcThreadFunction();
-	void predictWriteThreadFunction(boost::mutex* mutex);
-    void readConfiguration();
+	void readConfiguration();
 	
 	void setIdgType();
 	
@@ -58,19 +55,13 @@ private:
 		double uvw[3];
 		size_t dataDescId, antenna1, antenna2, timeIndex, rowId;
 	};
-	struct IDGRowForWriting {
-		std::complex<float>* data;
-		size_t rowId;
-	};
 	
-    std::unique_ptr<idg::api::BufferSet> _bufferset;
+	std::unique_ptr<idg::api::BufferSet> _bufferset;
 	size_t _subgridSize;
 	ao::uvector<double> _image;
 	ao::uvector<float> _taper_subgrid;
 	ao::uvector<float> _taper_grid;
-	ao::lane<IDGInversionRow> _inversionLane;
 	ao::lane<IDGPredictionRow> _predictionCalcLane;
-	ao::lane<IDGRowForWriting> _predictionWriteLane;
 	MSProvider* _outputProvider;
 	MultiBandData _selectedBands;
 	const WSCleanSettings& _settings;
