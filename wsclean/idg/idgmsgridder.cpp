@@ -228,7 +228,7 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 		bands.push_back(std::vector<double>(_selectedBands[i].begin(), _selectedBands[i].end()));
 	}
 
-	_bufferset->init_buffers(_buffersize, bands, nr_stations, max_baseline, _options, idg::api::BufferSetType::gridding);
+	_bufferset->init_buffers(_buffersize, bands, nr_stations, max_baseline, _options, idg::api::BufferSetType::degridding);
 
 	_predictionCalcLane.clear();
 	std::thread predictCalcThread(&IdgMsGridder::predictCalcThreadFunction, this);
@@ -263,7 +263,6 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 	_predictionCalcLane.write_end();
 	
 	predictCalcThread.join();
-	_bufferset.reset();
 }
 
 void IdgMsGridder::predictCalcThreadFunction()
