@@ -140,7 +140,8 @@ public:
 	
 	double* Allocate(size_t size)
 	{
-		if(size%2==1) ++size;
+		if(size == 0) size=2;
+		else if(size%2==1) ++size;
 		std::lock_guard<std::mutex> guard(_mutex);
 		
 		if(size != _previousSize)
@@ -174,7 +175,8 @@ public:
 	
 	std::complex<double>* AllocateComplex(size_t size)
 	{
-		if(size%2==1) ++size;
+		if(size == 0) size=2;
+		else if(size%2==1) ++size;
 		std::lock_guard<std::mutex> guard(_mutex);
 		
 		if(size != _previousSize)

@@ -218,7 +218,6 @@ class WStackingGridder
 			return layer >= layerRangeStart(_curLayerRangeIndex) && layer < layerRangeStart(_curLayerRangeIndex+1);
 		}
 		
-		
 		/**
 		 * Determine whether any samples within the specified w-value range
 		 * should be gridded in this pass. This can for example be used to
