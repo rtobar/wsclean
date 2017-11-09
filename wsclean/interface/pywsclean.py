@@ -22,34 +22,45 @@ class ImagingData(object):
 class Operator(object):
 	"""Class that wraps WSClean as an operator, so that it is easy
 	to get an image from data 'in memory' (and the inverse). Currently, the
-	operator will write that data to the MODEL_DATA Measurement Set before imaging."""
+	operator will write that data to the MODEL_DATA Measurement Set before imaging.
+	The read/write/backward/forward methods can only be used within a "with" context."""
 	_userdata = None;
 	_parameters = None;
 	_imagingdata = None;
 	
 	def __init__(self, parameters):
-		"""Constructor: initialize WSClean"""
+		"""Constructor: only sets parameters"""
 		self._parameters = parameters
-		self._userdata,self._imagingdata = _wsclean.initialize(parameters)
-		return
 	
-	def __del__(self):
+	def __enter__(self):
+		"""Context manager entrance: initialize WSClean"""
+		self._userdata,self._imagingdata = _wsclean.initialize(self._parameters)
+		return self
+	
+	def __exit__(self, type, value, traceback):
 		"""Destructor: release WSClean resources"""
 		if self._userdata != None:
 			print 'Releasing resources for WSClean...'
 			_wsclean.deinitialize(self._userdata)
+			self._userdata = None
+			self._imagingdata = None
 
 	def data_size(self):
 		"""Get the number of visibilities"""
+		if self._userdata == None:
+			raise RuntimeError('Operator.data_size() was called outside "with" block')
 		return self._imagingdata.dataSize
 	
 	def image_size(self):
 		"""Get the number of pixels in the image"""
+		if self._userdata == None:
+			raise RuntimeError('Operator.image_size() was called outside "with" block')
 		return self._parameters.imageWidth * self._parameters.imageHeight
 
 	def read(self):
 		"""Read the visibilities and return as a (data,weight) tuple. """
-		print 'Reading '+str(self.data_size())+' samples...'
+		if self._userdata == None:
+			raise RuntimeError('Operator.read() was called outside "with" block')
 		data = numpy.ascontiguousarray(numpy.zeros(self._imagingdata.dataSize, dtype=numpy.complex128))
 		weights = numpy.ascontiguousarray(numpy.zeros(self._imagingdata.dataSize, dtype=numpy.float64))
 		_wsclean.read(self._userdata, data, weights)
@@ -57,6 +68,8 @@ class Operator(object):
 
 	def write(self, filename, data):
 		"""Write a FITS image with the correct keywords etc."""
+		if self._userdata == None:
+			raise RuntimeError('Operator.write() was called outside "with" block')
 		dataCont = numpy.ascontiguousarray(data)
 		_wsclean.write(self._userdata, filename, data)
 
@@ -66,11 +79,20 @@ class Operator(object):
 		that will be filled with visibilities, dataIn should be an array
 		of doubles, representing the image for the operator input."""
 		
+		if self._userdata == None:
+			raise RuntimeError('Operator.forward() was called outside "with" block')
+		
 		if numpy.shape(dataOut)[0]!=self.data_size():
 			raise RuntimeError('Size of output argument ('+str(numpy.shape(dataOut)[0])+') does not match the image size (' + str(self.data_size()) +')')
 		
 		if numpy.shape(dataIn)[0]!=self.image_size():
 			raise RuntimeError('Shape of input argument ('+str(numpy.shape(dataIn)[0])+') does not match the number of visibilities (' + str(self.image_size()) + ')')
+		
+		if dataOut.dtype.name!='complex128':
+			raise RuntimeError('The dataOut parameter of forward() should be of type complex128, but was ' + dataOut.dtype.name)
+		
+		if dataIn.dtype.name!='float64':
+			raise RuntimeError('The dataIn parameter of forward() should be of type float64, but was ' + dataIn.dtype.name)
 		
 		dataOutCont = numpy.ascontiguousarray(dataOut)
 		dataInCont = numpy.ascontiguousarray(dataIn)
@@ -82,11 +104,20 @@ class Operator(object):
 		of doubles, which will be filled with the image, dataOut should be an array
 		of complex doubles, representing the visibilities for the operator input."""
 		
+		if self._userdata == None:
+			raise RuntimeError('Operator.backward() was called outside "with" block')
+		
 		if numpy.shape(dataOut)[0]!=self.image_size():
 			raise RuntimeError('Size of output argument ('+str(numpy.shape(dataOut)[0])+') does not match the image size (' + str(self.image_size())+  ')')
 		
 		if numpy.shape(dataIn)[0]!=self.data_size():
 			raise RuntimeError('Shape of input argument ('+str(numpy.shape(dataIn)[0])+') does not match the number of visibilities (' + str(self.data_size()) +')')
+		
+		if dataOut.dtype.name!='float64':
+			raise RuntimeError('The dataOut parameter of forward() should be of type float64, but was ' + dataOut.dtype.name)
+		
+		if dataIn.dtype.name!='complex128':
+			raise RuntimeError('The dataIn parameter of forward() should be of type complex128, but was ' + dataIn.dtype.name)
 		
 		dataOutCont = numpy.ascontiguousarray(dataOut)
 		dataInCont = numpy.ascontiguousarray(dataIn)
@@ -159,7 +190,7 @@ class WSClean(object):
 	def __get_parameterlist(self, prefixname):
 		plist = '-size '+str(self.width)+' '+str(self.height)+' -scale '+str(self.scale);
 		if self.datacolumn!='':
-			plist += ' -datacolumn '+self.datacolumn;
+			plist += ' -data-column '+self.datacolumn;
 		if self.__weightpar!='':
 			plist += ' '+self.__weightpar;
 		if self.niter!=0:

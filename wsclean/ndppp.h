@@ -168,7 +168,7 @@ public:
 						q = sed.FluxAtFrequency(refFreq, Polarization::StokesQ),
 						u = sed.FluxAtFrequency(refFreq, Polarization::StokesU),
 						v = sed.FluxAtFrequency(refFreq, Polarization::StokesV);
-					file << i << ", " << q << ", " << u << ", " << v << ", [], false, \n";
+					file << i << ", " << q << ", " << u << ", " << v << ", [], false, ";
 				}
 				else {
 					const PowerLawSED& sed = static_cast<const PowerLawSED&>(c.SED());

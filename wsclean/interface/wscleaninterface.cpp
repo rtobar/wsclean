@@ -77,8 +77,8 @@ void wsclean_initialize(
 	// Number of vis is nchannels x selected nrows; calculate both.
 	// (Assuming Stokes I polarization for now)
 	casacore::MeasurementSet ms(wscUserData->msPath);
-	casacore::ROScalarColumn<int> a1Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA1));
-	casacore::ROScalarColumn<int> a2Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA2));
+	casacore::ScalarColumn<int> a1Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA1));
+	casacore::ScalarColumn<int> a2Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA2));
 	BandData bandData(ms.spectralWindow());
 	size_t nChannel = bandData.ChannelCount();
 	size_t selectedRows = 0;
@@ -126,12 +126,12 @@ void wsclean_read(void* userData, DCOMPLEX* data, double* weights)
 	BandData bandData(ms.spectralWindow());
 	size_t nChannels = bandData.ChannelCount();
 	
-	casacore::ROScalarColumn<int> a1Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA1));
-	casacore::ROScalarColumn<int> a2Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA2));
+	casacore::ScalarColumn<int> a1Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA1));
+	casacore::ScalarColumn<int> a2Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA2));
 	
-	casacore::ROArrayColumn<casacore::Complex> dataCol(ms, wscUserData->dataColumn);
-	casacore::ROArrayColumn<float> weightCol(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::WEIGHT_SPECTRUM));
-	casacore::ROArrayColumn<bool> flagCol(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::FLAG));
+	casacore::ArrayColumn<casacore::Complex> dataCol(ms, wscUserData->dataColumn);
+	casacore::ArrayColumn<float> weightCol(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::WEIGHT_SPECTRUM));
+	casacore::ArrayColumn<bool> flagCol(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::FLAG));
 	
 	DCOMPLEX* dataPtr = data;
 	double* weightPtr = weights;
@@ -203,6 +203,7 @@ void getCommandLine(std::vector<std::string>& commandline, const WSCleanUserData
 	commandline.push_back("-scale");
 	commandline.push_back(Angle::ToNiceString(userData.pixelScaleX));
 	commandline.push_back("-quiet");
+	//commandline.push_back("-v");
 	if(!userData.extraParameters.empty())
 	{
 		size_t pos = 0;
@@ -246,7 +247,7 @@ void wsclean_operator_A(void* userData, DCOMPLEX* dataOut, const double* dataIn)
 	}
 	if(nonFiniteValues != 0)
 		std::cout << "Warning: input image contains " << nonFiniteValues << " non-finite values!\n";
-	std::cout << "Mean value in image: " << imageSum/(wscUserData->width*wscUserData->height-nonFiniteValues) << '\n';
+	//std::cout << "Mean value in image: " << imageSum/(wscUserData->width*wscUserData->height-nonFiniteValues) << '\n';
 
 	std::ostringstream filenameStr;
 	filenameStr << "tmp-operator-A-" << wscUserData->nACalls;
@@ -271,13 +272,14 @@ void wsclean_operator_A(void* userData, DCOMPLEX* dataOut, const double* dataIn)
 	BandData bandData(ms.spectralWindow());
 	size_t nChannels = bandData.ChannelCount();
 	
-	casacore::ROScalarColumn<int> a1Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA1));
-	casacore::ROScalarColumn<int> a2Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA2));
+	casacore::ScalarColumn<int> a1Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA1));
+	casacore::ScalarColumn<int> a2Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA2));
 	
-	casacore::ROArrayColumn<casacore::Complex> dataCol(ms,  casacore::MeasurementSet::columnName(casacore::MSMainEnums::MODEL_DATA));
+	casacore::ArrayColumn<casacore::Complex> dataCol(ms,  casacore::MeasurementSet::columnName(casacore::MSMainEnums::MODEL_DATA));
 	
 	DCOMPLEX* dataPtr = (DCOMPLEX*) dataOut;
 	casacore::IPosition shape = dataCol.shape(0);
+
 	size_t polarizationCount = shape[0];
 	casacore::Array<casacore::Complex> dataArr(shape);
 	for(size_t row=0; row!=ms.nrow(); ++row)
@@ -316,8 +318,8 @@ void wsclean_operator_At(void* userData, double* dataOut, const DCOMPLEX* dataIn
 	BandData bandData(ms.spectralWindow());
 	size_t nChannels = bandData.ChannelCount();
 	
-	casacore::ROScalarColumn<int> a1Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA1));
-	casacore::ROScalarColumn<int> a2Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA2));
+	casacore::ScalarColumn<int> a1Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA1));
+	casacore::ScalarColumn<int> a2Col(ms, casacore::MeasurementSet::columnName(casacore::MSMainEnums::ANTENNA2));
 	
 	casacore::ArrayColumn<casacore::Complex> dataCol(ms,  casacore::MeasurementSet::columnName(casacore::MSMainEnums::MODEL_DATA));
 	
@@ -352,7 +354,7 @@ void wsclean_operator_At(void* userData, double* dataOut, const DCOMPLEX* dataIn
 	getCommandLine(commandline, *wscUserData);
 	commandline.push_back("-name");
 	commandline.push_back(prefixName.str());
-	commandline.push_back("-datacolumn");
+	commandline.push_back("-data-column");
 	commandline.push_back("MODEL_DATA");
 	commandline.push_back("-no-dirty");
 	commandline.push_back(wscUserData->msPath);
