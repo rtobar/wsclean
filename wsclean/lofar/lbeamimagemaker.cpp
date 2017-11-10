@@ -242,8 +242,7 @@ void LBeamImageMaker::makeBeamSnapshot(const std::vector<Station::Ptr>& stations
 		inverseCentralGain.resize(stations.size());
 		for(size_t a=0; a!=stations.size(); ++a)
 		{
-			Station::Ptr s=stations[a];
-			matrix22c_t gainMatrix = s->response(time, frequency, diffBeamCentre, subbandFrequency, station0, tile0);
+			matrix22c_t gainMatrix = stations[a]->response(time, frequency, diffBeamCentre, subbandFrequency, station0, tile0);
 			inverseCentralGain[a][0] = gainMatrix[0][0];
 			inverseCentralGain[a][1] = gainMatrix[0][1];
 			inverseCentralGain[a][2] = gainMatrix[1][0];
@@ -278,8 +277,7 @@ void LBeamImageMaker::makeBeamSnapshot(const std::vector<Station::Ptr>& stations
 			std::vector<MC2x2> stationGains(stations.size());
 			for(size_t a=0; a!=stations.size(); ++a)
 			{
-				Station::Ptr s=stations[a];
-				matrix22c_t gainMatrix = s->response(time, frequency, itrfDirection, subbandFrequency, station0, tile0);
+				matrix22c_t gainMatrix = stations[a]->response(time, frequency, itrfDirection, subbandFrequency, station0, tile0);
 				stationGains[a][0] = gainMatrix[0][0];
 				stationGains[a][1] = gainMatrix[0][1];
 				stationGains[a][2] = gainMatrix[1][0];

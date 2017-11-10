@@ -32,8 +32,6 @@ LBeamEvaluator::LBeamEvaluator(casacore::MeasurementSet& ms) : _ms(ms)
 		throw std::runtime_error("LOFAR_TILE_BEAM_DIR column not found");
 	}
 	
-	_j2000ToITRFRef = casacore::MDirection::Convert(_j2000Ref, _itrfRef);
-	
 	_stations.resize(aTable.nrow());
 	readStations(ms, _stations.begin());
 }
@@ -44,7 +42,7 @@ LBeamEvaluator::~LBeamEvaluator()
 void LBeamEvaluator::SetTime(const casacore::MEpoch& time)
 {
 	_time = time;
-	_timeAsDouble = _time.getValue().get()*86400.0;	
+	_timeAsDouble = _time.getValue().get()*86400.0;
 	
 	_frame = casacore::MeasFrame(_arrayPos, _time);
 	_j2000Ref = casacore::MDirection::Ref(casacore::MDirection::J2000, _frame);

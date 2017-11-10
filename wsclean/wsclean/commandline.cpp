@@ -169,6 +169,8 @@ void CommandLine::printHelp()
 		"   to calculate this is with <baseline in nr. of lambdas> * 2pi * <acceptable integration in s> / (24*60*60).\n"
 		"-simulate-noise <stddev-in-jy>\n"
 		"   Will replace every visibility by a Gaussian distributed value with given standard deviation before imaging.\n"
+		"-grid-with-beam\n"
+		"   Apply a-terms to correct for the primary beam. This is only possible when IDG is enabled.\n"
 		"\n"
 		"  ** DATA SELECTION OPTIONS **\n"
 		"-pol <list>\n"
@@ -1051,6 +1053,10 @@ int CommandLine::Run(int argc, char* argv[])
 			++argi;
 			settings.simulateNoise = true;
 			settings.simulatedNoiseStdDev = atof(argv[argi]);
+		}
+		else if(param == "grid-with-beam")
+		{
+			settings.gridWithBeam = true;
 		}
 		else if(param == "visibility-weighting-mode")
 		{
