@@ -1,4 +1,4 @@
-// kate: space-indent off; tab-width 4; indent-width 4; replace-tabs off; eol unix;
+// kate: space-indent off; tab-width 2; indent-width 2; replace-tabs off; eol unix;
 
 #include "idgmsgridder.h"
 
@@ -18,8 +18,9 @@
 #include "../wsclean/logger.h"
 #include "../wsclean/wscleansettings.h"
 
+#include "../aterms/lofarbeamterm.h"
+
 IdgMsGridder::IdgMsGridder(const WSCleanSettings& settings) :
-	_predictionCalcLane(1024),
 	_outputProvider(nullptr),
 	_settings(settings),
 	_proxyType(idg::api::Type::CPU_OPTIMIZED),
@@ -97,7 +98,7 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 	// including non-selected antennas. Later this can be made more efficient.
 	casacore::MeasurementSet& ms = msData.msProvider->MS();
 	size_t nr_stations = ms.antenna().nrow();
-
+	
 	std::vector<std::vector<double>> bands;
 	for(size_t i=0; i!=_selectedBands.BandCount(); ++i)
 	{
@@ -107,6 +108,18 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 
 	_bufferset->init_buffers(_buffersize, bands, nr_stations, max_baseline, _options, idg::api::BufferSetType::gridding);
 	
+	std::unique_ptr<LofarBeamTerm> aTermMaker;
+	ao::uvector<std::complex<float>> aTermBuffer;
+	double aTermUpdateInterval = 900.0; // 15min
+	if(_settings.gridWithBeam)
+	{
+		size_t subgridsize = 256; //TODO
+		double dl = _actualPixelSizeX, dm = _actualPixelSizeY;
+		double pdl = PhaseCentreDL(), pdm = PhaseCentreDM();
+		aTermMaker.reset(new LofarBeamTerm(ms, subgridsize, subgridsize, dl, dm, pdl, pdm, _settings.useDifferentialLofarBeam));
+		aTermBuffer.resize(subgridsize*subgridsize*4*nr_stations);
+	}
+
 	ao::uvector<float> weightBuffer(_selectedBands.MaxChannels()*4);
 	ao::uvector<std::complex<float>> modelBuffer(_selectedBands.MaxChannels()*4);
 	ao::uvector<bool> isSelected(_selectedBands.MaxChannels()*4, true);
@@ -114,7 +127,7 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 	// The gridder doesn't need to know the absolute time index; this value indexes relatively to where we
 	// start in the measurement set, and only increases when the time changes.
 	int timeIndex = -1;
-	double currentTime = -1.0;
+	double currentTime = -1.0, lastATermUpdate = -aTermUpdateInterval-1;
 	for(msData.msProvider->Reset() ; msData.msProvider->CurrentRowAvailable() ; msData.msProvider->NextRow())
 	{
 		MSProvider::MetaData metaData;
@@ -123,6 +136,17 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 		{
 			currentTime = metaData.time;
 			timeIndex++;
+			
+			if(_settings.gridWithBeam)
+			{
+				if(currentTime - lastATermUpdate > aTermUpdateInterval)
+				{
+					Logger::Debug << "Calculating a-terms for timestep " << timeIndex << "\n";
+					aTermMaker->Calculate(aTermBuffer.data(), currentTime + aTermUpdateInterval*0.5, _selectedBands.CentreFrequency());
+					set_aterm(timeIndex, aTermBuffer.data());
+					lastATermUpdate = currentTime;
+				}
+			}
 		}
 		const BandData& curBand(_selectedBands[metaData.dataDescId]);
 		IDGInversionRow rowData;
@@ -136,7 +160,6 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 		rowData.antenna2 = metaData.antenna2;
 		rowData.timeIndex = timeIndex;
 		rowData.dataDescId = metaData.dataDescId;
-		
 		readAndWeightVisibilities<4>(*msData.msProvider, rowData, curBand, weightBuffer.data(), modelBuffer.data(), isSelected.data());
 
 		rowData.uvw[1] = -metaData.vInM;  // DEBUG vdtol, flip axis
@@ -230,12 +253,21 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 
 	_bufferset->init_buffers(_buffersize, bands, nr_stations, max_baseline, _options, idg::api::BufferSetType::degridding);
 
-	_predictionCalcLane.clear();
-	std::thread predictCalcThread(&IdgMsGridder::predictCalcThreadFunction, this);
-
+	std::unique_ptr<LofarBeamTerm> aTermMaker;
+	ao::uvector<std::complex<float>> aTermBuffer;
+	double aTermUpdateInterval = 900.0; // 15min
+	if(_settings.gridWithBeam)
+	{
+		size_t subgridsize = 256; //TODO
+		double dl = _actualPixelSizeX, dm = _actualPixelSizeY;
+		double pdl = PhaseCentreDL(), pdm = PhaseCentreDM();
+		aTermMaker.reset(new LofarBeamTerm(ms, subgridsize, subgridsize, dl, dm, pdl, pdm, _settings.useDifferentialLofarBeam));
+		aTermBuffer.resize(subgridsize*subgridsize*4*nr_stations);
+	}
+	
 	ao::uvector<std::complex<float>> buffer(_selectedBands.MaxChannels()*4);
 	int timeIndex = -1;
-	double currentTime = -1.0;
+	double currentTime = -1.0, lastATermUpdate = -aTermUpdateInterval-1;
 	for(msData.msProvider->Reset() ; msData.msProvider->CurrentRowAvailable() ; msData.msProvider->NextRow())
 	{
 		MSProvider::MetaData metaData;
@@ -245,6 +277,16 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 		{
 			currentTime = metaData.time;
 			timeIndex++;
+			if(_settings.gridWithBeam)
+			{
+				if(currentTime - lastATermUpdate > aTermUpdateInterval)
+				{
+					Logger::Debug << "Calculating a-terms for timestep " << timeIndex << "\n";
+					aTermMaker->Calculate(aTermBuffer.data(), currentTime + aTermUpdateInterval*0.5, _selectedBands.CentreFrequency());
+					set_aterm(timeIndex, aTermBuffer.data());
+					lastATermUpdate = currentTime;
+				}
+			}
 		}
 		
 		IDGPredictionRow row;
@@ -256,43 +298,32 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 		row.timeIndex = timeIndex;
 		row.dataDescId = metaData.dataDescId;
 		row.rowId = provRowId;
-		
-		_predictionCalcLane.write(row);
+		predictRow(row);
 	}
 	
-	_predictionCalcLane.write_end();
-	
-	predictCalcThread.join();
+	for(size_t d=0; d!=_selectedBands.DataDescCount(); ++d)
+		computePredictionBuffer(d);
 }
 
-void IdgMsGridder::predictCalcThreadFunction()
+void IdgMsGridder::predictRow(IDGPredictionRow& row)
 {
-	IDGPredictionRow row;
-	
-	// read the first sample, exit if none is there
-	if (!_predictionCalcLane.read(row)) return;
-	
-	while(true)
-	{
-		bool isBufferFull = _bufferset->get_degridder(row.dataDescId)->request_visibilities(row.rowId, row.timeIndex, row.antenna1, row.antenna2, row.uvw);
+	bool isBufferFull = _bufferset->get_degridder(row.dataDescId)->request_visibilities(row.rowId, row.timeIndex, row.antenna1, row.antenna2, row.uvw);
 
-		// compute if the buffer is full, or if there are no more samples
-		// if the buffer is full, no new sample will be read
-		if (isBufferFull || !_predictionCalcLane.read(row))
-		{
-			auto available_row_ids = _bufferset->get_degridder(row.dataDescId)->compute();
-			std::cout << "computed " << available_row_ids.size() << " rows" << std::endl;
-			for(auto i : available_row_ids)
-			{
-				_outputProvider->WriteModel(i.first, i.second);
-			}
-			_bufferset->get_degridder(row.dataDescId)->finished_reading();
-			
-			// If the buffer is not full
-			// we were computing because there were no more samples, return.
-			if (!isBufferFull) return;
-		}
+	if(isBufferFull)
+	{
+		computePredictionBuffer(row.dataDescId);
 	}
+}
+
+void IdgMsGridder::computePredictionBuffer(size_t dataDescId)
+{
+	auto available_row_ids = _bufferset->get_degridder(dataDescId)->compute();
+	Logger::Debug << "Computed " << available_row_ids.size() << " rows.\n";
+	for(auto i : available_row_ids)
+	{
+		_outputProvider->WriteModel(i.first, i.second);
+	}
+	_bufferset->get_degridder(dataDescId)->finished_reading();
 }
 
 void IdgMsGridder::Predict(double* real, double* imaginary)

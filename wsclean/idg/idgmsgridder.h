@@ -18,7 +18,7 @@ class IdgMsGridder : public MSGridderBase
 public:
 	IdgMsGridder(const class WSCleanSettings& settings);
 	
-	virtual ~IdgMsGridder();
+	virtual ~IdgMsGridder() final override;
 	
 	virtual void Invert();
 	
@@ -33,6 +33,20 @@ public:
 	virtual void GetGriddingCorrectionImage(double* image) const;
 	
 	virtual bool HasGriddingCorrectionImage() const;
+
+	/**
+	 * Stub functie die te implementeren methode spiegelt.
+	 * 
+	 * De aterms moeten dimensies n_stations * subgridsize * subgridsize * 2 * 2 hebben (2x2 is Jones matrix). 
+	 * 
+	 * Werking van set_aterm:
+	 * - Voegt aan m_aterm een slice toe met een kopie van aterms
+	 * - Voegt aan m_atermoffsets de timeIndex toe, zodat de gridder weet dat op dat timeslot de aterm verandert
+	 * De functie set_aterm roep je aan het gridden begint. Dus bijvoorbeeld op het moment dat je de visibility
+	 * voert waarom de a-term verandert. Maar eerder mag ook. Iets later eventueel ook, maar dan voordat je een
+	 * visibility van een volgend tijdslot pusht (want dan kan hij besluiten te gaan flushen).
+	 */
+	void set_aterm(size_t timeIndex, const std::complex<float>* aTerms) { }
 	
 private:
 	virtual size_t getSuggestedWGridSize() const   {
@@ -43,7 +57,6 @@ private:
 	void gridThreadFunction();
 	
 	void predictMeasurementSet(MSGridderBase::MSData& msData);
-	void predictCalcThreadFunction();
 	void readConfiguration();
 	
 	void setIdgType();
@@ -55,13 +68,14 @@ private:
 		double uvw[3];
 		size_t dataDescId, antenna1, antenna2, timeIndex, rowId;
 	};
+	void predictRow(IDGPredictionRow& row);
+	void computePredictionBuffer(size_t dataDescId);
 	
 	std::unique_ptr<idg::api::BufferSet> _bufferset;
 	size_t _subgridSize;
 	ao::uvector<double> _image;
 	ao::uvector<float> _taper_subgrid;
 	ao::uvector<float> _taper_grid;
-	ao::lane<IDGPredictionRow> _predictionCalcLane;
 	MSProvider* _outputProvider;
 	MultiBandData _selectedBands;
 	const WSCleanSettings& _settings;

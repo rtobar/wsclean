@@ -132,9 +132,9 @@ public:
 	static bool Invert(T* matrix)
 	{
 		T d = ((matrix[0]*matrix[3]) - (matrix[1]*matrix[2]));
-		if(d == 0.0)
+		if(d == T(0.0))
 			return false;
-		T oneOverDeterminant = 1.0 / d;
+		T oneOverDeterminant = T(1.0) / d;
 		T temp;
 		temp      = matrix[3] * oneOverDeterminant;
 		matrix[1] = -matrix[1] * oneOverDeterminant;
@@ -278,88 +278,89 @@ public:
 	}
 };
 
-class MC2x2
+template<typename ValType>
+class MC2x2Base
 {
 public:
-	MC2x2() { }
-	MC2x2(const MC2x2& source) { Matrix2x2::Assign(_values, source._values); }
+	MC2x2Base() { }
+	MC2x2Base(const MC2x2Base<ValType>& source) { Matrix2x2::Assign(_values, source._values); }
 	template<typename T>
-	explicit MC2x2(const T source[4]) { Matrix2x2::Assign(_values, source); }
-	MC2x2(double m00, double m01, double m10, double m11) {
+	explicit MC2x2Base(const T source[4]) { Matrix2x2::Assign(_values, source); }
+	MC2x2Base(ValType m00, ValType m01, ValType m10, ValType m11) {
 		_values[0] = m00; _values[1] = m01;
 		_values[2] = m10; _values[3] = m11;
 	}
-	MC2x2(std::complex<double> m00, std::complex<double> m01, std::complex<double> m10, std::complex<double> m11) {
+	MC2x2Base(std::complex<ValType> m00, std::complex<ValType> m01, std::complex<ValType> m10, std::complex<ValType> m11) {
 		_values[0] = m00; _values[1] = m01;
 		_values[2] = m10; _values[3] = m11;
 	}
-	MC2x2& operator=(const MC2x2& source)
+	MC2x2Base<ValType>& operator=(const MC2x2Base<ValType>& source)
 	{
 		Matrix2x2::Assign(_values, source._values);
 		return *this;
 	}
-	MC2x2& operator+=(const MC2x2& rhs)
+	MC2x2Base<ValType>& operator+=(const MC2x2Base<ValType>& rhs)
 	{
 		Matrix2x2::Add(_values, rhs._values);
 		return *this;
 	}
-	MC2x2& operator*=(double rhs)
+	MC2x2Base<ValType>& operator*=(ValType rhs)
 	{
 		Matrix2x2::ScalarMultiply(_values, rhs);
 		return *this;
 	}
-	MC2x2& operator/=(double rhs)
+	MC2x2Base<ValType>& operator/=(ValType rhs)
 	{
 		Matrix2x2::ScalarMultiply(_values, 1.0/rhs);
 		return *this;
 	}
-	const std::complex<double>& operator[](size_t index) const { return _values[index]; }
-	std::complex<double>& operator[](size_t index) { return _values[index]; }
-	const double& IndexReal(size_t index) const { return reinterpret_cast<const double(&)[2]>(_values[index/2])[index%2]; }
-	double& IndexReal(size_t index) { return reinterpret_cast<double(&)[2]>(_values[index/2])[index%2]; }
-	static MC2x2 Zero()
+	const std::complex<ValType>& operator[](size_t index) const { return _values[index]; }
+	std::complex<ValType>& operator[](size_t index) { return _values[index]; }
+	const ValType& IndexReal(size_t index) const { return reinterpret_cast<const ValType(&)[2]>(_values[index/2])[index%2]; }
+	ValType& IndexReal(size_t index) { return reinterpret_cast<ValType(&)[2]>(_values[index/2])[index%2]; }
+	static MC2x2Base<ValType> Zero()
 	{
-		return MC2x2(0.0, 0.0, 0.0, 0.0);
+		return MC2x2Base<ValType>(0.0, 0.0, 0.0, 0.0);
 	}
-	static MC2x2 Unity()
+	static MC2x2Base<ValType> Unity()
 	{
-		return MC2x2(1.0, 0.0, 0.0, 1.0);
+		return MC2x2Base(1.0, 0.0, 0.0, 1.0);
 	}
-	static MC2x2 NaN()
+	static MC2x2Base<ValType> NaN()
 	{
-		return MC2x2(
-			std::complex<double>(std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN()),
-			std::complex<double>(std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN()),
-			std::complex<double>(std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN()),
-			std::complex<double>(std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN()));
+		return MC2x2Base<ValType>(
+			std::complex<ValType>(std::numeric_limits<ValType>::quiet_NaN(), std::numeric_limits<ValType>::quiet_NaN()),
+			std::complex<ValType>(std::numeric_limits<ValType>::quiet_NaN(), std::numeric_limits<ValType>::quiet_NaN()),
+			std::complex<ValType>(std::numeric_limits<ValType>::quiet_NaN(), std::numeric_limits<ValType>::quiet_NaN()),
+			std::complex<ValType>(std::numeric_limits<ValType>::quiet_NaN(), std::numeric_limits<ValType>::quiet_NaN()));
 	}
-	std::complex<double>* Data() { return _values; }
-	const std::complex<double>* Data() const { return _values; }
-	MC2x2 Multiply(const MC2x2& rhs) const
+	std::complex<ValType>* Data() { return _values; }
+	const std::complex<ValType>* Data() const { return _values; }
+	MC2x2Base<ValType> Multiply(const MC2x2Base<ValType>& rhs) const
 	{
-		MC2x2 dest;
+		MC2x2Base<ValType> dest;
 		Matrix2x2::ATimesB(dest._values, _values, rhs._values);
 		return dest;
 	}
-	MC2x2 MultiplyHerm(const MC2x2& rhs) const
+	MC2x2Base<ValType> MultiplyHerm(const MC2x2Base<ValType>& rhs) const
 	{
-		MC2x2 dest;
+		MC2x2Base dest;
 		Matrix2x2::ATimesHermB(dest._values, _values, rhs._values);
 		return dest;
 	}
-	MC2x2 HermThenMultiply(const MC2x2& rhs) const
+	MC2x2Base<ValType> HermThenMultiply(const MC2x2Base<ValType>& rhs) const
 	{
-		MC2x2 dest;
+		MC2x2Base<ValType> dest;
 		Matrix2x2::HermATimesB(dest._values, _values, rhs._values);
 		return dest;
 	}
-	MC2x2 HermThenMultiplyHerm(const MC2x2& rhs) const
+	MC2x2Base<ValType> HermThenMultiplyHerm(const MC2x2Base<ValType>& rhs) const
 	{
-		MC2x2 dest;
+		MC2x2Base<ValType> dest;
 		Matrix2x2::HermATimesHermB(dest._values, _values, rhs._values);
 		return dest;
 	}
-	void AddWithFactorAndAssign(const MC2x2& rhs, double factor)
+	void AddWithFactorAndAssign(const MC2x2Base<ValType>& rhs, ValType factor)
 	{
 		Matrix2x2::MultiplyAdd(_values, rhs._values, factor);
 	}
@@ -367,19 +368,23 @@ public:
 	{
 		return Matrix2x2::Invert(_values);
 	}
-	static void ATimesB(MC2x2& dest, const MC2x2& lhs, const MC2x2& rhs)
+	static void ATimesB(MC2x2Base<ValType>& dest, const MC2x2Base<ValType>& lhs, const MC2x2Base<ValType>& rhs)
 	{
 		Matrix2x2::ATimesB(dest._values, lhs._values, rhs._values);
 	}
-	static void ATimesHermB(MC2x2& dest, const MC2x2& lhs, const MC2x2& rhs)
+	static void ATimesB(std::complex<ValType>* dest, const MC2x2Base<ValType>& lhs, const MC2x2Base<ValType>& rhs)
+	{
+		Matrix2x2::ATimesB(dest, lhs._values, rhs._values);
+	}
+	static void ATimesHermB(MC2x2Base<ValType>& dest, const MC2x2Base<ValType>& lhs, const MC2x2Base<ValType>& rhs)
 	{
 		Matrix2x2::ATimesHermB(dest._values, lhs._values, rhs._values);
 	}
-	static void HermATimesB(MC2x2& dest, const MC2x2& lhs, const MC2x2& rhs)
+	static void HermATimesB(MC2x2Base<ValType>& dest, const MC2x2Base<ValType>& lhs, const MC2x2Base<ValType>& rhs)
 	{
 		Matrix2x2::HermATimesB(dest._values, lhs._values, rhs._values);
 	}
-	static void HermATimesHermB(MC2x2& dest, const MC2x2& lhs, const MC2x2& rhs)
+	static void HermATimesHermB(MC2x2Base<ValType>& dest, const MC2x2Base<ValType>& lhs, const MC2x2Base<ValType>& rhs)
 	{
 		Matrix2x2::HermATimesHermB(dest._values, lhs._values, rhs._values);
 	}
@@ -390,11 +395,11 @@ public:
 			<< _values[2] << ", " << _values[3];
 		return str.str();
 	}
-	void CopyValues(std::complex<double>* values) const
+	void CopyValues(std::complex<ValType>* values) const
 	{
 		Matrix2x2::Assign(values, _values);
 	}
-	void EigenValues(std::complex<double> &e1, std::complex<double> &e2) const
+	void EigenValues(std::complex<ValType> &e1, std::complex<ValType> &e2) const
 	{
 		Matrix2x2::EigenValues(_values, e1, e2);
 	}
@@ -408,7 +413,10 @@ public:
 		);
 	}
 private:
-	std::complex<double> _values[4];
+	std::complex<ValType> _values[4];
 };
+
+using MC2x2 = MC2x2Base<double>;
+using MC2x2F = MC2x2Base<float>;
 
 #endif

@@ -3,14 +3,13 @@
 
 #include <casacore/ms/MeasurementSets/MeasurementSet.h>
 
-#include <casacore/measures/Measures/MEpoch.h>
-
 #include "../matrix2x2.h"
 
 #ifdef HAVE_LOFAR_BEAM
 #include <StationResponse/Station.h>
 #endif
 
+#include <casacore/measures/Measures/MEpoch.h>
 #include <casacore/measures/Measures/MDirection.h>
 #include <casacore/measures/Measures/MPosition.h>
 
