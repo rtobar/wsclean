@@ -40,7 +40,7 @@ find_library(LOFAR_STATION_RESPONSE_LIB stationresponse)
 if(LOFAR_STATION_RESPONSE_DIR AND LOFAR_STATION_RESPONSE_LIB)
   include_directories(${LOFAR_STATION_RESPONSE_DIR})
   set(LBEAM_LIBS ${LOFAR_STATION_RESPONSE_LIB})
-  set(LBEAM_FILES lofar/lbeamevaluator.cpp lofar/lmspredicter.cpp)
+  set(LBEAM_FILES lofar/lbeamevaluator.cpp lofar/lmspredicter.cpp aterms/lofarbeamterm.cpp)
   # Some versions of the LOFAR code require "HAVE_BOOST" to be set explicitly
   # (This is supposed to be fixed in newer LOFAR repositories, AO 2015-11-27)
   add_definitions(-DHAVE_LOFAR_BEAM -DHAVE_BOOST)
