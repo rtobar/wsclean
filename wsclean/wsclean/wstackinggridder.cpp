@@ -140,7 +140,7 @@ void WStackingGridder::StartPredictionPass(size_t passIndex)
 	
 	boost::mutex mutex;
 	boost::thread_group threadGroup;
-	for(size_t i=0; i!=_nFFTThreads; ++i)
+	for(size_t i=0; i!=std::min(_nFFTThreads, layers.size()); ++i)
 		threadGroup.add_thread(new boost::thread(&WStackingGridder::fftToUVThreadFunction, this, &mutex, &layers));
 	threadGroup.join_all();
 }
