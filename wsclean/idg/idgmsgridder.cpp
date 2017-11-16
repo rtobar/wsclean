@@ -113,7 +113,7 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 	double aTermUpdateInterval = 900.0; // 15min
 	if(_settings.gridWithBeam)
 	{
-		size_t subgridsize = 256; //TODO
+		size_t subgridsize = _bufferset->get_subgridsize();
 		double dl = _actualPixelSizeX, dm = _actualPixelSizeY;
 		double pdl = PhaseCentreDL(), pdm = PhaseCentreDM();
 		aTermMaker.reset(new LofarBeamTerm(ms, subgridsize, subgridsize, dl, dm, pdl, pdm, _settings.useDifferentialLofarBeam));
@@ -136,17 +136,6 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 		{
 			currentTime = metaData.time;
 			timeIndex++;
-			
-			if(_settings.gridWithBeam)
-			{
-				if(currentTime - lastATermUpdate > aTermUpdateInterval)
-				{
-					Logger::Debug << "Calculating a-terms for timestep " << timeIndex << "\n";
-					aTermMaker->Calculate(aTermBuffer.data(), currentTime + aTermUpdateInterval*0.5, _selectedBands.CentreFrequency());
-					set_aterm(timeIndex, aTermBuffer.data());
-					lastATermUpdate = currentTime;
-				}
-			}
 		}
 		const BandData& curBand(_selectedBands[metaData.dataDescId]);
 		IDGInversionRow rowData;
@@ -164,6 +153,14 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 
 		rowData.uvw[1] = -metaData.vInM;  // DEBUG vdtol, flip axis
 		rowData.uvw[2] = -metaData.wInM;  //
+
+		if(_settings.gridWithBeam && currentTime - lastATermUpdate > aTermUpdateInterval)
+		{
+			Logger::Debug << "Calculating a-terms for timestep " << timeIndex << "\n";
+			aTermMaker->Calculate(aTermBuffer.data(), currentTime + aTermUpdateInterval*0.5, _selectedBands.CentreFrequency());
+			_bufferset->get_gridder(rowData.dataDescId)->set_aterm(timeIndex, aTermBuffer.data());
+			lastATermUpdate = currentTime;
+		}
 
 		_bufferset->get_gridder(rowData.dataDescId)->grid_visibilities(timeIndex, metaData.antenna1, metaData.antenna2, rowData.uvw, rowData.data);
 	}
@@ -258,7 +255,7 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 	double aTermUpdateInterval = 900.0; // 15min
 	if(_settings.gridWithBeam)
 	{
-		size_t subgridsize = 256; //TODO
+		size_t subgridsize = _bufferset->get_subgridsize();
 		double dl = _actualPixelSizeX, dm = _actualPixelSizeY;
 		double pdl = PhaseCentreDL(), pdm = PhaseCentreDM();
 		aTermMaker.reset(new LofarBeamTerm(ms, subgridsize, subgridsize, dl, dm, pdl, pdm, _settings.useDifferentialLofarBeam));
@@ -277,16 +274,6 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 		{
 			currentTime = metaData.time;
 			timeIndex++;
-			if(_settings.gridWithBeam)
-			{
-				if(currentTime - lastATermUpdate > aTermUpdateInterval)
-				{
-					Logger::Debug << "Calculating a-terms for timestep " << timeIndex << "\n";
-					aTermMaker->Calculate(aTermBuffer.data(), currentTime + aTermUpdateInterval*0.5, _selectedBands.CentreFrequency());
-					set_aterm(timeIndex, aTermBuffer.data());
-					lastATermUpdate = currentTime;
-				}
-			}
 		}
 		
 		IDGPredictionRow row;
@@ -299,7 +286,15 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 		row.dataDescId = metaData.dataDescId;
 		row.rowId = provRowId;
 		predictRow(row);
-	}
+
+		if(_settings.gridWithBeam && currentTime - lastATermUpdate > aTermUpdateInterval)
+		{
+			Logger::Debug << "Calculating a-terms for timestep " << timeIndex << "\n";
+			aTermMaker->Calculate(aTermBuffer.data(), currentTime + aTermUpdateInterval*0.5, _selectedBands.CentreFrequency());
+			_bufferset->get_degridder(row.dataDescId)->set_aterm(timeIndex, aTermBuffer.data());
+			lastATermUpdate = currentTime;
+		}
+  }
 	
 	for(size_t d=0; d!=_selectedBands.DataDescCount(); ++d)
 		computePredictionBuffer(d);

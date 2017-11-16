@@ -34,20 +34,6 @@ public:
 	
 	virtual bool HasGriddingCorrectionImage() const;
 
-	/**
-	 * Stub functie die te implementeren methode spiegelt.
-	 * 
-	 * De aterms moeten dimensies n_stations * subgridsize * subgridsize * 2 * 2 hebben (2x2 is Jones matrix). 
-	 * 
-	 * Werking van set_aterm:
-	 * - Voegt aan m_aterm een slice toe met een kopie van aterms
-	 * - Voegt aan m_atermoffsets de timeIndex toe, zodat de gridder weet dat op dat timeslot de aterm verandert
-	 * De functie set_aterm roep je aan het gridden begint. Dus bijvoorbeeld op het moment dat je de visibility
-	 * voert waarom de a-term verandert. Maar eerder mag ook. Iets later eventueel ook, maar dan voordat je een
-	 * visibility van een volgend tijdslot pusht (want dan kan hij besluiten te gaan flushen).
-	 */
-	void set_aterm(size_t timeIndex, const std::complex<float>* aTerms) { }
-	
 private:
 	virtual size_t getSuggestedWGridSize() const   {
 		return 1; // TODO
