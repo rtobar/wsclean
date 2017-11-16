@@ -6,8 +6,8 @@
 class ATermStub
 {
 public:
-	ATermStub(casacore::MeasurementSet&, size_t, size_t, double, double, double, double) { }
-	void calculate(std::complex<float>*, double, double) { };
+	ATermStub(casacore::MeasurementSet&, size_t, size_t, double, double, double, double, bool) { }
+	void Calculate(std::complex<float>*, double, double) { };
 };
 
 #endif
