@@ -235,15 +235,15 @@ void WStackingGridder::fftToUVThreadFunction(boost::mutex *mutex, std::stack<siz
 void WStackingGridder::FinishInversionPass()
 {
 	size_t layerOffset = layerRangeStart(_curLayerRangeIndex);
-	size_t nPlanes = layerRangeStart(_curLayerRangeIndex+1) - layerOffset;
-	std::stack<size_t> planes;
-	for(size_t plane=0; plane!=nPlanes; ++plane)
-		planes.push(plane);
+	size_t nLayers = layerRangeStart(_curLayerRangeIndex+1) - layerOffset;
+	std::stack<size_t> layers;
+	for(size_t layer=0; layer!=nLayers; ++layer)
+		layers.push(layer);
 	
 	boost::mutex mutex;
 	boost::thread_group threadGroup;
-	for(size_t i=0; i!=_nFFTThreads; ++i)
-		threadGroup.add_thread(new boost::thread(&WStackingGridder::fftToImageThreadFunction, this, &mutex, &planes, i));
+	for(size_t i=0; i!=std::min(_nFFTThreads, layers.size()); ++i)
+		threadGroup.add_thread(new boost::thread(&WStackingGridder::fftToImageThreadFunction, this, &mutex, &layers, i));
 	threadGroup.join_all();
 }
 
