@@ -57,7 +57,7 @@ public:
 	struct MetaDataCache
 	{
 		struct Entry {
-			double minW, maxW, maxBaselineUVW, maxBaselineInM;
+			double minW, maxW, maxWWithFlags, maxBaselineUVW, maxBaselineInM;
 		};
 		std::vector<Entry> msDataVector;
 	};
@@ -75,7 +75,7 @@ protected:
 			MultiBandData bandData;
 			size_t startChannel, endChannel;
 			size_t matchingRows, totalRowsProcessed;
-			double minW, maxW, maxBaselineUVW, maxBaselineInM;
+			double minW, maxW, maxWWithFlags, maxBaselineUVW, maxBaselineInM;
 			size_t rowStart, rowEnd;
 		
 			MultiBandData SelectedBand() const { return MultiBandData(bandData, startChannel, endChannel); }
@@ -141,7 +141,7 @@ protected:
 	
 	double totalWeight() const { return _totalWeight; }
 	
-	void initializeMSDataVector(std::vector<MSData>& msDataVector, size_t nPolInMSProvider);
+	void initializeMSDataVector(std::vector<MSData>& msDataVector);
 	
 private:
 	template<size_t PolarizationCount>

@@ -110,6 +110,7 @@ void MSGridderBase::calculateWLimits(MSGridderBase::MSData& msData)
 	Logger::Info << "Determining min and max w & theoretical beam size... ";
 	Logger::Info.Flush();
 	msData.maxW = 0.0;
+	msData.maxWWithFlags = 0.0;
 	msData.minW = 1e100;
 	msData.maxBaselineUVW = 0.0;
 	msData.maxBaselineInM = 0.0;
@@ -132,12 +133,13 @@ void MSGridderBase::calculateWLimits(MSGridderBase::MSData& msData)
 			const float* weightPtr = weightArray.data();
 			for(size_t ch=0; ch!=curBand.ChannelCount(); ++ch)
 			{
+				const double wavelength = curBand.ChannelWavelength(ch);
+				double wInL = wInM/wavelength;
+				msData.maxWWithFlags = std::max(msData.maxWWithFlags, fabs(wInL));
 				if(*weightPtr != 0.0)
 				{
-					const double wavelength = curBand.ChannelWavelength(ch);
 					double
 						uInL = uInM/wavelength, vInL = vInM/wavelength,
-						wInL = wInM/wavelength,
 						x = uInL * PixelSizeX() * ImageWidth(),
 						y = vInL * PixelSizeY() * ImageHeight(),
 						imagingWeight = this->PrecalculatedWeightInfo()->GetWeight(uInL, vInL);
@@ -163,16 +165,21 @@ void MSGridderBase::calculateWLimits(MSGridderBase::MSData& msData)
 	if(msData.minW == 1e100)
 	{
 		msData.minW = 0.0;
+		msData.maxWWithFlags = 0.0;
 		msData.maxW = 0.0;
 	}
 	
 	Logger::Info << "DONE (w=[" << msData.minW << ":" << msData.maxW << "] lambdas, maxuvw=" << msData.maxBaselineUVW << " lambda)\n";
+	if(msData.maxWWithFlags != msData.maxW)
+	{
+		Logger::Debug << "Discarded data has higher w value of " << msData.maxWWithFlags << " lambda.\n";
+	}
 }
 
 template void MSGridderBase::calculateWLimits<1>(MSGridderBase::MSData& msData);
 template void MSGridderBase::calculateWLimits<4>(MSGridderBase::MSData& msData);
 
-void MSGridderBase::initializeMSDataVector(std::vector<MSGridderBase::MSData>& msDataVector, size_t nPolInMSProvider)
+void MSGridderBase::initializeMSDataVector(std::vector<MSGridderBase::MSData>& msDataVector)
 {
 	if(MeasurementSetCount() == 0)
 		throw std::runtime_error("Something is wrong during inversion: no measurement sets given to inversion algorithm");
@@ -225,6 +232,7 @@ void MSGridderBase::initializeMeasurementSet(MSGridderBase::MSData& msData, Meta
 	if(isCacheInitialized)
 	{
 		msData.maxW = cacheEntry.maxW;
+		msData.maxWWithFlags = cacheEntry.maxWWithFlags;
 		msData.minW = cacheEntry.minW;
 		msData.maxBaselineUVW = cacheEntry.maxBaselineUVW;
 		msData.maxBaselineInM = cacheEntry.maxBaselineInM;
@@ -235,6 +243,7 @@ void MSGridderBase::initializeMeasurementSet(MSGridderBase::MSData& msData, Meta
 		else
 			calculateWLimits<1>(msData);
 		cacheEntry.maxW = msData.maxW;
+		cacheEntry.maxWWithFlags = msData.maxWWithFlags;
 		cacheEntry.minW = msData.minW;
 		cacheEntry.maxBaselineUVW = msData.maxBaselineUVW;
 		cacheEntry.maxBaselineInM = msData.maxBaselineInM;

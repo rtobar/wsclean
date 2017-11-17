@@ -329,7 +329,7 @@ void WSMSGridder::predictWriteThread(ao::lane<PredictionWorkItem>* predictionWor
 void WSMSGridder::Invert()
 {
 	std::vector<MSData> msDataVector;
-	initializeMSDataVector(msDataVector, 1);
+	initializeMSDataVector(msDataVector);
 	
 	_gridder = std::unique_ptr<WStackingGridder>(new WStackingGridder(_actualInversionWidth, _actualInversionHeight, _actualPixelSizeX, _actualPixelSizeY, _cpuCount, _imageBufferAllocator, AntialiasingKernelSize(), OverSamplingFactor()));
 	_gridder->SetGridMode(GridMode());
@@ -447,7 +447,7 @@ void WSMSGridder::Predict(double* real, double* imaginary)
 		throw std::runtime_error("Imaginary specified in non-complex prediction");
 	
 	std::vector<MSData> msDataVector;
-	initializeMSDataVector(msDataVector, 1);
+	initializeMSDataVector(msDataVector);
 	
 	_gridder = std::unique_ptr<WStackingGridder>(new WStackingGridder(_actualInversionWidth, _actualInversionHeight, _actualPixelSizeX, _actualPixelSizeY, _cpuCount, _imageBufferAllocator, AntialiasingKernelSize(), OverSamplingFactor()));
 	_gridder->SetGridMode(GridMode());
