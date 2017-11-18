@@ -114,7 +114,7 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 	if(_settings.gridWithBeam)
 	{
 		size_t subgridsize = _bufferset->get_subgridsize();
-		double dl = _actualPixelSizeX, dm = _actualPixelSizeY;
+		double dl = _actualPixelSizeX * TrimWidth() / subgridsize, dm = _actualPixelSizeY * TrimHeight() / subgridsize;
 		double pdl = PhaseCentreDL(), pdm = PhaseCentreDM();
 		aTermMaker.reset(new LofarBeamTerm(ms, subgridsize, subgridsize, dl, dm, pdl, pdm, _settings.useDifferentialLofarBeam));
 		aTermBuffer.resize(subgridsize*subgridsize*4*nr_stations);
@@ -256,7 +256,7 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 	if(_settings.gridWithBeam)
 	{
 		size_t subgridsize = _bufferset->get_subgridsize();
-		double dl = _actualPixelSizeX, dm = _actualPixelSizeY;
+		double dl = _actualPixelSizeX * TrimWidth() / subgridsize, dm = _actualPixelSizeY * TrimHeight() / subgridsize;
 		double pdl = PhaseCentreDL(), pdm = PhaseCentreDM();
 		aTermMaker.reset(new LofarBeamTerm(ms, subgridsize, subgridsize, dl, dm, pdl, pdm, _settings.useDifferentialLofarBeam));
 		aTermBuffer.resize(subgridsize*subgridsize*4*nr_stations);
