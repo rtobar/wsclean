@@ -85,47 +85,49 @@ void LofarBeamTerm::Calculate(std::complex<float>* buffer, double time, double f
 	size_t nCPUs = System::ProcessorCount();
 	ao::lane<size_t> lane(nCPUs);
 	
-	LofarBeamTermThreadData data;
-	data.buffer = buffer;
-	data.lane = &lane;
-	data.time = time;
-	data.frequency = frequency;
-	
-	casacore::MEpoch timeEpoch(casacore::Quantity(time, "s"));
-	casacore::MeasFrame frame(_arrayPos, timeEpoch);
-	data.j2000Ref = casacore::MDirection::Ref(casacore::MDirection::J2000, frame);
-	casacore::MDirection::Ref itrfRef(casacore::MDirection::ITRF, frame);
-	data.j2000ToITRFRef = casacore::MDirection::Convert(data.j2000Ref, itrfRef);
-	
-	setITRF(data.j2000ToITRFRef(_delayDir), data.station0);
-	setITRF(data.j2000ToITRFRef(_tileBeamDir), data.tile0);
-	
-	if(_useDifferentialBeam)
-	{
-		vector3r_t diffBeamCentre;
-		setITRF(data.j2000ToITRFRef(_referenceDir), diffBeamCentre);
-		data.inverseCentralGain.resize(_stations.size());
-		for(size_t a=0; a!=_stations.size(); ++a)
-		{
-			matrix22c_t gainMatrix = _stations[a]->response(time, frequency, diffBeamCentre, _subbandFrequency, data.station0, data.tile0);
-			data.inverseCentralGain[a][0] = gainMatrix[0][0];
-			data.inverseCentralGain[a][1] = gainMatrix[0][1];
-			data.inverseCentralGain[a][2] = gainMatrix[1][0];
-			data.inverseCentralGain[a][3] = gainMatrix[1][1];
-			if(!data.inverseCentralGain[a].Invert())
-			{
-				data.inverseCentralGain[a] = MC2x2F::NaN();
-			}
-		}
-	}
-	
 	std::vector<std::thread> threads(nCPUs);
 	std::vector<LofarBeamTermThreadData> threadData(nCPUs);
-	for(size_t i=0; i!=1; ++i)
+	for(size_t i=0; i!=1; ++i) // TODO casacore can not handle multiple threads(??!)
 	{
 		// Make a private copy of the data so that each thread has its local copy
 		// (in particular to make sure casacore objects do not cause sync bugs)
-		threadData[i] = data;
+		LofarBeamTermThreadData& data = threadData[i];
+		data.buffer = buffer;
+		data.lane = &lane;
+		data.time = time;
+		data.frequency = frequency;
+		
+		casacore::MEpoch timeEpoch(casacore::Quantity(time, "s"));
+		casacore::MeasFrame frame(_arrayPos, timeEpoch);
+		data.j2000Ref = casacore::MDirection::Ref(casacore::MDirection::J2000, frame);
+		casacore::MDirection::Ref itrfRef(casacore::MDirection::ITRF, frame);
+		data.j2000ToITRFRef = casacore::MDirection::Convert(data.j2000Ref, itrfRef);
+		
+		setITRF(data.j2000ToITRFRef(_delayDir), data.station0);
+		setITRF(data.j2000ToITRFRef(_tileBeamDir), data.tile0);
+		
+		if(_useDifferentialBeam)
+		{
+			vector3r_t diffBeamCentre;
+			setITRF(data.j2000ToITRFRef(_referenceDir), diffBeamCentre);
+			data.inverseCentralGain.resize(_stations.size());
+			for(size_t a=0; a!=_stations.size(); ++a)
+			{
+				matrix22c_t gainMatrix = _stations[a]->response(time, frequency, diffBeamCentre, _subbandFrequency, data.station0, data.tile0);
+				data.inverseCentralGain[a][0] = gainMatrix[0][0];
+				data.inverseCentralGain[a][1] = gainMatrix[0][1];
+				data.inverseCentralGain[a][2] = gainMatrix[1][0];
+				data.inverseCentralGain[a][3] = gainMatrix[1][1];
+				if(!data.inverseCentralGain[a].Invert())
+				{
+					data.inverseCentralGain[a] = MC2x2F::NaN();
+				}
+			}
+		}
+		// It is necessary to use each converter once in the global thread, during which
+		// it initializes itself. This initializes is not thread safe, apparently.
+		threadData[i].j2000ToITRFRef(_delayDir);
+		
 		threads[i] = std::thread(&LofarBeamTerm::calcThread, this, &threadData[i]);
 	}
 	for(size_t y=0; y!=_height; ++y)

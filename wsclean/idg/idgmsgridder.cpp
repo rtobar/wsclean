@@ -53,17 +53,17 @@ void IdgMsGridder::Invert()
 	if(Polarization() == Polarization::StokesI)
 	{
 		std::vector<MSData> msDataVector;
-		initializeMSDataVector(msDataVector, 4);
+		initializeMSDataVector(msDataVector);
 		
 		resetVisibilityCounters();
 
 		double max_w = 0;
 		for(size_t i=0; i!=MeasurementSetCount(); ++i)
 		{
-			max_w = std::max(max_w, msDataVector[i].maxW);
+			max_w = std::max(max_w, msDataVector[i].maxWWithFlags);
 		}
 
-		_bufferset->init(width, _actualPixelSizeX, max_w, _options);
+		_bufferset->init(width, _actualPixelSizeX, max_w+1.0, _options);
 		for(size_t i=0; i!=MeasurementSetCount(); ++i)
 		{
 			// Adds the gridding result to _image member
@@ -193,15 +193,15 @@ void IdgMsGridder::Predict(double* image)
 	{
 		// Do actual predict
 		std::vector<MSData> msDataVector;
-		initializeMSDataVector(msDataVector, 4);
+		initializeMSDataVector(msDataVector);
 
 		double max_w = 0;
 		for(size_t i=0; i!=MeasurementSetCount(); ++i)
 		{
-			max_w = std::max(max_w, msDataVector[i].maxW);
+			max_w = std::max(max_w, msDataVector[i].maxWWithFlags);
 		}
 
-		_bufferset->init(width, _actualPixelSizeX, max_w, _options);
+		_bufferset->init(width, _actualPixelSizeX, max_w+1.0, _options);
 		_bufferset->set_image(_image.data());
 
 		for(size_t i=0; i!=MeasurementSetCount(); ++i)

@@ -1014,11 +1014,6 @@ void WSClean::initializeMSProvidersForPB(const ImagingTableEntry& entry, Primary
 	}
 }
 
-void WSClean::clearCurMSProviders()
-{
-	_currentPolMSes.clear();
-}
-
 void WSClean::runFirstInversion(ImagingTableEntry& entry)
 {
 	initializeCurMSProviders(entry);

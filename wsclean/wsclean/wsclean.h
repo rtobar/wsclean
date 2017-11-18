@@ -50,8 +50,6 @@ private:
 	std::unique_ptr<MSProvider> initializeMSProvider(const ImagingTableEntry& entry, const MSSelection& selection, size_t filenameIndex, size_t dataDescId);
 	void initializeCurMSProviders(const ImagingTableEntry& entry);
 	void initializeMSProvidersForPB(const ImagingTableEntry& entry, class PrimaryBeam& pb);
-	[[ deprecated("Just clear it yourself") ]]
-	void clearCurMSProviders();
 	void storeAndCombineXYandYX(CachedImageSet& dest, PolarizationEnum polarization, size_t joinedChannelIndex, bool isImaginary, const double* image);
 	bool selectChannels(MSSelection& selection, size_t msIndex, size_t bandIndex, const ImagingTableEntry& entry);
 	MSSelection selectInterval(MSSelection& fullSelection, size_t intervalIndex);
