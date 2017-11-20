@@ -3,22 +3,18 @@
 #include "idgmsgridder.h"
 
 #include <cmath>
-#include <fstream>
 #include <thread>
 
-//#include "interface.h"
-//#include "dummygridder.h"
 #include <idg-api.h>
 
 #include "../msproviders/msprovider.h"
-
-#include <boost/program_options.hpp>
-#include <boost/algorithm/string.hpp>
 
 #include "../wsclean/logger.h"
 #include "../wsclean/wscleansettings.h"
 
 #include "../aterms/lofarbeamterm.h"
+
+#include "idgconfiguration.h"
 
 IdgMsGridder::IdgMsGridder(const WSCleanSettings& settings) :
 	_outputProvider(nullptr),
@@ -26,7 +22,7 @@ IdgMsGridder::IdgMsGridder(const WSCleanSettings& settings) :
 	_proxyType(idg::api::Type::CPU_OPTIMIZED),
 	_buffersize(256)
 {
-	readConfiguration();
+	IdgConfiguration::Read(_proxyType, _buffersize, _options);
 	setIdgType();
 	_bufferset = std::unique_ptr<idg::api::BufferSet>(
 		idg::api::BufferSet::create(_proxyType));
@@ -136,6 +132,14 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 		{
 			currentTime = metaData.time;
 			timeIndex++;
+			
+			if(_settings.gridWithBeam && currentTime - lastATermUpdate > aTermUpdateInterval)
+			{
+				Logger::Debug << "Calculating a-terms for timestep " << timeIndex << "\n";
+				aTermMaker->Calculate(aTermBuffer.data(), currentTime + aTermUpdateInterval*0.5, _selectedBands.CentreFrequency());
+				_bufferset->get_gridder(metaData.dataDescId)->set_aterm(timeIndex, aTermBuffer.data());
+				lastATermUpdate = currentTime;
+			}
 		}
 		const BandData& curBand(_selectedBands[metaData.dataDescId]);
 		IDGInversionRow rowData;
@@ -153,14 +157,6 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 
 		rowData.uvw[1] = -metaData.vInM;  // DEBUG vdtol, flip axis
 		rowData.uvw[2] = -metaData.wInM;  //
-
-		if(_settings.gridWithBeam && currentTime - lastATermUpdate > aTermUpdateInterval)
-		{
-			Logger::Debug << "Calculating a-terms for timestep " << timeIndex << "\n";
-			aTermMaker->Calculate(aTermBuffer.data(), currentTime + aTermUpdateInterval*0.5, _selectedBands.CentreFrequency());
-			_bufferset->get_gridder(rowData.dataDescId)->set_aterm(timeIndex, aTermBuffer.data());
-			lastATermUpdate = currentTime;
-		}
 
 		_bufferset->get_gridder(rowData.dataDescId)->grid_visibilities(timeIndex, metaData.antenna1, metaData.antenna2, rowData.uvw, rowData.data);
 	}
@@ -274,6 +270,14 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 		{
 			currentTime = metaData.time;
 			timeIndex++;
+			
+			if(_settings.gridWithBeam && currentTime - lastATermUpdate > aTermUpdateInterval)
+			{
+				Logger::Debug << "Calculating a-terms for timestep " << timeIndex << "\n";
+				aTermMaker->Calculate(aTermBuffer.data(), currentTime + aTermUpdateInterval*0.5, _selectedBands.CentreFrequency());
+				_bufferset->get_degridder(metaData.dataDescId)->set_aterm(timeIndex, aTermBuffer.data());
+				lastATermUpdate = currentTime;
+			}
 		}
 		
 		IDGPredictionRow row;
@@ -286,14 +290,6 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 		row.dataDescId = metaData.dataDescId;
 		row.rowId = provRowId;
 		predictRow(row);
-
-		if(_settings.gridWithBeam && currentTime - lastATermUpdate > aTermUpdateInterval)
-		{
-			Logger::Debug << "Calculating a-terms for timestep " << timeIndex << "\n";
-			aTermMaker->Calculate(aTermBuffer.data(), currentTime + aTermUpdateInterval*0.5, _selectedBands.CentreFrequency());
-			_bufferset->get_degridder(row.dataDescId)->set_aterm(timeIndex, aTermBuffer.data());
-			lastATermUpdate = currentTime;
-		}
   }
 	
 	for(size_t d=0; d!=_selectedBands.DataDescCount(); ++d)
@@ -350,49 +346,3 @@ bool IdgMsGridder::HasGriddingCorrectionImage() const
 	return false; // For now (TODO)
 }
 
-void IdgMsGridder::readConfiguration()
-{
-	namespace po = boost::program_options; 
-	po::options_description desc("Options"); 
-	desc.add_options() 
-	("proxy", "idg proxy")
-	("max_nr_w_layers", po::value<int>(), "")
-	("buffersize", po::value<int>(), ""); 
-
-	po::variables_map vm;
-	std::cout << "trying to open config file" << std::endl;
-    std::ifstream ifs("idg.conf");
-	if (ifs.fail())
-	{
-		std::cout << "could not open config file" << std::endl;
-	}
-	else
-	{
-		std::cout << "reading config file" << std::endl;
-		try 
-		{ 
-			po::store(po::parse_config_file(ifs, desc), vm);
-		}
-		catch(po::error& e) 
-		{ 
-		} 
-	}
-	if (vm.count("proxy")) 
-	{
-		std::string proxy(vm["proxy"].as<string>());
-		boost::to_lower(proxy);
-		std::cout << "proxy = " << proxy << std::endl;
-		if (proxy == "cpu-optimized") _proxyType = idg::api::Type::CPU_OPTIMIZED;
-		if (proxy == "cpu-reference") _proxyType = idg::api::Type::CPU_REFERENCE;
-		if (proxy == "cuda-generic") _proxyType = idg::api::Type::CUDA_GENERIC;
-		if (proxy == "hybrid-cuda-cpu-optimized") _proxyType = idg::api::Type::HYBRID_CUDA_CPU_OPTIMIZED;
-	}
-	if (vm.count("buffersize")) 
-	{
-		_buffersize = vm["buffersize"].as<int>();
-	}
-	if (vm.count("max_nr_w_layers")) 
-	{
-		_options["max_nr_w_layers"] = vm["max_nr_w_layers"].as<int>();
-	}
-}
