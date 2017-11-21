@@ -9,7 +9,8 @@
 
 #include "../system.h"
 
-#include "../aocommon/lane.h"
+#include "../lane.h"
+#include "../uvector.h"
 
 #include <casacore/measures/TableMeasures/ArrayMeasColumn.h>
 #include <casacore/measures/Measures/MEpoch.h>
@@ -137,11 +138,18 @@ void LofarBeamTerm::Calculate(std::complex<float>* buffer, double time, double f
 	lane.write_end();
 	for(size_t i=0; i!=1; ++i)
 		threads[i].join();
+	
+	static int index = 0;
+	std::ostringstream f;
+	f << "aterm" << index << ".fits";
+	StoreATerms(f.str(), buffer);
+	++index;
 }
 
 void LofarBeamTerm::calcThread(struct LofarBeamTermThreadData* data)
 {
 	const size_t valuesPerAntenna = _width * _height * 4;
+	const casacore::Unit radUnit("rad");
 	
 	size_t y;
 	while(data->lane->read(y))
@@ -153,7 +161,6 @@ void LofarBeamTerm::calcThread(struct LofarBeamTermThreadData* data)
 			l += _phaseCentreDL; m += _phaseCentreDM;
 			ImageCoordinates::LMToRaDec(l, m, _phaseCentreRA, _phaseCentreDec, ra, dec);
 			
-			static const casacore::Unit radUnit("rad");
 			casacore::MDirection imageDir(casacore::MVDirection(
 				casacore::Quantity(ra, radUnit),
 				casacore::Quantity(dec,radUnit)),
@@ -191,4 +198,29 @@ void LofarBeamTerm::calcThread(struct LofarBeamTermThreadData* data)
 			}
 		}
 	}
+}
+
+#include "../fitswriter.h"
+void LofarBeamTerm::StoreATerms(const std::string& filename, std::complex<float>* buffer)
+{
+	size_t ny = floor(sqrt(_stations.size())), nx = (_stations.size()+ny-1) / ny;
+	Logger::Info << "Storing " << filename << " (" << _stations.size() << " ant, " << nx << " x " << ny << ")\n";
+	ao::uvector<double> img(nx*ny * _width*_height, 0.0);
+	for(size_t ant=0; ant!=_stations.size(); ++ant)
+	{
+		size_t xCorner = (ant%nx)*_width, yCorner = (ant/nx)*_height;
+		for(size_t y=0; y!=_height; ++y)
+		{
+			for(size_t x=0; x!=_width; ++x)
+			{
+				std::complex<float> e1, e2;
+				Matrix2x2::EigenValues(buffer+(_width*(ant*_height + y) + x)*4, e1, e2);
+				double val = std::max(std::abs(e1), std::abs(e2));
+				img[(yCorner + y)*_width*nx + x + xCorner] = val;
+			}
+		}
+	}
+	FitsWriter writer;
+	writer.SetImageDimensions(nx*_width, ny*_height);
+	writer.Write(filename, img.data());
 }

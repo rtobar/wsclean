@@ -197,12 +197,13 @@ public:
 		e2 = trHalf - term;
 	}
 	
-	static void EigenValues(const std::complex<double>* matrix, std::complex<double> &e1, std::complex<double> &e2)
+	template<typename ValType>
+	static void EigenValues(const std::complex<ValType>* matrix, std::complex<ValType>& e1, std::complex<ValType>& e2)
 	{
-		std::complex<double> tr = matrix[0] + matrix[3];
-		std::complex<double> d = matrix[0]*matrix[3] - matrix[1]*matrix[2];
-		std::complex<double> term = sqrt(tr*tr*0.25-d);
-		std::complex<double> trHalf = tr*0.5;
+		std::complex<ValType> tr = matrix[0] + matrix[3];
+		std::complex<ValType> d = matrix[0]*matrix[3] - matrix[1]*matrix[2];
+		std::complex<ValType> term = sqrt(tr*tr*ValType(0.25)-d);
+		std::complex<ValType> trHalf = tr*ValType(0.5);
 		e1 = trHalf + term;
 		e2 = trHalf - term;
 	}

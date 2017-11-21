@@ -19,7 +19,9 @@ public:
 	LofarBeamTerm(casacore::MeasurementSet& ms, size_t width, size_t height, double dl, double dm, double phaseCentreDL, double phaseCentreDM, bool useDifferentialBeam);
 	
 	void Calculate(std::complex<float>* buffer, double time, double frequency);
-	
+		
+	void StoreATerms(const std::string& filename, std::complex<float>* buffer);
+
 private:
 	void calcThread(struct LofarBeamTermThreadData* data);
 	
