@@ -26,7 +26,7 @@ IdgMsGridder::IdgMsGridder(const WSCleanSettings& settings) :
 	setIdgType();
 	_bufferset = std::unique_ptr<idg::api::BufferSet>(
 		idg::api::BufferSet::create(_proxyType));
-	_options["a_term_kernel_size"] = float(5.0);
+		if(_settings.gridWithBeam) _options["a_term_kernel_size"] = float(5.0);
 }
 
 IdgMsGridder::~IdgMsGridder()
