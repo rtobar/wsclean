@@ -240,18 +240,27 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 	
 	if(!_settings.fitsDeconvolutionMask.empty())
 	{
-		if(_cleanMask.empty())
+		FitsReader maskReader(_settings.fitsDeconvolutionMask, true, true);
+		if(maskReader.ImageWidth() != _imgWidth || maskReader.ImageHeight() != _imgHeight)
+			throw std::runtime_error("Specified Fits file mask did not have same dimensions as output image!");
+		ao::uvector<float> maskData(_imgWidth*_imgHeight);
+		if(maskReader.NFrequencies() == 1)
 		{
-			Logger::Info << "Reading mask '" << _settings.fitsDeconvolutionMask << "'...\n";
-			FitsReader maskReader(_settings.fitsDeconvolutionMask);
-			if(maskReader.ImageWidth() != _imgWidth || maskReader.ImageHeight() != _imgHeight)
-				throw std::runtime_error("Specified Fits file mask did not have same dimensions as output image!");
-			ao::uvector<float> maskData(_imgWidth*_imgHeight);
+			Logger::Debug << "Reading mask '" << _settings.fitsDeconvolutionMask << "'...\n";
 			maskReader.Read(maskData.data());
-			_cleanMask.assign(_imgWidth*_imgHeight, false);
-			for(size_t i=0; i!=_imgWidth*_imgHeight; ++i)
-				_cleanMask[i] = maskData[i]!=0.0;
 		}
+		else if(maskReader.NFrequencies()==_settings.channelsOut) {
+			Logger::Debug << "Reading mask '" << _settings.fitsDeconvolutionMask << "' (" << (groupTable.Front().outputChannelIndex+1) << ")...\n";
+			maskReader.ReadFrequency(maskData.data(), groupTable.Front().outputChannelIndex);
+		}
+		else {
+			std::stringstream msg;
+			msg << "The number of frequencies in the specified fits mask (" << maskReader.NFrequencies() << ") does not match the number of requested output channels (" << _settings.channelsOut << ")";
+			throw std::runtime_error(msg.str());
+		}
+		_cleanMask.assign(_imgWidth*_imgHeight, false);
+		for(size_t i=0; i!=_imgWidth*_imgHeight; ++i)
+			_cleanMask[i] = (maskData[i]!=0.0);
 		_cleanAlgorithm->SetCleanMask(_cleanMask.data());
 	} else if(!_settings.casaDeconvolutionMask.empty())
 	{

@@ -140,7 +140,7 @@ void WStackingGridder::StartPredictionPass(size_t passIndex)
 	
 	boost::mutex mutex;
 	boost::thread_group threadGroup;
-	for(size_t i=0; i!=std::min(_nFFTThreads, layers.size()); ++i)
+	for(size_t i=0; i!=std::min(_nFFTThreads, nLayersInPass); ++i)
 		threadGroup.add_thread(new boost::thread(&WStackingGridder::fftToUVThreadFunction, this, &mutex, &layers));
 	threadGroup.join_all();
 }
@@ -235,14 +235,14 @@ void WStackingGridder::fftToUVThreadFunction(boost::mutex *mutex, std::stack<siz
 void WStackingGridder::FinishInversionPass()
 {
 	size_t layerOffset = layerRangeStart(_curLayerRangeIndex);
-	size_t nLayers = layerRangeStart(_curLayerRangeIndex+1) - layerOffset;
+	size_t nLayersInPass = layerRangeStart(_curLayerRangeIndex+1) - layerOffset;
 	std::stack<size_t> layers;
-	for(size_t layer=0; layer!=nLayers; ++layer)
+	for(size_t layer=0; layer!=nLayersInPass; ++layer)
 		layers.push(layer);
 	
 	boost::mutex mutex;
 	boost::thread_group threadGroup;
-	for(size_t i=0; i!=std::min(_nFFTThreads, layers.size()); ++i)
+	for(size_t i=0; i!=std::min(_nFFTThreads, nLayersInPass); ++i)
 		threadGroup.add_thread(new boost::thread(&WStackingGridder::fftToImageThreadFunction, this, &mutex, &layers, i));
 	threadGroup.join_all();
 }

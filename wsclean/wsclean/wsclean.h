@@ -96,6 +96,10 @@ private:
 		) && !_settings.forceNoReorder;
 	}
 	
+	// This must be the first field, because other members might take references
+	// of this object and use them in their destructors.
+	mutable ImageBufferAllocator _imageAllocator;
+	
 	MSSelection _globalSelection;
 	std::string _commandLine;
 	std::vector<ChannelInfo> _inputChannelFrequencies;
@@ -109,7 +113,6 @@ private:
 	std::unique_ptr<class MSGridderBase> _gridder;
 	std::unique_ptr<class ImageWeightCache> _imageWeightCache;
 	std::unique_ptr<class PrimaryBeam> _primaryBeam;
-	mutable ImageBufferAllocator _imageAllocator;
 	Stopwatch _inversionWatch, _predictingWatch, _deconvolutionWatch;
 	bool _isFirstInversion, _doReorder;
 	size_t _majorIterationNr;

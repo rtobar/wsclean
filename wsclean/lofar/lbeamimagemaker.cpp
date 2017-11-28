@@ -247,8 +247,6 @@ void LBeamImageMaker::makeBeamSnapshot(const std::vector<Station::Ptr>& stations
 			inverseCentralGain[a][1] = gainMatrix[0][1];
 			inverseCentralGain[a][2] = gainMatrix[1][0];
 			inverseCentralGain[a][3] = gainMatrix[1][1];
-			if(a == 0)
-				std::cout << inverseCentralGain[a][0] << '\n';
 			if(!inverseCentralGain[a].Invert())
 			{
 				inverseCentralGain[a] = MC2x2::NaN();

@@ -143,6 +143,16 @@ public:
 		matrix[0] = temp;
 		return true;
 	}
+	
+	template<typename T>
+	static void ConjugateTranspose(T* matrix)
+	{
+		matrix[0] = std::conj(matrix[0]);
+		T temp = matrix[1];
+		matrix[1] = std::conj(matrix[2]);
+		matrix[2] = std::conj(temp);
+		matrix[3] = std::conj(matrix[3]);
+	}
 
 	static bool MultiplyWithInverse(std::complex<double>* lhs, const std::complex<double>* rhs)
 	{
@@ -259,6 +269,31 @@ public:
 			} else {
 				for(size_t i=0; i!=4; ++i)
 					matrix[i] = std::numeric_limits<double>::quiet_NaN();
+			}
+		}
+	}
+	
+	static void SquareRoot(std::complex<double>* matrix)
+	{
+		std::complex<double> tr = matrix[0] + matrix[3];
+		std::complex<double> d = matrix[0]*matrix[3] - matrix[1]*matrix[2];
+		std::complex<double> s = /*+/-*/ sqrt(d);
+		std::complex<double> t = /*+/-*/ sqrt(tr + 2.0*s);
+		if(t != 0.0)
+		{
+			matrix[0] = (matrix[0]+s ) / t;
+			matrix[1] = (matrix[1] / t);
+			matrix[2] = (matrix[2] / t);
+			matrix[3] = (matrix[3]+s) / t;
+		}
+		else {
+			if(matrix[0] == 0.0 && matrix[1] == 0.0 &&
+				matrix[2] == 0.0 && matrix[3] == 0.0)
+			{
+				// done: it's the zero matrix
+			} else {
+				for(size_t i=0; i!=4; ++i)
+					matrix[i] = std::complex<double>(std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN());
 			}
 		}
 	}

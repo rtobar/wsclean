@@ -901,13 +901,13 @@ void WSClean::readEarlierModelImages(const ImagingTableEntry& entry)
 		}
 		// Check if image corresponds with image dimensions of the settings
 		// Here I require the pixel scale to be accurate enough so that the image is at most 1/10th pixel larger/smaller.
-		/*else if(std::fabs(reader.PixelSizeX() - _settings.pixelScaleX) * _settings.trimmedImageWidth > 0.1 * _settings.pixelScaleX ||
+		else if(std::fabs(reader.PixelSizeX() - _settings.pixelScaleX) * _settings.trimmedImageWidth > 0.1 * _settings.pixelScaleX ||
 			std::fabs(reader.PixelSizeY() - _settings.pixelScaleY) * _settings.trimmedImageHeight > 0.1 * _settings.pixelScaleY)
 		{
 			std::ostringstream msg;
 			msg << "Inconsistent pixel size: pixel size of input image did not match. Input: " << reader.PixelSizeX() << " x " << reader.PixelSizeY() << ", specified: " << _settings.pixelScaleX << " x " << _settings.pixelScaleY;
 			throw std::runtime_error(msg.str());
-		}*/
+		}
 		if(_settings.pixelScaleX == 0.0 || _settings.pixelScaleY == 0.0)
 		{
 			throw std::runtime_error("Could not determine proper pixel size. The input image did not provide proper pixel size values, and no or an invalid -scale was provided to WSClean");
