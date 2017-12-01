@@ -17,7 +17,7 @@
 
 #include <thread>
 
-LofarBeamTerm::LofarBeamTerm(casa::MeasurementSet& ms, size_t width, size_t height, double dl, double dm, double phaseCentreDL, double phaseCentreDM, bool useDifferentialBeam) :
+LofarBeamTerm::LofarBeamTerm(casacore::MeasurementSet& ms, size_t width, size_t height, double dl, double dm, double phaseCentreDL, double phaseCentreDM, bool useDifferentialBeam) :
 	_width(width),
 	_height(height),
 	_dl(dl), _dm(dm),
