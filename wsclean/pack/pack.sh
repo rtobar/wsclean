@@ -59,4 +59,12 @@ else
 		cmake ../ -DCMAKE_PREFIX_PATH="/home/anoko/Software/LOFAR-install"
 		make -j 4 && make check -j 4
 		cd ..
+
+		echo Building WITH LOFAR lib AND IDG
+		rm build -rf
+		mkdir build
+		cd build
+		cmake ../ -DCMAKE_PREFIX_PATH="/home/anoko/Software/LOFAR-install;/home/anoko/Software/git-idg/install"
+		make -j 4 && make check -j 4
+		cd ..
 fi
