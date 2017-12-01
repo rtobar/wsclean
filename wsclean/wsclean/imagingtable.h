@@ -9,7 +9,7 @@
 
 #include "../msproviders/partitionedms.h"
 
-struct ImagingTableEntry
+class ImagingTableEntry
 {
 public:
 	struct MSBandInfo
