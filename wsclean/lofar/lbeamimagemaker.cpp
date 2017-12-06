@@ -331,7 +331,8 @@ void LBeamImageMaker::calculateStationWeights(const ImageWeights& imageWeights, 
 	
 	MultiBandData multiband(ms.spectralWindow(), ms.dataDescription());
 	size_t channelCount = selection.ChannelRangeEnd() - selection.ChannelRangeStart();
-	ao::uvector<float> weightArr(channelCount);
+	size_t polarizationCount = (msProvider.Polarization() == Polarization::Instrumental) ? 4 : 1;
+	ao::uvector<float> weightArr(channelCount * polarizationCount);
 	
 	while(msProvider.CurrentRowAvailable())
 	{
@@ -348,7 +349,7 @@ void LBeamImageMaker::calculateStationWeights(const ImageWeights& imageWeights, 
 				u = metaData.uInM / band.ChannelWavelength(ch),
 				v = metaData.vInM / band.ChannelWavelength(ch);
 			double iw = imageWeights.GetWeight(u, v);
-			double w = weightArr[ch] * iw;
+			double w = weightArr[ch*polarizationCount] * iw;
 			totalWeight += w;
 			weights[metaData.antenna1] += w;
 			weights[metaData.antenna2] += w;
