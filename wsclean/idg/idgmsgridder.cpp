@@ -130,6 +130,9 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 	{
 		MSProvider::MetaData metaData;
 		msData.msProvider->ReadMeta(metaData);
+
+		if (metaData.uInM*metaData.uInM + metaData.vInM*metaData.vInM > max_baseline*max_baseline) continue;
+
 		if(currentTime != metaData.time)
 		{
 			currentTime = metaData.time;
@@ -268,6 +271,8 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 	{
 		MSProvider::MetaData metaData;
 		msData.msProvider->ReadMeta(metaData);
+		if (metaData.uInM*metaData.uInM + metaData.vInM*metaData.vInM > max_baseline*max_baseline) continue;
+
 		size_t provRowId = msData.msProvider->RowId();
 		if(currentTime != metaData.time)
 		{
