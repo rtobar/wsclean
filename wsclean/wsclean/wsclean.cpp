@@ -756,6 +756,8 @@ void WSClean::runIndependentGroup(ImagingTable& groupTable)
     }
 	}
 	
+	_deconvolution.FreeDeconvolutionAlgorithms();
+	
 	_imageAllocator.ReportStatistics();
 	Logger::Info << "Inversion: " << _inversionWatch.ToString() << ", prediction: " << _predictingWatch.ToString() << ", deconvolution: " << _deconvolutionWatch.ToString() << '\n';
 	
@@ -1051,11 +1053,11 @@ void WSClean::runFirstInversion(ImagingTableEntry& entry)
 		
 		imageMainFirst(entry);
 		
+		entry.imageWeight = _gridder->ImageWeight();
 		// If this was the first polarization of this channel, we need to set
 		// the info for this channel
 		if(isFirstPol)
 		{
-			entry.imageWeight = _gridder->ImageWeight();
 			_infoPerChannel[entry.outputChannelIndex].weight = entry.imageWeight;
 			// If no PSF is made, also set the beam size. If the PSF was made, these would already be set
 			// after imaging the PSF.
