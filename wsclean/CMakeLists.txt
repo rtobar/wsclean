@@ -164,6 +164,7 @@ find_package(Boost COMPONENTS date_time filesystem thread system program_options
 if(Boost_FOUND)
   add_executable(runtest EXCLUDE_FROM_ALL
 		tests/test.cpp
+		tests/testbanddata.cpp
 		tests/testbaselinedependentaveraging.cpp
 		tests/testclean.cpp 
 		tests/testcomponentlist.cpp
@@ -171,6 +172,7 @@ if(Boost_FOUND)
 		tests/testfluxdensity.cpp
 		tests/testgaussianfitter.cpp
 		tests/testimage.cpp
+		tests/testimagebufferallocator.cpp
 		tests/testimageset.cpp
 		tests/testmatrix2x2.cpp
 		tests/testpolynomialchannelfitter.cpp
