@@ -1333,7 +1333,8 @@ void WSClean::makeImagingTable(size_t outputIntervalIndex)
 		str << "Parameter '-channelsout' was set to an invalid value: " << _settings.channelsOut << " output channels requested, but combined in all specified measurement sets, there are only " << channelSet.size() << " unique channels.";
 		throw std::runtime_error(str.str());
 	}
-	_inputChannelFrequencies = std::vector<ChannelInfo>(channelSet.begin(), channelSet.end());
+	_inputChannelFrequencies.assign(channelSet.begin(), channelSet.end());
+	Logger::Debug << "Total nr of channels found in measurement sets: " << _inputChannelFrequencies.size() << '\n';
 	
 	size_t joinedGroupIndex = 0, squaredGroupIndex = 0;
 	_imagingTable.Clear();
@@ -1384,11 +1385,40 @@ void WSClean::makeImagingTableEntry(const std::vector<ChannelInfo>& channels, si
 		width = channels.size();
 	}
 	
-	size_t
-		chLowIndex = startCh + outChannelIndex*width/_settings.channelsOut,
+	size_t chLowIndex, chHighIndex;
+	if(_settings.divideChannelsByGaps)
+	{
+		std::multimap<double, size_t> gaps;
+		for(size_t i = 1; i!=channels.size(); ++i)
+		{
+			double left = channels[i-1].Frequency();
+			double right = channels[i].Frequency();
+			gaps.insert(std::make_pair(right-left, i));
+		}
+		std::vector<size_t> orderedGaps;
+		auto iter = gaps.rbegin();
+		for(size_t i=0; i!=_settings.channelsOut-1; ++i)
+		{
+			orderedGaps.push_back(iter->second);
+			++iter;
+		}
+		std::sort(orderedGaps.begin(), orderedGaps.end());
+		if(outChannelIndex == 0)
+			chLowIndex = 0;
+		else
+			chLowIndex = orderedGaps[outChannelIndex-1];
+		if(outChannelIndex+1 == _settings.channelsOut)
+			chHighIndex = width-1;
+		else
+			chHighIndex = orderedGaps[outChannelIndex]-1;
+	}
+	else {
+		chLowIndex = startCh + outChannelIndex*width/_settings.channelsOut;
 		chHighIndex = startCh + (outChannelIndex+1)*width/_settings.channelsOut - 1;
+	}
 	if(channels[chLowIndex].Frequency() > channels[chHighIndex].Frequency())
 		std::swap(chLowIndex, chHighIndex);
+	entry.inputChannelCount = chHighIndex+1 - chLowIndex;
 	entry.lowestFrequency = channels[chLowIndex].Frequency();
 	entry.highestFrequency = channels[chHighIndex].Frequency();
 	entry.bandStartFrequency = entry.lowestFrequency - channels[chLowIndex].Width()*0.5;

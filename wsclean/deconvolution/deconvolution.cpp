@@ -38,8 +38,8 @@ void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedM
 	
 	_imageAllocator->FreeUnused();
 	ImageSet
-		residualSet(&groupTable, *_imageAllocator, _settings.deconvolutionChannelCount, _settings.squaredJoins, _imgWidth, _imgHeight),
-		modelSet(&groupTable, *_imageAllocator, _settings.deconvolutionChannelCount, _settings.squaredJoins, _imgWidth, _imgHeight);
+		residualSet(&groupTable, *_imageAllocator, _settings.deconvolutionChannelCount, _settings.squaredJoins, _settings.linkedPolarizations, _imgWidth, _imgHeight),
+		modelSet(&groupTable, *_imageAllocator, _settings.deconvolutionChannelCount, _settings.squaredJoins, _settings.linkedPolarizations, _imgWidth, _imgHeight);
 		
 	residualSet.LoadAndAverage(*_residualImages);
 	modelSet.LoadAndAverage(*_modelImages);
@@ -308,7 +308,7 @@ void Deconvolution::SaveSourceList(const class ImagingTable& table, long double 
 	}
 	else {
 		_imageAllocator->FreeUnused();
-		ImageSet modelSet(&table, *_imageAllocator, _settings.deconvolutionChannelCount, _settings.squaredJoins, _imgWidth, _imgHeight);
+		ImageSet modelSet(&table, *_imageAllocator, _settings.deconvolutionChannelCount, _settings.squaredJoins, _settings.linkedPolarizations, _imgWidth, _imgHeight);
 		modelSet.LoadAndAverage(*_modelImages);
 		ComponentList componentList(_imgWidth, _imgHeight, modelSet);
 		componentList.WriteSingleScale(filename, *_cleanAlgorithm, _pixelScaleX, _pixelScaleY, phaseCentreRA, phaseCentreDec);
@@ -368,7 +368,7 @@ void Deconvolution::SavePBSourceList(const class ImagingTable& table, long doubl
 	}
 	else {
 		_imageAllocator->FreeUnused();
-		ImageSet modelSet(&table, *_imageAllocator, _settings.deconvolutionChannelCount, _settings.squaredJoins, _imgWidth, _imgHeight);
+		ImageSet modelSet(&table, *_imageAllocator, _settings.deconvolutionChannelCount, _settings.squaredJoins, _settings.linkedPolarizations, _imgWidth, _imgHeight);
 		modelSet.LoadAndAverage(*_modelImages);
 		list.reset(new ComponentList(_imgWidth, _imgHeight, modelSet));
 	}

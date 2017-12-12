@@ -32,6 +32,7 @@ public:
 	double imagePadding;
 	size_t widthForNWCalculation, heightForNWCalculation;
 	size_t channelsOut, intervalsOut;
+	bool divideChannelsByGaps;
 	double pixelScaleX, pixelScaleY;
 	std::string restoreModel, restoreInput, restoreOutput;
 	double manualBeamMajorSize, manualBeamMinorSize, manualBeamPA;
@@ -44,13 +45,14 @@ public:
 	size_t fieldId;
 	size_t startTimestep, endTimestep;
 	size_t startChannel, endChannel;
-	bool joinedPolarizationCleaning, joinedFrequencyCleaning;
 	size_t predictionChannels;
 	std::string dataColumnName;
 	std::set<PolarizationEnum> polarizations;
 	std::set<size_t> spectralWindows;
 	WeightMode weightMode;
 	std::string prefixName;
+	bool joinedPolarizationCleaning, joinedFrequencyCleaning;
+	std::set<PolarizationEnum> linkedPolarizations;
 	bool smallInversion, makePSF, makePSFOnly, isWeightImageSaved, isUVImageSaved, isDirtySaved, isGriddingImageSaved;
 	bool writeImagingWeightSpectrumColumn;
 	bool dftPrediction, dftWithBeam;
@@ -130,6 +132,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	imagePadding(1.2),
 	widthForNWCalculation(0), heightForNWCalculation(0),
 	channelsOut(1), intervalsOut(1),
+	divideChannelsByGaps(false),
 	pixelScaleX(0.0), pixelScaleY(0.0),
 	restoreModel(), restoreInput(), restoreOutput(),
 	manualBeamMajorSize(0.0), manualBeamMinorSize(0.0),
@@ -147,12 +150,13 @@ inline WSCleanSettings::WSCleanSettings() :
 	fieldId(0),
 	startTimestep(0), endTimestep(0),
 	startChannel(0), endChannel(0),
-	joinedPolarizationCleaning(false), joinedFrequencyCleaning(false),
 	predictionChannels(0),
 	dataColumnName(),
 	polarizations(),
 	weightMode(WeightMode::UniformWeighted),
 	prefixName("wsclean"),
+	joinedPolarizationCleaning(false), joinedFrequencyCleaning(false),
+	linkedPolarizations(),
 	smallInversion(true), makePSF(false), makePSFOnly(false), isWeightImageSaved(false),
 	isUVImageSaved(false), isDirtySaved(true), isGriddingImageSaved(false),
 	writeImagingWeightSpectrumColumn(false),

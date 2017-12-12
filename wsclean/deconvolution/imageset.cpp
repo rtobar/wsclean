@@ -183,10 +183,10 @@ void ImageSet::directStore(CachedImageSet& imageSet)
 
 void ImageSet::getSquareIntegratedWithNormalChannels(double* dest, double* scratch) const
 {
+	// In case only one frequency channel is used, we do not have to use 'scratch',
+	// which saves copying and normalizing the data.
 	if(_channelsInDeconvolution == 1)
 	{
-		// In case only one frequency channel is used, we do not have to use 'scratch',
-		// which saves copying and normalizing the data.
 		ImagingTable subTable = _imagingTable.GetSquaredGroup(0);
 		if(subTable.EntryCount() == 1)
 		{
@@ -195,17 +195,21 @@ void ImageSet::getSquareIntegratedWithNormalChannels(double* dest, double* scrat
 			assign(dest, _images[imageIndex]);
 		}
 		else {
+			const bool useAllPolarizations = _linkedPolarizations.empty();
 			for(size_t eIndex = 0; eIndex!=subTable.EntryCount(); ++eIndex)
 			{
 				const ImagingTableEntry& entry = subTable[eIndex];
-				size_t imageIndex = _tableIndexToImageIndex.find(entry.index)->second;
-				if(eIndex == 0)
+				if(useAllPolarizations || _linkedPolarizations.count(entry.polarization) != 0)
 				{
-					assign(dest, _images[0]);
-					square(dest);
-				}
-				else {
-					addSquared(dest, _images[imageIndex]);
+					size_t imageIndex = _tableIndexToImageIndex.find(entry.index)->second;
+					if(eIndex == 0)
+					{
+						assign(dest, _images[0]);
+						square(dest);
+					}
+					else {
+						addSquared(dest, _images[imageIndex]);
+					}
 				}
 			}
 			squareRootMultiply(dest, sqrt(_polarizationNormalizationFactor));
@@ -225,17 +229,21 @@ void ImageSet::getSquareIntegratedWithNormalChannels(double* dest, double* scrat
 				assign(scratch, _images[imageIndex]);
 			}
 			else {
+				const bool useAllPolarizations = _linkedPolarizations.empty();
 				for(size_t eIndex = 0; eIndex!=subTable.EntryCount(); ++eIndex)
 				{
 					const ImagingTableEntry& entry = subTable[eIndex];
-					size_t imageIndex = _tableIndexToImageIndex.find(entry.index)->second;
-					if(eIndex == 0)
+					if(useAllPolarizations || _linkedPolarizations.count(entry.polarization) != 0)
 					{
-						assign(scratch, _images[imageIndex]);
-						square(scratch);
-					}
-					else {
-						addSquared(scratch, _images[imageIndex]);
+						size_t imageIndex = _tableIndexToImageIndex.find(entry.index)->second;
+						if(eIndex == 0)
+						{
+							assign(scratch, _images[imageIndex]);
+							square(scratch);
+						}
+						else {
+							addSquared(scratch, _images[imageIndex]);
+						}
 					}
 				}
 				squareRoot(scratch);
@@ -255,21 +263,27 @@ void ImageSet::getSquareIntegratedWithNormalChannels(double* dest, double* scrat
 
 void ImageSet::getSquareIntegratedWithSquaredChannels(double* dest) const
 {
-	size_t addIndex = 0;
+	bool isFirst = true;
+	const bool useAllPolarizations = _linkedPolarizations.empty();
 	for(size_t sqIndex = 0; sqIndex!=_channelsInDeconvolution; ++sqIndex)
 	{
 		ImagingTable subTable = _imagingTable.GetSquaredGroup(sqIndex);
 		for(size_t eIndex = 0; eIndex!=subTable.EntryCount(); ++eIndex)
 		{
 			const ImagingTableEntry& entry = subTable[eIndex];
-			size_t imageIndex = _tableIndexToImageIndex.find(entry.index)->second;
-			if(addIndex == 0)
+			if(useAllPolarizations || _linkedPolarizations.count(entry.polarization) != 0)
 			{
-				assign(dest, _images[imageIndex]);
-				square(dest);
-			} else
-				addSquared(dest, _images[imageIndex]);
-			++addIndex;
+				size_t imageIndex = _tableIndexToImageIndex.find(entry.index)->second;
+				if(isFirst)
+				{
+					assign(dest, _images[imageIndex]);
+					square(dest);
+					isFirst = false;
+				}
+				else {
+					addSquared(dest, _images[imageIndex]);
+				}
+			}
 		}
 	}
 	double factor = _channelsInDeconvolution > 0 ?
@@ -280,6 +294,7 @@ void ImageSet::getSquareIntegratedWithSquaredChannels(double* dest) const
 
 void ImageSet::getLinearIntegratedWithNormalChannels(double* dest) const
 {
+	const bool useAllPolarizations = _linkedPolarizations.empty();
 	if(_channelsInDeconvolution == 1 && _imagingTable.GetSquaredGroup(0).EntryCount() == 1)
 	{
 		ImagingTable subTable = _imagingTable.GetSquaredGroup(0);
@@ -288,7 +303,7 @@ void ImageSet::getLinearIntegratedWithNormalChannels(double* dest) const
 		assign(dest, _images[imageIndex]);
   }
 	else {
-		size_t addIndex = 0;
+		bool isFirst = true;
 		double weightSum = 0.0;
 		for(size_t sqIndex = 0; sqIndex!=_channelsInDeconvolution; ++sqIndex)
 		{
@@ -298,12 +313,18 @@ void ImageSet::getLinearIntegratedWithNormalChannels(double* dest) const
 			for(size_t eIndex = 0; eIndex!=subTable.EntryCount(); ++eIndex)
 			{
 				const ImagingTableEntry& entry = subTable[eIndex];
-				size_t imageIndex = _tableIndexToImageIndex.find(entry.index)->second;
-				if(addIndex == 0)
-					assignMultiply(dest, _images[imageIndex], groupWeight);
-				else
-					addFactor(dest, _images[imageIndex], groupWeight);
-				++addIndex;
+				if(useAllPolarizations ||  _linkedPolarizations.count(entry.polarization) != 0)
+				{
+					size_t imageIndex = _tableIndexToImageIndex.find(entry.index)->second;
+					if(isFirst)
+					{
+						assignMultiply(dest, _images[imageIndex], groupWeight);
+						isFirst = false;
+					}
+					else {
+						addFactor(dest, _images[imageIndex], groupWeight);
+					}
+				}
 			}
 		}
 		if(weightSum > 0.0)

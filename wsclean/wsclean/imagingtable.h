@@ -32,6 +32,7 @@ public:
 	 */
 	double lowestFrequency, highestFrequency;
 	double bandStartFrequency, bandEndFrequency;
+	size_t inputChannelCount;
 	
 	PolarizationEnum polarization;
 	

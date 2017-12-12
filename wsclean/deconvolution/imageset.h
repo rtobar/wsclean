@@ -11,13 +11,14 @@
 class ImageSet
 {
 public:
-	ImageSet(const ImagingTable* table, ImageBufferAllocator& allocator, size_t requestedChannelsInDeconvolution, bool squareJoinedChannels) :
+	ImageSet(const ImagingTable* table, ImageBufferAllocator& allocator, size_t requestedChannelsInDeconvolution, bool squareJoinedChannels, const std::set<PolarizationEnum>& linkedPolarizations) :
 		_images(),
 		_imageSize(0),
 		_channelsInDeconvolution((requestedChannelsInDeconvolution==0) ? table->SquaredGroupCount() : requestedChannelsInDeconvolution),
 		_squareJoinedChannels(squareJoinedChannels),
 		_imagingTable(*table),
 		_imageIndexToPSFIndex(),
+		_linkedPolarizations(linkedPolarizations),
 		_allocator(allocator)
 	{
 		size_t nPol = table->GetSquaredGroup(0).EntryCount();
@@ -29,13 +30,14 @@ public:
 		initializeIndices();
 	}
 	
-	ImageSet(const ImagingTable* table, ImageBufferAllocator& allocator, size_t requestedChannelsInDeconvolution, bool squareJoinedChannels, size_t width, size_t height) :
+	ImageSet(const ImagingTable* table, ImageBufferAllocator& allocator, size_t requestedChannelsInDeconvolution, bool squareJoinedChannels, const std::set<PolarizationEnum>& linkedPolarizations, size_t width, size_t height) :
 		_images(),
 		_imageSize(width*height),
 		_channelsInDeconvolution((requestedChannelsInDeconvolution==0) ? table->SquaredGroupCount() : requestedChannelsInDeconvolution),
 		_squareJoinedChannels(squareJoinedChannels),
 		_imagingTable(*table),
 		_imageIndexToPSFIndex(),
+		_linkedPolarizations(linkedPolarizations),
 		_allocator(allocator)
 	{
 		size_t nPol = table->GetSquaredGroup(0).EntryCount();
@@ -187,7 +189,7 @@ public:
 	
 	ImageSet* CreateTrimmed(size_t x1, size_t y1, size_t x2, size_t y2, size_t oldWidth) const
 	{
-		std::unique_ptr<ImageSet> p(new ImageSet(&_imagingTable, _allocator, _channelsInDeconvolution, _squareJoinedChannels, x2-x1, y2-y1));
+		std::unique_ptr<ImageSet> p(new ImageSet(&_imagingTable, _allocator, _channelsInDeconvolution, _squareJoinedChannels, _linkedPolarizations, x2-x1, y2-y1));
 		for(size_t i=0; i!=_images.size(); ++i)
 		{
 			copySmallerPart(_images[i], p->_images[i], x1, y1, x2, y2, oldWidth);
@@ -220,8 +222,14 @@ public:
 		assign(_images[index], rhs);
 	}
 	
-	bool SquareJoinedChannels() const {
+	bool SquareJoinedChannels() const
+	{
 		return _squareJoinedChannels; 
+	}
+	
+	const std::set<PolarizationEnum>& LinkedPolarizations() const
+	{
+		return _linkedPolarizations;
 	}
 private:
 	ImageSet(const ImageSet&) = delete;
@@ -334,7 +342,13 @@ private:
 		ImagingTable firstChannelGroup = _imagingTable.GetSquaredGroup(0);
 		std::set<PolarizationEnum> pols;
 		for(size_t i=0; i!=firstChannelGroup.EntryCount(); ++i)
-			pols.insert(firstChannelGroup[i].polarization);
+		{
+			if(_linkedPolarizations.empty()
+				|| _linkedPolarizations.count(firstChannelGroup[i].polarization) !=0 )
+			{
+				pols.insert(firstChannelGroup[i].polarization);
+			}
+		}
 		bool isDual = pols.size()==2 && Polarization::HasDualPolarization(pols);
 		bool isFull = pols.size()==4 && (
 			Polarization::HasFullLinearPolarization(pols) ||
@@ -374,6 +388,7 @@ private:
 	std::map<size_t, size_t> _tableIndexToImageIndex;
 	ao::uvector<size_t> _imageIndexToPSFIndex;
 	double _polarizationNormalizationFactor;
+	std::set<PolarizationEnum> _linkedPolarizations;
 	ImageBufferAllocator& _allocator;
 };
 

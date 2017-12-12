@@ -99,8 +99,16 @@ boost::optional<double> ClarkLoop::Run(ImageSet& convolvedResidual, const ao::uv
 
 void ClarkModel::MakeSets(const ImageSet& residualSet)
 {
-	_residual.reset(new ImageSet(&residualSet.Table(), residualSet.Allocator(), residualSet.ChannelsInDeconvolution(), residualSet.SquareJoinedChannels(), size(), 1));
-	_model.reset(new ImageSet(&residualSet.Table(), residualSet.Allocator(), residualSet.ChannelsInDeconvolution(), residualSet.SquareJoinedChannels(), size(), 1));
+	_residual.reset(new ImageSet(
+			&residualSet.Table(), residualSet.Allocator(),
+			residualSet.ChannelsInDeconvolution(), residualSet.SquareJoinedChannels(),
+			residualSet.LinkedPolarizations(),
+			size(), 1));
+	_model.reset(new ImageSet(
+		&residualSet.Table(), residualSet.Allocator(),
+		residualSet.ChannelsInDeconvolution(), residualSet.SquareJoinedChannels(),
+		residualSet.LinkedPolarizations(),
+		size(), 1));
 	for(size_t imgIndex=0; imgIndex!=_model->size(); ++imgIndex)
 	{
 		std::fill((*_model)[imgIndex], (*_model)[imgIndex]+size(), 0.0);

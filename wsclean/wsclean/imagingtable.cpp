@@ -8,6 +8,7 @@ ImagingTableEntry::ImagingTableEntry() :
 	highestFrequency(0.0),
 	bandStartFrequency(0.0),
 	bandEndFrequency(0.0),
+	inputChannelCount(0),
 	polarization(Polarization::StokesI),
 	outputChannelIndex(0),
 	outputIntervalIndex(0),
@@ -101,7 +102,8 @@ string ImagingTableEntry::ToString()
 		<< "  " << squaredDeconvolutionIndex
 		<< "  " << outputIntervalIndex
 		<< "  " << round(bandStartFrequency*1e-6)
-		<< "-" << round(bandEndFrequency*1e-6);
+		<< "-" << round(bandEndFrequency*1e-6)
+		<< " (" << inputChannelCount << ")";
 	
 	return str.str();
 }

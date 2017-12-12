@@ -14,6 +14,8 @@ private:
 	static void printHeader();
 	static void printHelp();
 	static size_t parse_size_t(const char* param, const char* name);
+	static double parse_double(const char* param, double lowerLimit, const char* name, bool inclusive=true);
+	static double parse_double(const char* param, const char* name);
 };
 
 #endif
