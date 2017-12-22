@@ -10,14 +10,15 @@
 
 #include <boost/thread/thread.hpp>
 
-GenericClean::GenericClean(ImageBufferAllocator& allocator, bool clarkOptimization) :
+GenericClean::GenericClean(ImageBufferAllocator& allocator, class FFTWManager& fftwManager, bool clarkOptimization) :
 	_convolutionPadding(1.1),
 	_useClarkOptimization(clarkOptimization),
-	_allocator(allocator)
+	_allocator(allocator),
+	_fftwManager(fftwManager)
 {
 }
 
-void GenericClean::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& modelSet, const ao::uvector<const double*>& psfs, size_t width, size_t height, bool& reachedMajorThreshold)
+double GenericClean::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& modelSet, const ao::uvector<const double*>& psfs, size_t width, size_t height, bool& reachedMajorThreshold)
 {
 	const size_t iterationCounterAtStart = _iterationNumber;
 	if(_stopOnNegativeComponent)
@@ -42,15 +43,17 @@ void GenericClean::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& modelSet,
 	{
 		Logger::Info << "No peak found.\n";
 		reachedMajorThreshold = false;
-		return;
+		return 0.0;
 	}
 	Logger::Info << "Initial peak: " << peakDescription(integrated.data(), componentX, componentY) << '\n';
 	double firstThreshold = this->_threshold;
-	double stopGainThreshold = std::fabs(*maxValue)*(1.0-this->_mGain);
-	if(stopGainThreshold > firstThreshold)
+	double majorIterThreshold = std::max(
+		MajorIterThreshold(),
+		std::fabs(*maxValue)*(1.0-this->_mGain));
+	if(majorIterThreshold > firstThreshold)
 	{
-		firstThreshold = stopGainThreshold;
-		Logger::Info << "Next major iteration at: " << FluxDensity::ToNiceString(stopGainThreshold) << '\n';
+		firstThreshold = majorIterThreshold;
+		Logger::Info << "Next major iteration at: " << FluxDensity::ToNiceString(majorIterThreshold) << '\n';
 	}
 	else if(this->_mGain != 1.0) {
 		Logger::Info << "Major iteration threshold reached global threshold of " << FluxDensity::ToNiceString(this->_threshold) << ": final major iteration.\n";
@@ -85,7 +88,7 @@ void GenericClean::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& modelSet,
 		{
 			// TODO this can be multi-threaded if each thread has its own temporaries
 			const double *psf = psfs[dirtySet.PSFIndex(imageIndex)];
-			clarkLoop.CorrectResidualDirty(scratchA.data(), scratchB.data(), integrated.data(), imageIndex, dirtySet[imageIndex],  psf);
+			clarkLoop.CorrectResidualDirty(_fftwManager, scratchA.data(), scratchB.data(), integrated.data(), imageIndex, dirtySet[imageIndex],  psf);
 			
 			clarkLoop.GetFullIndividualModel(imageIndex, scratchA.data());
 			double* model = modelSet[imageIndex];
@@ -137,7 +140,7 @@ void GenericClean::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& modelSet,
 			maxIterReached = _iterationNumber >= MaxNIter(),
 			finalThresholdReached = std::fabs(*maxValue) <= _threshold || maxValue == 0.0,
 			negativeReached = maxValue<0.0 && this->_stopOnNegativeComponent,
-			mgainReached = std::fabs(*maxValue) <= stopGainThreshold,
+			mgainReached = std::fabs(*maxValue) <= majorIterThreshold,
 			didWork = (_iterationNumber-iterationCounterAtStart)!=0;
 		
 		if(maxIterReached)
@@ -151,10 +154,12 @@ void GenericClean::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& modelSet,
 		else
 			Logger::Info << "the minor-loop threshold was reached. Continuing cleaning after inversion/prediction round.\n";
 		reachedMajorThreshold = mgainReached && didWork && !negativeReached && !finalThresholdReached;
+		return *maxValue;
 	}
 	else {
 		Logger::Info << "Deconvolution aborted.\n";
 		reachedMajorThreshold = false;
+		return 0.0;
 	}
 }
 

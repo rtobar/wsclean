@@ -19,11 +19,15 @@ class DeconvolutionAlgorithm
 public:
 	virtual ~DeconvolutionAlgorithm() { }
 	
-	virtual void ExecuteMajorIteration(class ImageSet& dataImage, class ImageSet& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedMajorThreshold) = 0;
+	virtual double ExecuteMajorIteration(class ImageSet& dataImage, class ImageSet& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedMajorThreshold) = 0;
+	
+	virtual std::unique_ptr<DeconvolutionAlgorithm> Clone() const = 0;
 	
 	void SetMaxNIter(size_t nIter) { _maxIter = nIter; }
 	
 	void SetThreshold(double threshold) { _threshold = threshold; }
+	
+	void SetMajorIterThreshold(double mThreshold) { _majorIterThreshold = mThreshold; }
 	
 	void SetGain(double gain) { _gain = gain; }
 	
@@ -39,6 +43,7 @@ public:
 	
 	size_t MaxNIter() const { return _maxIter; }
 	double Threshold() const { return _threshold; }
+	double MajorIterThreshold() const { return _majorIterThreshold; }
 	double Gain() const { return _gain; }
 	double MGain() const { return _mGain; }
 	double CleanBorderRatio() const { return _cleanBorderRatio; }
@@ -92,10 +97,13 @@ public:
 	const Image& RMSFactorImage() const { return _rmsFactorImage; }
 protected:
 	DeconvolutionAlgorithm();
+
+	DeconvolutionAlgorithm(const DeconvolutionAlgorithm& source) = default;
+	DeconvolutionAlgorithm& operator=(const DeconvolutionAlgorithm& source) = default;
 	
 	void PerformSpectralFit(double* values);
 	
-	double _threshold, _gain, _mGain, _cleanBorderRatio;
+	double _threshold, _majorIterThreshold, _gain, _mGain, _cleanBorderRatio;
 	size_t _maxIter, _iterationNumber, _threadCount;
 	bool _allowNegativeComponents, _stopOnNegativeComponent;
 	const bool* _cleanMask;

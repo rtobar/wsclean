@@ -17,7 +17,7 @@ void MoreSane::ExecuteMajorIteration(double* dataImage, double* modelImage, cons
 		ImageBufferAllocator::Ptr preparedPsf;
 		_allocator->Allocate(width*height, preparedPsf);
 		FFTConvolver::PrepareKernel(preparedPsf.data(), psfImage, width, height);
-		FFTConvolver::ConvolveSameSize(modelImage, preparedPsf.data(), width, height);
+		FFTConvolver::ConvolveSameSize(_fftwManager, modelImage, preparedPsf.data(), width, height);
 		Logger::Info << "Adding model back to residual...\n";
 		for(size_t i=0; i!=width*height; ++i)
 			dataImage[i] += modelImage[i];
@@ -89,7 +89,7 @@ void MoreSane::ExecuteMajorIteration(double* dataImage, double* modelImage, cons
 	
 }
 
-void MoreSane::ExecuteMajorIteration(ImageSet& dataImage, ImageSet& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedMajorThreshold)
+double MoreSane::ExecuteMajorIteration(ImageSet& dataImage, ImageSet& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedMajorThreshold)
 {
 	for(size_t i=0; i!=dataImage.size(); ++i)
 	{
@@ -101,4 +101,5 @@ void MoreSane::ExecuteMajorIteration(ImageSet& dataImage, ImageSet& modelImage, 
 	++_iterationNumber;
 	
 	reachedMajorThreshold = _iterationNumber<_maxIter;
+	return 0.0;
 }

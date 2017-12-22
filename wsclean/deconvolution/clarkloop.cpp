@@ -193,7 +193,7 @@ void ClarkLoop::GetFullIndividualModel(size_t imageIndex, double* individualMode
 	}
 }
 
-void ClarkLoop::CorrectResidualDirty(double* scratchA, double* scratchB, double* scratchC, size_t imageIndex, double* residual, const double* singleConvolvedPsf) const
+void ClarkLoop::CorrectResidualDirty(class FFTWManager& fftw, double* scratchA, double* scratchB, double* scratchC, size_t imageIndex, double* residual, const double* singleConvolvedPsf) const
 {
 	// Get padded kernel in scratchB
 	Image::Untrim(scratchA, _untrimmedWidth, _untrimmedHeight, singleConvolvedPsf, _width, _height);
@@ -204,7 +204,7 @@ void ClarkLoop::CorrectResidualDirty(double* scratchA, double* scratchB, double*
 	Image::Untrim(scratchA, _untrimmedWidth, _untrimmedHeight, scratchC, _width, _height);
 	
 	// Convolve and store in scratchA
-	FFTConvolver::ConvolveSameSize(scratchA, scratchB, _untrimmedWidth, _untrimmedHeight);
+	FFTConvolver::ConvolveSameSize(fftw, scratchA, scratchB, _untrimmedWidth, _untrimmedHeight);
 	
 	//Trim the result into scratchC
 	Image::Trim(scratchC, _width, _height, scratchA, _untrimmedWidth, _untrimmedHeight);

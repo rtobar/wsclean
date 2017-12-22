@@ -113,6 +113,12 @@ void WSCleanSettings::checkPolarizations() const
 		if(!joinedFrequencyCleaning)
 			throw std::runtime_error("You have requested spectral fitting, but you are not joining channels. This is not possible: you probably want to turn channel joining on (add -join-channels).");
 	}
+	
+	if(autoDeconvolutionThreshold && autoMask)
+	{
+		if(autoDeconvolutionThresholdSigma >= autoMaskSigma)
+			throw std::runtime_error("The auto-masking threshold was smaller or equal to the auto-threshold. This does not make sense. Did you accidentally reverse the auto-mask and auto-threshold values?");
+	}
 }
 
 void WSCleanSettings::RecalculatePaddedDimensions()

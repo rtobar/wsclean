@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
 	// Not strictly required, but the following line will turn on FFTW multi-threading.
 	// In this particular scenario, without w-term correction, this speeds up the
 	// FFT a bit.
-	FFTWMultiThreadEnabler fftwMT;
+	FFTWManager fftwMT;
 	
 	// Initialize the gridder
 	// Here, larger and more accurate values are used for the kernel size (here: 15) and

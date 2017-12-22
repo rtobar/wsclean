@@ -673,7 +673,7 @@ void WSClean::runIndependentGroup(ImagingTable& groupTable)
 		runFirstInversion(entry);
 	}
 	
-	_deconvolution.InitializeDeconvolutionAlgorithm(groupTable, *_settings.polarizations.begin(), &_imageAllocator, _settings.trimmedImageWidth, _settings.trimmedImageHeight, _settings.pixelScaleX, _settings.pixelScaleY, minTheoreticalBeamSize(groupTable), _settings.threadCount);
+	_deconvolution.InitializeDeconvolutionAlgorithm(groupTable, *_settings.polarizations.begin(), &_imageAllocator, minTheoreticalBeamSize(groupTable), _settings.threadCount);
 
 	if(!_settings.makePSFOnly)
 	{

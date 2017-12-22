@@ -53,6 +53,7 @@ public:
 	std::string prefixName;
 	bool joinedPolarizationCleaning, joinedFrequencyCleaning;
 	std::set<PolarizationEnum> linkedPolarizations;
+	size_t parallelDeconvolutionMaxSize;
 	bool smallInversion, makePSF, makePSFOnly, isWeightImageSaved, isUVImageSaved, isDirtySaved, isGriddingImageSaved;
 	bool writeImagingWeightSpectrumColumn;
 	bool dftPrediction, dftWithBeam;
@@ -80,7 +81,8 @@ public:
 	bool saveSourceList;
 	size_t deconvolutionIterationCount, majorIterationCount;
 	bool allowNegativeComponents, stopOnNegativeComponents;
-	bool useMultiscale, useClarkOptimization, squaredJoins, forceDynamicJoin;
+	bool useMultiscale, useClarkOptimization, squaredJoins;
+	//bool forceDynamicJoin;
 	bool multiscaleFastSubMinorLoop;
 	double multiscaleGain, multiscaleDeconvolutionScaleBias;
 	bool multiscaleNormalizeResponse;
@@ -157,6 +159,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	prefixName("wsclean"),
 	joinedPolarizationCleaning(false), joinedFrequencyCleaning(false),
 	linkedPolarizations(),
+	parallelDeconvolutionMaxSize(0),
 	smallInversion(true), makePSF(false), makePSFOnly(false), isWeightImageSaved(false),
 	isUVImageSaved(false), isDirtySaved(true), isGriddingImageSaved(false),
 	writeImagingWeightSpectrumColumn(false),
@@ -197,7 +200,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	useMultiscale(false),
 	useClarkOptimization(true),
 	squaredJoins(false),
-	forceDynamicJoin(false),
+	//forceDynamicJoin(false),
 	multiscaleFastSubMinorLoop(true),
 	multiscaleGain(0.2),
 	multiscaleDeconvolutionScaleBias(0.6),

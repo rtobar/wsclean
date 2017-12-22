@@ -44,6 +44,8 @@ public:
 	const double& operator[](size_t index) const { return _data[index]; }
 	double& operator[](size_t index) { return _data[index]; }
 	
+	Image& operator+=(const Image& other);
+	
 	Image& operator*=(double factor);
 	Image& operator*=(const Image& other);
 	
@@ -56,6 +58,9 @@ public:
 	static void Trim(double* output, size_t outWidth, size_t outHeight, const double* input, size_t inWidth, size_t inHeight);
 	
 	static void TrimBox(bool* output, size_t x1, size_t y1, size_t boxWidth, size_t boxHeight, const bool* input, size_t inWidth, size_t inHeight);
+	
+	template<typename T>
+	static void CopyMasked(T* to, size_t toX, size_t toY, size_t toWidth, const T* from, size_t fromWidth, size_t fromHeight, const bool* fromMask);
 	
 	/** Extend an image with zeros, complement of Trim.
 	 * @param outWidth Should be &gt;= inWidth.
@@ -104,5 +109,18 @@ private:
 	
 	static double median_with_copy(const double* data, size_t size, ao::uvector<double>& copy);
 };
+
+template<typename T>
+void Image::CopyMasked(T* to, size_t toX, size_t toY, size_t toWidth, const T* from, size_t fromWidth, size_t fromHeight, const bool* fromMask)
+{
+	for(size_t y=0; y!=fromHeight; ++y)
+	{
+		for(size_t x=0; x!=fromWidth; ++x)
+		{
+			if(fromMask[y*fromWidth + x])
+				to[toX + (toY+y) * toWidth + x] = from[y*fromWidth + x];
+		}
+	}
+}
 
 #endif

@@ -12,7 +12,7 @@ void MultiScaleTransforms::Transform(const ao::uvector<double*>& images, double*
 	
 	FFTConvolver::PrepareSmallKernel(scratch, _width, _height, shape.data(), kernelSize);
 	for(double*const* imageIter = images.begin(); imageIter!=images.end(); ++imageIter)
-		FFTConvolver::ConvolveSameSize(*imageIter, scratch, _width, _height);
+		FFTConvolver::ConvolveSameSize(_fftwManager, *imageIter, scratch, _width, _height);
 }
 
 void MultiScaleTransforms::PrepareTransform(double* kernel, double scale)
@@ -28,5 +28,5 @@ void MultiScaleTransforms::PrepareTransform(double* kernel, double scale)
 
 void MultiScaleTransforms::FinishTransform(double* image, const double* kernel)
 {
-	FFTConvolver::ConvolveSameSize(image, kernel, _width, _height);
+	FFTConvolver::ConvolveSameSize(_fftwManager, image, kernel, _width, _height);
 }

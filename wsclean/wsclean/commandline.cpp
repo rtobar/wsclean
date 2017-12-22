@@ -314,8 +314,8 @@ void CommandLine::printHelp()
 		"   Use with -join-channels to perform peak finding in the sum of squared values over\n"
 		"   channels, instead of the normal sum. This is useful for imaging QU polarizations\n"
 		"   with non-zero rotation measures, for which the normal sum is insensitive.\n"
-		"-force-dynamic-join\n"
-		"   Use alternative joined clean algorithm (feature for testing).\n"
+		"-parallel-deconvolution <maxsize>\n"
+		"   Deconvolve subimages in parallel. Subimages will be at most of the given size.\n"
 		"\n"
 		"  ** RESTORATION OPTIONS **\n"
 		"-restore <input residual> <input model> <output image>\n"
@@ -914,9 +914,10 @@ int CommandLine::Run(int argc, char* argv[])
 		{
 			settings.squaredJoins = true;
 		}
-		else if(param == "force-dynamic-join")
+		else if(param == "parallel-deconvolution")
 		{
-			settings.forceDynamicJoin = true;
+			++argi;
+			settings.parallelDeconvolutionMaxSize = parse_size_t(argv[argi], "parallel-deconvolution");
 		}
 		else if(param == "field")
 		{

@@ -141,7 +141,7 @@ public:
 	 * scratchA and scratchB need to be able to store the full padded image (_untrimmedWidth x _untrimmedHeight).
 	 * scratchC only needs to store the trimmed size (_width x _height).
 	 */
-	void CorrectResidualDirty(double* scratchA, double* scratchB, double* scratchC, size_t imageIndex, double* residual, const double* singleConvolvedPsf) const;
+	void CorrectResidualDirty(class FFTWManager& fftw, double* scratchA, double* scratchB, double* scratchC, size_t imageIndex, double* residual, const double* singleConvolvedPsf) const;
 	
 	void GetFullIndividualModel(size_t imageIndex, double* individualModelImg) const;
 	

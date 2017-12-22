@@ -7,6 +7,7 @@
 #include "threadeddeconvolutiontools.h"
 
 #include "../uvector.h"
+#include "../aocommon/cloned_ptr.h"
 
 #include "../deconvolution/componentlist.h"
 #include "../deconvolution/imageset.h"
@@ -19,14 +20,18 @@
 class MultiScaleAlgorithm : public DeconvolutionAlgorithm
 {
 public:
-	MultiScaleAlgorithm(class ImageBufferAllocator& allocator, double beamSize, double pixelScaleX, double pixelScaleY);
+	MultiScaleAlgorithm(class ImageBufferAllocator& allocator, class FFTWManager& fftwManager, double beamSize, double pixelScaleX, double pixelScaleY);
 	~MultiScaleAlgorithm();
 	
-	void SetManualScaleList(const ao::uvector<double>& scaleList) { _manualScaleList = scaleList; }
+	std::unique_ptr<DeconvolutionAlgorithm> Clone() const final override
+	{
+		return std::unique_ptr<DeconvolutionAlgorithm>(new MultiScaleAlgorithm(*this));
+	}
 	
-	//void PerformMajorIteration(size_t& iterCounter, size_t nIter, DynamicSet& modelSet, DynamicSet& dirtySet, const ao::uvector<const double*>& psfs, bool& reachedMajorThreshold);
+	void SetManualScaleList(const ao::uvector<double>& scaleList)
+	{ _manualScaleList = scaleList; }
 	
-	virtual void ExecuteMajorIteration(ImageSet& dataImage, ImageSet& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedMajorThreshold);
+	virtual double ExecuteMajorIteration(ImageSet& dataImage, ImageSet& modelImage, const ao::uvector<const double*>& psfImages, size_t width, size_t height, bool& reachedMajorThreshold) final override;
 	
 	void SetAutoMaskMode(bool trackPerScaleMasks, bool usePerScaleMasks) {
 		_trackPerScaleMasks = trackPerScaleMasks;
@@ -66,12 +71,21 @@ public:
 	{
 		return *_componentList;
 	}
+	const ComponentList& GetComponentList() const
+	{
+		return *_componentList;
+	}
 	double ScaleSize(size_t scaleIndex) const
 	{
 		return _scaleInfos[scaleIndex].scale; 
 	}
+	ao::uvector<bool>& GetScaleMask(size_t index)
+	{
+		return _scaleMasks[index];
+	}
 private:
 	class ImageBufferAllocator& _allocator;
+	FFTWManager& _fftwManager;
 	size_t _width, _height, _convolutionWidth, _convolutionHeight;
 	double _convolutionPadding;
 	double _beamSizeInPixels;
@@ -79,7 +93,7 @@ private:
 	double _multiscaleGain;
 	bool _multiscaleNormalizeResponse;
 	MultiScaleTransforms::Shape _scaleShape;
-	ThreadedDeconvolutionTools* _tools;
+	//ThreadedDeconvolutionTools* _tools;
 	
 	struct ScaleInfo
 	{
@@ -115,11 +129,11 @@ private:
 	
 	bool _trackPerScaleMasks, _usePerScaleMasks, _fastSubMinorLoop, _trackComponents;
 	std::vector<ao::uvector<bool>> _scaleMasks;
-	std::unique_ptr<ComponentList> _componentList;
+	ao::cloned_ptr<ComponentList> _componentList;
 
 	void initializeScaleInfo();
 	void convolvePSFs(std::unique_ptr<ImageBufferAllocator::Ptr[]>& convolvedPSFs, const double* psf, double* tmp, bool isIntegrated);
-	void findActiveScaleConvolvedMaxima(const ImageSet& imageSet, double* integratedScratch, double* scratch, bool reportRMS);
+	void findActiveScaleConvolvedMaxima(const ImageSet& imageSet, double* integratedScratch, double* scratch, bool reportRMS, ThreadedDeconvolutionTools* tools);
 	bool selectMaximumScale(size_t& scaleWithPeak);
 	void activateScales(size_t scaleWithLastPeak);
 	void measureComponentValues(ao::uvector<double>& componentValues, size_t scaleIndex, ImageSet& imageSet);

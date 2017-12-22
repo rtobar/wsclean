@@ -11,7 +11,8 @@ class MultiScaleTransforms
 public:
 	enum Shape { TaperedQuadraticShape, GaussianShape };
 	
-	MultiScaleTransforms(size_t width, size_t height, Shape shape) :
+	MultiScaleTransforms(class FFTWManager& fftwManager, size_t width, size_t height, Shape shape) :
+	_fftwManager(fftwManager),
 	_width(width), _height(height), _shape(shape)
 	{ }
 	
@@ -103,6 +104,7 @@ public:
 		return scaleSizeInPixels * (3.0 / 16.0);
 	}
 private:
+	class FFTWManager& _fftwManager;
 	size_t _width, _height;
 	enum Shape _shape;
 	

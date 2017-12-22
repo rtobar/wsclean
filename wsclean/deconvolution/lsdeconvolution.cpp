@@ -137,12 +137,14 @@ struct LSDeconvolutionData
 };
 
 LSDeconvolution::LSDeconvolution() : _allocator(nullptr), _data(new LSDeconvolutionData())
-{
-}
+{ }
+
+LSDeconvolution::LSDeconvolution(const LSDeconvolution& source) :
+	_allocator(source._allocator), _data(new LSDeconvolutionData(*source._data))
+{ }
 
 LSDeconvolution::~LSDeconvolution()
-{
-}
+{ }
 
 void LSDeconvolution::getMaskPositions(ao::uvector<std::pair<size_t, size_t>>& maskPositions, const bool* mask, size_t width, size_t height)
 {

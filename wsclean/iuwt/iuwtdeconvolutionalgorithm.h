@@ -11,9 +11,9 @@
 class IUWTDeconvolutionAlgorithm
 {
 public:
-	IUWTDeconvolutionAlgorithm(size_t width, size_t height, double gain, double mGain, double cleanBorder, bool allowNegativeComponents, const bool* mask, double absoluteThreshold, double thresholdSigmaLevel=4.0, double tolerance=0.75, bool useSNRTest=true);
+	IUWTDeconvolutionAlgorithm(class FFTWManager& fftwManager, size_t width, size_t height, double gain, double mGain, double cleanBorder, bool allowNegativeComponents, const bool* mask, double absoluteThreshold, double thresholdSigmaLevel=4.0, double tolerance=0.75, bool useSNRTest=true);
 	
-	void PerformMajorIteration(size_t& iterCounter, size_t nIter, class ImageSet& modelSet, class ImageSet& dirtySet, const ao::uvector<const double*>& psfs, bool& reachedMajorThreshold);
+	double PerformMajorIteration(size_t& iterCounter, size_t nIter, class ImageSet& modelSet, class ImageSet& dirtySet, const ao::uvector<const double*>& psfs, bool& reachedMajorThreshold);
 	
 	void Subtract(double* dest, const ao::uvector<double>& rhs);
 	void Subtract(ao::uvector<double>& dest, const ao::uvector<double>& rhs)
@@ -113,6 +113,7 @@ private:
 	
 	bool extractPointSources(const IUWTDecomposition& iuwt, const IUWTMask& mask, const double* dirty, double* model);
 		
+	class FFTWManager& _fftwManager;
 	size_t _width, _height;
 	size_t _curBoxXStart, _curBoxXEnd;
 	size_t _curBoxYStart, _curBoxYEnd;

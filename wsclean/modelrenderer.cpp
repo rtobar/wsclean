@@ -7,6 +7,7 @@
 #include "units/imagecoordinates.h"
 #include "uvector.h"
 #include "fftconvolver.h"
+#include "fftwmanager.h"
 
 template<typename T>
 T ModelRenderer::gaus(T x, T sigma)
@@ -220,7 +221,8 @@ void ModelRenderer::Restore(double* imageData, const double* modelData, size_t i
 		ao::uvector<double> convolvedModel(imageWidth*imageHeight);
 		memcpy(convolvedModel.data(), modelData, sizeof(double)*imageWidth*imageHeight);
 		
-		FFTConvolver::Convolve(convolvedModel.data(), imageWidth, imageHeight, kernel.data(), boundingBoxSize);
+		FFTWManager fftw;
+		FFTConvolver::Convolve(fftw, convolvedModel.data(), imageWidth, imageHeight, kernel.data(), boundingBoxSize);
 		for(size_t j=0; j!=imageWidth*imageHeight; ++j)
 			imageData[j] += convolvedModel[j];
 	}
