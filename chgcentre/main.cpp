@@ -253,7 +253,6 @@ void processField(
 		ImageCoordinates::RaDecToLM(oldRA, oldDec, newRA, newDec, newDl, newDm);
 	double oldDl, oldDm;
 	getShift(fieldTable, oldDl, oldDm);
-	bool oldIsShifted = (oldDl != 0.0 || oldDm != 0.0);
 	std::cout << "Processing field \"" << nameCol(fieldIndex) << "\": "
 		<< dirToString(phaseDirection) << " -> "
 		<< dirToString(newDirection) << " ("
@@ -329,18 +328,12 @@ void processField(
 					double shiftFactor =
 						-2.0*M_PI* (newUVW.getVector()[2] - oldUVW.getValue().getVector()[2]);
 
-					if(shiftback)
-					{
-						double u = newUVW.getVector()[0], v = newUVW.getVector()[1];
-						shiftFactor +=
-							-2.0*M_PI* (u*newDl + v*newDm);
-					}
-					if(oldIsShifted)
-					{
-						double u = oldUVW.getValue().getVector()[0], v = oldUVW.getValue().getVector()[1];
-						shiftFactor -=
-							-2.0*M_PI* (u*oldDl + v*oldDm);
-					}
+					double dnu = newUVW.getVector()[0], dnv = newUVW.getVector()[1];
+					shiftFactor +=
+						-2.0*M_PI* (dnu*newDl + dnv*newDm);
+					double dou = oldUVW.getValue().getVector()[0], dov = oldUVW.getValue().getVector()[1];
+					shiftFactor -=
+						-2.0*M_PI* (dou*oldDl + dov*oldDm);
 					
 					const BandData& thisBand = bandData[dataDescId];
 					dataCol->get(row, *dataArray);
@@ -371,12 +364,8 @@ void processField(
 		phaseDirVector[0] = newDirection;
 		phaseDirCol.put(fieldIndex, phaseDirVector);
 		
-		if(shiftback || newDl!=oldDl || newDm!=oldDm)
+		if(newDl==0.0 && newDm==0.0)
 		{
-			fieldTable.rwKeywordSet().define(RecordFieldId("WSCLEAN_DL"), newDl);
-			fieldTable.rwKeywordSet().define(RecordFieldId("WSCLEAN_DM"), newDm);
-		}
-		else {
 			if(fieldTable.keywordSet().isDefined("WSCLEAN_DL"))
 			{
 				fieldTable.rwKeywordSet().removeField(RecordFieldId("WSCLEAN_DL"));
@@ -387,6 +376,10 @@ void processField(
 				fieldTable.rwKeywordSet().removeField(RecordFieldId("WSCLEAN_DM"));
 				std::cout << "Removing WSCLEAN_DM keyword.\n";
 			}
+		}
+		else {
+			fieldTable.rwKeywordSet().define(RecordFieldId("WSCLEAN_DL"), newDl);
+			fieldTable.rwKeywordSet().define(RecordFieldId("WSCLEAN_DM"), newDm);
 		}
 	}
 }
