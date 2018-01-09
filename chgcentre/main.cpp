@@ -772,7 +772,7 @@ int main(int argc, char **argv)
 		}
 		if(argi == argc)
 			std::cout << "Missing parameter.\n";
-		else if(argi+1 == argc && !toZenith && !toMinW && !toGeozenith && !same)
+		else if(argi+1 == argc && !toZenith && !toMinW && !toGeozenith && !same && templateMS.empty())
 		{
 			MeasurementSet set(argv[argi]);
 			readAntennas(set, antennas);
