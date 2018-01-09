@@ -371,7 +371,7 @@ void processField(
 		phaseDirVector[0] = newDirection;
 		phaseDirCol.put(fieldIndex, phaseDirVector);
 		
-		if(shiftback)
+		if(shiftback || newDl!=oldDl || newDm!=oldDm)
 		{
 			fieldTable.rwKeywordSet().define(RecordFieldId("WSCLEAN_DL"), newDl);
 			fieldTable.rwKeywordSet().define(RecordFieldId("WSCLEAN_DM"), newDm);
