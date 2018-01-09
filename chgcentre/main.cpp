@@ -186,9 +186,21 @@ MDirection ZenithDirectionEnd(MeasurementSet& set)
 	return ZenithDirection(set, set.nrow()-1);
 }
 
+void getShift(MSField& fieldTable, double& dl, double& dm)
+{
+	if(fieldTable.keywordSet().isDefined("WSCLEAN_DL"))
+		dl = fieldTable.keywordSet().asDouble(RecordFieldId("WSCLEAN_DL"));
+	else
+		dl = 0.0;
+	if(fieldTable.keywordSet().isDefined("WSCLEAN_DM"))
+		dm = fieldTable.keywordSet().asDouble(RecordFieldId("WSCLEAN_DM"));
+	else
+		dm = 0.0;
+}
+
 void processField(
 	MeasurementSet &set, const std::string& dataColumn, int fieldIndex, MSField &fieldTable, const MDirection &newDirection,
-	bool onlyUVW, bool shiftback, bool flipUVWSign, bool force)
+	bool onlyUVW, bool shiftback, double newDl, double newDm, bool flipUVWSign, bool force)
 {
 	MultiBandData bandData(set.spectralWindow(), set.dataDescription());
 	ROScalarColumn<casacore::String> nameCol(fieldTable, fieldTable.columnName(MSFieldEnums::NAME));
@@ -237,21 +249,10 @@ void processField(
 	double oldDec = phaseDirection.getAngle().getValue()[1];
 	double newRA = newDirection.getAngle().getValue()[0];
 	double newDec = newDirection.getAngle().getValue()[1];
-	double oldDl, oldDm, newDl, newDm;
 	if(shiftback)
 		ImageCoordinates::RaDecToLM(oldRA, oldDec, newRA, newDec, newDl, newDm);
-	else {
-		newDl = 0.0;
-		newDm = 0.0;
-	}
-	if(fieldTable.keywordSet().isDefined("WSCLEAN_DL"))
-		oldDl = fieldTable.keywordSet().asDouble(RecordFieldId("WSCLEAN_DL"));
-	else
-		oldDl = 0.0;
-	if(fieldTable.keywordSet().isDefined("WSCLEAN_DM"))
-		oldDm = fieldTable.keywordSet().asDouble(RecordFieldId("WSCLEAN_DM"));
-	else
-		oldDm = 0.0;
+	double oldDl, oldDm;
+	getShift(fieldTable, oldDl, oldDm);
 	bool oldIsShifted = (oldDl != 0.0 || oldDm != 0.0);
 	std::cout << "Processing field \"" << nameCol(fieldIndex) << "\": "
 		<< dirToString(phaseDirection) << " -> "
@@ -282,7 +283,7 @@ void processField(
 			dataArray.reset(new Array<Complex>(dataShape));
 		}
 		
-		ProgressBar* progressBar = 0;
+		std::unique_ptr<ProgressBar> progressBar;
 		
 		std::vector<Muvw> uvws(antennas.size());
 		MEpoch time(MVEpoch(-1.0));
@@ -317,8 +318,8 @@ void processField(
 					std::cout << "New " << newUVW << " (" << length(newUVW) << ")\n\n";
 				}
 				else {
-					if(progressBar == 0)
-						progressBar = new ProgressBar("Changing phase centre");
+					if(progressBar == nullptr)
+						progressBar.reset(new ProgressBar("Changing phase centre"));
 					progressBar->SetProgress(row, set.nrow());
 				}
 				
@@ -365,7 +366,7 @@ void processField(
 				uvwOutCol.put(row, newUVW.getVector());
 			}
 		}
-		delete progressBar;
+		progressBar.reset();
 		
 		phaseDirVector[0] = newDirection;
 		phaseDirCol.put(fieldIndex, phaseDirVector);
@@ -660,11 +661,16 @@ void printPhaseDir(MeasurementSet& set)
 	MDirection zenith = ZenithDirection(set);
 	
 	std::cout << "Current phase direction:\n  ";
+	double dl, dm;
+	getShift(fieldTable, dl, dm);
 	for(size_t i=0; i!=fieldTable.nrow(); ++i)
 	{
 		Vector<MDirection> phaseDirVector = phaseDirCol(i);
 		MDirection phaseDirection = phaseDirVector[0];
-		std::cout << dirToString(phaseDirection) << '\n';
+		std::cout << dirToString(phaseDirection);
+		if(dl != 0.0 || dm != 0.0)
+			std::cout << ", shift: " << dl << ',' << dm;
+		std::cout << '\n';
 	}
 	
 	std::cout << "Zenith is at:\n  " << dirToString(zenith) << " (" << dirToString(ZenithDirectionStart(set)) << " - " << dirToString(ZenithDirectionEnd(set)) << ")\n";
@@ -709,6 +715,8 @@ int main(int argc, char **argv)
 		bool
 			toZenith = false, toMinW = false, onlyUVW = false,
 			shiftback = false, toGeozenith = false, flipUVWSign = false, force = false, show = false, same = false;
+		double newDl = 0.0, newDm = 0.0;
+		std::string templateMS;
 		std::string dataColumn;
 		while(argv[argi][0] == '-')
 		{
@@ -754,6 +762,11 @@ int main(int argc, char **argv)
 				++argi;
 				dataColumn = argv[argi];
 			}
+			else if(param == "from-ms")
+			{
+				++argi;
+				templateMS = argv[argi];
+			}
 			else throw std::runtime_error("Invalid parameter");
 			++argi;
 		}
@@ -787,6 +800,15 @@ int main(int argc, char **argv)
 				Vector<MDirection> phaseDirVector = phaseDirCol(0);
 				newDirection = phaseDirVector[0];
 			}
+			else if(!templateMS.empty())
+			{
+				MeasurementSet fromMS(templateMS);
+				MSField fromField(fromMS.field());
+				MDirection::ROArrayColumn phaseDirCol(fromField, fromField.columnName(MSFieldEnums::PHASE_DIR));
+				Vector<MDirection> phaseDirVector = phaseDirCol(0);
+				newDirection = phaseDirVector[0];
+				getShift(fromField, newDl, newDm);
+			}
 			else if(!toGeozenith) {
 				double newRA = RaDecCoord::ParseRA(argv[argi+1]);
 				double newDec = RaDecCoord::ParseDec(argv[argi+2]);
@@ -801,7 +823,7 @@ int main(int argc, char **argv)
 				else if(toGeozenith)
 					rotateToGeoZenith(*set, fieldIndex, fieldTable, onlyUVW, flipUVWSign);
 				else
-					processField(*set, dataColumn, fieldIndex, fieldTable, newDirection, onlyUVW, shiftback, flipUVWSign, force);
+					processField(*set, dataColumn, fieldIndex, fieldTable, newDirection, onlyUVW, shiftback, newDl, newDm, flipUVWSign, force);
 			}
 			delete set;
 		}
