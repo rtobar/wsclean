@@ -132,10 +132,13 @@ public:
 			// A patch is created by not giving a source name
 			if(convertClustersToPatches)
 			{
-				if(patchName != source.ClusterName())
+				std::string sourcePatchName = source.ClusterName();
+				if(sourcePatchName.empty())
+					sourcePatchName = "no_patch";
+				if(patchName != sourcePatchName)
 				{
-					patchName = source.ClusterName();
-					file << ", " << source.ClusterName() << ", POINT, , , , , , , , , , , ,\n";
+					patchName = sourcePatchName;
+					file << ", " << patchName << ", POINT, , , , , , , , , , , ,\n";
 				}
 			}
 			else {

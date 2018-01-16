@@ -78,7 +78,7 @@ void MSGridderBase::initializePhaseCentre(casacore::MeasurementSet& ms, size_t f
 	
 	_denormalPhaseCentre = _phaseCentreDL != 0.0 || _phaseCentreDM != 0.0;
 	if(_denormalPhaseCentre)
-		Logger::Info << "Set has denormal phase centre: dl=" << _phaseCentreDL << ", dm=" << _phaseCentreDM << '\n';
+		Logger::Debug << "Set has denormal phase centre: dl=" << _phaseCentreDL << ", dm=" << _phaseCentreDM << '\n';
 }
 
 void MSGridderBase::initializeBandData(casacore::MeasurementSet& ms, MSGridderBase::MSData& msData)
@@ -88,7 +88,7 @@ void MSGridderBase::initializeBandData(casacore::MeasurementSet& ms, MSGridderBa
 	{
 		msData.startChannel = Selection(msData.msIndex).ChannelRangeStart();
 		msData.endChannel = Selection(msData.msIndex).ChannelRangeEnd();
-		Logger::Info << "Selected channels: " << msData.startChannel << '-' << msData.endChannel << '\n';
+		Logger::Debug << "Selected channels: " << msData.startChannel << '-' << msData.endChannel << '\n';
 		const BandData& firstBand = msData.bandData.FirstBand();
 		if(msData.startChannel >= firstBand.ChannelCount() || msData.endChannel > firstBand.ChannelCount()
 			|| msData.startChannel == msData.endChannel)

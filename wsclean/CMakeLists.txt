@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 2.8.8)
 
 project(wsclean)
 
+include(CMakeVersionInfo.txt)
+
 #if(NOT CMAKE_BUILD_TYPE)
 #  set(CMAKE_BUILD_TYPE "Release")
 #endif()
@@ -113,6 +115,9 @@ IF("${isSystemDir}" STREQUAL "-1")
    SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 ENDIF("${isSystemDir}" STREQUAL "-1")
 
+configure_file("${PROJECT_SOURCE_DIR}/wscversion.h.in" "${PROJECT_BINARY_DIR}/wscversion.h")
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
 add_library(wsclean-object OBJECT
   casamaskreader.cpp dftpredictionalgorithm.cpp fftconvolver.cpp fftresampler.cpp fftwmanager.cpp fitsiochecker.cpp fitsreader.cpp fitswriter.cpp image.cpp imageweights.cpp modelrenderer.cpp multibanddata.cpp nlplfitter.cpp polynomialchannelfitter.cpp polynomialfitter.cpp progressbar.cpp rmsimage.cpp stopwatch.cpp
   deconvolution/clarkloop.cpp deconvolution/componentlist.cpp deconvolution/deconvolution.cpp deconvolution/deconvolutionalgorithm.cpp deconvolution/genericclean.cpp deconvolution/imageset.cpp deconvolution/paralleldeconvolution.cpp deconvolution/moresane.cpp deconvolution/simpleclean.cpp deconvolution/spectralfitter.cpp
@@ -132,6 +137,7 @@ set(WSCLEANFILES $<TARGET_OBJECTS:wsclean-object>)
 
 add_library(wsclean-lib STATIC ${WSCLEANFILES})
 set_target_properties(wsclean-lib PROPERTIES OUTPUT_NAME wsclean)
+set_target_properties(wsclean-lib PROPERTIES SOVERSION ${WSCLEAN_VERSION_STR})
 
 add_library(wsclean-shared SHARED ${WSCLEANFILES})
 target_link_libraries(wsclean-shared)

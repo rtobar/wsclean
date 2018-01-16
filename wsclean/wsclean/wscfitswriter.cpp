@@ -1,11 +1,12 @@
 #include "wscfitswriter.h"
 
+#include <wscversion.h>
+
 #include "imagefilename.h"
 #include "msgridderbase.h"
 
 #include "../fitsreader.h"
 #include "../modelrenderer.h"
-#include "../wscversion.h"
 
 #include "../deconvolution/deconvolution.h"
 

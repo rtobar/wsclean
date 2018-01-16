@@ -31,6 +31,9 @@ void ParallelDeconvolution::SetAlgorithm(std::unique_ptr<class DeconvolutionAlgo
 		_verImages = (height+maxSubImageSize-1) / maxSubImageSize;
 		_algorithms.resize(_horImages * _verImages);
 		_algorithms.front() = std::move(algorithm);
+		size_t threadsPerAlg = (System::ProcessorCount()+_algorithms.size()-1)
+			/ _algorithms.size();
+		_algorithms.front()->SetThreadCount(threadsPerAlg);
 		Logger::Debug << "Parallel cleaning will use " << _algorithms.size() << " subimages.\n";
 		for(size_t i=1; i!=_algorithms.size(); ++i)
 			_algorithms[i] = _algorithms.front()->Clone();

@@ -733,12 +733,12 @@ void WSClean::runIndependentGroup(ImagingTable& groupTable)
 							} // end of polarization loop
 						}
 					} // end of joined channels loop
-					
-					++_majorIterationNr;
 				}
 				
+				++_majorIterationNr;
 			} while(reachedMajorThreshold);
 			
+			--_majorIterationNr;
 			Logger::Info << _majorIterationNr << " major iterations were performed.\n";
 		}
 		

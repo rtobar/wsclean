@@ -1,10 +1,11 @@
 #include "commandline.h"
 
+#include <wscversion.h>
+
 #include "../units/angle.h"
 #include "../units/fluxdensity.h"
 
 #include "../numberlist.h"
-#include "../wscversion.h"
 
 #include "wsclean.h"
 #include "wscfitswriter.h"

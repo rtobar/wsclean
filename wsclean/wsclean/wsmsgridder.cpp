@@ -380,10 +380,10 @@ void WSMSGridder::Invert()
 			totalMatchingRows += msDataVector[i].matchingRows;
 		}
 		
-		Logger::Info << "Total rows read: " << totalRowsRead;
+		Logger::Debug << "Total rows read: " << totalRowsRead;
 		if(totalMatchingRows != 0)
-			Logger::Info << " (overhead: " << std::max(0.0, round(totalRowsRead * 100.0 / totalMatchingRows - 100.0)) << "%)";
-		Logger::Info << '\n';
+			Logger::Debug << " (overhead: " << std::max(0.0, round(totalRowsRead * 100.0 / totalMatchingRows - 100.0)) << "%)";
+		Logger::Debug << '\n';
 	}
 	
 	if(NormalizeForWeighting())
@@ -423,7 +423,7 @@ void WSMSGridder::Invert()
 	
 	if(TrimWidth() != ImageWidth() || TrimHeight() != ImageHeight())
 	{
-		Logger::Info << "Trimming " << ImageWidth() << " x " << ImageHeight() << " -> " << TrimWidth() << " x " << TrimHeight() << '\n';
+		Logger::Debug << "Trimming " << ImageWidth() << " x " << ImageHeight() << " -> " << TrimWidth() << " x " << TrimHeight() << '\n';
 		// Perform trimming
 		
 		double *trimmed = _imageBufferAllocator->Allocate(TrimWidth() * TrimHeight());
@@ -466,7 +466,7 @@ void WSMSGridder::Predict(double* real, double* imaginary)
 	ImageBufferAllocator::Ptr untrimmedReal, untrimmedImag;
 	if(TrimWidth() != ImageWidth() || TrimHeight() != ImageHeight())
 	{
-		Logger::Info << "Untrimming " << TrimWidth() << " x " << TrimHeight() << " -> " << ImageWidth() << " x " << ImageHeight() << '\n';
+		Logger::Debug << "Untrimming " << TrimWidth() << " x " << TrimHeight() << " -> " << ImageWidth() << " x " << ImageHeight() << '\n';
 		// Undo trimming (i.e., extend with zeros)
 		// The input is of size TrimWidth() x TrimHeight()
 		// This will make the model image of size ImageWidth() x ImageHeight()
@@ -534,8 +534,8 @@ void WSMSGridder::Predict(double* real, double* imaginary)
 		totalMatchingRows += msDataVector[i].matchingRows;
 	}
 	
-	Logger::Info << "Total rows written: " << totalRowsWritten;
+	Logger::Debug << "Total rows written: " << totalRowsWritten;
 	if(totalMatchingRows != 0)
-		Logger::Info << " (overhead: " << std::max(0.0, round(totalRowsWritten * 100.0 / totalMatchingRows - 100.0)) << "%)";
-	Logger::Info << '\n';
+		Logger::Debug << " (overhead: " << std::max(0.0, round(totalRowsWritten * 100.0 / totalMatchingRows - 100.0)) << "%)";
+	Logger::Debug << '\n';
 }
