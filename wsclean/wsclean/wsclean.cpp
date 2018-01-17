@@ -1250,7 +1250,7 @@ MSSelection WSClean::selectInterval(MSSelection& fullSelection, size_t intervalI
 			Logger::Info.Flush();
 			casacore::ROScalarColumn<double> timeColumn(ms, casacore::MS::columnName(casacore::MSMainEnums::TIME));
 			double time = timeColumn(0);
-			size_t timestepIndex = 0;
+			size_t timestepIndex = 1;
 			for(size_t row = 0; row!=ms.nrow(); ++row)
 			{
 				if(time != timeColumn(row))
@@ -1264,6 +1264,12 @@ MSSelection WSClean::selectInterval(MSSelection& fullSelection, size_t intervalI
 			tE = timestepIndex;
 			// Store the full interval in the selection, so that it doesn't need to be determined again.
 			fullSelection.SetInterval(tS, tE);
+		}
+		if(_settings.intervalsOut > tE-tS)
+		{
+			std::ostringstream str;
+			str << "Invalid interval selection: " << _settings.intervalsOut << " intervals requested, but measurement set has only " << tE-tS << " intervals.";
+			throw std::runtime_error(str.str());
 		}
 		MSSelection newSelection(fullSelection);
 		newSelection.SetInterval(
