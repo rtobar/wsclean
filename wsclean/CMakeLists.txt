@@ -137,11 +137,11 @@ set(WSCLEANFILES $<TARGET_OBJECTS:wsclean-object>)
 
 add_library(wsclean-lib STATIC ${WSCLEANFILES})
 set_target_properties(wsclean-lib PROPERTIES OUTPUT_NAME wsclean)
-set_target_properties(wsclean-lib PROPERTIES SOVERSION ${WSCLEAN_VERSION_STR})
+set_target_properties(wsclean-lib PROPERTIES SOVERSION ${WSCLEAN_VERSION_SO})
 
 add_library(wsclean-shared SHARED ${WSCLEANFILES})
 target_link_libraries(wsclean-shared)
-set_target_properties(wsclean-shared PROPERTIES SOVERSION ${WSCLEAN_VERSION_STR})
+set_target_properties(wsclean-shared PROPERTIES SOVERSION ${WSCLEAN_VERSION_SO})
 
 add_executable(wsclean wscleanmain.cpp)
 target_link_libraries(wsclean wsclean-lib ${CASACORE_LIBRARIES} ${FFTW3_LIB} ${FFTW3_THREADS_LIB} ${Boost_DATE_TIME_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${CFITSIO_LIBRARY} ${GSL_LIB} ${GSL_CBLAS_LIB} ${PTHREAD_LIB} ${LBEAM_LIBS} ${IDGAPI_LIBRARIES})
