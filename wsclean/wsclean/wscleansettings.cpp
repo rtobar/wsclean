@@ -38,6 +38,8 @@ void WSCleanSettings::Validate() const
 		}
 		if(allStokes && !joinedPolarizationCleaning && deconvolutionIterationCount!=0)
 			throw std::runtime_error("Cleaning IDG images with multiple polarizations is only possible in joined polarization mode");
+		if(trimmedImageWidth != trimmedImageHeight)
+			throw std::runtime_error("IDG can not yet make rectangular images -- this will be implemented at a later time");
 	}
 	
 	if(baselineDependentAveragingInWavelengths != 0.0)
