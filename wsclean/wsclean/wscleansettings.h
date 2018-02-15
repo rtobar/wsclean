@@ -37,6 +37,7 @@ public:
 	std::string restoreModel, restoreInput, restoreOutput;
 	double manualBeamMajorSize, manualBeamMinorSize, manualBeamPA;
 	bool fittedBeam, theoreticBeam, circularBeam;
+	double beamFittingBoxSize;
 	bool continuedRun;
 	double memFraction, absMemLimit, minUVWInMeters, maxUVWInMeters, minUVInLambda, maxUVInLambda, wLimit, rankFilterLevel;
 	size_t rankFilterSize;
@@ -139,6 +140,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	restoreModel(), restoreInput(), restoreOutput(),
 	manualBeamMajorSize(0.0), manualBeamMinorSize(0.0),
 	manualBeamPA(0.0), fittedBeam(true), theoreticBeam(false), circularBeam(false),
+	beamFittingBoxSize(10.0),
 	continuedRun(false),
 	memFraction(1.0), absMemLimit(0.0),
 	minUVWInMeters(0.0), maxUVWInMeters(0.0),

@@ -1482,7 +1482,8 @@ void WSClean::fitBeamSize(double& bMaj, double& bMin, double& bPA, const double*
 		beamFitter.Fit2DCircularGaussianCentred(
 			image,
 			_settings.trimmedImageWidth, _settings.trimmedImageHeight,
-			bMaj);
+			bMaj,
+			_settings.beamFittingBoxSize);
 		bMin = bMaj;
 		bPA = 0.0;
 	}
@@ -1491,7 +1492,8 @@ void WSClean::fitBeamSize(double& bMaj, double& bMin, double& bPA, const double*
 			image,
 			_settings.trimmedImageWidth, _settings.trimmedImageHeight,
 			beamEstimate,
-			bMaj, bMin, bPA);
+			bMaj, bMin, bPA,
+			_settings.beamFittingBoxSize);
 	}
 	bMaj = bMaj*0.5*(_settings.pixelScaleX+_settings.pixelScaleY);
 	bMin = bMin*0.5*(_settings.pixelScaleX+_settings.pixelScaleY);

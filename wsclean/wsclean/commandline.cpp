@@ -333,6 +333,8 @@ void CommandLine::printHelp()
 		"   Determine beam shape by fitting the PSF (default if PSF is made).\n"
 		"-no-fit-beam\n"
 		"   Do not determine beam shape from the PSF.\n"
+		"-beam-fitting-size <factor>\n"
+		"   Use a fitting box the size of <factor> times the theoretical beam size for fitting a Gaussian to the PSF.\n"
 		"-theoretic-beam\n"
 		"   Write the beam in output fits files as calculated from the longest projected baseline.\n"
 		"   This method results in slightly less accurate beam size/integrated fluxes, but provides a beam size\n"
@@ -995,6 +997,11 @@ int CommandLine::Run(int argc, char* argv[])
 			settings.fittedBeam = false;
 			if(param == "nofitbeam")
 				deprecated(param, "no-fit-beam");
+		}
+		else if(param == "beam-fitting-size")
+		{
+			++argi;
+			settings.beamFittingBoxSize = parse_double(argv[argi], 0.0, "beam-fitting-size", false);
 		}
 		else if(param == "theoretic-beam" || param == "theoreticbeam")
 		{

@@ -298,6 +298,62 @@ public:
 		}
 	}
 	
+	/**
+	 * Calculates L, the lower triangle of the Cholesky decomposition, such that
+	 * L L^H = M. The result is undefined when the matrix is not positive definite.
+	 */
+	static void UncheckedCholesky(std::complex<double>* matrix)
+	{
+		// solve:
+		// ( a 0 ) ( a* b* ) = ( aa* ;    ab*    )
+		// ( b c ) ( 0  c* )   ( a*b ; bb* + cc* )
+		// With a and c necessarily real.
+		double a = sqrt(matrix[0].real());
+		std::complex<double> b = std::conj(matrix[1] / a);
+		double bbConj = b.real()*b.real() + b.imag()*b.imag();
+		double c = sqrt(matrix[3].real() - bbConj);
+		matrix[0] = a;
+		matrix[1] = 0.0;
+		matrix[2] = b;
+		matrix[3] = c;
+	}
+	
+	/**
+	 * Calculates L, the lower triangle of the Cholesky decomposition, such that
+	 * L L^H = M. Return false when the result would not be finite. 
+	 */
+	static bool Cholesky(std::complex<double>* matrix)
+	{
+		if(matrix[0].real() < 0.0)
+			return false;
+		double a = sqrt(matrix[0].real());
+		std::complex<double> b = std::conj(matrix[1] / a);
+		double bbConj = b.real()*b.real() + b.imag()*b.imag();
+		double cc = matrix[3].real() - bbConj;
+		if(cc < 0.0)
+			return false;
+		double c = sqrt(cc);
+		matrix[0] = a;
+		matrix[1] = 0.0;
+		matrix[2] = b;
+		matrix[3] = c;
+		return true;
+	}
+	
+	/**
+	 * Calculates L, the lower triangle of the Cholesky decomposition, such that
+	 * L L^H = M. Return false when the matrix was not positive semi-definite.
+	 */
+	static bool CheckedCholesky(std::complex<double>* matrix)
+	{
+		if(matrix[0].real() <= 0.0 || matrix[0].imag() != 0.0 ||
+			matrix[3].real() <= 0.0 || matrix[3].imag() != 0.0 || 
+			matrix[1] != std::conj(matrix[2]))
+			return false;
+		UncheckedCholesky(matrix);
+		return true;
+	}
+	
 	template<typename T>
 	static T RotationAngle(const std::complex<T>* matrix)
 	{
@@ -447,6 +503,22 @@ public:
 			std::isfinite(_values[2].real()) && std::isfinite(_values[2].imag()) &&
 			std::isfinite(_values[3].real()) && std::isfinite(_values[3].imag())
 		);
+	}
+	/**
+	 * Calculates L, the lower triangle of the Cholesky decomposition, such that
+	 * L L^H = M.
+	 */
+	bool Cholesky()
+	{
+		return Matrix2x2::Cholesky(_values);
+	}
+	bool CheckedCholesky()
+	{
+		return Matrix2x2::CheckedCholesky(_values);
+	}
+	void UncheckedCholesky()
+	{
+		Matrix2x2::UncheckedCholesky(_values);
 	}
 private:
 	std::complex<ValType> _values[4];
