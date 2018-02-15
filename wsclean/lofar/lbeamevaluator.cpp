@@ -85,10 +85,10 @@ void LBeamEvaluator::EvaluateFullArray(const LBeamEvaluator::PrecalcPosInfo& pos
 	for(Station::Ptr s : _stations)
 	{
 		matrix22c_t gainMatrix = s->response(_timeAsDouble, frequency, posInfo.itrfDirection, _subbandFrequency, _station0, _tile0);
-		beamValues[0] += gainMatrix[0][0];
-		beamValues[1] += gainMatrix[0][1];
-		beamValues[2] += gainMatrix[1][0];
-		beamValues[3] += gainMatrix[1][1];
+		beamValues[0] = beamValues[0] + gainMatrix[0][0];
+		beamValues[1] = beamValues[1] + gainMatrix[0][1];
+		beamValues[2] = beamValues[2] + gainMatrix[1][0];
+		beamValues[3] = beamValues[3] + gainMatrix[1][1];
 	}
 	beamValues /= double(_stations.size());
 }
