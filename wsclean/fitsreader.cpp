@@ -183,7 +183,7 @@ void FitsReader::initialize()
 		name << "CTYPE" << (i+1);
 		if(ReadStringKeyIfExists(name.str().c_str(), tmp))
 		{
-			if(tmp == "FREQ")
+			if(tmp == "FREQ" || tmp == "VRAD")
 				_nFrequencies = naxes[i];
 			else if(naxes[i] != 1)
 				throw std::runtime_error("Multiple images given in fits file");
