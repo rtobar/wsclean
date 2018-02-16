@@ -25,7 +25,7 @@ BOOST_AUTO_TEST_CASE( fit )
 	
 	GaussianFitter fitter;
 	double fitMaj, fitMin, fitPA;
-	fitter.Fit2DGaussianCentred(restored.data(), width, height, 5.0, fitMaj, fitMin, fitPA, false);
+	fitter.Fit2DGaussianCentred(restored.data(), width, height, 5.0, fitMaj, fitMin, fitPA, 10.0, false);
 	
 	BOOST_CHECK_CLOSE_FRACTION(fitMaj, 20.0, 1e-4);
 	BOOST_CHECK_CLOSE_FRACTION(fitMin, 5.0, 1e-4);
@@ -56,7 +56,7 @@ BOOST_AUTO_TEST_CASE( fit_with_bad_initial_value )
 	
 	GaussianFitter fitter;
 	double fitMajor, fitMinor, fitPA;
-	fitter.Fit2DGaussianCentred(restored.data(), width, height, estimatedBeamPx, fitMajor, fitMinor, fitPA, false);
+	fitter.Fit2DGaussianCentred(restored.data(), width, height, estimatedBeamPx, fitMajor, fitMinor, fitPA, 10.0, false);
 	
 	BOOST_CHECK_CLOSE_FRACTION(fitMajor, 4.0, 1e-4);
 	BOOST_CHECK_CLOSE_FRACTION(fitMinor, 4.0, 1e-4);
@@ -115,7 +115,7 @@ BOOST_AUTO_TEST_CASE( fit_small_beam )
 	
 	GaussianFitter fitter;
 	double fitMajor = estimatedBeamPx, fitMinor = estimatedBeamPx, fitPA = 0.0;
-	fitter.Fit2DGaussianCentred(restored.data(), width, height, estimatedBeamPx, fitMajor, fitMinor, fitPA, false);
+	fitter.Fit2DGaussianCentred(restored.data(), width, height, estimatedBeamPx, fitMajor, fitMinor, fitPA, 10.0, false);
 	
 	BOOST_CHECK_CLOSE_FRACTION(fitMinor, 0.5, 1e-4);
 }
