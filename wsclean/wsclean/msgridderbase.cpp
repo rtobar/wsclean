@@ -320,7 +320,8 @@ void MSGridderBase::readAndWeightVisibilities(MSProvider& msProvider, InversionR
 {
 	if(DoImagePSF())
 	{
-		msProvider.ReadWeights(rowData.data);
+		for(size_t chp=0; chp!=curBand.ChannelCount() * PolarizationCount; ++chp)
+			rowData.data[chp] = 1.0;
 		if(HasDenormalPhaseCentre())
 		{
 			double lmsqrt = sqrt(1.0-PhaseCentreDL()*PhaseCentreDL()- PhaseCentreDM()*PhaseCentreDM());
@@ -358,22 +359,17 @@ void MSGridderBase::readAndWeightVisibilities(MSProvider& msProvider, InversionR
 	switch(VisibilityWeightingMode())
 	{
 	case NormalVisibilityWeighting:
-		// The MS provider has already preweighted the
-		// visibilities for their weight, so we do not
-		// have to do anything.
+		// The weight buffer already contains the visibility weights: do nothing
 		break;
 	case SquaredVisibilityWeighting:
+		// Square the visibility weights
 		for(size_t chp=0; chp!=curBand.ChannelCount() * PolarizationCount; ++chp)
-			rowData.data[chp] *= weightBuffer[chp];
+			weightBuffer[chp] *= weightBuffer[chp];
 		break;
 	case UnitVisibilityWeighting:
+		// Set the visibility weights to one
 		for(size_t chp=0; chp!=curBand.ChannelCount() * PolarizationCount; ++chp)
-		{
-			if(weightBuffer[chp] == 0.0)
-				rowData.data[chp] = 0.0;
-			else
-				rowData.data[chp] /= weightBuffer[chp];
-		}
+			weightBuffer[chp] = 1.0f;
 		break;
 	}
 	
@@ -386,19 +382,21 @@ void MSGridderBase::readAndWeightVisibilities(MSProvider& msProvider, InversionR
 		double
 			u = rowData.uvw[0] / curBand.ChannelWavelength(ch),
 			v = rowData.uvw[1] / curBand.ChannelWavelength(ch),
-			weight = PrecalculatedWeightInfo()->GetWeight(u, v);
-		_scratchWeights[ch] = weight;
-		double cumWeight = weight * *weightIter;
-		if(cumWeight != 0.0)
-		{
-			_visibilityWeightSum += *weightIter * 0.5;
+			imageWeight = PrecalculatedWeightInfo()->GetWeight(u, v);
+		_scratchWeights[ch] = imageWeight;
+		// Visibility weight sum is the sum of weights excluding imaging weights
+		_visibilityWeightSum += *weightIter;
+		if(*weightIter != 0.0f)
 			++_griddedVisibilityCount;
-			_maxGriddedWeight = std::max(cumWeight, _maxGriddedWeight);
-			_totalWeight += cumWeight;
-		}
+		
 		for(size_t p=0; p!=PolarizationCount; ++p)
 		{
-			*dataIter *= weight;
+			_maxGriddedWeight = std::max(*weightIter, _maxGriddedWeight);
+			*weightIter *= imageWeight;
+			// Total weight includes imaging weights
+			if(p == 0)
+				_totalWeight += *weightIter;
+			*dataIter *= *weightIter;
 			++dataIter;
 			++weightIter;
 		}

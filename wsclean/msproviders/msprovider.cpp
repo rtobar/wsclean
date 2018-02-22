@@ -8,12 +8,10 @@
 
 #include "../msselection.h"
 
-void MSProvider::copyWeightedData(std::complex<float>* dest, size_t startChannel, size_t endChannel, const std::vector<PolarizationEnum>& polsIn, const casacore::Array<std::complex<float>>& data, const casacore::Array<float>& weights, const casacore::Array<bool>& flags, PolarizationEnum polOut)
+void MSProvider::copyData(std::complex<float>* dest, size_t startChannel, size_t endChannel, const std::vector<PolarizationEnum>& polsIn, const casacore::Array<std::complex<float>>& data, PolarizationEnum polOut)
 {
 	const size_t polCount = polsIn.size();
 	casacore::Array<std::complex<float> >::const_contiter inPtr = data.cbegin() + startChannel * polCount;
-	casacore::Array<float>::const_contiter weightPtr = weights.cbegin() + startChannel * polCount;
-	casacore::Array<bool>::const_contiter flagPtr = flags.cbegin() + startChannel * polCount;
 	const size_t selectedChannelCount = endChannel - startChannel;
 		
 	size_t polIndex;
@@ -21,44 +19,26 @@ void MSProvider::copyWeightedData(std::complex<float>* dest, size_t startChannel
 	{
 		for(size_t ch=0; ch!=selectedChannelCount*polsIn.size(); ++ch)
 		{
-			if(!*flagPtr && std::isfinite(inPtr->real()) && std::isfinite(inPtr->imag()))
-			{
-				dest[ch] = *inPtr * (*weightPtr);
-			}
-			else {
+			if(isfinite(*inPtr))
+				dest[ch] = *inPtr;
+			else
 				dest[ch] = 0;
-			}
-			weightPtr++;
 			inPtr++;
-			flagPtr++;
 		}
 	}
 	else if(Polarization::TypeToIndex(polOut, polsIn, polIndex)) {
 		inPtr += polIndex;
-		weightPtr += polIndex;
-		flagPtr += polIndex;
 		for(size_t ch=0; ch!=selectedChannelCount; ++ch)
 		{
-			if(!*flagPtr && std::isfinite(inPtr->real()) && std::isfinite(inPtr->imag()))
-			{
-				dest[ch] = *inPtr * (*weightPtr);
-			}
-			else {
+			if(isfinite(*inPtr))
+				dest[ch] = *inPtr;
+			else
 				dest[ch] = 0;
-			}
-			weightPtr += polCount;
 			inPtr += polCount;
-			flagPtr += polCount;
 		}
 	}
 	else {
 		// Copy the right visibilities with conversion if necessary.
-		// Note that many conversions require dividing by two, e.g.
-		// I = (XX + YY)/2. This division is done with weighting, so
-		// weighted I = (w1 XX + w2 YY),
-		// which is given a weight (w1 + w2),
-		// and hence unweighted I = (w1 XX + w2 YY) / (w1 + w2), which if
-		// w1 = w2 results in I = (XX + YY) / 2.
 		switch(polOut)
 		{
 		case Polarization::StokesI: {
@@ -75,28 +55,19 @@ void MSProvider::copyWeightedData(std::complex<float>* dest, size_t startChannel
 			
 			for(size_t ch=0; ch!=selectedChannelCount; ++ch)
 			{
-				weightPtr += polIndexA;
 				inPtr += polIndexA;
-				flagPtr += polIndexA;
-				
-				bool flagA = *flagPtr || !std::isfinite(inPtr->real())|| !std::isfinite(inPtr->imag());
-				casacore::Complex valA = *inPtr * (*weightPtr);
-				
-				weightPtr += polIndexB - polIndexA;
+				casacore::Complex val = *inPtr;
 				inPtr += polIndexB - polIndexA;
-				flagPtr += polIndexB - polIndexA;
 				
-				bool flagB = *flagPtr || !std::isfinite(inPtr->real())|| !std::isfinite(inPtr->imag());
-				if(flagA || flagB)
+				// I = (XX + YY) / 2
+				val = (*inPtr + val) * 0.5f;
+				
+				if(isfinite(val))
+					dest[ch] = val;
+				else
 					dest[ch] = 0.0;
-				else {
-					// I = XX + YY
-					dest[ch] = (*inPtr * (*weightPtr)) + valA;
-				}
 				
-				weightPtr += polCount - polIndexB;
 				inPtr += polCount - polIndexB;
-				flagPtr += polCount - polIndexB;
 			}
 		} break;
 		case Polarization::StokesQ: {
@@ -108,28 +79,19 @@ void MSProvider::copyWeightedData(std::complex<float>* dest, size_t startChannel
 				// Convert to StokesQ from XX and YY
 				for(size_t ch=0; ch!=selectedChannelCount; ++ch)
 				{
-					weightPtr += polIndexA;
 					inPtr += polIndexA;
-					flagPtr += polIndexA;
-					
-					bool flagA = *flagPtr || !std::isfinite(inPtr->real())|| !std::isfinite(inPtr->imag());
-					casacore::Complex valA = *inPtr * (*weightPtr);
-					
-					weightPtr += polIndexB - polIndexA;
+					casacore::Complex val = *inPtr;
 					inPtr += polIndexB - polIndexA;
-					flagPtr += polIndexB - polIndexA;
 					
-					bool flagB = *flagPtr || !std::isfinite(inPtr->real())|| !std::isfinite(inPtr->imag());
-					if(flagA || flagB)
+					// Q = (XX - YY)/2
+					val = (val - *inPtr) * 0.5f;
+						
+					if(isfinite(val))
+						dest[ch] = val;
+					else
 						dest[ch] = 0.0;
-					else {
-						// Q = (XX - YY)/2
-						dest[ch] = valA - (*inPtr * (*weightPtr));
-					}
 					
-					weightPtr += polCount - polIndexB;
 					inPtr += polCount - polIndexB;
-					flagPtr += polCount - polIndexB;
 				}
 			}
 			else {
@@ -140,28 +102,19 @@ void MSProvider::copyWeightedData(std::complex<float>* dest, size_t startChannel
 					throw std::runtime_error("Can not form requested polarization (Stokes Q) from available polarizations");
 				for(size_t ch=0; ch!=selectedChannelCount; ++ch)
 				{
-					weightPtr += polIndexA;
 					inPtr += polIndexA;
-					flagPtr += polIndexA;
-					
-					bool flagA = *flagPtr || !std::isfinite(inPtr->real())|| !std::isfinite(inPtr->imag());
-					casacore::Complex valA = *inPtr * (*weightPtr);
-					
-					weightPtr += polIndexB - polIndexA;
+					casacore::Complex val = *inPtr;
 					inPtr += polIndexB - polIndexA;
-					flagPtr += polIndexB - polIndexA;
 					
-					bool flagB = *flagPtr || !std::isfinite(inPtr->real()) || !std::isfinite(inPtr->imag());
-					if(flagA || flagB)
+					// Q = (RL + LR)/2
+					val = (*inPtr + val) * 0.5f;
+						
+					if(isfinite(val))
+						dest[ch] = val;
+					else
 						dest[ch] = 0.0;
-					else {
-						// Q = (RL + LR)/2
-						dest[ch] = (*inPtr * (*weightPtr)) + valA;
-					}
 					
-					weightPtr += polCount - polIndexB;
 					inPtr += polCount - polIndexB;
-					flagPtr += polCount - polIndexB;
 				}
 			}
 		} break;
@@ -174,26 +127,19 @@ void MSProvider::copyWeightedData(std::complex<float>* dest, size_t startChannel
 				// Convert to StokesU from XY and YX
 				for(size_t ch=0; ch!=selectedChannelCount; ++ch)
 				{
-					weightPtr += polIndexA;
 					inPtr += polIndexA;
-					flagPtr += polIndexA;
-					
-					bool flagA = *flagPtr || !std::isfinite(inPtr->real())|| !std::isfinite(inPtr->imag());
-					casacore::Complex valA = *inPtr * (*weightPtr);
-					
-					weightPtr += polIndexB - polIndexA;
+					casacore::Complex val = *inPtr;
 					inPtr += polIndexB - polIndexA;
-					flagPtr += polIndexB - polIndexA;
+
+					// U = (XY + YX)/2
+					val = (val + *inPtr) * 0.5f;
 					
-					bool flagB = *flagPtr || !std::isfinite(inPtr->real())|| !std::isfinite(inPtr->imag());
-					if(flagA || flagB)
-						dest[ch] = 0.0;
+					if(isfinite(val))
+						dest[ch] = val;
 					else
-						dest[ch] = valA + (*inPtr * (*weightPtr)); // U = (XY + YX)/2
+						dest[ch] = 0.0;
 					
-					weightPtr += polCount - polIndexB;
 					inPtr += polCount - polIndexB;
-					flagPtr += polCount - polIndexB;
 				}
 			}
 			else {
@@ -204,29 +150,20 @@ void MSProvider::copyWeightedData(std::complex<float>* dest, size_t startChannel
 					throw std::runtime_error("Can not form requested polarization (Stokes U) from available polarizations");
 				for(size_t ch=0; ch!=selectedChannelCount; ++ch)
 				{
-					weightPtr += polIndexA;
 					inPtr += polIndexA;
-					flagPtr += polIndexA;
-					
-					bool flagA = *flagPtr || !std::isfinite(inPtr->real())|| !std::isfinite(inPtr->imag());
-					casacore::Complex valA = *inPtr * (*weightPtr);
-					
-					weightPtr += polIndexB - polIndexA;
+					casacore::Complex val = *inPtr;
 					inPtr += polIndexB - polIndexA;
-					flagPtr += polIndexB - polIndexA;
 					
-					bool flagB = *flagPtr || !std::isfinite(inPtr->real())|| !std::isfinite(inPtr->imag());
-					if(flagA || flagB)
+					// U = -i (RL - LR)/2
+					val = (val - *inPtr) * 0.5f;
+					val = casacore::Complex(val.imag(), -val.real());
+						
+					if(isfinite(val))
+						dest[ch] = val;
+					else
 						dest[ch] = 0.0;
-					else {
-						casacore::Complex diff = (valA - *inPtr * (*weightPtr));
-						// U = -i (RL - LR)/2
-						dest[ch] = casacore::Complex(diff.imag(), -diff.real());
-					}
 					
-					weightPtr += polCount - polIndexB;
 					inPtr += polCount - polIndexB;
-					flagPtr += polCount - polIndexB;
 				}
 			}
 		} break;
@@ -239,29 +176,20 @@ void MSProvider::copyWeightedData(std::complex<float>* dest, size_t startChannel
 				// Convert to StokesV from XX and YY
 				for(size_t ch=0; ch!=selectedChannelCount; ++ch)
 				{
-					weightPtr += polIndexA;
 					inPtr += polIndexA;
-					flagPtr += polIndexA;
-					
-					bool flagA = *flagPtr || !std::isfinite(inPtr->real())|| !std::isfinite(inPtr->imag());
-					casacore::Complex valA = *inPtr * (*weightPtr);
-					
-					weightPtr += polIndexB - polIndexA;
+					casacore::Complex val = *inPtr;
 					inPtr += polIndexB - polIndexA;
-					flagPtr += polIndexB - polIndexA;
 					
-					bool flagB = *flagPtr || !std::isfinite(inPtr->real())|| !std::isfinite(inPtr->imag());
-					if(flagA || flagB)
+					// V = -i(XY - YX)/2
+					val = (val - *inPtr) * 0.5f;
+					val = casacore::Complex(val.imag(), -val.real());
+					
+					if(isfinite(val))
+						dest[ch] = val;
+					else
 						dest[ch] = 0.0;
-					else {
-						casacore::Complex diff = valA - (*inPtr * (*weightPtr));
-						// V = -i(XY - YX)/2
-						dest[ch] = casacore::Complex(diff.imag(), -diff.real());
-					}
 					
-					weightPtr += polCount - polIndexB;
 					inPtr += polCount - polIndexB;
-					flagPtr += polCount - polIndexB;
 				}
 			}
 			else {
@@ -272,28 +200,19 @@ void MSProvider::copyWeightedData(std::complex<float>* dest, size_t startChannel
 					throw std::runtime_error("Can not form requested polarization (Stokes V) from available polarizations");
 				for(size_t ch=0; ch!=selectedChannelCount; ++ch)
 				{
-					weightPtr += polIndexA;
 					inPtr += polIndexA;
-					flagPtr += polIndexA;
-					
-					bool flagA = *flagPtr || !std::isfinite(inPtr->real())|| !std::isfinite(inPtr->imag());
-					casacore::Complex valA = *inPtr * (*weightPtr);
-					
-					weightPtr += polIndexB - polIndexA;
+					casacore::Complex val = *inPtr;
 					inPtr += polIndexB - polIndexA;
-					flagPtr += polIndexB - polIndexA;
 					
-					bool flagB = *flagPtr || !std::isfinite(inPtr->real())|| !std::isfinite(inPtr->imag());
-					if(flagA || flagB)
+					// V = (RR - LL)/2
+					val = (val - *inPtr) * 0.5f;
+						
+					if(isfinite(val))
 						dest[ch] = 0.0;
-					else {
-						// V = (RR - LL)/2
-						dest[ch] = valA - *inPtr * (*weightPtr);
-					}
+					else
+						dest[ch] = val;
 					
-					weightPtr += polCount - polIndexB;
 					inPtr += polCount - polIndexB;
-					flagPtr += polCount - polIndexB;
 				}
 			}
 		} break;
@@ -317,10 +236,10 @@ void MSProvider::copyWeights(NumType* dest, size_t startChannel, size_t endChann
 	{
 		for(size_t ch=0; ch!=selectedChannelCount * polsIn.size(); ++ch)
 		{
-			if(!*flagPtr && std::isfinite(inPtr->real()) && std::isfinite(inPtr->imag()))
+			if(!*flagPtr && isfinite(*inPtr))
 				dest[ch] = *weightPtr;
 			else
-				dest[ch] = 0;
+				dest[ch] = 0.0f;
 			inPtr++;
 			weightPtr++;
 			flagPtr++;
@@ -332,10 +251,10 @@ void MSProvider::copyWeights(NumType* dest, size_t startChannel, size_t endChann
 		flagPtr += polIndex;
 		for(size_t ch=0; ch!=selectedChannelCount; ++ch)
 		{
-			if(!*flagPtr && std::isfinite(inPtr->real()) && std::isfinite(inPtr->imag()))
+			if(!*flagPtr && isfinite(*inPtr))
 				dest[ch] = *weightPtr;
 			else
-				dest[ch] = 0;
+				dest[ch] = 0.0f;
 			inPtr += polCount;
 			weightPtr += polCount;
 			flagPtr += polCount;
@@ -390,17 +309,17 @@ void MSProvider::copyWeights(NumType* dest, size_t startChannel, size_t endChann
 		flagPtr += polIndexA;
 		for(size_t ch=0; ch!=selectedChannelCount; ++ch)
 		{
-			if(!*flagPtr && std::isfinite(inPtr->real()) && std::isfinite(inPtr->imag()))
-				dest[ch] = *weightPtr;
+			if(!*flagPtr && isfinite(*inPtr))
+				dest[ch] = *weightPtr * 2.0f;
 			else
-				dest[ch] = 0;
+				dest[ch] = 0.0f;
 			inPtr += polIndexB-polIndexA;
 			weightPtr += polIndexB-polIndexA;
 			flagPtr += polIndexB-polIndexA;
-			if(!*flagPtr && std::isfinite(inPtr->real()) && std::isfinite(inPtr->imag()))
-				dest[ch] += *weightPtr;
+			if(!*flagPtr && isfinite(*inPtr))
+				dest[ch] += *weightPtr * 2.0f;
 			else
-				dest[ch] = 0.0;
+				dest[ch] = 0.0f;
 			weightPtr += polCount - polIndexB + polIndexA;
 			inPtr += polCount - polIndexB + polIndexA;
 			flagPtr += polCount - polIndexB + polIndexA;

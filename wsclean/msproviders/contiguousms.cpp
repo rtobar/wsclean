@@ -166,7 +166,7 @@ void ContiguousMS::ReadData(std::complex<float>* buffer)
 		startChannel = 0;
 		endChannel = _bandData[_dataDescId].ChannelCount();
 	}
-	copyWeightedData(buffer,  startChannel, endChannel, _inputPolarizations, _dataArray, _weightSpectrumArray, _flagArray, _polOut);
+	copyData(buffer,  startChannel, endChannel, _inputPolarizations, _dataArray, _polOut);
 }
 
 void ContiguousMS::prepareModelColumn()
@@ -197,7 +197,7 @@ void ContiguousMS::ReadModel(std::complex<float>* buffer)
 		startChannel = 0;
 		endChannel = _bandData[_dataDescId].ChannelCount();
 	}
-	copyWeightedData(buffer,  startChannel, endChannel, _inputPolarizations, _modelArray, _weightSpectrumArray, _flagArray, _polOut);
+	copyData(buffer,  startChannel, endChannel, _inputPolarizations, _modelArray, _polOut);
 }
 
 void ContiguousMS::WriteModel(size_t rowId, std::complex<float>* buffer)

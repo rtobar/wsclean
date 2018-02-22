@@ -201,15 +201,10 @@ void PartitionedMS::WriteModel(size_t rowId, std::complex<float>* buffer)
 	if(!_partHeader.hasModel)
 		throw std::runtime_error("Partitioned MS initialized without model");
 #endif
-	_weightFile.seekg(_partHeader.channelCount * _polarizationCountInFile * sizeof(float) * rowId, std::ios::beg);
-	_weightFile.read(reinterpret_cast<char*>(_weightBuffer.data()), _partHeader.channelCount * _polarizationCountInFile * sizeof(float));
-	for(size_t i=0; i!=_partHeader.channelCount * _polarizationCountInFile; ++i)
-		buffer[i] *= _weightBuffer[i];
-	
 	size_t rowLength = _partHeader.channelCount * _polarizationCountInFile * sizeof(std::complex<float>);
 	std::complex<float>* modelWritePtr = reinterpret_cast<std::complex<float>*>(_modelFileMap + rowLength*rowId);
 	
-	// In case the value was not sampled in this pass, it will be set to infinite and should not overwrite the current
+	// In case the value was not sampled in this pass, it has been set to infinite and should not overwrite the current
 	// value in the set.
 	for(size_t i=0; i!=_partHeader.channelCount * _polarizationCountInFile; ++i)
 	{
@@ -457,14 +452,14 @@ PartitionedMS::Handle PartitionedMS::Partition(const string& msPath, const std::
 				for(PolarizationEnum p : polsOut)
 				{
 					PartitionFiles& f = files[fileIndex];
-					copyWeightedData(dataBuffer.data(), partStartCh, partEndCh, msPolarizations, dataArray, weightSpectrumArray, flagArray, p);
+					copyData(dataBuffer.data(), partStartCh, partEndCh, msPolarizations, dataArray, p);
 					f.data->write(reinterpret_cast<char*>(dataBuffer.data()), (partEndCh - partStartCh) * sizeof(std::complex<float>) * polarizationsPerFile);
 					if(!f.data->good())
 						throw std::runtime_error("Error writing to temporary data file");
 					
 					if(initialModelRequired)
 					{
-						copyWeightedData(dataBuffer.data(), partStartCh, partEndCh, msPolarizations, modelArray, weightSpectrumArray, flagArray, p);
+						copyData(dataBuffer.data(), partStartCh, partEndCh, msPolarizations, modelArray, p);
 						f.model->write(reinterpret_cast<char*>(dataBuffer.data()), (partEndCh - partStartCh) * sizeof(std::complex<float>) * polarizationsPerFile);
 						if(!f.model->good())
 							throw std::runtime_error("Error writing to temporary data file");

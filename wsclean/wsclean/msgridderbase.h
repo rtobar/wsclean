@@ -123,6 +123,25 @@ protected:
 	
 	void calculateOverallMetaData(const MSData* msDataVector);
 	
+	/**
+	 * Read the visibilities from the msprovider, and apply weights and flags.
+	 * 
+	 * This function applies both the selected method of visibility weighting (i.e. the weights that are normally stored in the
+	 * WEIGHT_SPECTRUM column) and the imaging weight (coming from uniform or Briggs weighting, etc). To read the data, this
+	 * function requires scratch weight and model buffers to store intermediate values in. Even if the caller does not need
+	 * these values, they still need to provide an already allocated buffer. This is to avoid having to allocate memory within
+	 * this method.
+	 * @tparam PolarizationCount Normally set to one when imaging a single polarization, but set to 4 for IDG as it images all
+	 * polarizations at once.
+	 * @param msProvider The measurement set provider
+	 * @param rowData The resulting weighted data
+	 * @param curBand The spectral band currently being imaged
+	 * @param weightBuffer An allocated buffer to store intermediate weights in. After returning from the call, these values will
+	 * hold the full applied weight (i.e. visibility weight * imaging weight).
+	 * @param modelBuffer An allocated buffer to store intermediate model data in.
+	 * @param isSelected Per visibility whether that visibility will be gridded in this pass. When the visibility is not gridded,
+	 * its weight will not be added to the relevant sums (visibility count, weight sum, etc.).
+	 */
 	template<size_t PolarizationCount>
 	void readAndWeightVisibilities(MSProvider& msProvider, InversionRow& rowData, const BandData& curBand, float* weightBuffer, std::complex<float>* modelBuffer, const bool* isSelected);
 
@@ -165,7 +184,7 @@ private:
 	
 	size_t _griddedVisibilityCount;
 	double _totalWeight;
-	double _maxGriddedWeight;
+	float _maxGriddedWeight;
 	double _visibilityWeightSum;
 	
 	ao::uvector<float> _scratchWeights;
