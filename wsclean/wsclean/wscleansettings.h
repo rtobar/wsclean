@@ -60,7 +60,6 @@ public:
 	bool dftPrediction, dftWithBeam;
 	std::string temporaryDirectory;
 	bool forceReorder, forceNoReorder, subtractModel, modelUpdateRequired, mfsWeighting;
-	bool normalizeForWeighting;
 	bool applyPrimaryBeam, reusePrimaryBeam, useDifferentialLofarBeam, savePsfPb;
 	bool useIDG, gridWithBeam;
 	enum IDGMode { IDG_DEFAULT, IDG_GPU, IDG_CPU, IDG_HYBRID } idgMode;
@@ -171,7 +170,6 @@ inline WSCleanSettings::WSCleanSettings() :
 	subtractModel(false),
 	modelUpdateRequired(true),
 	mfsWeighting(false),
-	normalizeForWeighting(true),
 	applyPrimaryBeam(false), reusePrimaryBeam(false),
 	useDifferentialLofarBeam(false),
 	savePsfPb(false),

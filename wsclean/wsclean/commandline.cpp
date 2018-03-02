@@ -1095,10 +1095,6 @@ int CommandLine::Run(int argc, char* argv[])
 			++argi;
 			settings.wLimit = parse_double(argv[argi], 0.0, "maxw");
 		}
-		else if(param == "no-normalize-for-weighting")
-		{
-			settings.normalizeForWeighting = false;
-		}
 		else if(param == "baseline-averaging")
 		{
 			++argi;

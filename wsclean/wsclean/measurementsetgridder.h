@@ -89,7 +89,6 @@ class MeasurementSetGridder
 		size_t OverSamplingFactor() const { return _overSamplingFactor; }
 		bool HasWLimit() const { return _wLimit != 0.0; }
 		double WLimit() const { return _wLimit; }
-		bool NormalizeForWeighting() const { return _normalizeForWeighting; }
 		enum VisibilityWeightingMode VisibilityWeightingMode() const { return _visibilityWeightingMode; }
 		bool StoreImagingWeights() const { return _storeImagingWeights; }
 		
@@ -168,10 +167,6 @@ class MeasurementSetGridder
 		void SetWLimit(double wLimit)
 		{
 			_wLimit = wLimit;
-		}
-		void SetNormalizeForWeighting(bool normalizeForWeighting)
-		{
-			_normalizeForWeighting = normalizeForWeighting;
 		}
 		void SetVisibilityWeightingMode(enum VisibilityWeightingMode mode)
 		{

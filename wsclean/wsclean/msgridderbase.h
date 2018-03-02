@@ -18,10 +18,8 @@ public:
 	virtual double PhaseCentreDL() const final override { return _phaseCentreDL; }
 	virtual double PhaseCentreDM() const final override { return _phaseCentreDM; }
 	virtual bool HasDenormalPhaseCentre() const final override { return _denormalPhaseCentre; }
-	virtual double ImageWeight() const final override { return _totalWeight*2.0; }
-	virtual double NormalizationFactor() const final override {
-		return NormalizeForWeighting() ? _totalWeight*2.0 : 1.0;
-	}
+	virtual double ImageWeight() const final override { return _totalWeight; }
+	virtual double NormalizationFactor() const final override { return _totalWeight; }
 	virtual double BeamSize() const final override { return _theoreticalBeamSize; }
 	
 	/**
@@ -156,6 +154,7 @@ protected:
 		_griddedVisibilityCount = 0;
 		_totalWeight = 0.0;
 		_maxGriddedWeight = 0.0;
+		_visibilityWeightSum = 0.0;
 	}
 	
 	double totalWeight() const { return _totalWeight; }
@@ -184,7 +183,7 @@ private:
 	
 	size_t _griddedVisibilityCount;
 	double _totalWeight;
-	float _maxGriddedWeight;
+	double _maxGriddedWeight;
 	double _visibilityWeightSum;
 	
 	ao::uvector<float> _scratchWeights;

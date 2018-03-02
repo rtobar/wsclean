@@ -75,17 +75,15 @@ void WSClean::imagePSF(ImagingTableEntry& entry)
 	_gridder->Invert();
 	
 	size_t centralIndex = _settings.trimmedImageWidth/2 + (_settings.trimmedImageHeight/2) * _settings.trimmedImageWidth;
-	if(_settings.normalizeForWeighting)
-	{
-		double normFactor;
-		if(_gridder->ImageRealResult()[centralIndex] != 0.0)
-			normFactor = 1.0/_gridder->ImageRealResult()[centralIndex];
-		else
-			normFactor = 0.0;
-		_infoPerChannel[channelIndex].psfNormalizationFactor = normFactor;
-		multiplyImage(normFactor, _gridder->ImageRealResult());
-		Logger::Debug << "Normalized PSF by factor of " << normFactor << ".\n";
-	}
+	
+	double normFactor;
+	if(_gridder->ImageRealResult()[centralIndex] != 0.0)
+		normFactor = 1.0/_gridder->ImageRealResult()[centralIndex];
+	else
+		normFactor = 0.0;
+	_infoPerChannel[channelIndex].psfNormalizationFactor = normFactor;
+	multiplyImage(normFactor, _gridder->ImageRealResult());
+	Logger::Debug << "Normalized PSF by factor of " << normFactor << ".\n";
 		
 	DeconvolutionAlgorithm::RemoveNaNsInPSF(_gridder->ImageRealResult(), _settings.trimmedImageWidth, _settings.trimmedImageHeight);
 	_psfImages.SetFitsWriter(createWSCFitsWriter(entry, false).Writer());
@@ -380,7 +378,6 @@ void WSClean::prepareInversionAlgorithm(PolarizationEnum polarization)
 	_gridder->SetWeighting(_settings.weightMode);
 	_gridder->SetWLimit(_settings.wLimit/100.0);
 	_gridder->SetSmallInversion(_settings.smallInversion);
-	_gridder->SetNormalizeForWeighting(_settings.normalizeForWeighting);
 	_gridder->SetVisibilityWeightingMode(_settings.visibilityWeightingMode);
 }
 
@@ -1287,10 +1284,10 @@ void WSClean::saveUVImage(const double* image, PolarizationEnum pol, const Imagi
 		imagUV(_settings.trimmedImageWidth, _settings.trimmedImageHeight, _imageAllocator);
 	FFTResampler fft(_settings.trimmedImageWidth, _settings.trimmedImageHeight, _settings.trimmedImageWidth, _settings.trimmedImageHeight, 1, true);
 	fft.SingleFT(image, realUV.data(), imagUV.data());
-	// There are two factors of 2 involved: one coming from
-	// SingleFT(), and one from the fact that normF excludes a factor of two.
-	realUV *= 4.0 * _infoPerChannel[entry.outputChannelIndex].normalizationFactor / sqrt(_settings.trimmedImageWidth * _settings.trimmedImageHeight);
-	imagUV *= 4.0 * _infoPerChannel[entry.outputChannelIndex].normalizationFactor / sqrt(_settings.trimmedImageWidth * _settings.trimmedImageHeight);
+	// Factors of 2 involved: because of SingleFT()
+	// (also one from the fact that normF excludes a factor of two?)
+	realUV *= _infoPerChannel[entry.outputChannelIndex].normalizationFactor / sqrt(0.5*_settings.trimmedImageWidth * _settings.trimmedImageHeight);
+	imagUV *= _infoPerChannel[entry.outputChannelIndex].normalizationFactor / sqrt(0.5*_settings.trimmedImageWidth * _settings.trimmedImageHeight);
 	WSCFitsWriter writer(createWSCFitsWriter(entry, isImaginary));
 	writer.WriteUV(prefix+"-real.fits", realUV.data());
 	writer.WriteUV(prefix+"-imag.fits", imagUV.data());

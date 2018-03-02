@@ -384,18 +384,19 @@ void MSGridderBase::readAndWeightVisibilities(MSProvider& msProvider, InversionR
 			v = rowData.uvw[1] / curBand.ChannelWavelength(ch),
 			imageWeight = PrecalculatedWeightInfo()->GetWeight(u, v);
 		_scratchWeights[ch] = imageWeight;
-		// Visibility weight sum is the sum of weights excluding imaging weights
-		_visibilityWeightSum += *weightIter;
-		if(*weightIter != 0.0f)
-			++_griddedVisibilityCount;
 		
 		for(size_t p=0; p!=PolarizationCount; ++p)
 		{
-			_maxGriddedWeight = std::max(*weightIter, _maxGriddedWeight);
-			*weightIter *= imageWeight;
-			// Total weight includes imaging weights
-			if(p == 0)
-				_totalWeight += *weightIter;
+			double cumWeight = *weightIter * imageWeight;
+			if(p == 0 && cumWeight != 0.0) {
+				// Visibility weight sum is the sum of weights excluding imaging weights
+				_visibilityWeightSum += *weightIter;
+				_maxGriddedWeight = std::max(cumWeight, _maxGriddedWeight);
+				++_griddedVisibilityCount;
+				// Total weight includes imaging weights
+				_totalWeight += cumWeight;
+			}
+			*weightIter = cumWeight;
 			*dataIter *= *weightIter;
 			++dataIter;
 			++weightIter;

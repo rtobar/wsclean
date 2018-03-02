@@ -386,12 +386,7 @@ void WSMSGridder::Invert()
 		Logger::Debug << '\n';
 	}
 	
-	if(NormalizeForWeighting())
-		_gridder->FinalizeImage(1.0/totalWeight(), false);
-	else {
-		Logger::Info << "Not dividing by normalization factor of " << totalWeight()/2.0 << ".\n";
-		_gridder->FinalizeImage(2.0, true);
-	}
+	_gridder->FinalizeImage(1.0/totalWeight(), false);
 	Logger::Info << "Gridded visibility count: " << double(GriddedVisibilityCount());
 	if(Weighting().IsNatural())
 		Logger::Info << ", effective count after weighting: " << EffectiveGriddedVisibilityCount();

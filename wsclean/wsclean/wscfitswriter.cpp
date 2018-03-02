@@ -78,8 +78,6 @@ void WSCFitsWriter::setGridderConfiguration(const WSCleanSettings& settings, con
 
 void WSCFitsWriter::setGridderKeywords(const MSGridderBase& gridder)
 {
-	/* This represents the weight of the image when averaging */
-	_writer.SetExtraKeyword("WSCIMGWG", gridder.ImageWeight());
 	/* This is the normalization factor that was applied. The factor is useful
 	 * to undo the normalization for e.g. conversion to Kelvins. */ 
 	_writer.SetExtraKeyword("WSCDATAC", gridder.DataColumnName());
