@@ -119,7 +119,7 @@ void LBeamImageMaker::makeBeamForMS(PrimaryBeamImageSet& beamImages, MSProvider&
 		casacore::ROArrayMeasColumn<casacore::MDirection> tileBeamDirColumn(fieldTable, "LOFAR_TILE_BEAM_DIR");
 		_tileBeamDir = *(tileBeamDirColumn(0).data());
 	} else {
-		throw std::runtime_error("LOFAR_TILE_BEAM_DIR column not found");
+		_tileBeamDir = _delayDir;
 	}
 	
 	std::vector<Station::Ptr> stations(aTable.nrow());

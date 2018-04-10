@@ -177,7 +177,7 @@ private:
 		uint64_t channelCount;
 		uint64_t channelStart;
 		uint32_t dataDescId;
-		bool hasModel, hasWeights;
+		bool hasModel;
 	} _partHeader;
 	
 	static std::string getPartPrefix(const std::string& msPath, size_t partIndex, PolarizationEnum pol, size_t dataDescId, const std::string& tempDir);

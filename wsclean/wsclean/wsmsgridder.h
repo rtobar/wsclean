@@ -13,7 +13,7 @@
 #include <casacore/casa/Arrays/Array.h>
 #include <casacore/tables/Tables/ArrayColumn.h>
 
-#include <boost/thread/thread.hpp>
+#include <thread>
 
 namespace casacore {
 	class MeasurementSet;
@@ -47,6 +47,12 @@ class WSMSGridder : public MSGridderBase
 			_gridder.reset();
 		}
 		
+		void SetGridAtLOFARCentroid(bool gridAtLOFARCentroid, size_t fullResWidth)
+		{
+			_gridAtLOFARCentroid = gridAtLOFARCentroid;
+			_fullResWidth = fullResWidth;
+		}
+		
 	private:
 		struct InversionWorkSample
 		{
@@ -60,11 +66,12 @@ class WSMSGridder : public MSGridderBase
 			size_t rowId, dataDescId;
 		};
 		
-		void gridMeasurementSet(MSData &msData);
-		void countSamplesPerLayer(MSData &msData);
+		void gridMeasurementSet(MSData& msData);
+		void gridLOFARCentroidMeasurementSet(MSData& msData);
+		void countSamplesPerLayer(MSData& msData);
 		virtual size_t getSuggestedWGridSize() const  ;
 
-		void predictMeasurementSet(MSData &msData);
+		void predictMeasurementSet(MSData& msData);
 
 		void workThread(ao::lane<InversionRow>* workLane)
 		{
@@ -84,10 +91,12 @@ class WSMSGridder : public MSGridderBase
 		void predictWriteThread(ao::lane<PredictionWorkItem>* samplingWorkLane, const MSData* msData);
 
 		std::unique_ptr<WStackingGridder> _gridder;
-		std::unique_ptr<ao::lane<InversionWorkSample>[]> _inversionCPULanes;
-		std::unique_ptr<boost::thread_group> _threadGroup;
+		std::vector<ao::lane<InversionWorkSample>> _inversionCPULanes;
+		std::vector<std::thread> _threadGroup;
 		size_t _cpuCount, _laneBufferSize;
 		int64_t _memSize;
+		bool _gridAtLOFARCentroid;
+		size_t _fullResWidth;
 		ImageBufferAllocator* _imageBufferAllocator;
 };
 

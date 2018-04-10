@@ -173,6 +173,9 @@ void CommandLine::printHelp()
 		"   to calculate this is with <baseline in nr. of lambdas> * 2pi * <acceptable integration in s> / (24*60*60).\n"
 		"-simulate-noise <stddev-in-jy>\n"
 		"   Will replace every visibility by a Gaussian distributed value with given standard deviation before imaging.\n"
+		"-lofar-centroids <nch fullres>\n"
+		"   Place visibilities on the high-resolution centroid uv position, by using the\n"
+		"   LOFAR fullres flag information that is generated when averaging with DPPP.\n"
 		"-grid-with-beam\n"
 		"   Apply a-terms to correct for the primary beam. This is only possible when IDG is enabled.\n"
 		"-use-idg\n"
@@ -194,6 +197,10 @@ void CommandLine::printHelp()
 		"   Default: image all time steps.\n"
 		"-intervals-out <count>\n"
 		"   Number of intervals to image inside the selected global interval. Default: 1\n"
+		"-even-timesteps\n"
+		"   Only select even timesteps. Can be used together with -odd-timesteps to determine noise values.\n"
+		"-odd-timesteps\n"
+		"   Only select odd timesteps.\n"
 		"-channel-range <start-channel> <end-channel>\n"
 		"   Only image the given channel range. Indices specify channel indices, end index is exclusive.\n"
 		"   Default: image all channels.\n"
@@ -738,6 +745,14 @@ int CommandLine::Run(int argc, char* argv[])
 			if(param == "intervalsout")
 				deprecated(param, "intervals-out");
 		}
+		else if(param == "even-timesteps")
+		{
+			settings.evenOddTimesteps = MSSelection::EvenTimesteps;
+		}
+		else if(param == "odd-timesteps")
+		{
+			settings.evenOddTimesteps = MSSelection::OddTimesteps;
+		}
 		else if(param == "channel-range" || param == "channelrange")
 		{
 			settings.startChannel = parse_size_t(argv[argi+1], "channel-range");
@@ -1105,6 +1120,12 @@ int CommandLine::Run(int argc, char* argv[])
 			++argi;
 			settings.simulateNoise = true;
 			settings.simulatedNoiseStdDev = parse_double(argv[argi], 0.0, "simulate-noise");
+		}
+		else if(param == "lofar-centroids")
+		{
+			settings.useLofarCentroids = true;
+			++argi;
+			settings.fullResWidth = atoi(argv[argi]);
 		}
 		else if(param == "grid-with-beam")
 		{
