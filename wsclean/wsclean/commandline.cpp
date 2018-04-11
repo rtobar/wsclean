@@ -68,6 +68,10 @@ void CommandLine::printHelp()
 		"   Assume the visibilities have already been beam-corrected for the reference direction.\n"
 		"-save-psf-pb\n"
 		"   When applying beam correction, also save the primary-beam corrected PSF image.\n"
+		"-pb-undersampling <factor>\n"
+		"   Normally, the primary beam is calculated at a lower resolution and interpolated, because calculating the beam is\n"
+		"   computationally expensive. The amount of undersampling can be controlled by this parameter, or set to '1' for no\n"
+		"   undersampling. Default: 8.\n"
 		"\n"
 		"  ** WEIGHTING OPTIONS **\n"
 		"-weight <weightmode>\n"
@@ -628,6 +632,11 @@ int CommandLine::Run(int argc, char* argv[])
 		else if(param == "save-psf-pb")
 		{
 			settings.savePsfPb = true;
+		}
+		else if(param == "pb-undersampling")
+		{
+			++argi;
+			settings.primaryBeamUndersampling = parse_size_t(argv[argi], "pb-undersampling");
 		}
 		else if(param == "negative")
 		{

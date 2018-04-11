@@ -64,6 +64,7 @@ public:
 	bool useLofarCentroids;
 	size_t fullResOffset, fullResWidth, fullResPad;
 	bool applyPrimaryBeam, reusePrimaryBeam, useDifferentialLofarBeam, savePsfPb;
+	size_t primaryBeamUndersampling;
 	bool useIDG, gridWithBeam;
 	enum IDGMode { IDG_DEFAULT, IDG_GPU, IDG_CPU, IDG_HYBRID } idgMode;
 	enum GridModeEnum gridMode;
@@ -181,6 +182,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	applyPrimaryBeam(false), reusePrimaryBeam(false),
 	useDifferentialLofarBeam(false),
 	savePsfPb(false),
+	primaryBeamUndersampling(8),
 	useIDG(false),
 	gridWithBeam(false),
 	idgMode(IDG_DEFAULT),
