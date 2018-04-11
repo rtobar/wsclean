@@ -317,7 +317,7 @@ struct PartitionFiles
  * - Start channel in MS
  * - Total weight in part
  * - Data    (single polarization, as requested)
- * - Weights (single, only needed when imaging PSF)
+ * - Weights (single)
  * - Model, optionally
  */
 PartitionedMS::Handle PartitionedMS::Partition(const string& msPath, const std::vector<ChannelRange>& channels, MSSelection& selection, const string& dataColumnName, bool includeModel, bool initialModelRequired, const WSCleanSettings& settings)
@@ -462,7 +462,7 @@ PartitionedMS::Handle PartitionedMS::Partition(const string& msPath, const std::
 						copyData(dataBuffer.data(), partStartCh, partEndCh, msPolarizations, modelArray, p);
 						f.model->write(reinterpret_cast<char*>(dataBuffer.data()), (partEndCh - partStartCh) * sizeof(std::complex<float>) * polarizationsPerFile);
 						if(!f.model->good())
-							throw std::runtime_error("Error writing to temporary data file");
+							throw std::runtime_error("Error writing to temporary model data file");
 					}
 					
 					copyWeights(weightBuffer.data(), partStartCh, partEndCh, msPolarizations, dataArray, weightSpectrumArray, flagArray, p);
@@ -615,7 +615,7 @@ void PartitionedMS::unpartition(const PartitionedMS::Handle::HandleData& handle)
 		size_t selectedRowCountForDebug = 0;
 		for(size_t row=startRow; row!=endRow; ++row)
 		{
-			progress.SetProgress(row - startRow, startRow - endRow);
+			progress.SetProgress(row - startRow, endRow - startRow);
 			const int
 				a1 = antenna1Column(row), a2 = antenna2Column(row),
 				fieldId = fieldIdColumn(row), dataDescId = dataDescIdColumn(row);
@@ -668,7 +668,7 @@ void PartitionedMS::unpartition(const PartitionedMS::Handle::HandleData& handle)
 
 PartitionedMS::Handle::HandleData::~HandleData()
 {
-	if(_modelUpdateRequired && !_initialModelRequired)
+	if(_modelUpdateRequired)
 		PartitionedMS::unpartition(*this);
 	
 	Logger::Info << "Cleaning up temporary files...\n";
