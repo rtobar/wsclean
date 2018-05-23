@@ -74,26 +74,6 @@ include_directories(${GSL_INCLUDE_DIR})
 
 include(CheckCXXSourceCompiles)
 
-check_cxx_source_compiles(
-"#include \"${CMAKE_CURRENT_SOURCE_DIR}/aocommon/uvector_11.h\"
-int main(int argc, char* argv[])
-{
-return 0;
-}" UVECTOR_COMPILES)
-check_cxx_source_compiles(
-"#include \"${CMAKE_CURRENT_SOURCE_DIR}/aocommon/lane_11.h\"
-int main(int argc, char* argv[])
-{
-return 0;
-}" LANE11_COMPILES)
-
-if(UVECTOR_COMPILES)
-  add_definitions(-DHAVE_UVECTOR)
-endif(UVECTOR_COMPILES)
-if(LANE11_COMPILES)
-  add_definitions(-DHAVE_LANE11)
-endif(LANE11_COMPILES)
-
 # GSL is required for WSClean, so always available
 add_definitions(-DHAVE_GSL)
 
