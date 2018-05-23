@@ -4,6 +4,9 @@
 
 #include "../banddata.h"
 
+#include "../wsclean/logger.h"
+#include "../units/radeccoord.h"
+
 #include <casacore/measures/TableMeasures/ArrayMeasColumn.h>
 
 #include <StationResponse/LofarMetaDataUtil.h>
@@ -29,8 +32,10 @@ LBeamEvaluator::LBeamEvaluator(casacore::MeasurementSet& ms) : _ms(ms)
 		casacore::ROArrayMeasColumn<casacore::MDirection> tileBeamDirColumn(fieldTable, "LOFAR_TILE_BEAM_DIR");
 		_tileBeamDir = *(tileBeamDirColumn(0).data());
 	} else {
-		throw std::runtime_error("LOFAR_TILE_BEAM_DIR column not found");
+		_tileBeamDir = _delayDir;
 	}
+	
+	Logger::Debug << "Using delay direction: " << RaDecCoord::RaDecToString(_tileBeamDir.getValue().getVector()[0], _tileBeamDir.getValue().getVector()[1]) << '\n';
 	
 	_stations.resize(aTable.nrow());
 	readStations(ms, _stations.begin());

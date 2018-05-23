@@ -439,7 +439,7 @@ void WSClean::RunClean()
 
 	_settings.Propogate();
 	
-	_settings.GetMSSelection(_globalSelection);
+	_globalSelection = _settings.GetMSSelection();
 	MSSelection fullSelection = _globalSelection;
 	
 	for(size_t intervalIndex=0; intervalIndex!=_settings.intervalsOut; ++intervalIndex)
@@ -461,8 +461,11 @@ void WSClean::RunClean()
 		
 		if(_settings.useIDG)
 			_gridder.reset(new IdgMsGridder(_settings));
-		else
+		else {
 			_gridder.reset(new WSMSGridder(&_imageAllocator, _settings.threadCount, _settings.memFraction, _settings.absMemLimit));
+			static_cast<WSMSGridder*>(_gridder.get())->SetGridAtLOFARCentroid(
+				_settings.useLofarCentroids, _settings.fullResWidth);
+		}
 		
 		for(size_t groupIndex=0; groupIndex!=_imagingTable.IndependentGroupCount(); ++groupIndex)
 		{
@@ -562,7 +565,7 @@ void WSClean::RunPredict()
 	
 	_settings.Propogate();
 	
-	_settings.GetMSSelection(_globalSelection);
+	_globalSelection = _settings.GetMSSelection();
 	MSSelection fullSelection = _globalSelection;
 	
 	for(size_t intervalIndex=0; intervalIndex!=_settings.intervalsOut; ++intervalIndex)

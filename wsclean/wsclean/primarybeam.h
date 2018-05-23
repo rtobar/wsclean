@@ -196,6 +196,7 @@ private:
 		lbeam.SetUseDifferentialBeam(_settings.useDifferentialLofarBeam);
 		lbeam.SetImageDetails(_settings.trimmedImageWidth, _settings.trimmedImageHeight, _settings.pixelScaleX, _settings.pixelScaleY, _phaseCentreRA, _phaseCentreDec, _phaseCentreDL, _phaseCentreDM);
 		lbeam.SetImageWeight(imageWeightCache);
+		lbeam.SetUndersampling(_settings.primaryBeamUndersampling);
 		lbeam.Make(beamImages);
 	}
 };

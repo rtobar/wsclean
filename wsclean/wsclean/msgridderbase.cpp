@@ -369,7 +369,10 @@ void MSGridderBase::readAndWeightVisibilities(MSProvider& msProvider, InversionR
 	case UnitVisibilityWeighting:
 		// Set the visibility weights to one
 		for(size_t chp=0; chp!=curBand.ChannelCount() * PolarizationCount; ++chp)
-			weightBuffer[chp] = 1.0f;
+		{
+			if(weightBuffer[chp] != 0.0)
+				weightBuffer[chp] = 1.0f;
+		}
 		break;
 	}
 	

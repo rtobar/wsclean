@@ -12,17 +12,13 @@
 
 #include "gridmodeenum.h"
 
-// Forward declare boost::mutex to avoid header inclusion
-namespace boost
-{
-	class mutex;
-}
-
 #include <cmath>
 #include <cstring>
 #include <complex>
+#include <mutex>
 #include <vector>
 #include <stack>
+#include <thread>
 
 class ImageBufferAllocator;
 
@@ -596,8 +592,8 @@ class WStackingGridder
 		void initializeSqrtLMLookupTableForSampling();
 		void initializeLayeredUVData(size_t n);
 		void freeLayeredUVData() { initializeLayeredUVData(0); }
-		void fftToImageThreadFunction(boost::mutex *mutex, std::stack<size_t> *tasks, size_t threadIndex);
-		void fftToUVThreadFunction(boost::mutex *mutex, std::stack<size_t> *tasks);
+		void fftToImageThreadFunction(std::mutex *mutex, std::stack<size_t> *tasks, size_t threadIndex);
+		void fftToUVThreadFunction(std::mutex *mutex, std::stack<size_t> *tasks);
 		void finalizeImage(double multiplicationFactor, std::vector<double*>& dataArray);
 		void initializePrediction(const double *image, std::vector<double*>& dataArray);
 		

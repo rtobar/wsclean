@@ -7,9 +7,6 @@
 #include <iostream>
 #include <fstream>
 
-#include <boost/thread/thread.hpp>
-#include <boost/thread/mutex.hpp>
-
 WStackingGridder::WStackingGridder(size_t width, size_t height, double pixelSizeX, double pixelSizeY, size_t fftThreadCount, ImageBufferAllocator* allocator, size_t kernelSize, size_t overSamplingFactor) :
 	_width(width),
 	_height(height),
@@ -138,14 +135,15 @@ void WStackingGridder::StartPredictionPass(size_t passIndex)
 	for(size_t layer=0; layer!=nLayersInPass; ++layer)
 		layers.push(layer);
 	
-	boost::mutex mutex;
-	boost::thread_group threadGroup;
+	std::mutex mutex;
+	std::vector<std::thread> threadGroup;
 	for(size_t i=0; i!=std::min(_nFFTThreads, nLayersInPass); ++i)
-		threadGroup.add_thread(new boost::thread(&WStackingGridder::fftToUVThreadFunction, this, &mutex, &layers));
-	threadGroup.join_all();
+		threadGroup.emplace_back(&WStackingGridder::fftToUVThreadFunction, this, &mutex, &layers);
+	for(std::thread& thr : threadGroup)
+		thr.join();
 }
 
-void WStackingGridder::fftToImageThreadFunction(boost::mutex *mutex, std::stack<size_t> *tasks, size_t threadIndex)
+void WStackingGridder::fftToImageThreadFunction(std::mutex *mutex, std::stack<size_t> *tasks, size_t threadIndex)
 {
 	const size_t imgSize = _width * _height;
 	std::complex<double> *fftwIn = _imageBufferAllocator->AllocateComplex(imgSize);
@@ -153,7 +151,7 @@ void WStackingGridder::fftToImageThreadFunction(boost::mutex *mutex, std::stack<
 	std::complex<double> *fftwOut = _imageBufferAllocator->AllocateComplex(imgSize);
 	// reinterpret_cast<std::complex<double>*>(fftw_malloc(imgSize * sizeof(double) * 2));
 	
-	boost::mutex::scoped_lock lock(*mutex);
+	std::unique_lock<std::mutex> lock(*mutex);
 	fftw_plan plan =
 		fftw_plan_dft_2d(_height, _width,
 			reinterpret_cast<fftw_complex*>(fftwIn), reinterpret_cast<fftw_complex*>(fftwOut),
@@ -188,7 +186,7 @@ void WStackingGridder::fftToImageThreadFunction(boost::mutex *mutex, std::stack<
 	_imageBufferAllocator->Free(fftwOut);
 }
 
-void WStackingGridder::fftToUVThreadFunction(boost::mutex *mutex, std::stack<size_t> *tasks)
+void WStackingGridder::fftToUVThreadFunction(std::mutex *mutex, std::stack<size_t> *tasks)
 {
 	const size_t imgSize = _width * _height;
 	std::complex<double> *fftwIn = _imageBufferAllocator->AllocateComplex(imgSize);
@@ -196,7 +194,7 @@ void WStackingGridder::fftToUVThreadFunction(boost::mutex *mutex, std::stack<siz
 	std::complex<double> *fftwOut = _imageBufferAllocator->AllocateComplex(imgSize);
 		// reinterpret_cast<std::complex<double>*>(fftw_malloc(imgSize * sizeof(double) * 2));
 	
-	boost::mutex::scoped_lock lock(*mutex);
+	std::unique_lock<std::mutex> lock(*mutex);
 	fftw_plan plan =
 		fftw_plan_dft_2d(_height, _width,
 			reinterpret_cast<fftw_complex*>(fftwIn), reinterpret_cast<fftw_complex*>(fftwOut),
@@ -240,11 +238,12 @@ void WStackingGridder::FinishInversionPass()
 	for(size_t layer=0; layer!=nLayersInPass; ++layer)
 		layers.push(layer);
 	
-	boost::mutex mutex;
-	boost::thread_group threadGroup;
+	std::mutex mutex;
+	std::vector<std::thread> threadGroup;
 	for(size_t i=0; i!=std::min(_nFFTThreads, nLayersInPass); ++i)
-		threadGroup.add_thread(new boost::thread(&WStackingGridder::fftToImageThreadFunction, this, &mutex, &layers, i));
-	threadGroup.join_all();
+		threadGroup.emplace_back(&WStackingGridder::fftToImageThreadFunction, this, &mutex, &layers, i);
+	for(std::thread& thr : threadGroup)
+		thr.join();
 }
 
 void WStackingGridder::makeKernels()

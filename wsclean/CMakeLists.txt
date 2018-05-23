@@ -108,7 +108,7 @@ add_library(wsclean-object OBJECT
   msproviders/averagingmsrowprovider.cpp msproviders/contiguousms.cpp msproviders/directmsrowprovider.cpp msproviders/msprovider.cpp msproviders/msrowprovider.cpp msproviders/partitionedms.cpp
   multiscale/multiscalealgorithm.cpp multiscale/multiscaletransforms.cpp multiscale/threadeddeconvolutiontools.cpp
   wsclean/commandline.cpp wsclean/imagingtable.cpp wsclean/logger.cpp wsclean/msgridderbase.cpp wsclean/wscfitswriter.cpp wsclean/wsclean.cpp
-  wsclean/wscleansettings.cpp wsclean/wsmsgridder.cpp wsclean/wstackinggridder.cpp
+  wsclean/wscleansettings.cpp wsclean/wsmsgridder.cpp wsclean/lofarcentroidgridding.cpp wsclean/wstackinggridder.cpp
 	${LBEAM_FILES} ${IDG_FILES})
 
 set_property(TARGET wsclean-object PROPERTY POSITION_INDEPENDENT_CODE 1)

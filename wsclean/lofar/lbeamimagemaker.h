@@ -54,6 +54,11 @@ public:
 		_useDifferentialBeam = useDifferentialBeam;
 	}
 	
+	void SetUndersampling(size_t undersamplingFactor)
+	{
+		_undersample = undersamplingFactor;
+	}
+	
 private:
 #ifdef HAVE_LOFAR_BEAM
 	class WeightMatrix

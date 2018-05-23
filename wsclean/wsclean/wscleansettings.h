@@ -32,6 +32,7 @@ public:
 	double imagePadding;
 	size_t widthForNWCalculation, heightForNWCalculation;
 	size_t channelsOut, intervalsOut;
+	enum MSSelection::EvenOddSelection evenOddTimesteps;
 	bool divideChannelsByGaps;
 	double pixelScaleX, pixelScaleY;
 	std::string restoreModel, restoreInput, restoreOutput;
@@ -60,7 +61,10 @@ public:
 	bool dftPrediction, dftWithBeam;
 	std::string temporaryDirectory;
 	bool forceReorder, forceNoReorder, subtractModel, modelUpdateRequired, mfsWeighting;
+	bool useLofarCentroids;
+	size_t fullResOffset, fullResWidth, fullResPad;
 	bool applyPrimaryBeam, reusePrimaryBeam, useDifferentialLofarBeam, savePsfPb;
+	size_t primaryBeamUndersampling;
 	bool useIDG, gridWithBeam;
 	enum IDGMode { IDG_DEFAULT, IDG_GPU, IDG_CPU, IDG_HYBRID } idgMode;
 	enum GridModeEnum gridMode;
@@ -109,13 +113,15 @@ public:
 	 * @}
 	 */
 	
-	void GetMSSelection(MSSelection& selection)
+	MSSelection GetMSSelection() const
 	{
-		selection = MSSelection();
+		MSSelection selection;
 		selection.SetInterval(startTimestep, endTimestep);
 		selection.SetFieldId(fieldId);
 		selection.SetMinUVWInM(minUVWInMeters);
 		selection.SetMaxUVWInM(maxUVWInMeters);
+		selection.SetEvenOrOddTimesteps(evenOddTimesteps);
+		return selection;
 	}
 	
 	bool IsSpectralFittingEnabled() const {
@@ -134,6 +140,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	imagePadding(1.2),
 	widthForNWCalculation(0), heightForNWCalculation(0),
 	channelsOut(1), intervalsOut(1),
+	evenOddTimesteps(MSSelection::AllTimesteps),
 	divideChannelsByGaps(false),
 	pixelScaleX(0.0), pixelScaleY(0.0),
 	restoreModel(), restoreInput(), restoreOutput(),
@@ -170,9 +177,12 @@ inline WSCleanSettings::WSCleanSettings() :
 	subtractModel(false),
 	modelUpdateRequired(true),
 	mfsWeighting(false),
+	useLofarCentroids(false),
+	fullResOffset(0), fullResWidth(0), fullResPad(0),
 	applyPrimaryBeam(false), reusePrimaryBeam(false),
 	useDifferentialLofarBeam(false),
 	savePsfPb(false),
+	primaryBeamUndersampling(8),
 	useIDG(false),
 	gridWithBeam(false),
 	idgMode(IDG_DEFAULT),
