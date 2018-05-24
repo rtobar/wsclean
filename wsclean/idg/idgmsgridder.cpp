@@ -20,13 +20,14 @@ IdgMsGridder::IdgMsGridder(const WSCleanSettings& settings) :
 	_outputProvider(nullptr),
 	_settings(settings),
 	_proxyType(idg::api::Type::CPU_OPTIMIZED),
-	_buffersize(256)
+	_buffersize(100)
 {
 	IdgConfiguration::Read(_proxyType, _buffersize, _options);
 	setIdgType();
 	_bufferset = std::unique_ptr<idg::api::BufferSet>(
 		idg::api::BufferSet::create(_proxyType));
-		if(_settings.gridWithBeam) _options["a_term_kernel_size"] = float(5.0);
+	if(_settings.gridWithBeam) _options["a_term_kernel_size"] = float(5.0);
+
 }
 
 IdgMsGridder::~IdgMsGridder()
@@ -49,10 +50,13 @@ void IdgMsGridder::Invert()
 	// is the dirty of Stokes I, which should thus overwrite all images.
 	if(Polarization() == Polarization::StokesI)
 	{
+		if (!_metaDataCache->average_beam) _metaDataCache->average_beam = std::make_shared<AverageBeam>();
+		_average_beam = std::dynamic_pointer_cast<AverageBeam>(_metaDataCache->average_beam);
+		std::cout << "_average_beam: " << _average_beam << std::endl;
+
 		std::vector<MSData> msDataVector;
 		initializeMSDataVector(msDataVector);
 		
-		resetVisibilityCounters();
 
 		double max_w = 0;
 		for(size_t i=0; i!=MeasurementSetCount(); ++i)
@@ -61,23 +65,77 @@ void IdgMsGridder::Invert()
 		}
 
 		_bufferset->init(width, _actualPixelSizeX, max_w+1.0, _options);
-		for(size_t i=0; i!=MeasurementSetCount(); ++i)
+
+		if (DoImagePSF())
 		{
-			// Adds the gridding result to _image member
-			gridMeasurementSet(msDataVector[i]);
+			// Computing the PSF
+			// For the PSF the aterm is computed but not applied
+			// The aterm is computed so that the average beam can be computed
+			_bufferset->set_apply_aterm(false);
+			_bufferset->init_compute_avg_beam(idg::api::compute_flags::compute_and_grid);
+			resetVisibilityCounters();
+			for(size_t i=0; i!=MeasurementSetCount(); ++i)
+			{
+				// Adds the gridding result to _image member
+				gridMeasurementSet(msDataVector[i]);
+			}
+			_bufferset->finalize_compute_avg_beam();
+			_average_beam->set_scalar_beam(_bufferset->get_scalar_beam());
+			_average_beam->set_matrix_inverse_beam(_bufferset->get_matrix_inverse_beam());
+			_image.assign(4 * width * height, 0.0);
+			_bufferset->get_image(_image.data());
+
+			// Normalize by total weight
+			std::cout << "total weight: " << totalWeight() << std::endl;
+
+			for(size_t ii=0; ii != 4 * width * height; ++ii)
+			{
+				_image[ii] = _image[ii]/totalWeight();
+			}
 		}
-		
-		std::cout << "total weight: " << totalWeight() << std::endl;
-		_image.assign(4 * width * height, 0.0);
-		_bufferset->get_image(_image.data());
-		
-		// Normalize by total weight
-		
-		for(size_t ii=0; ii != 4 * width * height; ++ii)
+		else
 		{
-			_image[ii] = _image[ii]/totalWeight();
+			// Compute a dirty/residual image
+			// with application of the a term
+			_bufferset->set_apply_aterm(true);
+
+			// Because compensation for the average beam happens at subgrid level
+			// it needs to be known in advance.
+			// If it is not in the cache it needs to be computed first
+			if (!_average_beam->is_empty())
+			{
+				// Set avg beam from cache
+				std::cout << "average beam in cache is not empty, use it." << std::endl;
+				_bufferset->set_scalar_beam(_average_beam->get_scalar_beam());
+				_bufferset->set_matrix_inverse_beam(_average_beam->get_matrix_inverse_beam());
+			}
+			else
+			{
+				// Compute avg beam
+				std::cout << "Computing average beam..." << std::endl;
+				_bufferset->init_compute_avg_beam(idg::api::compute_flags::compute_only);
+				for(size_t i=0; i!=MeasurementSetCount(); ++i)
+				{
+					gridMeasurementSet(msDataVector[i]);
+				}
+				_bufferset->finalize_compute_avg_beam();
+				std::cout << "Finished computing average beam." << std::endl;
+				_average_beam->set_scalar_beam(_bufferset->get_scalar_beam());
+				_average_beam->set_matrix_inverse_beam(_bufferset->get_matrix_inverse_beam());
+			}
+
+			std::cout << "Gridding measurementsets..." << std::endl;
+			resetVisibilityCounters();
+			for(size_t i=0; i!=MeasurementSetCount(); ++i)
+			{
+				// Adds the gridding result to _image member
+				gridMeasurementSet(msDataVector[i]);
+			}
+			std::cout << "Finished gridding measurementsets." << std::endl;
+			_image.assign(4 * width * height, 0.0);
+			_bufferset->get_image(_image.data());
 		}
-		
+
 		// result is now in _image member
 		// Can be accessed by subsequent calls to ImageRealResult()
 		
@@ -107,13 +165,13 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 	
 	std::unique_ptr<LofarBeamTerm> aTermMaker;
 	ao::uvector<std::complex<float>> aTermBuffer;
-	double aTermUpdateInterval = 900.0; // 15min
+	double aTermUpdateInterval = 120.0; // 2min
 	if(_settings.gridWithBeam)
 	{
 		size_t subgridsize = _bufferset->get_subgridsize();
-		double dl = _bufferset->get_subgrid_pixelsize();
-		double dm = _bufferset->get_subgrid_pixelsize();
-		double pdl = PhaseCentreDL(), pdm = PhaseCentreDM();
+		double dl = -_bufferset->get_subgrid_pixelsize();
+		double dm = -_bufferset->get_subgrid_pixelsize(); // TODO
+		double pdl = PhaseCentreDL(), pdm = PhaseCentreDM(); // TODO half pixel shift here?
 		aTermMaker.reset(new LofarBeamTerm(ms, subgridsize, subgridsize, dl, dm, pdl, pdm, _settings.useDifferentialLofarBeam));
 		aTermBuffer.resize(subgridsize*subgridsize*4*nr_stations);
 	}
@@ -131,8 +189,6 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 		MSProvider::MetaData metaData;
 		msData.msProvider->ReadMeta(metaData);
 
-		if (metaData.uInM*metaData.uInM + metaData.vInM*metaData.vInM > max_baseline*max_baseline) continue;
-
 		if(currentTime != metaData.time)
 		{
 			currentTime = metaData.time;
@@ -141,7 +197,18 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 			if(_settings.gridWithBeam && currentTime - lastATermUpdate > aTermUpdateInterval)
 			{
 				Logger::Debug << "Calculating a-terms for timestep " << timeIndex << "\n";
+
 				aTermMaker->Calculate(aTermBuffer.data(), currentTime + aTermUpdateInterval*0.5, _selectedBands.CentreFrequency());
+// 				DEBUG
+// 				size_t subgridsize = _bufferset->get_subgridsize();
+// 				for(size_t i = 0; i < subgridsize*subgridsize*nr_stations; i++)
+// 				{
+// 					aTermBuffer[i*4] = 1.0;
+// 					aTermBuffer[i*4+1] = 3.0;
+// 					aTermBuffer[i*4+2] = 0.0;
+// 					aTermBuffer[i*4+3] = 2.0;
+// 				}
+
 				_bufferset->get_gridder(metaData.dataDescId)->set_aterm(timeIndex, aTermBuffer.data());
 				lastATermUpdate = currentTime;
 			}
@@ -163,7 +230,7 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 		rowData.uvw[1] = -metaData.vInM;  // DEBUG vdtol, flip axis
 		rowData.uvw[2] = -metaData.wInM;  //
 
-		_bufferset->get_gridder(rowData.dataDescId)->grid_visibilities(timeIndex, metaData.antenna1, metaData.antenna2, rowData.uvw, rowData.data);
+		_bufferset->get_gridder(rowData.dataDescId)->grid_visibilities(timeIndex, metaData.antenna1, metaData.antenna2, rowData.uvw, rowData.data, weightBuffer.data());
 	}
 	
 	_bufferset->finished();
@@ -182,6 +249,13 @@ void IdgMsGridder::Predict(double* image)
 	if (Polarization() == Polarization::StokesI)
 	{
 		_image.assign(4 * width * height, 0.0);
+		if (!_metaDataCache->average_beam)
+		{
+			std::cout << "no average_beam in cache, creating an empty one." << std::endl;
+			_metaDataCache->average_beam = std::make_shared<AverageBeam>();
+		}
+		_average_beam = std::dynamic_pointer_cast<AverageBeam>(_metaDataCache->average_beam);
+		std::cout << "_average_beam: " << _average_beam << std::endl;
 	}
 
 	size_t polIndex = Polarization::StokesToIndex(Polarization());
@@ -189,10 +263,25 @@ void IdgMsGridder::Predict(double* image)
 		_image[i + polIndex*width*height] = image[i];
 
 	// Stokes V is the last requested pol, unless only Stokes I is imaged. Only when the last
-	// polarization is requested, do the actual prediction.
+	// polarization is given, do the actual prediction.
 	if (Polarization() == Polarization::StokesV || (Polarization() == Polarization::StokesI && _settings.polarizations.size()==1))
 	{
 		// Do actual predict
+
+		bool do_scale = false;
+		if (!_average_beam->is_empty())
+		{
+			// Set avg beam from cache
+			std::cout << "setting beam from cache" << std::endl;
+			_bufferset->set_scalar_beam(_average_beam->get_scalar_beam());
+			do_scale = true;
+		}
+		else
+		{
+			std::cout << "scalar beam is empty." << std::endl;
+		}
+
+
 		std::vector<MSData> msDataVector;
 		initializeMSDataVector(msDataVector);
 
@@ -203,7 +292,7 @@ void IdgMsGridder::Predict(double* image)
 		}
 
 		_bufferset->init(width, _actualPixelSizeX, max_w+1.0, _options);
-		_bufferset->set_image(_image.data());
+		_bufferset->set_image(_image.data(), do_scale);
 
 		for(size_t i=0; i!=MeasurementSetCount(); ++i)
 		{
@@ -253,13 +342,13 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 
 	std::unique_ptr<LofarBeamTerm> aTermMaker;
 	ao::uvector<std::complex<float>> aTermBuffer;
-	double aTermUpdateInterval = 900.0; // 15min
+	double aTermUpdateInterval = 120.0; // 15min
 	if(_settings.gridWithBeam)
 	{
 		size_t subgridsize = _bufferset->get_subgridsize();
-		double dl = _bufferset->get_subgrid_pixelsize();
-		double dm = _bufferset->get_subgrid_pixelsize();
-		double pdl = PhaseCentreDL(), pdm = PhaseCentreDM();
+		double dl = -_bufferset->get_subgrid_pixelsize();
+		double dm = -_bufferset->get_subgrid_pixelsize();
+		double pdl = PhaseCentreDL(), pdm = PhaseCentreDM(); // TODO half pixel shift here?
 		aTermMaker.reset(new LofarBeamTerm(ms, subgridsize, subgridsize, dl, dm, pdl, pdm, _settings.useDifferentialLofarBeam));
 		aTermBuffer.resize(subgridsize*subgridsize*4*nr_stations);
 	}
@@ -271,7 +360,6 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 	{
 		MSProvider::MetaData metaData;
 		msData.msProvider->ReadMeta(metaData);
-		if (metaData.uInM*metaData.uInM + metaData.vInM*metaData.vInM > max_baseline*max_baseline) continue;
 
 		size_t provRowId = msData.msProvider->RowId();
 		if(currentTime != metaData.time)
@@ -282,7 +370,18 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 			if(_settings.gridWithBeam && currentTime - lastATermUpdate > aTermUpdateInterval)
 			{
 				Logger::Debug << "Calculating a-terms for timestep " << timeIndex << "\n";
+
 				aTermMaker->Calculate(aTermBuffer.data(), currentTime + aTermUpdateInterval*0.5, _selectedBands.CentreFrequency());
+// 				DEBUG
+// 				size_t subgridsize = _bufferset->get_subgridsize();
+// 				for(size_t i = 0; i < subgridsize*subgridsize*nr_stations; i++)
+// 				{
+// 					aTermBuffer[i*4] = 1.0;
+// 					aTermBuffer[i*4+1] = 3.0;
+// 					aTermBuffer[i*4+2] = 0.0;
+// 					aTermBuffer[i*4+3] = 2.0;
+// 				}
+
 				_bufferset->get_degridder(metaData.dataDescId)->set_aterm(timeIndex, aTermBuffer.data());
 				lastATermUpdate = currentTime;
 			}
@@ -306,9 +405,7 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 
 void IdgMsGridder::predictRow(IDGPredictionRow& row)
 {
-	bool isBufferFull = _bufferset->get_degridder(row.dataDescId)->request_visibilities(row.rowId, row.timeIndex, row.antenna1, row.antenna2, row.uvw);
-
-	if(isBufferFull)
+	while (_bufferset->get_degridder(row.dataDescId)->request_visibilities(row.rowId, row.timeIndex, row.antenna1, row.antenna2, row.uvw))
 	{
 		computePredictionBuffer(row.dataDescId);
 	}
