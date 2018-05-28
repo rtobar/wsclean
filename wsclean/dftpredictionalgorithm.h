@@ -32,8 +32,8 @@ public:
 	size_t ChannelCount() const { return _beamValuesPerChannel.size(); }
 	void InitializeChannelBuffers(size_t channelCount) { _beamValuesPerChannel.resize(channelCount); }
 	void SetUnitaryBeam() {
-		for(std::vector<MC2x2>::iterator i = _beamValuesPerChannel.begin(); i!=_beamValuesPerChannel.end(); ++i)
-			*i = MC2x2::Unity();
+		for(MC2x2& m : _beamValuesPerChannel)
+			m = MC2x2::Unity();
 	}
 private:
 	std::vector<MC2x2> _beamValuesPerChannel;

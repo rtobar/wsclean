@@ -1501,6 +1501,15 @@ void WSClean::fitBeamSize(double& bMaj, double& bMin, double& bPA, const double*
 
 void WSClean::determineBeamSize(double& bMaj, double& bMin, double& bPA, const double* image, double theoreticBeam) const
 {
+	double theoreticBeamWithTaper = theoreticBeam;
+	if(_settings.gaussianTaperBeamSize != 0.0)
+	{
+		if(_settings.gaussianTaperBeamSize > theoreticBeamWithTaper)
+		{
+			theoreticBeamWithTaper = _settings.gaussianTaperBeamSize;
+			Logger::Debug << "Beam is tapered; using " << Angle::ToNiceString(theoreticBeamWithTaper) << " as initial value in PSF fitting.\n";
+		}
+	}
 	if(_settings.manualBeamMajorSize != 0.0)
 	{
 		bMaj = _settings.manualBeamMajorSize;
@@ -1508,16 +1517,16 @@ void WSClean::determineBeamSize(double& bMaj, double& bMin, double& bPA, const d
 		bPA = _settings.manualBeamPA;
 	} else if(_settings.fittedBeam)
 	{
-		fitBeamSize(bMaj, bMin, bPA, image, theoreticBeam*2.0/(_settings.pixelScaleX+_settings.pixelScaleY));
+		fitBeamSize(bMaj, bMin, bPA, image, theoreticBeamWithTaper*2.0/(_settings.pixelScaleX+_settings.pixelScaleY));
 		Logger::Info << "major=" << Angle::ToNiceString(bMaj) << ", minor=" <<
 		Angle::ToNiceString(bMin) << ", PA=" << Angle::ToNiceString(bPA) << ", theoretical=" <<
-		Angle::ToNiceString(theoreticBeam)<< ".\n";
+		Angle::ToNiceString(theoreticBeamWithTaper)<< ".\n";
 	}
 	else if(_settings.theoreticBeam) {
-		bMaj = theoreticBeam;
-		bMin = theoreticBeam;
+		bMaj = theoreticBeamWithTaper;
+		bMin = theoreticBeamWithTaper;
 		bPA = 0.0;
-		Logger::Info << "Beam size is " << Angle::ToNiceString(theoreticBeam) << '\n';
+		Logger::Info << "Beam size is " << Angle::ToNiceString(theoreticBeamWithTaper) << '\n';
 	} else {
 		bMaj = std::numeric_limits<double>::quiet_NaN();
 		bMin = std::numeric_limits<double>::quiet_NaN();

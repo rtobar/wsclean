@@ -51,6 +51,8 @@ public:
 			} while(!boxWasLargeEnough && nIter < 5);
 		}
 		else {
+			if(verbose)
+				std::cout << "Image is as large as the fitting box.\n";
 			fit2DGaussianCentred(image, width, height, beamEst, beamMaj, beamMin, beamPA, verbose);
 		}
 	}
