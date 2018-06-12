@@ -102,7 +102,10 @@ public:
 					
 					double uInLambda = double(int(width)/2-int(x)) / (pixelSizeX * width);
 					double psfVal = std::abs(std::complex<double>(realPsfPtr[x], imagPsfPtr[x]));
-					file << uInLambda << " " << vInLambda << " " << realPtr[x] << " " << imagPtr[x] << " " << psfVal << " " << psfVal*vwSum/nVis << '\n';
+					file
+						<< uInLambda << " " << vInLambda << " "
+						<< realPtr[x] << " " << imagPtr[x] << " "
+						<< psfVal << " " << psfVal*vwSum/nVis << '\n';
 					effVisSum += psfVal;
 				}
 				else {
