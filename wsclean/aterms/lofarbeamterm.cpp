@@ -17,7 +17,7 @@
 
 #include <thread>
 
-LofarBeamTerm::LofarBeamTerm(casacore::MeasurementSet& ms, size_t width, size_t height, double dl, double dm, double phaseCentreDL, double phaseCentreDM, bool useDifferentialBeam) :
+LofarBeamTerm::LofarBeamTerm(casa::MeasurementSet& ms, size_t width, size_t height, double dl, double dm, double phaseCentreDL, double phaseCentreDM, bool useDifferentialBeam) :
 	_width(width),
 	_height(height),
 	_dl(dl), _dm(dm),
@@ -86,10 +86,9 @@ void LofarBeamTerm::Calculate(std::complex<float>* buffer, double time, double f
 	size_t nCPUs = System::ProcessorCount();
 	ao::lane<size_t> lane(nCPUs);
 	
-	size_t nThreads = 1; // nCPUs TODO
-	std::vector<std::thread> threads(nThreads);
-	std::vector<LofarBeamTermThreadData> threadData(nThreads);
-	for(size_t i=0; i!=nThreads; ++i)
+	std::vector<std::thread> threads(nCPUs);
+	std::vector<LofarBeamTermThreadData> threadData(nCPUs);
+	for(size_t i=0; i!=1; ++i) // TODO casacore can not handle multiple threads(??!)
 	{
 		// Make a private copy of the data so that each thread has its local copy
 		// (in particular to make sure casacore objects do not cause sync bugs)
@@ -122,16 +121,14 @@ void LofarBeamTerm::Calculate(std::complex<float>* buffer, double time, double f
 				data.inverseCentralGain[a][3] = gainMatrix[1][1];
 				if(!data.inverseCentralGain[a].Invert())
 				{
-					data.inverseCentralGain[a] = MC2x2F::Zero();
+					data.inverseCentralGain[a] = MC2x2F::NaN();
 				}
 			}
 		}
 		// It is necessary to use each converter once in the global thread, during which
 		// it initializes itself. This initializes is not thread safe, apparently.
 		threadData[i].j2000ToITRFRef(_delayDir);
-	}
-	for(size_t i=0; i!=nThreads; ++i)
-	{
+		
 		threads[i] = std::thread(&LofarBeamTerm::calcThread, this, &threadData[i]);
 	}
 	for(size_t y=0; y!=_height; ++y)
@@ -160,8 +157,11 @@ void LofarBeamTerm::calcThread(struct LofarBeamTermThreadData* data)
 		for(size_t x=0; x!=_width; ++x)
 		{
 			double l, m, ra, dec;
-			ImageCoordinates::XYToLM(x, y, _dl, _dm, _width, _height, l, m);
-			l += _phaseCentreDL; m += _phaseCentreDM;
+            double l0, m0, l1, m1;
+			ImageCoordinates::XYToLM(x, y, _dl, _dm, _width, _height, l0, m0);
+			ImageCoordinates::XYToLM(x+1, y+1, _dl, _dm, _width, _height, l1, m1);
+			l = (l0+l1)/2 + _phaseCentreDL;
+            m = (m0+m1)/2 + _phaseCentreDM;
 			ImageCoordinates::LMToRaDec(l, m, _phaseCentreRA, _phaseCentreDec, ra, dec);
 			
 			casacore::MDirection imageDir(casacore::MVDirection(
