@@ -17,7 +17,7 @@
 
 #include <thread>
 
-LofarBeamTerm::LofarBeamTerm(casa::MeasurementSet& ms, size_t width, size_t height, double dl, double dm, double phaseCentreDL, double phaseCentreDM, bool useDifferentialBeam) :
+LofarBeamTerm::LofarBeamTerm(casacore::MeasurementSet& ms, size_t width, size_t height, double dl, double dm, double phaseCentreDL, double phaseCentreDM, bool useDifferentialBeam) :
 	_width(width),
 	_height(height),
 	_dl(dl), _dm(dm),
@@ -86,9 +86,10 @@ void LofarBeamTerm::Calculate(std::complex<float>* buffer, double time, double f
 	size_t nCPUs = System::ProcessorCount();
 	ao::lane<size_t> lane(nCPUs);
 	
-	std::vector<std::thread> threads(nCPUs);
-	std::vector<LofarBeamTermThreadData> threadData(nCPUs);
-	for(size_t i=0; i!=1; ++i) // TODO casacore can not handle multiple threads(??!)
+	size_t nThreads = 1; // nCPUs TODO
+	std::vector<std::thread> threads(nThreads);
+	std::vector<LofarBeamTermThreadData> threadData(nThreads);
+	for(size_t i=0; i!=nThreads; ++i)
 	{
 		// Make a private copy of the data so that each thread has its local copy
 		// (in particular to make sure casacore objects do not cause sync bugs)
@@ -121,14 +122,16 @@ void LofarBeamTerm::Calculate(std::complex<float>* buffer, double time, double f
 				data.inverseCentralGain[a][3] = gainMatrix[1][1];
 				if(!data.inverseCentralGain[a].Invert())
 				{
-					data.inverseCentralGain[a] = MC2x2F::NaN();
+					data.inverseCentralGain[a] = MC2x2F::Zero();
 				}
 			}
 		}
 		// It is necessary to use each converter once in the global thread, during which
 		// it initializes itself. This initializes is not thread safe, apparently.
 		threadData[i].j2000ToITRFRef(_delayDir);
-		
+	}
+	for(size_t i=0; i!=nThreads; ++i)
+	{
 		threads[i] = std::thread(&LofarBeamTerm::calcThread, this, &threadData[i]);
 	}
 	for(size_t y=0; y!=_height; ++y)
