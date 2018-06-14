@@ -160,11 +160,9 @@ void LofarBeamTerm::calcThread(struct LofarBeamTermThreadData* data)
 		for(size_t x=0; x!=_width; ++x)
 		{
 			double l, m, ra, dec;
-            double l0, m0, l1, m1;
-			ImageCoordinates::XYToLM(x, y, _dl, _dm, _width, _height, l0, m0);
-			ImageCoordinates::XYToLM(x+1, y+1, _dl, _dm, _width, _height, l1, m1);
-			l = (l0+l1)/2 + _phaseCentreDL;
-            m = (m0+m1)/2 + _phaseCentreDM;
+			ImageCoordinates::XYToLM(x, y, _dl, _dm, _width, _height, l, m);
+			l += _phaseCentreDL;
+			m += _phaseCentreDM;
 			ImageCoordinates::LMToRaDec(l, m, _phaseCentreRA, _phaseCentreDec, ra, dec);
 			
 			casacore::MDirection imageDir(casacore::MVDirection(
