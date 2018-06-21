@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "lofarbeamterm.h"
 
 #include "../banddata.h"
@@ -16,7 +17,6 @@
 #include <casacore/measures/TableMeasures/ArrayMeasColumn.h>
 #include <casacore/measures/Measures/MEpoch.h>
 
-#include <thread>
 
 LofarBeamTerm::LofarBeamTerm(casacore::MeasurementSet& ms, size_t width, size_t height, double dl, double dm, double phaseCentreDL, double phaseCentreDM, double aTermUpdateInterval, bool useDifferentialBeam) :
 	_width(width),
@@ -27,10 +27,17 @@ LofarBeamTerm::LofarBeamTerm(casacore::MeasurementSet& ms, size_t width, size_t 
 	_updateInterval(aTermUpdateInterval),
 	_lastATermUpdate(-aTermUpdateInterval-1),
 	_useDifferentialBeam(useDifferentialBeam),
-	_saveATerms(false)
+	_saveATerms(true)
 {
 	std::cout << "dl=" << dl*180.0/M_PI*60.0*60.0 << " asec.\n";
+
 	casacore::MSAntenna aTable(ms.antenna());
+
+	size_t nr_stations = ms.nrow();
+	size_t nCPUs = System::ProcessorCount();
+	_nThreads = std::min(nCPUs, nr_stations);
+	_threads.resize(_nThreads);
+
 	casacore::MPosition::ROScalarColumn antPosColumn(aTable, aTable.columnName(casacore::MSAntennaEnums::POSITION));
 	_arrayPos = antPosColumn(0);
 	_stations.resize(aTable.nrow());
@@ -76,17 +83,6 @@ void setITRF(const casacore::MDirection& itrfDir, LOFAR::StationResponse::vector
 	itrf[2] = itrfVal[2];
 }
 
-struct LofarBeamTermThreadData
-{
-	std::complex<float>* buffer;
-	ao::lane<size_t>* lane;
-	casacore::MDirection::Ref j2000Ref;
-	casacore::MDirection::Convert j2000ToITRFRef;
-	std::vector<MC2x2F> inverseCentralGain;
-	double time, frequency;
-	vector3r_t station0, tile0;
-};
-
 bool LofarBeamTerm::Calculate(std::complex<float>* buffer, double time, double frequency)
 {
 	if(time - _lastATermUpdate > _updateInterval)
@@ -102,65 +98,75 @@ bool LofarBeamTerm::Calculate(std::complex<float>* buffer, double time, double f
 
 void LofarBeamTerm::calculateUpdate(std::complex<float>* buffer, double time, double frequency)
 {
-	size_t nCPUs = System::ProcessorCount();
-	ao::lane<size_t> lane(nCPUs);
-	
-	size_t nThreads = 1; // nCPUs TODO
-	std::vector<std::thread> threads(nThreads);
-	std::vector<LofarBeamTermThreadData> threadData(nThreads);
-	for(size_t i=0; i!=nThreads; ++i)
+	ao::lane<size_t> lane(_nThreads);
+	_lane = &lane;
+
+	casacore::MEpoch timeEpoch(casacore::Quantity(time, "s"));
+	casacore::MeasFrame frame(_arrayPos, timeEpoch);
+	casacore::MDirection::Ref j2000Ref(casacore::MDirection::J2000, frame);
+	casacore::MDirection::Ref itrfRef(casacore::MDirection::ITRF, frame);
+	casacore::MDirection::Convert j2000ToITRFRef(j2000Ref, itrfRef);
+
+	setITRF(j2000ToITRFRef(_delayDir), _station0);
+	setITRF(j2000ToITRFRef(_tileBeamDir), _tile0);
+
+	const casacore::Unit radUnit("rad");
+
+	casacore::MDirection lDir(casacore::MVDirection(
+		casacore::Quantity(_phaseCentreRA + M_PI/2, radUnit),
+		casacore::Quantity(0, radUnit)),
+		j2000Ref);
+	setITRF(j2000ToITRFRef(lDir), _l_vector_itrf);
+
+	casacore::MDirection mDir(casacore::MVDirection(
+		casacore::Quantity(_phaseCentreRA, radUnit),
+		casacore::Quantity(_phaseCentreDec + M_PI/2, radUnit)),
+		j2000Ref);
+	setITRF(j2000ToITRFRef(mDir), _m_vector_itrf);
+
+	casacore::MDirection nDir(casacore::MVDirection(
+		casacore::Quantity(_phaseCentreRA, radUnit),
+		casacore::Quantity(_phaseCentreDec, radUnit)),
+		j2000Ref);
+	setITRF(j2000ToITRFRef(nDir), _n_vector_itrf);
+
+	vector3r_t diffBeamCentre;
+	setITRF(j2000ToITRFRef(_referenceDir), diffBeamCentre);
+	_inverseCentralGain.resize(_stations.size());
+	for(size_t a=0; a!=_stations.size(); ++a)
 	{
-		// Make a private copy of the data so that each thread has its local copy
-		// (in particular to make sure casacore objects do not cause sync bugs)
-		LofarBeamTermThreadData& data = threadData[i];
-		data.buffer = buffer;
-		data.lane = &lane;
-		data.time = time;
-		data.frequency = frequency;
-		
-		casacore::MEpoch timeEpoch(casacore::Quantity(time, "s"));
-		casacore::MeasFrame frame(_arrayPos, timeEpoch);
-		data.j2000Ref = casacore::MDirection::Ref(casacore::MDirection::J2000, frame);
-		casacore::MDirection::Ref itrfRef(casacore::MDirection::ITRF, frame);
-		data.j2000ToITRFRef = casacore::MDirection::Convert(data.j2000Ref, itrfRef);
-		
-		setITRF(data.j2000ToITRFRef(_delayDir), data.station0);
-		setITRF(data.j2000ToITRFRef(_tileBeamDir), data.tile0);
-		
+		matrix22c_t gainMatrix = _stations[a]->response(time, frequency, diffBeamCentre, _subbandFrequency, _station0, _tile0);
 		if(_useDifferentialBeam)
 		{
-			vector3r_t diffBeamCentre;
-			setITRF(data.j2000ToITRFRef(_referenceDir), diffBeamCentre);
-			data.inverseCentralGain.resize(_stations.size());
-			for(size_t a=0; a!=_stations.size(); ++a)
+			_inverseCentralGain[a][0] = gainMatrix[0][0];
+			_inverseCentralGain[a][1] = gainMatrix[0][1];
+			_inverseCentralGain[a][2] = gainMatrix[1][0];
+			_inverseCentralGain[a][3] = gainMatrix[1][1];
+			if(!_inverseCentralGain[a].Invert())
 			{
-				matrix22c_t gainMatrix = _stations[a]->response(time, frequency, diffBeamCentre, _subbandFrequency, data.station0, data.tile0);
-				data.inverseCentralGain[a][0] = gainMatrix[0][0];
-				data.inverseCentralGain[a][1] = gainMatrix[0][1];
-				data.inverseCentralGain[a][2] = gainMatrix[1][0];
-				data.inverseCentralGain[a][3] = gainMatrix[1][1];
-				if(!data.inverseCentralGain[a].Invert())
-				{
-					data.inverseCentralGain[a] = MC2x2F::Zero();
-				}
+				_inverseCentralGain[a] = MC2x2F::Zero();
 			}
 		}
-		// It is necessary to use each converter once in the global thread, during which
-		// it initializes itself. This initialize is not thread safe, apparently.
-		threadData[i].j2000ToITRFRef(_delayDir);
 	}
-	for(size_t i=0; i!=nThreads; ++i)
+
+	for(size_t i=0; i!=_nThreads; ++i)
 	{
-		threads[i] = std::thread(&LofarBeamTerm::calcThread, this, &threadData[i]);
+		_threads[i] = std::thread(&LofarBeamTerm::calcThread, this, buffer, time, frequency);
 	}
+
 	for(size_t y=0; y!=_height; ++y)
 	{
-		lane.write(y);
+		for(size_t antennaIndex=0; antennaIndex!=_stations.size(); ++antennaIndex)
+		{
+			size_t job_id = y*_stations.size() + antennaIndex;
+			lane.write(job_id);
+		}
 	}
+
 	lane.write_end();
-	for(size_t i=0; i!=1; ++i)
-		threads[i].join();
-	
+	for(size_t i=0; i!=_nThreads; ++i)
+		_threads[i].join();
+
 	if(_saveATerms)
 	{
 		static int index = 0;
@@ -171,51 +177,50 @@ void LofarBeamTerm::calculateUpdate(std::complex<float>* buffer, double time, do
 	}
 }
 
-void LofarBeamTerm::calcThread(struct LofarBeamTermThreadData* data)
+void LofarBeamTerm::calcThread(std::complex<float>* buffer, double time, double frequency)
 {
 	const size_t valuesPerAntenna = _width * _height * 4;
 	const casacore::Unit radUnit("rad");
-	
-	size_t y;
-	while(data->lane->read(y))
-	{
+
+	size_t job_id;
+	while(_lane->read(job_id))
+    {
+		size_t antennaIndex = job_id % _stations.size();
+		size_t y = job_id / _stations.size();
 		for(size_t x=0; x!=_width; ++x)
 		{
-			double l, m, ra, dec;
+			double l, m, n, ra, dec;
 			ImageCoordinates::XYToLM(x, y, _dl, _dm, _width, _height, l, m);
 			l += _phaseCentreDL;
 			m += _phaseCentreDM;
+			n = sqrt(1.0 - l*l - m*m);
+
 			ImageCoordinates::LMToRaDec(l, m, _phaseCentreRA, _phaseCentreDec, ra, dec);
-			
-			casacore::MDirection imageDir(casacore::MVDirection(
-				casacore::Quantity(ra, radUnit),
-				casacore::Quantity(dec,radUnit)),
-				data->j2000Ref);
 
 			vector3r_t itrfDirection;
-			setITRF(data->j2000ToITRFRef(imageDir), itrfDirection);
-			
-			std::complex<float>* baseBuffer = data->buffer + (x + y*_height) * 4;
-			
-			for(size_t antennaIndex=0; antennaIndex!=_stations.size(); ++antennaIndex)
+
+			itrfDirection[0] = l*_l_vector_itrf[0] + m*_m_vector_itrf[0] + n*_n_vector_itrf[0];
+			itrfDirection[1] = l*_l_vector_itrf[1] + m*_m_vector_itrf[1] + n*_n_vector_itrf[1];
+			itrfDirection[2] = l*_l_vector_itrf[2] + m*_m_vector_itrf[2] + n*_n_vector_itrf[2];
+
+			std::complex<float>* baseBuffer = buffer + (x + y*_height) * 4;
+
+			std::complex<float>* antBufferPtr = baseBuffer + antennaIndex*valuesPerAntenna;
+			matrix22c_t gainMatrix = _stations[antennaIndex]->response(time, frequency, itrfDirection, _subbandFrequency, _station0, _tile0);
+			if(_useDifferentialBeam)
 			{
-				std::complex<float>* antBufferPtr = baseBuffer + antennaIndex*valuesPerAntenna;
-				matrix22c_t gainMatrix = _stations[antennaIndex]->response(data->time, data->frequency, itrfDirection, _subbandFrequency, data->station0, data->tile0);
-				if(_useDifferentialBeam)
-				{
-					MC2x2F stationGains;
-					stationGains[0] = gainMatrix[0][0];
-					stationGains[1] = gainMatrix[0][1];
-					stationGains[2] = gainMatrix[1][0];
-					stationGains[3] = gainMatrix[1][1];
-					MC2x2F::ATimesB(antBufferPtr, data->inverseCentralGain[antennaIndex], stationGains);
-				}
-				else {
-					antBufferPtr[0] = gainMatrix[0][0];
-					antBufferPtr[1] = gainMatrix[0][1];
-					antBufferPtr[2] = gainMatrix[1][0];
-					antBufferPtr[3] = gainMatrix[1][1];
-				}
+				MC2x2F stationGains;
+				stationGains[0] = gainMatrix[0][0];
+				stationGains[1] = gainMatrix[0][1];
+				stationGains[2] = gainMatrix[1][0];
+				stationGains[3] = gainMatrix[1][1];
+				MC2x2F::ATimesB(antBufferPtr, _inverseCentralGain[antennaIndex], stationGains);
+			}
+			else {
+				antBufferPtr[0] = gainMatrix[0][0];
+				antBufferPtr[1] = gainMatrix[0][1];
+				antBufferPtr[2] = gainMatrix[1][0];
+				antBufferPtr[3] = gainMatrix[1][1];
 			}
 		}
 	}

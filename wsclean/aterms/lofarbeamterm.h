@@ -1,6 +1,8 @@
 #ifndef LOFAR_BEAM_TERM_H
 #define LOFAR_BEAM_TERM_H
 
+#include <thread>
+
 #include <casacore/ms/MeasurementSets/MeasurementSet.h>
 
 #include <complex>
@@ -11,6 +13,10 @@
 #ifdef HAVE_LOFAR_BEAM
 
 #include <StationResponse/LofarMetaDataUtil.h>
+
+#include "../lane.h"
+#include "../matrix2x2.h"
+
 
 using namespace LOFAR::StationResponse;
 
@@ -32,7 +38,8 @@ public:
 
 private:
 	void calculateUpdate(std::complex<float>* buffer, double time, double frequency);
-	void calcThread(struct LofarBeamTermThreadData* data);
+
+	void calcThread(std::complex<float>* buffer, double time, double frequency);
 	
 	std::vector<LOFAR::StationResponse::Station::Ptr> _stations;
 	size_t _width, _height;
@@ -41,6 +48,15 @@ private:
 	casacore::MPosition _arrayPos;
 	double _updateInterval, _lastATermUpdate;
 	bool _useDifferentialBeam, _saveATerms;
+	vector3r_t _l_vector_itrf;
+	vector3r_t _m_vector_itrf;
+	vector3r_t _n_vector_itrf;
+	std::vector<MC2x2F> _inverseCentralGain;
+	vector3r_t _station0, _tile0;
+	ao::lane<size_t> *_lane;
+
+	size_t _nThreads;
+	std::vector<std::thread> _threads;
 };
 
 #else
