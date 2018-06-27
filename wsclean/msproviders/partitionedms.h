@@ -180,6 +180,7 @@ private:
 		bool hasModel;
 	} _partHeader;
 	
+	static std::string getFilenamePrefix(const std::string& msPath, const std::string& tempDir);
 	static std::string getPartPrefix(const std::string& msPath, size_t partIndex, PolarizationEnum pol, size_t dataDescId, const std::string& tempDir);
 	static std::string getMetaFilename(const std::string& msPath, const std::string& tempDir, size_t dataDescId);
 };

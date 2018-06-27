@@ -252,20 +252,28 @@ void PartitionedMS::ReadWeights(float* buffer)
 	_weightFile.read(reinterpret_cast<char*>(buffer), _partHeader.channelCount * _polarizationCountInFile * sizeof(float));
 	_weightPtrIsOk = false;
 }
-
-std::string PartitionedMS::getPartPrefix(const std::string& msPathStr, size_t partIndex, PolarizationEnum pol, size_t dataDescId, const std::string& tempDir)
+std::string PartitionedMS::getFilenamePrefix(const std::string& msPathStr, const std::string& tempDir)
 {
 	boost::filesystem::path
-		msPath(msPathStr),
 		prefixPath;
 	if(tempDir.empty())
-		prefixPath = msPath;
-	else
+		prefixPath = msPathStr;
+	else {
+		std::string msPathCopy(msPathStr);
+		while(!msPathCopy.empty() && *msPathCopy.rbegin() == '/')
+			msPathCopy.resize(msPathCopy.size()-1);
+		boost::filesystem::path msPath(msPathCopy);
 		prefixPath = boost::filesystem::path(tempDir) / msPath.filename();
-		
+	}
 	std::string prefix(prefixPath.string());
 	while(!prefix.empty() && *prefix.rbegin() == '/')
 		prefix.resize(prefix.size()-1);
+	return prefix;
+}
+
+std::string PartitionedMS::getPartPrefix(const std::string& msPathStr, size_t partIndex, PolarizationEnum pol, size_t dataDescId, const std::string& tempDir)
+{
+	std::string prefix = getFilenamePrefix(msPathStr, tempDir);
 	
 	std::ostringstream partPrefix;
 	partPrefix << prefix << "-part";
@@ -281,16 +289,8 @@ std::string PartitionedMS::getPartPrefix(const std::string& msPathStr, size_t pa
 
 string PartitionedMS::getMetaFilename(const string& msPathStr, const std::string& tempDir, size_t dataDescId)
 {
-	boost::filesystem::path
-		msPath(msPathStr),
-		prefixPath;
-	if(tempDir.empty())
-		prefixPath = msPath;
-	else
-		prefixPath = boost::filesystem::path(tempDir) / msPath.filename();
-	std::string prefix(prefixPath.string());
-	while(!prefix.empty() && *prefix.rbegin() == '/')
-		prefix.resize(prefix.size()-1);
+	std::string prefix = getFilenamePrefix(msPathStr, tempDir);
+	
 	std::ostringstream s;
 	s << prefix << "-spw" << dataDescId << "-parted-meta.tmp";
 	return s.str();
