@@ -23,7 +23,8 @@ LofarBeamTerm::LofarBeamTerm(casacore::MeasurementSet& ms, size_t width, size_t 
 	_dl(dl), _dm(dm),
 	_phaseCentreDL(phaseCentreDL),
 	_phaseCentreDM(phaseCentreDM),
-	_useDifferentialBeam(useDifferentialBeam)
+	_useDifferentialBeam(useDifferentialBeam),
+	_saveATerms(false)
 {
 	casacore::MSAntenna aTable(ms.antenna());
 	casacore::MPosition::ROScalarColumn antPosColumn(aTable, aTable.columnName(casacore::MSAntennaEnums::POSITION));
@@ -143,11 +144,14 @@ void LofarBeamTerm::Calculate(std::complex<float>* buffer, double time, double f
 	for(size_t i=0; i!=1; ++i)
 		threads[i].join();
 	
-	static int index = 0;
-	std::ostringstream f;
-	f << "aterm" << index << ".fits";
-	StoreATerms(f.str(), buffer);
-	++index;
+	if(_saveATerms)
+	{
+		static int index = 0;
+		std::ostringstream f;
+		f << "aterm" << index << ".fits";
+		StoreATerms(f.str(), buffer);
+		++index;
+	}
 }
 
 void LofarBeamTerm::calcThread(struct LofarBeamTermThreadData* data)

@@ -66,6 +66,8 @@ public:
 	bool applyPrimaryBeam, reusePrimaryBeam, useDifferentialLofarBeam, savePsfPb;
 	size_t primaryBeamUndersampling;
 	bool useIDG, gridWithBeam;
+	double beamAtermUpdateTime; // in seconds.
+	bool saveATerms;
 	enum IDGMode { IDG_DEFAULT, IDG_GPU, IDG_CPU, IDG_HYBRID } idgMode;
 	enum GridModeEnum gridMode;
 	enum MeasurementSetGridder::VisibilityWeightingMode visibilityWeightingMode;
@@ -185,6 +187,8 @@ inline WSCleanSettings::WSCleanSettings() :
 	primaryBeamUndersampling(8),
 	useIDG(false),
 	gridWithBeam(false),
+	beamAtermUpdateTime(300.0),
+	saveATerms(false),
 	idgMode(IDG_DEFAULT),
 	gridMode(KaiserBesselKernel),
 	visibilityWeightingMode(MeasurementSetGridder::NormalVisibilityWeighting),

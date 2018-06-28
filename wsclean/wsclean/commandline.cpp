@@ -180,12 +180,18 @@ void CommandLine::printHelp()
 		"-lofar-centroids <nch fullres>\n"
 		"   Place visibilities on the high-resolution centroid uv position, by using the\n"
 		"   LOFAR fullres flag information that is generated when averaging with DPPP.\n"
-		"-grid-with-beam\n"
-		"   Apply a-terms to correct for the primary beam. This is only possible when IDG is enabled.\n"
 		"-use-idg\n"
 		"   Use the 'image-domain gridder' (Van der Tol et al.) to do the inversions and predictions.\n"
 		"-idg-mode [cpu/gpu/hybrid]\n"
 		"   Sets the IDG mode. Default: cpu. Hybrid is recommended when a GPU is available.\n"
+		"\n"
+		"  ** A-TERM GRIDDING **\n"
+		"-grid-with-beam\n"
+		"   Apply a-terms to correct for the primary beam. This is only possible when IDG is enabled.\n"
+		"-beam-aterm-update <seconds>\n"
+		"   Set the ATerm update time in seconds. The default is every 300 seconds.\n"
+		"-save-aterms\n"
+		"   Output a fits file for every aterm update, containing the applied image for every station.\n"
 		"\n"
 		"  ** DATA SELECTION OPTIONS **\n"
 		"-pol <list>\n"
@@ -1134,11 +1140,20 @@ int CommandLine::Run(int argc, char* argv[])
 		{
 			settings.useLofarCentroids = true;
 			++argi;
-			settings.fullResWidth = atoi(argv[argi]);
+			settings.fullResWidth = parse_size_t(argv[argi], "lofar-centroids");
 		}
 		else if(param == "grid-with-beam")
 		{
 			settings.gridWithBeam = true;
+		}
+		else if(param == "beam-aterm-update")
+		{
+			++argi;
+			settings.beamAtermUpdateTime = parse_double(argv[argi], "beam-aterm-update");
+		}
+		else if(param == "save-aterms")
+		{
+			settings.saveATerms = true;
 		}
 		else if(param == "visibility-weighting-mode")
 		{

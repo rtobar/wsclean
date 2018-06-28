@@ -21,6 +21,13 @@ public:
 	void Calculate(std::complex<float>* buffer, double time, double frequency);
 		
 	void StoreATerms(const std::string& filename, std::complex<float>* buffer);
+	
+	/**
+	 * Set whether a fits image with the a-terms should be written to disk
+	 * every time they are calculated.
+	 * @param saveATerms Fits images are saved when set to true.
+	 */
+	void SetSaveATerms(bool saveATerms);
 
 private:
 	void calcThread(struct LofarBeamTermThreadData* data);
@@ -30,7 +37,7 @@ private:
 	double _subbandFrequency, _phaseCentreRA, _phaseCentreDec, _dl, _dm, _phaseCentreDL, _phaseCentreDM;
 	casacore::MDirection _delayDir, _referenceDir, _tileBeamDir;
 	casacore::MPosition _arrayPos;
-	bool _useDifferentialBeam;
+	bool _useDifferentialBeam, _saveATerms;
 };
 
 #else
