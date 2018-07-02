@@ -12,12 +12,6 @@
 class NDPPP
 {
 public:
-	static void ConvertSkyModelToSourceDB(const std::string& destination, const std::string& input)
-	{
-		boost::filesystem::remove_all(destination);
-		Application::Run("makesourcedb in=" + input + " out=" + destination + " format='<'");
-	}
-	
 	static void WriteStandardHeader(std::ostream& stream, double refFrequency)
 	{
 		stream.precision(15);
@@ -203,25 +197,6 @@ public:
 				else file << ", , ,\n";
 			}
 		}
-	}
-	
-	static void Predict(const std::string& msName, bool predictWithBeam)
-	{
-		std::ofstream ndpppParset("wsclean-prediction.parset");
-		ndpppParset <<
-			"msin = " << msName << "\n"
-			"msin.datacolumn = DATA\n"
-			"msout = .\n"
-			"msout.datacolumn = MODEL_DATA\n"
-			"steps = [predict]\n"
-			"predict.sourcedb=wsclean-prediction.sourcedb\n"
-			"predict.usebeammodel=";
-		if(predictWithBeam)
-			ndpppParset << "true\n";
-		else
-			ndpppParset << "false\n";
-		ndpppParset.close();
-		Application::Run("NDPPP wsclean-prediction.parset");
 	}
 };
 

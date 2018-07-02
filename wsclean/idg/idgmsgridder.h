@@ -33,9 +33,12 @@ public:
 	virtual void GetGriddingCorrectionImage(double* image) const final override;
 	
 	virtual bool HasGriddingCorrectionImage() const final override;
+	
+	void SavePBCorrectedImages(class FitsWriter& writer, class ImageFilename& filename, const std::string& filenameKind, class ImageBufferAllocator& allocator) const;
+	
+	void SaveBeamImage(const class ImagingTableEntry& entry, class ImageFilename& filename) const;
 
 private:
-
 	class AverageBeam : public AverageBeamBase
 	{
 	public:

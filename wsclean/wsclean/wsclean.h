@@ -66,7 +66,6 @@ private:
 	void imageMainFirst(const ImagingTableEntry& entry);
 	void imageMainNonFirst(const ImagingTableEntry& entry);
 	void predict(const ImagingTableEntry& entry);
-	void dftPredict(const ImagingTable& squaredGroup);
 	
 	void makeMFSImage(const string& suffix, size_t intervalIndex, PolarizationEnum pol, bool isImaginary, bool isPSF = false);
 	void renderMFSImage(size_t intervalIndex, PolarizationEnum pol, bool isImaginary, bool isPBCorrected) const;

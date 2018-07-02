@@ -9,8 +9,13 @@
 
 #include "../msproviders/msprovider.h"
 
+#include "../wsclean/imagefilename.h"
+#include "../wsclean/imagingtable.h"
 #include "../wsclean/logger.h"
 #include "../wsclean/wscleansettings.h"
+
+#include "../fitsreader.h"
+#include "../fitswriter.h"
 
 #include "../aterms/lofarbeamterm.h"
 
@@ -420,3 +425,38 @@ bool IdgMsGridder::HasGriddingCorrectionImage() const
 	return false; // For now (TODO)
 }
 
+void IdgMsGridder::SaveBeamImage(const ImagingTableEntry& entry, ImageFilename& filename) const
+{
+	FitsWriter writer;
+	writer.SetImageDimensions(_settings.trimmedImageWidth, _settings.trimmedImageHeight, PhaseCentreRA(), PhaseCentreDec(), _settings.pixelScaleX, _settings.pixelScaleY);
+	writer.SetPhaseCentreShift(PhaseCentreDL(), PhaseCentreDM());
+	ImageFilename polName(filename);
+	polName.SetPolarization(Polarization::StokesI);
+	writer.SetPolarization(Polarization::StokesI);
+	writer.SetFrequency(entry.CentralFrequency(), entry.bandEndFrequency - entry.bandStartFrequency);
+	writer.Write(polName.GetBeamPrefix(_settings) + ".fits", _averageBeam->ScalarBeam()->data());
+}
+
+void IdgMsGridder::SavePBCorrectedImages(FitsWriter& writer, ImageFilename& filename, const std::string& filenameKind, ImageBufferAllocator& allocator) const
+{
+	ImageBufferAllocator::Ptr image;
+	for(size_t polIndex = 0; polIndex != 4; ++polIndex)
+	{
+		PolarizationEnum pol = Polarization::IndexToStokes(polIndex);
+		ImageFilename name(filename);
+		name.SetPolarization(pol);
+		FitsReader reader(name.GetPrefix(_settings) + "-" + filenameKind + ".fits");
+		if(!image)
+			allocator.Allocate(reader.ImageWidth() * reader.ImageHeight(), image);
+		reader.Read(image.data());
+		
+		const float* beam = _averageBeam->ScalarBeam()->data();
+		for(size_t i=0; i!=reader.ImageWidth() * reader.ImageHeight(); ++i)
+		{
+			image[i] /= beam[i];
+		}
+		
+		writer.SetPolarization(pol);
+		writer.Write(name.GetPrefix(_settings) + "-" + filenameKind + "-pb.fits", image.data());
+	}
+}

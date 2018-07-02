@@ -10,24 +10,24 @@ class UnavailableGridder : public MSGridderBase
 public:
 	UnavailableGridder(const WSCleanSettings&) { doThrow(); }
 	
-	virtual ~UnavailableGridder() { doThrow(); }
+	virtual ~UnavailableGridder() final override { doThrow(); }
 	
-	virtual void Invert() { doThrow(); }
+	virtual void Invert() final override { doThrow(); }
 	
-	virtual void Predict(double* real) { doThrow(); }
+	virtual void Predict(double* real) final override { doThrow(); }
 	
-	virtual void Predict(double* real, double* imaginary) { doThrow(); }
+	virtual void Predict(double* real, double* imaginary) final override { doThrow(); }
 	
-	virtual double* ImageRealResult() { doThrow(); return 0; }
+	virtual double* ImageRealResult() final override { doThrow(); return 0; }
 	
-	virtual double* ImageImaginaryResult() { doThrow(); return 0; }
+	virtual double* ImageImaginaryResult() final override { doThrow(); return 0; }
 	
-	virtual void GetGriddingCorrectionImage(double* image) const { doThrow(); }
+	virtual void GetGriddingCorrectionImage(double* image) const final override { doThrow(); }
 	
-	virtual bool HasGriddingCorrectionImage() const { doThrow(); return false; }
+	virtual bool HasGriddingCorrectionImage() const final override { doThrow(); return false; }
 	
 private:
-	virtual size_t getSuggestedWGridSize() const { doThrow(); return 0; }
+	virtual size_t getSuggestedWGridSize() const final override { doThrow(); return 0; }
 	
 	void doThrow() const
 	{
