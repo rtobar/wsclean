@@ -49,8 +49,8 @@ void IdgMsGridder::Invert()
 	// is the dirty of Stokes I, which should thus overwrite all images.
 	if(Polarization() == Polarization::StokesI)
 	{
-		if (!_metaDataCache->average_beam) _metaDataCache->average_beam = std::make_shared<AverageBeam>();
-		_average_beam = std::dynamic_pointer_cast<AverageBeam>(_metaDataCache->average_beam);
+		if (!_metaDataCache->average_beam) _metaDataCache->average_beam.reset(new AverageBeam());
+		_average_beam = static_cast<AverageBeam*>(_metaDataCache->average_beam.get());
 		std::cout << "_average_beam: " << _average_beam << std::endl;
 
 		std::vector<MSData> msDataVector;
@@ -162,7 +162,7 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 	
 	std::unique_ptr<LofarBeamTerm> aTermMaker;
 	ao::uvector<std::complex<float>> aTermBuffer;
-	double aTermUpdateInterval = 120.0; // 2min
+	double aTermUpdateInterval = _settings.beamAtermUpdateTime; // in seconds
 	if(_settings.gridWithBeam)
 	{
 		size_t subgridsize = _bufferset->get_subgridsize();
@@ -238,11 +238,11 @@ void IdgMsGridder::Predict(double* image)
 		_image.assign(4 * width * height, 0.0);
 		if (!_metaDataCache->average_beam)
 		{
-			std::cout << "no average_beam in cache, creating an empty one." << std::endl;
-			_metaDataCache->average_beam = std::make_shared<AverageBeam>();
+			Logger::Info << "no average_beam in cache, creating an empty one.\n";
+			_metaDataCache->average_beam.reset(new AverageBeam());
 		}
-		_average_beam = std::dynamic_pointer_cast<AverageBeam>(_metaDataCache->average_beam);
-		std::cout << "_average_beam: " << _average_beam << std::endl;
+		_average_beam = static_cast<AverageBeam*>(_metaDataCache->average_beam.get());
+		Logger::Debug << "_average_beam: " << _average_beam << '\n';
 	}
 
 	size_t polIndex = Polarization::StokesToIndex(Polarization());

@@ -54,9 +54,9 @@ public:
 	
 	class AverageBeamBase
 	{
-    public:
-        virtual ~AverageBeamBase() {}
-    };
+	public:
+			virtual ~AverageBeamBase() {}
+	};
 
 	struct MetaDataCache
 	{
@@ -64,7 +64,7 @@ public:
 			double minW, maxW, maxWWithFlags, maxBaselineUVW, maxBaselineInM;
 		};
 		std::vector<Entry> msDataVector;
-        std::shared_ptr<AverageBeamBase> average_beam;
+		std::unique_ptr<AverageBeamBase> average_beam;
 	};
 	
 	void SetMetaDataCache(MetaDataCache* cache) { _metaDataCache = cache; }

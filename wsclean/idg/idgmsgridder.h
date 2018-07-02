@@ -18,7 +18,7 @@ class IdgMsGridder : public MSGridderBase
 public:
 	IdgMsGridder(const class WSCleanSettings& settings);
 	
-	virtual ~IdgMsGridder() final override;
+	virtual ~IdgMsGridder() final override { }
 	
 	virtual void Invert();
 	
@@ -36,21 +36,21 @@ public:
 
 private:
 
-    class AverageBeam : public AverageBeamBase
-    {
-    public:
-        AverageBeam() {std::cout << "Constructing AverageBeam" << std::endl;}
-        bool is_empty() {return (!m_scalar_beam || !m_matrix_inverse_beam);}
-        void set_scalar_beam(std::shared_ptr<std::vector<float>> scalar_beam) {m_scalar_beam = scalar_beam;}
-        void set_matrix_inverse_beam(std::shared_ptr<std::vector<std::complex<float>>> matrix_inverse_beam) {m_matrix_inverse_beam = matrix_inverse_beam;}
-        std::shared_ptr<std::vector<float>> get_scalar_beam() {return m_scalar_beam;}
-        std::shared_ptr<std::vector<std::complex<float>>> get_matrix_inverse_beam() {return m_matrix_inverse_beam;}
-    private:
-        std::shared_ptr<std::vector<float>> m_scalar_beam;
-        std::shared_ptr<std::vector<std::complex<float>>> m_matrix_inverse_beam;
-    };
+		class AverageBeam : public AverageBeamBase
+		{
+		public:
+				AverageBeam() {std::cout << "Constructing AverageBeam" << std::endl;}
+				bool is_empty() {return (!m_scalar_beam || !m_matrix_inverse_beam);}
+				void set_scalar_beam(std::shared_ptr<std::vector<float>> scalar_beam) {m_scalar_beam = scalar_beam;}
+				void set_matrix_inverse_beam(std::shared_ptr<std::vector<std::complex<float>>> matrix_inverse_beam) {m_matrix_inverse_beam = matrix_inverse_beam;}
+				std::shared_ptr<std::vector<float>> get_scalar_beam() {return m_scalar_beam;}
+				std::shared_ptr<std::vector<std::complex<float>>> get_matrix_inverse_beam() {return m_matrix_inverse_beam;}
+		private:
+				std::shared_ptr<std::vector<float>> m_scalar_beam;
+				std::shared_ptr<std::vector<std::complex<float>>> m_matrix_inverse_beam;
+		};
 
-    std::shared_ptr<AverageBeam> _average_beam;
+		AverageBeam* _average_beam;
 
 	virtual size_t getSuggestedWGridSize() const   {
 		return 1; // TODO
