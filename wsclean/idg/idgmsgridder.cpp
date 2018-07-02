@@ -17,6 +17,7 @@
 #include "idgconfiguration.h"
 
 IdgMsGridder::IdgMsGridder(const WSCleanSettings& settings) :
+	_averageBeam(nullptr),
 	_outputProvider(nullptr),
 	_settings(settings),
 	_proxyType(idg::api::Type::CPU_OPTIMIZED),
@@ -28,9 +29,6 @@ IdgMsGridder::IdgMsGridder(const WSCleanSettings& settings) :
 		idg::api::BufferSet::create(_proxyType));
 	if(_settings.gridWithBeam) _options["a_term_kernel_size"] = float(5.0);
 }
-
-IdgMsGridder::~IdgMsGridder()
-{ }
 
 void IdgMsGridder::Invert()
 {
@@ -50,8 +48,7 @@ void IdgMsGridder::Invert()
 	if(Polarization() == Polarization::StokesI)
 	{
 		if (!_metaDataCache->average_beam) _metaDataCache->average_beam.reset(new AverageBeam());
-		_average_beam = static_cast<AverageBeam*>(_metaDataCache->average_beam.get());
-		std::cout << "_average_beam: " << _average_beam << std::endl;
+		_averageBeam = static_cast<AverageBeam*>(_metaDataCache->average_beam.get());
 
 		std::vector<MSData> msDataVector;
 		initializeMSDataVector(msDataVector);
@@ -79,17 +76,17 @@ void IdgMsGridder::Invert()
 				gridMeasurementSet(msDataVector[i]);
 			}
 			_bufferset->finalize_compute_avg_beam();
-			_average_beam->set_scalar_beam(_bufferset->get_scalar_beam());
-			_average_beam->set_matrix_inverse_beam(_bufferset->get_matrix_inverse_beam());
+			_averageBeam->SetScalarBeam(_bufferset->get_scalar_beam());
+			_averageBeam->SetMatrixInverseBeam(_bufferset->get_matrix_inverse_beam());
 			_image.assign(4 * width * height, 0.0);
 			_bufferset->get_image(_image.data());
 
 			// Normalize by total weight
-			std::cout << "total weight: " << totalWeight() << std::endl;
+			Logger::Debug << "Total weight: " << totalWeight() << '\n';
 
 			for(size_t ii=0; ii != 4 * width * height; ++ii)
 			{
-				_image[ii] = _image[ii]/totalWeight();
+				_image[ii] /= totalWeight();
 			}
 		}
 		else {
@@ -100,35 +97,33 @@ void IdgMsGridder::Invert()
 			// Because compensation for the average beam happens at subgrid level
 			// it needs to be known in advance.
 			// If it is not in the cache it needs to be computed first
-			if (!_average_beam->is_empty())
+			if (!_averageBeam->Empty())
 			{
 				// Set avg beam from cache
-				std::cout << "average beam in cache is not empty, use it." << std::endl;
-				_bufferset->set_scalar_beam(_average_beam->get_scalar_beam());
-				_bufferset->set_matrix_inverse_beam(_average_beam->get_matrix_inverse_beam());
+				Logger::Debug << "Using average beam from cache.\n";
+				_bufferset->set_scalar_beam(_averageBeam->ScalarBeam());
+				_bufferset->set_matrix_inverse_beam(_averageBeam->MatrixInverseBeam());
 			}
 			else {
 				// Compute avg beam
-				std::cout << "Computing average beam..." << std::endl;
+				Logger::Debug << "Computing average beam.\n";
 				_bufferset->init_compute_avg_beam(idg::api::compute_flags::compute_only);
 				for(size_t i=0; i!=MeasurementSetCount(); ++i)
 				{
 					gridMeasurementSet(msDataVector[i]);
 				}
 				_bufferset->finalize_compute_avg_beam();
-				std::cout << "Finished computing average beam." << std::endl;
-				_average_beam->set_scalar_beam(_bufferset->get_scalar_beam());
-				_average_beam->set_matrix_inverse_beam(_bufferset->get_matrix_inverse_beam());
+				Logger::Debug << "Finished computing average beam.\n";
+				_averageBeam->SetScalarBeam(_bufferset->get_scalar_beam());
+				_averageBeam->SetMatrixInverseBeam(_bufferset->get_matrix_inverse_beam());
 			}
 
-			std::cout << "Gridding measurementsets..." << std::endl;
 			resetVisibilityCounters();
 			for(size_t i=0; i!=MeasurementSetCount(); ++i)
 			{
 				// Adds the gridding result to _image member
 				gridMeasurementSet(msDataVector[i]);
 			}
-			std::cout << "Finished gridding measurementsets." << std::endl;
 			_image.assign(4 * width * height, 0.0);
 			_bufferset->get_image(_image.data());
 		}
@@ -241,8 +236,7 @@ void IdgMsGridder::Predict(double* image)
 			Logger::Info << "no average_beam in cache, creating an empty one.\n";
 			_metaDataCache->average_beam.reset(new AverageBeam());
 		}
-		_average_beam = static_cast<AverageBeam*>(_metaDataCache->average_beam.get());
-		Logger::Debug << "_average_beam: " << _average_beam << '\n';
+		_averageBeam = static_cast<AverageBeam*>(_metaDataCache->average_beam.get());
 	}
 
 	size_t polIndex = Polarization::StokesToIndex(Polarization());
@@ -256,11 +250,11 @@ void IdgMsGridder::Predict(double* image)
 		// Do actual predict
 
 		bool do_scale = false;
-		if (!_average_beam->is_empty())
+		if (!_averageBeam->Empty())
 		{
 			// Set avg beam from cache
 			std::cout << "setting beam from cache" << std::endl;
-			_bufferset->set_scalar_beam(_average_beam->get_scalar_beam());
+			_bufferset->set_scalar_beam(_averageBeam->ScalarBeam());
 			do_scale = true;
 		}
 		else
@@ -305,7 +299,6 @@ void IdgMsGridder::setIdgType()
 			return;
 	}
 }
-
 
 void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 {
@@ -398,7 +391,7 @@ void IdgMsGridder::computePredictionBuffer(size_t dataDescId)
 	_bufferset->get_degridder(dataDescId)->finished_reading();
 }
 
-void IdgMsGridder::Predict(double* real, double* imaginary)
+void IdgMsGridder::Predict(double* /*real*/, double* /*imaginary*/)
 {
 	throw std::runtime_error("IDG gridder cannot make complex images");
 }
