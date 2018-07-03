@@ -68,8 +68,8 @@ void WSCleanSettings::Validate() const
 	if(deconvolutionChannelCount != 0 && deconvolutionChannelCount != channelsOut && spectralFittingMode == NoSpectralFitting)
 		throw std::runtime_error("You have requested to deconvolve with a decreased number of channels (-deconvolution-channels), but you have not enabled spectral fitting. You should specify an interpolation function by enabling spectral fitting in order to interpolate the deconvolved channels back to the full number of channels. The most useful and common spectral fitting function is -fit-spectral-pol.");
 	
-	if(savePsfPb && !applyPrimaryBeam)
-		throw std::runtime_error("You can not save the primary-beam corrected PSF without enabling primary beam correction: add -apply-primary-beam to your commandline.");
+	if(savePsfPb && !(applyPrimaryBeam || gridWithBeam))
+		throw std::runtime_error("You can not save the primary-beam corrected PSF without enabling primary beam correction: add -apply-primary-beam to your commandline or use IDG to apply the beam.");
 	
 	if(saveSourceList && (polarizations.size()!=1 || (*polarizations.begin())!=Polarization::StokesI))
 		throw std::runtime_error("Saving a source list currently only works for Stokes I imaging");

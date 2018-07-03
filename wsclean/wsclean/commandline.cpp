@@ -160,11 +160,6 @@ void CommandLine::printHelp()
 		"   Only make the psf, no images are made.\n"
 		"-save-gridding\n"
 		"   Save the gridding correction image. This shows the effect of the antialiasing filter. Default: not saved.\n"
-		"-dft-prediction\n"
-		"   Predict via a direct Fourier transform. This is slow, but can account for direction-dependent effects. This has\n"
-		"   only effect when -mgain is set or -predict is given.\n"
-		"-dft-with-beam\n"
-		"   Apply the beam during DFT. Currently only works for LOFAR.\n"
 		"-visibility-weighting-mode [normal/squared/unit]\n"
 		"   Specify visibility weighting modi. Affects how the weights (normally) stored in\n"
 		"   WEIGHT_SPECTRUM column are applied. Useful for estimating e.g. EoR power spectra errors.\n"
@@ -705,14 +700,6 @@ int CommandLine::Run(int argc, char* argv[])
 			settings.isGriddingImageSaved = true;
 			if(param == "savegridding")
 				deprecated(param, "save-gridding");
-		}
-		else if(param == "dft-prediction")
-		{
-			settings.dftPrediction = true;
-		}
-		else if(param == "dft-with-beam")
-		{
-			settings.dftWithBeam = true;
 		}
 		else if(param == "name")
 		{

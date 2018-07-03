@@ -58,7 +58,6 @@ public:
 	size_t parallelDeconvolutionMaxSize;
 	bool smallInversion, makePSF, makePSFOnly, isWeightImageSaved, isUVImageSaved, isDirtySaved, isGriddingImageSaved;
 	bool writeImagingWeightSpectrumColumn;
-	bool dftPrediction, dftWithBeam;
 	std::string temporaryDirectory;
 	bool forceReorder, forceNoReorder, subtractModel, modelUpdateRequired, mfsWeighting;
 	bool useLofarCentroids;
@@ -173,7 +172,6 @@ inline WSCleanSettings::WSCleanSettings() :
 	smallInversion(true), makePSF(false), makePSFOnly(false), isWeightImageSaved(false),
 	isUVImageSaved(false), isDirtySaved(true), isGriddingImageSaved(false),
 	writeImagingWeightSpectrumColumn(false),
-	dftPrediction(false), dftWithBeam(false),
 	temporaryDirectory(),
 	forceReorder(false), forceNoReorder(false),
 	subtractModel(false),

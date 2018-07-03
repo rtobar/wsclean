@@ -242,63 +242,6 @@ void WSClean::predict(const ImagingTableEntry& entry)
 	_imageAllocator.Free(modelImageImaginary);
 }
 
-void WSClean::dftPredict(const ImagingTable& squaredGroup)
-{
-	Logger::Info.Flush();
-	Logger::Info << " == Predicting visibilities ==\n";
-	const size_t size = _settings.trimmedImageWidth*_settings.trimmedImageHeight;
-	std::vector<ImageBufferAllocator::Ptr> modelImages(squaredGroup.EntryCount());
-		
-	// Get the model images. Only I or IQUV is supported.
-	for(size_t i=0; i!=squaredGroup.EntryCount(); ++i)
-	{
-		_imageAllocator.Allocate(size, modelImages[i]);
-		const ImagingTableEntry& entry = squaredGroup[i];
-		_modelImages.Load(modelImages[i].data(), entry.polarization, entry.outputChannelIndex, false);
-	}
-	
-	std::vector<double*> imagePtrs(modelImages.size());
-	for(size_t i=0; i!=modelImages.size(); ++i)
-		imagePtrs[i] = modelImages[i].data();
-	
-	if(_settings.dftWithBeam)
-	{
-		Logger::Info << "Converting model to absolute values...\n";
-		ImageFilename imageName = ImageFilename(squaredGroup.Front().outputChannelIndex, squaredGroup.Front().outputIntervalIndex);
-		_primaryBeam->CorrectImages(imageName, imagePtrs, _imageAllocator);
-	}
-	
-	Logger::Info << "Creating model...\n";
-	Model model;
-	if(Polarization::HasFullStokesPolarization(_settings.polarizations))
-		DeconvolutionAlgorithm::GetModelFromIQUVImage(model, const_cast<const double**>(imagePtrs.data()), _settings.trimmedImageWidth, _settings.trimmedImageHeight, _gridder->PhaseCentreRA(), _gridder->PhaseCentreDec(), _settings.pixelScaleX, _settings.pixelScaleY, _gridder->PhaseCentreDL(), _gridder->PhaseCentreDM(), 0.0, squaredGroup.Front().CentralFrequency());
-	else if(_settings.polarizations.size()==1 && *_settings.polarizations.begin()==Polarization::StokesI)
-		DeconvolutionAlgorithm::GetModelFromImage(model, modelImages[0].data(), _settings.trimmedImageWidth, _settings.trimmedImageHeight, _gridder->PhaseCentreRA(), _gridder->PhaseCentreDec(), _settings.pixelScaleX, _settings.pixelScaleY, _gridder->PhaseCentreDL(), _gridder->PhaseCentreDM(), 0.0, squaredGroup.Front().CentralFrequency());
-	else throw std::runtime_error("Can't perform DFT for this set of polarizations: either image only I or IQUV.");
-	
-	NDPPP::SaveSkyModel("wsclean-prediction-skymodel.txt", model, false);
-	NDPPP::ConvertSkyModelToSourceDB("wsclean-prediction.sourcedb", "wsclean-prediction-skymodel.txt");
-	
-	Logger::Info << "Number of components to be predicted: " << model.SourceCount() << '\n';
-	
-	_predictingWatch.Start();
-	
-	for(size_t filenameIndex=0; filenameIndex!=_settings.filenames.size(); ++filenameIndex)
-	{
-		for(size_t d=0; d!=_msBands[filenameIndex].DataDescCount(); ++d)
-		{
-			const std::string& msName = _settings.filenames[filenameIndex];
-			
-			MSSelection selection(_globalSelection);
-			if(!selectChannels(selection, filenameIndex, d, squaredGroup.Front()))
-				continue;
-			NDPPP::Predict(msName, _settings.dftWithBeam);
-		}
-	}
-	
-	_predictingWatch.Pause();
-}
-
 void WSClean::initializeImageWeights(const ImagingTableEntry& entry)
 {
 	if(!_settings.mfsWeighting)
@@ -496,7 +439,7 @@ void WSClean::RunClean()
 					if(_settings.deconvolutionIterationCount == 0)
 					{
 						makeMFSImage("image.fits", intervalIndex, *pol, false);
-						if(_settings.applyPrimaryBeam)
+						if(_settings.applyPrimaryBeam || _settings.gridWithBeam)
 							makeMFSImage("image-pb.fits", intervalIndex, *pol, false);
 					}
 					else 
@@ -504,7 +447,7 @@ void WSClean::RunClean()
 						makeMFSImage("residual.fits", intervalIndex, *pol, false);
 						makeMFSImage("model.fits", intervalIndex, *pol, false);
 						renderMFSImage(intervalIndex, *pol, false, false);
-						if(_settings.applyPrimaryBeam)
+						if(_settings.applyPrimaryBeam || _settings.gridWithBeam)
 						{
 							makeMFSImage("residual-pb.fits", intervalIndex, *pol, false);
 							makeMFSImage("model-pb.fits", intervalIndex, *pol, false);
@@ -518,14 +461,14 @@ void WSClean::RunClean()
 						if(_settings.deconvolutionIterationCount == 0)
 						{
 								makeMFSImage("image.fits", intervalIndex, *pol, true);
-							if(_settings.applyPrimaryBeam)
+							if(_settings.applyPrimaryBeam || _settings.gridWithBeam)
 								makeMFSImage("image-pb.fits", intervalIndex, *pol, true);
 						}
 						else {
 							makeMFSImage("residual.fits", intervalIndex, *pol, true);
 							makeMFSImage("model.fits", intervalIndex, *pol, true);
 							renderMFSImage(intervalIndex, *pol, true, false);
-							if(_settings.applyPrimaryBeam)
+							if(_settings.applyPrimaryBeam || _settings.gridWithBeam)
 							{
 								makeMFSImage("residual-pb.fits", intervalIndex, *pol, true);
 								makeMFSImage("model-pb.fits", intervalIndex, *pol, true);
@@ -699,39 +642,24 @@ void WSClean::runIndependentGroup(ImagingTable& groupTable)
 					for(size_t sGroupIndex=0; sGroupIndex!=groupTable.SquaredGroupCount(); ++sGroupIndex)
 					{
 						const ImagingTable sGroupTable = groupTable.GetSquaredGroup(sGroupIndex);
-						if(_settings.dftPrediction)
+						for(size_t e=0; e!=sGroupTable.EntryCount(); ++e)
 						{
-							dftPredict(sGroupTable);
-							for(size_t e=0; e!=sGroupTable.EntryCount(); ++e)
-							{
-								prepareInversionAlgorithm(sGroupTable[e].polarization);
-								initializeCurMSProviders(sGroupTable[e]);
-								initializeImageWeights(sGroupTable[e]);
-			
-								imageMainNonFirst(sGroupTable[e]);
-								_currentPolMSes.clear();
-							}
+							prepareInversionAlgorithm(sGroupTable[e].polarization);
+							initializeCurMSProviders(sGroupTable[e]);
+							initializeImageWeights(sGroupTable[e]);
+		
+							predict(sGroupTable[e]);
+							_currentPolMSes.clear();
 						}
-						else {
-							for(size_t e=0; e!=sGroupTable.EntryCount(); ++e)
-							{
-								prepareInversionAlgorithm(sGroupTable[e].polarization);
-								initializeCurMSProviders(sGroupTable[e]);
-								initializeImageWeights(sGroupTable[e]);
-			
-								predict(sGroupTable[e]);
-								_currentPolMSes.clear();
-							}
-							for(size_t e=0; e!=sGroupTable.EntryCount(); ++e)
-							{
-								prepareInversionAlgorithm(sGroupTable[e].polarization);
-								initializeCurMSProviders(sGroupTable[e]);
-								initializeImageWeights(sGroupTable[e]);
-								
-								imageMainNonFirst(sGroupTable[e]);
-								_currentPolMSes.clear();
-							} // end of polarization loop
-						}
+						for(size_t e=0; e!=sGroupTable.EntryCount(); ++e)
+						{
+							prepareInversionAlgorithm(sGroupTable[e].polarization);
+							initializeCurMSProviders(sGroupTable[e]);
+							initializeImageWeights(sGroupTable[e]);
+							
+							imageMainNonFirst(sGroupTable[e]);
+							_currentPolMSes.clear();
+						} // end of polarization loop
 					} // end of joined channels loop
 				}
 				
@@ -746,6 +674,7 @@ void WSClean::runIndependentGroup(ImagingTable& groupTable)
 		
 		for(size_t joinedIndex=0; joinedIndex!=groupTable.EntryCount(); ++joinedIndex)
 			saveRestoredImagesForGroup(groupTable[joinedIndex]);
+		
 		if(_settings.saveSourceList)
     {
 			_deconvolution.SaveSourceList(groupTable, _gridder->PhaseCentreRA(), _gridder->PhaseCentreDec());
@@ -813,16 +742,31 @@ void WSClean::saveRestoredImagesForGroup(const ImagingTableEntry& tableEntry) co
 		Logger::Info << "DONE\n";
 		_imageAllocator.Free(restoredImage);
 		
-		if(curPol == *_settings.polarizations.rbegin() && _settings.applyPrimaryBeam)
+		if(curPol == *_settings.polarizations.rbegin())
 		{
 			ImageFilename imageName = ImageFilename(currentChannelIndex, tableEntry.outputIntervalIndex);
-			_primaryBeam->CorrectImages(writer.Writer(), imageName, "image", _imageAllocator);
-			if(_settings.savePsfPb)
-				_primaryBeam->CorrectImages(writer.Writer(), imageName, "psf", _imageAllocator);
-			if(_settings.deconvolutionIterationCount != 0)
+			if(_settings.applyPrimaryBeam)
 			{
-				_primaryBeam->CorrectImages(writer.Writer(), imageName, "residual", _imageAllocator);
-				_primaryBeam->CorrectImages(writer.Writer(), imageName, "model", _imageAllocator);
+				_primaryBeam->CorrectImages(writer.Writer(), imageName, "image", _imageAllocator);
+				if(_settings.savePsfPb)
+					_primaryBeam->CorrectImages(writer.Writer(), imageName, "psf", _imageAllocator);
+				if(_settings.deconvolutionIterationCount != 0)
+				{
+					_primaryBeam->CorrectImages(writer.Writer(), imageName, "residual", _imageAllocator);
+					_primaryBeam->CorrectImages(writer.Writer(), imageName, "model", _imageAllocator);
+				}
+			}
+			else if(_settings.gridWithBeam)
+			{
+				IdgMsGridder& idg = static_cast<IdgMsGridder&>(*_gridder);
+				idg.SavePBCorrectedImages(writer.Writer(), imageName, "image", _imageAllocator);
+				if(_settings.savePsfPb)
+					idg.SavePBCorrectedImages(writer.Writer(), imageName, "psf", _imageAllocator);
+				if(_settings.deconvolutionIterationCount != 0)
+				{
+					idg.SavePBCorrectedImages(writer.Writer(), imageName, "residual", _imageAllocator);
+					idg.SavePBCorrectedImages(writer.Writer(), imageName, "model", _imageAllocator);
+				}
 			}
 		}
 	}
@@ -1031,18 +975,25 @@ void WSClean::runFirstInversion(ImagingTableEntry& entry)
 	if(doMakePSF && isFirstPol)
 		imagePSF(entry);
 	
-	if(isLastPol && (_settings.applyPrimaryBeam || _settings.dftWithBeam))
+	if(isLastPol)
 	{
-		_primaryBeam.reset(new PrimaryBeam(_settings));
-		initializeMSProvidersForPB(entry, *_primaryBeam);
-		// we don't have to call initializeImageWeights(entry), because they're still set ok.
-		double ra, dec, dl, dm;
-		MSGridderBase::GetPhaseCentreInfo(_currentPolMSes.front()->MS(), _settings.fieldId, ra, dec, dl, dm);
-		_primaryBeam->SetPhaseCentre(ra, dec, dl, dm);
 		ImageFilename imageName = ImageFilename(entry.outputChannelIndex, entry.outputIntervalIndex);
-		_primaryBeam->MakeBeamImages(imageName, entry, _imageWeightCache.get(), _imageAllocator);
-		_currentPolMSes.clear();
-		initializeCurMSProviders(entry);
+		if(_settings.applyPrimaryBeam)
+		{
+			_primaryBeam.reset(new PrimaryBeam(_settings));
+			initializeMSProvidersForPB(entry, *_primaryBeam);
+			// we don't have to call initializeImageWeights(entry), because they're still set ok.
+			double ra, dec, dl, dm;
+			MSGridderBase::GetPhaseCentreInfo(_currentPolMSes.front()->MS(), _settings.fieldId, ra, dec, dl, dm);
+			_primaryBeam->SetPhaseCentre(ra, dec, dl, dm);
+			_primaryBeam->MakeBeamImages(imageName, entry, _imageWeightCache.get(), _imageAllocator);
+			_currentPolMSes.clear();
+			initializeCurMSProviders(entry);
+		}
+		else if(_settings.gridWithBeam)
+		{
+			static_cast<IdgMsGridder&>(*_gridder).SaveBeamImage(entry, imageName);
+		}
 	}
 		
 	if(!_settings.makePSFOnly)
