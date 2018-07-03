@@ -27,9 +27,11 @@ public:
 	
 	virtual bool HasGriddingCorrectionImage() const final override { doThrow(); return false; }
 	
-	void SavePBCorrectedImages(class FitsWriter& writer, class ImageFilename& filename, const std::string& filenameKind, class ImageBufferAllocator& allocator) const;
+	void SavePBCorrectedImages(class FitsWriter& /*writer*/, class ImageFilename& /*filename*/, const std::string& /*filenameKind*/, class ImageBufferAllocator& /*allocator*/) const
+	{ }
 	
-	void SaveBeamImage(const class ImagingTableEntry& entry, class ImageFilename& filename) const;
+	void SaveBeamImage(const class ImagingTableEntry& /*entry*/, class ImageFilename& /*filename*/) const
+	{ }
 
 private:
 	virtual size_t getSuggestedWGridSize() const final override { doThrow(); return 0; }
