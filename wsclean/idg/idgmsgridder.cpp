@@ -422,7 +422,7 @@ void IdgMsGridder::GetGriddingCorrectionImage(double* image) const
 
 bool IdgMsGridder::HasGriddingCorrectionImage() const
 {
-	return false; // For now (TODO)
+	return false;
 }
 
 void IdgMsGridder::SaveBeamImage(const ImagingTableEntry& entry, ImageFilename& filename) const
