@@ -990,10 +990,6 @@ void WSClean::runFirstInversion(ImagingTableEntry& entry)
 			_currentPolMSes.clear();
 			initializeCurMSProviders(entry);
 		}
-		else if(_settings.gridWithBeam)
-		{
-			static_cast<IdgMsGridder&>(*_gridder).SaveBeamImage(entry, imageName);
-		}
 	}
 		
 	if(!_settings.makePSFOnly)
@@ -1067,6 +1063,12 @@ void WSClean::runFirstInversion(ImagingTableEntry& entry)
 				_imageAllocator.Free(dirtyImage);
 			}
 		}
+	}
+
+	if (isLastPol && _settings.gridWithBeam)
+	{
+		ImageFilename imageName = ImageFilename(entry.outputChannelIndex, entry.outputIntervalIndex);
+		static_cast<IdgMsGridder&>(*_gridder).SaveBeamImage(entry, imageName);
 	}
 	_currentPolMSes.clear();
 }

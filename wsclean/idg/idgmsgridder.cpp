@@ -427,6 +427,10 @@ bool IdgMsGridder::HasGriddingCorrectionImage() const
 
 void IdgMsGridder::SaveBeamImage(const ImagingTableEntry& entry, ImageFilename& filename) const
 {
+	if (!_averageBeam || _averageBeam->Empty())
+	{
+		throw std::runtime_error("IDG gridder can not save beam image. Beam has not been computed yet.");
+	}
 	FitsWriter writer;
 	writer.SetImageDimensions(_settings.trimmedImageWidth, _settings.trimmedImageHeight, PhaseCentreRA(), PhaseCentreDec(), _settings.pixelScaleX, _settings.pixelScaleY);
 	writer.SetPhaseCentreShift(PhaseCentreDL(), PhaseCentreDM());
