@@ -26,11 +26,11 @@ class FitsReader : public FitsIOChecker
 		
 		FitsReader& operator=(const FitsReader& rhs);
 		
-		template<typename NumType> void ReadFrequency(NumType *image, size_t index);
+		template<typename NumType> void ReadIndex(NumType *image, size_t index);
 		
 		template<typename NumType> void Read(NumType *image)
 		{
-			ReadFrequency(image, 0);
+			ReadIndex(image, 0);
 		}
 		
 		size_t ImageWidth() const { return _imgWidth; }

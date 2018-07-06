@@ -7,16 +7,16 @@ void WSCleanSettings::Validate() const
 	if(mode == ImagingMode)
 	{
 		if(trimmedImageWidth == 0 && trimmedImageHeight == 0)
-			throw std::runtime_error("Image size has not been set");
+			throw std::runtime_error("Image size has not been set.");
 		
 		if(trimmedImageWidth == 0 || trimmedImageHeight == 0)
 			throw std::runtime_error("Invalid image size given: one of the dimensions was zero.");
 		
 		if(pixelScaleX == 0.0 && pixelScaleY == 0.0)
-			throw std::runtime_error("Pixel scale has not been set");
+			throw std::runtime_error("Pixel scale has not been set.");
 		
 		if(pixelScaleX == 0.0 || pixelScaleY == 0.0)
-			throw std::runtime_error("Invalid pixel scale given: one direction was set to zero");
+			throw std::runtime_error("Invalid pixel scale given: one direction was set to zero.");
 	}
 	
 	// antialiasingKernelSize should be odd
@@ -34,18 +34,24 @@ void WSCleanSettings::Validate() const
 			polarizations.size() == 4;
 		if(!allStokes && !stokesIOnly)
 		{
-			throw std::runtime_error("When using IDG, it is only possible to either image Stokes I or to image all 4 Stokes polarizations: use -pol i or -pol iquv");
+			throw std::runtime_error("When using IDG, it is only possible to either image Stokes I or to image all 4 Stokes polarizations: use -pol i or -pol iquv.");
 		}
 		if(allStokes && !joinedPolarizationCleaning && deconvolutionIterationCount!=0)
-			throw std::runtime_error("Cleaning IDG images with multiple polarizations is only possible in joined polarization mode");
+			throw std::runtime_error("Cleaning IDG images with multiple polarizations is only possible in joined polarization mode.");
 		if(trimmedImageWidth != trimmedImageHeight)
-			throw std::runtime_error("IDG can not yet make rectangular images -- this will be implemented at a later time");
+			throw std::runtime_error("IDG can not yet make rectangular images -- this will be implemented at a later time.");
 	}
+	if(gridWithBeam && !useIDG)
+		throw std::runtime_error("Can't grid with the beam without IDG: specify '-use-idg' to use IDG.");
+	if(gridWithBeam && applyPrimaryBeam)
+		throw std::runtime_error("Can't simultaneously grid with the beam and apply the average beam: use either one.");
+	if(useDifferentialLofarBeam && !(gridWithBeam || applyPrimaryBeam))
+		throw std::runtime_error("Differential beam correction was requested, but no beam correction is applied. Use either IDG and grid with the beam, or apply the average beam.");
 	
 	if(baselineDependentAveragingInWavelengths != 0.0)
 	{
 		if(forceNoReorder)
-			throw std::runtime_error("Baseline dependent averaging can not be performed without reordering");
+			throw std::runtime_error("Baseline dependent averaging can not be performed without reordering.");
 		if(modelUpdateRequired)
 			throw std::runtime_error("Baseline dependent averaging can not update the model column (yet) -- you have to add -no-update-model-required.");
 	}
@@ -53,7 +59,7 @@ void WSCleanSettings::Validate() const
 	if(simulateNoise)
 	{
 		if(forceNoReorder)
-			throw std::runtime_error("Noise simulation can not be performed without reordering");
+			throw std::runtime_error("Noise simulation can not be performed without reordering.");
 	}
 	
 	if(channelsOut == 0)
@@ -72,10 +78,10 @@ void WSCleanSettings::Validate() const
 		throw std::runtime_error("You can not save the primary-beam corrected PSF without enabling primary beam correction: add -apply-primary-beam to your commandline or use IDG to apply the beam.");
 	
 	if(saveSourceList && (polarizations.size()!=1 || (*polarizations.begin())!=Polarization::StokesI))
-		throw std::runtime_error("Saving a source list currently only works for Stokes I imaging");
+		throw std::runtime_error("Saving a source list currently only works for Stokes I imaging.");
 	
 	if(saveSourceList && deconvolutionIterationCount==0)
-		throw std::runtime_error("A source list cannot be saved without cleaning");
+		throw std::runtime_error("A source list cannot be saved without cleaning.");
 	
 	checkPolarizations();
 }
@@ -87,7 +93,7 @@ void WSCleanSettings::checkPolarizations() const
 	if(joinedPolarizationCleaning)
 	{
 		if(polarizations.size() == 1)
-			throw std::runtime_error("Joined/linked polarization cleaning requested, but only one polarization is being imaged. Specify multiple polarizations, or do not request to join the polarizations");
+			throw std::runtime_error("Joined/linked polarization cleaning requested, but only one polarization is being imaged. Specify multiple polarizations, or do not request to join the polarizations.");
 	}
 	else {
 		if((hasXY || hasYX) && deconvolutionIterationCount !=0)
@@ -101,7 +107,7 @@ void WSCleanSettings::checkPolarizations() const
 			std::ostringstream str;
 			str << "Linked polarization cleaning was requested for polarization "
 				<< Polarization::TypeToFullString(p)
-				<< ", but this polarization is not imaged";
+				<< ", but this polarization is not imaged.";
 			throw std::runtime_error(str.str());
 		}
 	}

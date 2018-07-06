@@ -303,11 +303,11 @@ void FitsReader::initialize()
 	readHistory();
 }
 
-template void FitsReader::ReadFrequency(float* image, size_t index);
-template void FitsReader::ReadFrequency(double* image, size_t index);
+template void FitsReader::ReadIndex(float* image, size_t index);
+template void FitsReader::ReadIndex(double* image, size_t index);
 
 template<typename NumType>
-void FitsReader::ReadFrequency(NumType* image, size_t index)
+void FitsReader::ReadIndex(NumType* image, size_t index)
 {
 	int status = 0;
 	int naxis = 0;

@@ -257,7 +257,7 @@ void Deconvolution::readMask(const ImagingTable& groupTable)
 		}
 		else if(maskReader.NFrequencies()==_settings.channelsOut) {
 			Logger::Debug << "Reading mask '" << _settings.fitsDeconvolutionMask << "' (" << (groupTable.Front().outputChannelIndex+1) << ")...\n";
-			maskReader.ReadFrequency(maskData.data(), groupTable.Front().outputChannelIndex);
+			maskReader.ReadIndex(maskData.data(), groupTable.Front().outputChannelIndex);
 		}
 		else {
 			std::stringstream msg;
