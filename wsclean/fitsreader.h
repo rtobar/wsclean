@@ -15,9 +15,9 @@ class FitsReader : public FitsIOChecker
 		explicit FitsReader(const std::string &filename) 
 		: FitsReader(filename, true, false)
 		{ }
-		explicit FitsReader(const std::string &filename, bool checkCType, bool allowMultiFreq=false) :
+		explicit FitsReader(const std::string &filename, bool checkCType, bool allowMultipleImages=false) :
 			_filename(filename), _hasBeam(false),
-			_checkCType(checkCType), _allowMultiFreq(allowMultiFreq)
+			_checkCType(checkCType), _allowMultipleImages(allowMultipleImages)
 		{
 			initialize(); 
 		}
@@ -82,6 +82,11 @@ class FitsReader : public FitsIOChecker
 		fitsfile* FitsHandle() const { return _fitsPtr; }
 		
 		size_t NFrequencies() const { return _nFrequencies; }
+		size_t NAntennas() const { return _nAntennas; }
+		size_t NTimesteps() const { return _nTimesteps; }
+		
+		double TimeDimensionStart() const { return _timeDimensionStart; }
+		double TimeDimensionIncr() const { return _timeDimensionIncr; }
 	private:
 		double readDoubleKey(const char* key);
 		std::string readStringKey(const char* key);
@@ -94,13 +99,14 @@ class FitsReader : public FitsIOChecker
 		fitsfile *_fitsPtr;
 		
 		size_t _imgWidth, _imgHeight;
-		size_t _nFrequencies;
+		size_t _nAntennas, _nFrequencies, _nTimesteps;
 		double _phaseCentreRA, _phaseCentreDec;
 		double _pixelSizeX, _pixelSizeY;
 		double _phaseCentreDL, _phaseCentreDM;
 		double _frequency, _bandwidth, _dateObs;
 		bool _hasBeam;
 		double _beamMajorAxisRad, _beamMinorAxisRad, _beamPositionAngle;
+		double _timeDimensionStart, _timeDimensionIncr;
 		
 		PolarizationEnum _polarization;
 		FitsIOChecker::Unit _unit;
@@ -108,7 +114,7 @@ class FitsReader : public FitsIOChecker
 		std::string _origin, _originComment;
 		std::vector<std::string> _history;
 		
-		bool _checkCType, _allowMultiFreq;
+		bool _checkCType, _allowMultipleImages;
 };
 
 #endif

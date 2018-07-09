@@ -16,9 +16,17 @@ void FitsATerm::OpenTECFile(const std::string& filename)
 {
 	_reader.reset(new FitsReader(filename, true, true));
 	if(_reader->NFrequencies() != 1)
-		throw std::runtime_error("Fits file for TEC A-terms has multiple frequencies in it");
-	double time = _reader->DateObs(); // TODO this has to be the time corresponding to the image
-	_timesteps.emplace_back(time);
+		throw std::runtime_error("FITS file for TEC A-terms has multiple frequencies in it");
+	if(_reader->NAntennas() != _nAntenna)
+	{
+		std::ostringstream str;
+		str << "FITS file for TEC A-terms has incorrect number of antennas. Measurement set has "
+		<< _nAntenna << " antennas, a-term FITS file has " << _reader->NAntennas() << " antennas.";
+		throw std::runtime_error(str.str());
+	}
+	double time0 = _reader->TimeDimensionStart();
+	for(size_t i=0; i!=_reader->NTimesteps(); ++i)
+		_timesteps.emplace_back(time0 + i*_reader->TimeDimensionIncr());
 }
 
 void FitsATerm::Calculate(std::complex<float>* buffer, double time, double frequency)
@@ -60,8 +68,8 @@ void FitsATerm::readImages(std::complex<float>* buffer, size_t timeIndex, double
 {
 	for(size_t antennaIndex = 0; antennaIndex != _nAntenna; ++antennaIndex)
 	{
-		// TODO if we are in the same timestep but at a different frequency, it would
-		// be possible to script reading and resampling, and immediately call evaluateTEC()
+		// TODO When we are in the same timestep but at a different frequency, it would
+		// be possible to skip reading and resampling, and immediately call evaluateTEC()
 		// with the "scratch" data still there.
 		
 		ao::uvector<double> image(_reader->ImageWidth() * _reader->ImageHeight());

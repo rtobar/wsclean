@@ -9,6 +9,7 @@
 
 #include "../system.h"
 
+#include "../fitswriter.h"
 #include "../lane.h"
 #include "../uvector.h"
 
@@ -129,7 +130,7 @@ void LofarBeamTerm::Calculate(std::complex<float>* buffer, double time, double f
 			}
 		}
 		// It is necessary to use each converter once in the global thread, during which
-		// it initializes itself. This initializes is not thread safe, apparently.
+		// it initializes itself. This initialize is not thread safe, apparently.
 		threadData[i].j2000ToITRFRef(_delayDir);
 	}
 	for(size_t i=0; i!=nThreads; ++i)
@@ -204,7 +205,6 @@ void LofarBeamTerm::calcThread(struct LofarBeamTermThreadData* data)
 	}
 }
 
-#include "../fitswriter.h"
 void LofarBeamTerm::StoreATerms(const std::string& filename, std::complex<float>* buffer)
 {
 	size_t ny = floor(sqrt(_stations.size())), nx = (_stations.size()+ny-1) / ny;

@@ -13,7 +13,9 @@ FitsReader::FitsReader(const FitsReader& source) :
 	_filename(source._filename),
 	_fitsPtr(0),
 	_imgWidth(source._imgWidth), _imgHeight(source._imgHeight),
+	_nAntennas(source._nAntennas),
 	_nFrequencies(source._nFrequencies),
+	_nTimesteps(source._nTimesteps),
 	_phaseCentreRA(source._phaseCentreRA), _phaseCentreDec(source._phaseCentreDec),
 	_pixelSizeX(source._pixelSizeX), _pixelSizeY(source._pixelSizeY),
 	_phaseCentreDL(source._phaseCentreDL), _phaseCentreDM(source._phaseCentreDM),
@@ -25,7 +27,8 @@ FitsReader::FitsReader(const FitsReader& source) :
 	_telescopeName(source._telescopeName), _observer(source._observer), _objectName(source._objectName),
 	_origin(source._origin), _originComment(source._originComment),
 	_history(source._history),
-	_checkCType(source._checkCType)
+	_checkCType(source._checkCType),
+	_allowMultipleImages(source._allowMultipleImages)
 {
 	int status = 0;
 	fits_open_file(&_fitsPtr, _filename.c_str(), READONLY, &status);
@@ -49,7 +52,9 @@ FitsReader& FitsReader::operator=(const FitsReader& rhs)
 	_filename = rhs._filename;
 	_imgWidth = rhs._imgWidth;
 	_imgHeight = rhs._imgHeight;
+	_nAntennas = rhs._nAntennas;
 	_nFrequencies = rhs._nFrequencies;
+	_nTimesteps = rhs._nTimesteps;
 	_phaseCentreRA = rhs._phaseCentreRA;
 	_phaseCentreDec = rhs._phaseCentreDec;
 	_pixelSizeX = rhs._pixelSizeX;
@@ -71,6 +76,8 @@ FitsReader& FitsReader::operator=(const FitsReader& rhs)
 	_origin = rhs._origin;
 	_originComment = rhs._originComment;
 	_history = rhs._history;
+	_checkCType = rhs._checkCType;
+	_allowMultipleImages = rhs._allowMultipleImages;
 	
 	int status = 0;
 	fits_close_file(_fitsPtr, &status);
@@ -153,6 +160,18 @@ bool FitsReader::ReadStringKeyIfExists(const char *key, std::string& value, std:
 
 void FitsReader::initialize()
 {
+	_nFrequencies = 1;
+	_nAntennas = 1;
+	_nTimesteps = 1;
+	_phaseCentreRA = 0.0;
+	_pixelSizeX = 0.0;
+	_phaseCentreDec = 0.0;
+	_pixelSizeY = 0.0;
+	_dateObs = 0.0;
+	_frequency = 0.0;
+	_bandwidth = 0.0;
+	_polarization = Polarization::StokesI;
+	
 	int status = 0;
 	fits_open_file(&_fitsPtr, _filename.c_str(), READONLY, &status);
 	checkStatus(status, _filename);
@@ -174,7 +193,6 @@ void FitsReader::initialize()
 	
 	_imgWidth = naxes[0];
 	_imgHeight = naxes[1];
-	_nFrequencies = 1;
 	
 	std::string tmp;
 	for(int i=2;i!=naxis;++i)
@@ -183,15 +201,56 @@ void FitsReader::initialize()
 		name << "CTYPE" << (i+1);
 		if(ReadStringKeyIfExists(name.str().c_str(), tmp))
 		{
+			std::ostringstream crval, cdelt;
+			crval << "CRVAL" << (i+1);
+			cdelt << "CDELT" << (i+1);
 			if(tmp == "FREQ" || tmp == "VRAD")
+			{
 				_nFrequencies = naxes[i];
+				_frequency = readDoubleKey(crval.str().c_str());
+				_bandwidth = readDoubleKey(cdelt.str().c_str());
+			}
+			else if(tmp == "ANTENNA")
+				_nAntennas = naxes[i];
+			else if(tmp == "TIME")
+			{
+				_nTimesteps = naxes[i];
+				_timeDimensionStart = readDoubleKey(crval.str().c_str());
+				_timeDimensionIncr = readDoubleKey(cdelt.str().c_str());
+			}
+			else if(tmp == "STOKES")
+			{
+				double val = readDoubleKey(crval.str().c_str());
+				switch(int(val))
+				{
+					default: throw std::runtime_error("Unknown polarization specified in fits file");
+					case 1: _polarization = Polarization::StokesI; break;
+					case 2: _polarization = Polarization::StokesQ; break;
+					case 3: _polarization = Polarization::StokesU; break;
+					case 4: _polarization = Polarization::StokesV; break;
+					case -1: _polarization = Polarization::RR; break;
+					case -2: _polarization = Polarization::LL; break;
+					case -3: _polarization = Polarization::RL; break;
+					case -4: _polarization = Polarization::LR; break;
+					case -5: _polarization = Polarization::XX; break;
+					case -6: _polarization = Polarization::YY; break;
+					case -7: _polarization = Polarization::XY; break;
+					case -8: _polarization = Polarization::YX; break;
+				}
+				if(naxes[i]!=1 && !_allowMultipleImages)
+					throw std::runtime_error("Multiple polarizations given in fits file");
+			}
 			else if(naxes[i] != 1)
 				throw std::runtime_error("Multiple images given in fits file");
 		}
 	}
 	
-	if(_nFrequencies != 1 && !_allowMultiFreq)
+	if(_nFrequencies != 1 && !_allowMultipleImages)
 		throw std::runtime_error("Multiple frequencies given in fits file");
+	if(_nAntennas != 1 && !_allowMultipleImages)
+		throw std::runtime_error("Multiple antennas given in fits file");
+	if(_nTimesteps != 1 && !_allowMultipleImages)
+		throw std::runtime_error("Multiple timesteps given in fits file");
 	
 	double bScale = 1.0, bZero = 0.0, equinox = 2000.0;
 	ReadDoubleKeyIfExists("BSCALE", bScale);
@@ -207,10 +266,8 @@ void FitsReader::initialize()
 	if(ReadStringKeyIfExists("CTYPE1", tmp) && tmp != "RA---SIN" && _checkCType)
 		throw std::runtime_error("Invalid value for CTYPE1");
 	
-	_phaseCentreRA = 0.0;
 	ReadDoubleKeyIfExists("CRVAL1", _phaseCentreRA);
 	_phaseCentreRA *= M_PI / 180.0;
-	_pixelSizeX = 0.0;
 	ReadDoubleKeyIfExists("CDELT1", _pixelSizeX);
 	_pixelSizeX *= -M_PI / 180.0;
 	if(ReadStringKeyIfExists("CUNIT1", tmp) && tmp != "deg" && _checkCType)
@@ -223,10 +280,8 @@ void FitsReader::initialize()
 
 	if(ReadStringKeyIfExists("CTYPE2",tmp) && tmp != "DEC--SIN" && _checkCType)
 		throw std::runtime_error("Invalid value for CTYPE2");
-	_phaseCentreDec = 0.0;
 	ReadDoubleKeyIfExists("CRVAL2", _phaseCentreDec);
 	_phaseCentreDec *= M_PI / 180.0;
-	_pixelSizeY = 0.0;
 	ReadDoubleKeyIfExists("CDELT2", _pixelSizeY);
 	_pixelSizeY *= M_PI / 180.0;
 	if(ReadStringKeyIfExists("CUNIT2", tmp) && tmp != "deg" && _checkCType)
@@ -237,42 +292,8 @@ void FitsReader::initialize()
 	else
 		_phaseCentreDM = 0.0;
 	
-	_dateObs = 0.0;
 	readDateKeyIfExists("DATE-OBS", _dateObs);
 	
-	if(naxis >= 3 && readStringKey("CTYPE3") == "FREQ")
-	{
-		_frequency = readDoubleKey("CRVAL3");
-		_bandwidth = readDoubleKey("CDELT3");
-	}
-	else {
-		_frequency = 0.0;
-		_bandwidth = 0.0;
-	}
-	
-	if(naxis >= 4 && readStringKey("CTYPE4") == "STOKES")
-	{
-		double val = readDoubleKey("CRVAL4");
-		switch(int(val))
-		{
-			default: throw std::runtime_error("Unknown polarization specified in fits file");
-			case 1: _polarization = Polarization::StokesI; break;
-			case 2: _polarization = Polarization::StokesQ; break;
-			case 3: _polarization = Polarization::StokesU; break;
-			case 4: _polarization = Polarization::StokesV; break;
-			case -1: _polarization = Polarization::RR; break;
-			case -2: _polarization = Polarization::LL; break;
-			case -3: _polarization = Polarization::RL; break;
-			case -4: _polarization = Polarization::LR; break;
-			case -5: _polarization = Polarization::XX; break;
-			case -6: _polarization = Polarization::YY; break;
-			case -7: _polarization = Polarization::XY; break;
-			case -8: _polarization = Polarization::YX; break;
-		}
-	}
-	else {
-		_polarization = Polarization::StokesI;
-	}
 	double bMaj=0.0, bMin=0.0, bPa=0.0;
 	if(ReadDoubleKeyIfExists("BMAJ", bMaj) && ReadDoubleKeyIfExists("BMIN", bMin) && ReadDoubleKeyIfExists("BPA", bPa))
 	{
