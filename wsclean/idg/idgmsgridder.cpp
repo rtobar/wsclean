@@ -258,15 +258,10 @@ void IdgMsGridder::Predict(double* image)
 		if (!_averageBeam->Empty())
 		{
 			// Set avg beam from cache
-			std::cout << "setting beam from cache" << std::endl;
+			Logger::Debug << "Average beam is already in cache.\n";
 			_bufferset->set_scalar_beam(_averageBeam->ScalarBeam());
 			do_scale = true;
 		}
-		else
-		{
-			std::cout << "scalar beam is empty." << std::endl;
-		}
-
 
 		std::vector<MSData> msDataVector;
 		initializeMSDataVector(msDataVector);
@@ -327,13 +322,13 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 
 	std::unique_ptr<LofarBeamTerm> aTermMaker;
 	ao::uvector<std::complex<float>> aTermBuffer;
-	double aTermUpdateInterval = 120.0; // 2 min
+	double aTermUpdateInterval = _settings.beamAtermUpdateTime; // in seconds
 	if(_settings.gridWithBeam)
 	{
 		size_t subgridsize = _bufferset->get_subgridsize();
 		double dl = -_bufferset->get_subgrid_pixelsize();
 		double dm = -_bufferset->get_subgrid_pixelsize();
-		double pdl = PhaseCentreDL(), pdm = PhaseCentreDM(); // TODO half pixel shift here?
+		double pdl = PhaseCentreDL() - 0.5*dl, pdm = PhaseCentreDM() + 0.5*dm;
 		aTermMaker.reset(new LofarBeamTerm(ms, subgridsize, subgridsize, dl, dm, pdl, pdm, _settings.useDifferentialLofarBeam));
 		aTermBuffer.resize(subgridsize*subgridsize*4*nr_stations);
 	}
