@@ -19,7 +19,7 @@ class LofarBeamTerm : public ATermBase
 public:
 	LofarBeamTerm(casacore::MeasurementSet& ms, size_t width, size_t height, double dl, double dm, double phaseCentreDL, double phaseCentreDM, bool useDifferentialBeam);
 	
-	virtual void Calculate(std::complex<float>* buffer, double time, double frequency) final override;
+	virtual bool Calculate(std::complex<float>* buffer, double time, double frequency) final override;
 		
 	void StoreATerms(const std::string& filename, std::complex<float>* buffer);
 	

@@ -160,11 +160,14 @@ std::unique_ptr<class ATermBase> IdgMsGridder::getATermMaker(MSGridderBase::MSDa
 		{
 			std::unique_ptr<ATermConfig> config(new ATermConfig(ms, nr_stations, subgridsize, subgridsize, dl, dm, pdl, pdm));
 			config->Read(_settings.atermConfigFilename);
+			return config;
 		}
 		else
 			return std::unique_ptr<LofarBeamTerm>(new LofarBeamTerm(ms, subgridsize, subgridsize, dl, dm, pdl, pdm, _settings.useDifferentialLofarBeam));
 	}
-	return std::unique_ptr<ATermBase>();
+	else {
+		return std::unique_ptr<ATermBase>();
+	}
 }
 
 void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
@@ -213,8 +216,8 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 			if(aTermMaker && (!_settings.gridWithBeam || currentTime - lastATermUpdate > aTermUpdateInterval))
 			{
 				Logger::Debug << "Calculating a-terms for timestep " << timeIndex << "\n";
-				aTermMaker->Calculate(aTermBuffer.data(), currentTime + aTermUpdateInterval*0.5, _selectedBands.CentreFrequency());
-				_bufferset->get_gridder(metaData.dataDescId)->set_aterm(timeIndex, aTermBuffer.data());
+				if(aTermMaker->Calculate(aTermBuffer.data(), currentTime + aTermUpdateInterval*0.5, _selectedBands.CentreFrequency()))
+					_bufferset->get_gridder(metaData.dataDescId)->set_aterm(timeIndex, aTermBuffer.data());
 				lastATermUpdate = currentTime;
 			}
 		}
@@ -361,9 +364,11 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 			
 			if(aTermMaker && (!_settings.gridWithBeam || currentTime - lastATermUpdate > aTermUpdateInterval))
 			{
-				Logger::Debug << "Calculating a-terms for timestep " << timeIndex << "\n";
-				aTermMaker->Calculate(aTermBuffer.data(), currentTime + aTermUpdateInterval*0.5, _selectedBands.CentreFrequency());
-				_bufferset->get_degridder(metaData.dataDescId)->set_aterm(timeIndex, aTermBuffer.data());
+				if(aTermMaker->Calculate(aTermBuffer.data(), currentTime + aTermUpdateInterval*0.5, _selectedBands.CentreFrequency()))
+				{
+					_bufferset->get_degridder(metaData.dataDescId)->set_aterm(timeIndex, aTermBuffer.data());
+					Logger::Debug << "Calculated new a-terms for timestep " << timeIndex << "\n";
+				}
 				lastATermUpdate = currentTime;
 			}
 		}

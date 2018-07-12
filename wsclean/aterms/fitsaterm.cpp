@@ -2,6 +2,8 @@
 
 #include "../units/imagecoordinates.h"
 
+#include "../wsclean/logger.h"
+
 FitsATerm::FitsATerm(size_t nAntenna, size_t width, size_t height, double dl, double dm, double phaseCentreDL, double phaseCentreDM) :
 	_nAntenna(nAntenna),
 	_width(width),
@@ -26,21 +28,36 @@ void FitsATerm::OpenTECFile(const std::string& filename)
 	double time0 = _reader->TimeDimensionStart();
 	for(size_t i=0; i!=_reader->NTimesteps(); ++i)
 		_timesteps.emplace_back(time0 + i*_reader->TimeDimensionIncr());
+	_curTimeindex = std::numeric_limits<size_t>::max();
+	
+	size_t inWidth = _reader->ImageWidth(), inHeight = _reader->ImageHeight();
+	double inPixelSizeX = _reader->PixelSizeX(), inPixelSizeY = _reader->PixelSizeY();
+	double inPhaseCentreDL = _reader->PhaseCentreDL(), inPhaseCentreDM = _reader->PhaseCentreDM();
+	Logger::Debug << inPixelSizeX << " " << inPixelSizeY << " " << inWidth << " " << inHeight << " " << inPhaseCentreDL << " " << inPhaseCentreDM << '\n';
+	Logger::Debug << _dl << " " << _dm << " " << _width << " " << _height << " " << _phaseCentreDL << " " << _phaseCentreDM << '\n';
 }
 
-void FitsATerm::Calculate(std::complex<float>* buffer, double time, double frequency)
+#include <iostream>
+bool FitsATerm::Calculate(std::complex<float>* buffer, double time, double frequency)
 {
 	bool newImage = false;
-	// Have we arrived at the next timestep?
+	if(_curTimeindex == std::numeric_limits<size_t>::max())
+	{
+		newImage = true;
+		_bufferCache.clear();
+		_curTimeindex = 0;
+	}
 	if(_curTimeindex+1 < _timesteps.size())
 	{
+		// Do we need to calculate a next timestep?
 		double curTime = _timesteps[_curTimeindex];
 		double nextTime = _timesteps[_curTimeindex+1];
 		// If we are closer to the next timestep, use the next.
+		// TODO might have to skip multiple timesteps!
 		if(std::fabs(nextTime - time) < std::fabs(curTime - time))
 		{
-			newImage = true;
 			++_curTimeindex;
+			newImage = true;
 			_bufferCache.clear();
 		}
 	}
@@ -56,15 +73,14 @@ void FitsATerm::Calculate(std::complex<float>* buffer, double time, double frequ
 		readImages(buffer, _curTimeindex, frequency);
 		std::vector<std::complex<float>>& cacheEntry = _bufferCache[frequency];
 		cacheEntry.assign(buffer, buffer + _nAntenna * 4 * _width * _height);
+		return true;
 	}
-	else {
-		// Use a previously calculated buffer
-		std::copy(iter->second.begin(), iter->second.end(), buffer);
-	}
+	return false;
 }
 
 void FitsATerm::readImages(std::complex<float>* buffer, size_t timeIndex, double frequency)
 {
+	_scratch.resize(_width*_height);
 	for(size_t antennaIndex = 0; antennaIndex != _nAntenna; ++antennaIndex)
 	{
 		// TODO When we are in the same timestep but at a different frequency, it would
@@ -74,7 +90,7 @@ void FitsATerm::readImages(std::complex<float>* buffer, size_t timeIndex, double
 		ao::uvector<double> image(_reader->ImageWidth() * _reader->ImageHeight());
 		_reader->ReadIndex(image.data(), antennaIndex + timeIndex*_nAntenna);
 		
-		resample(image.data(), _scratch.data());
+		resample(_scratch.data(), image.data());
 		
 		std::complex<float>* antennaBuffer = buffer + antennaIndex * _width*_height*4;
 		
@@ -114,10 +130,16 @@ void FitsATerm::resample(double* dest, const double* source)
 	}
 }
 
+#include <iostream>
 void FitsATerm::evaluateTEC(std::complex<float>* dest, const double* source, double frequency)
 {
-	for(size_t pixel = 0; pixel != _width*_height*4; ++pixel)
+	for(size_t pixel = 0; pixel != _width*_height; ++pixel)
 	{
-		dest[pixel] = std::polar(1.0, source[pixel] * -8.44797245e9 / frequency);
+		dest[pixel*4 ] = std::polar(1.0, source[pixel] * -8.44797245e9 / frequency);
+		dest[pixel*4 + 1] = 0.0;
+		dest[pixel*4 + 2] = 0.0;
+		dest[pixel*4 + 3] = dest[pixel*4];
 	}
+	std::cout << source[0] << " -> " << dest[0] << '\n';
+	std::cout << source[_width*_height-1] << " -> " << dest[_width*_height*4-1] << '\n';
 }

@@ -12,7 +12,7 @@ public:
 	{
 		throw std::runtime_error("ATerm not implemented -- did you forget to turn specific beam options on during the compilation?");
 	}
-	void Calculate(std::complex<float>*, double, double) final override { };
+	virtual bool Calculate(std::complex<float>*, double, double) final override { return false; };
 };
 
 #endif

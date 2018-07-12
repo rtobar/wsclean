@@ -54,10 +54,10 @@ public:
 		}
 	}
 	
-	virtual void Calculate(std::complex<float>* buffer, double time, double frequency) final override
+	virtual bool Calculate(std::complex<float>* buffer, double time, double frequency) final override
 	{
 		// TODO iterate and multiple
-		_aterms.front()->Calculate(buffer, time, frequency);
+		return _aterms.front()->Calculate(buffer, time, frequency);
 	}
 private:
 	casacore::MeasurementSet& _ms;

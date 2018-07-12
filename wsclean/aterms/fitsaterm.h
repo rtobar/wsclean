@@ -23,7 +23,7 @@ public:
 	
 	void OpenTECFile(const std::string& filename);
 	
-	virtual void Calculate(std::complex<float>* buffer, double time, double frequency);
+	virtual bool Calculate(std::complex<float>* buffer, double time, double frequency);
 	
 private:
 	void readImages(std::complex<float>* buffer, size_t timeIndex, double frequency);

@@ -84,7 +84,7 @@ struct LofarBeamTermThreadData
 	vector3r_t station0, tile0;
 };
 
-void LofarBeamTerm::Calculate(std::complex<float>* buffer, double time, double frequency)
+bool LofarBeamTerm::Calculate(std::complex<float>* buffer, double time, double frequency)
 {
 	size_t nCPUs = System::ProcessorCount();
 	ao::lane<size_t> lane(nCPUs);
@@ -153,6 +153,7 @@ void LofarBeamTerm::Calculate(std::complex<float>* buffer, double time, double f
 		StoreATerms(f.str(), buffer);
 		++index;
 	}
+	return true;
 }
 
 void LofarBeamTerm::calcThread(struct LofarBeamTermThreadData* data)
