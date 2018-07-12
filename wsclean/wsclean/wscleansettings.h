@@ -64,7 +64,9 @@ public:
 	size_t fullResOffset, fullResWidth, fullResPad;
 	bool applyPrimaryBeam, reusePrimaryBeam, useDifferentialLofarBeam, savePsfPb;
 	size_t primaryBeamUndersampling;
-	bool useIDG, gridWithBeam;
+	bool useIDG;
+	std::string atermConfigFilename;
+	bool gridWithBeam;
 	double beamAtermUpdateTime; // in seconds.
 	bool saveATerms;
 	enum IDGMode { IDG_DEFAULT, IDG_GPU, IDG_CPU, IDG_HYBRID } idgMode;
@@ -184,6 +186,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	savePsfPb(false),
 	primaryBeamUndersampling(8),
 	useIDG(false),
+	atermConfigFilename(),
 	gridWithBeam(false),
 	beamAtermUpdateTime(300.0),
 	saveATerms(false),

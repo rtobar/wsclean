@@ -79,6 +79,8 @@ private:
 	
 	void setIdgType();
 	
+	std::unique_ptr<class ATermBase> getATermMaker(MSGridderBase::MSData& msData);
+	
 	struct IDGInversionRow : public MSGridderBase::InversionRow {
 		size_t antenna1, antenna2, timeIndex;
 	};

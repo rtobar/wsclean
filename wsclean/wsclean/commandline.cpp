@@ -181,6 +181,9 @@ void CommandLine::printHelp()
 		"   Sets the IDG mode. Default: cpu. Hybrid is recommended when a GPU is available.\n"
 		"\n"
 		"  ** A-TERM GRIDDING **\n"
+		"-aterm-config <filename>\n"
+		"   Specify a parameter set describing how a-terms should be applied. Please refer to the documentation for\n"
+		"   details of the configuration file format. Applying a-terms is only possible when IDG is enabled.\n"
 		"-grid-with-beam\n"
 		"   Apply a-terms to correct for the primary beam. This is only possible when IDG is enabled.\n"
 		"-beam-aterm-update <seconds>\n"
@@ -1128,6 +1131,11 @@ int CommandLine::Run(int argc, char* argv[])
 			settings.useLofarCentroids = true;
 			++argi;
 			settings.fullResWidth = parse_size_t(argv[argi], "lofar-centroids");
+		}
+		else if(param == "aterm-config")
+		{
+			++argi;
+			settings.atermConfigFilename = argv[argi];
 		}
 		else if(param == "grid-with-beam")
 		{

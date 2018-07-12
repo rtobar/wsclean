@@ -17,6 +17,7 @@
 #include "../fitsreader.h"
 #include "../fitswriter.h"
 
+#include "../aterms/atermconfig.h"
 #include "../aterms/lofarbeamterm.h"
 
 #include "idgconfiguration.h"
@@ -142,6 +143,30 @@ void IdgMsGridder::Invert()
 	}
 }
 
+std::unique_ptr<class ATermBase> IdgMsGridder::getATermMaker(MSGridderBase::MSData& msData)
+{
+	casacore::MeasurementSet& ms = msData.msProvider->MS();
+	size_t nr_stations = ms.antenna().nrow();
+	std::unique_ptr<ATermBase> aTermMaker;
+	ao::uvector<std::complex<float>> aTermBuffer;
+	if(!_settings.atermConfigFilename.empty() || _settings.gridWithBeam)
+	{
+		// IDG uses a flipped coordinate system which is moved by half a pixel:
+		double dl = -_bufferset->get_subgrid_pixelsize();
+		double dm = -_bufferset->get_subgrid_pixelsize();
+		double pdl = PhaseCentreDL() - 0.5*dl, pdm = PhaseCentreDM() + 0.5*dm;
+		size_t subgridsize = _bufferset->get_subgridsize();
+		if(!_settings.atermConfigFilename.empty())
+		{
+			std::unique_ptr<ATermConfig> config(new ATermConfig(ms, nr_stations, subgridsize, subgridsize, dl, dm, pdl, pdm));
+			config->Read(_settings.atermConfigFilename);
+		}
+		else
+			return std::unique_ptr<LofarBeamTerm>(new LofarBeamTerm(ms, subgridsize, subgridsize, dl, dm, pdl, pdm, _settings.useDifferentialLofarBeam));
+	}
+	return std::unique_ptr<ATermBase>();
+}
+
 void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 {
 	_selectedBands = msData.SelectedBand();
@@ -160,19 +185,12 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 
 	_bufferset->init_buffers(_buffersize, bands, nr_stations, max_baseline, _options, idg::api::BufferSetType::gridding);
 	
-	std::unique_ptr<LofarBeamTerm> aTermMaker;
-	ao::uvector<std::complex<float>> aTermBuffer;
+	std::unique_ptr<ATermBase> aTermMaker = getATermMaker(msData);
 	double aTermUpdateInterval = _settings.beamAtermUpdateTime; // in seconds
-	if(_settings.gridWithBeam)
-	{
-		size_t subgridsize = _bufferset->get_subgridsize();
-		// IDG uses a flipped coordinate system which is moved by half a pixel:
-		double dl = -_bufferset->get_subgrid_pixelsize();
-		double dm = -_bufferset->get_subgrid_pixelsize();
-		double pdl = PhaseCentreDL() - 0.5*dl, pdm = PhaseCentreDM() + 0.5*dm;
-		aTermMaker.reset(new LofarBeamTerm(ms, subgridsize, subgridsize, dl, dm, pdl, pdm, _settings.useDifferentialLofarBeam));
+	ao::uvector<std::complex<float>> aTermBuffer;
+	size_t subgridsize = _bufferset->get_subgridsize();
+	if(aTermMaker)
 		aTermBuffer.resize(subgridsize*subgridsize*4*nr_stations);
-	}
 
 	ao::uvector<float> weightBuffer(_selectedBands.MaxChannels()*4);
 	ao::uvector<std::complex<float>> modelBuffer(_selectedBands.MaxChannels()*4);
@@ -192,7 +210,7 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 			currentTime = metaData.time;
 			timeIndex++;
 			
-			if(_settings.gridWithBeam && currentTime - lastATermUpdate > aTermUpdateInterval)
+			if(aTermMaker && (!_settings.gridWithBeam || currentTime - lastATermUpdate > aTermUpdateInterval))
 			{
 				Logger::Debug << "Calculating a-terms for timestep " << timeIndex << "\n";
 				aTermMaker->Calculate(aTermBuffer.data(), currentTime + aTermUpdateInterval*0.5, _selectedBands.CentreFrequency());
@@ -320,18 +338,12 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 
 	_bufferset->init_buffers(_buffersize, bands, nr_stations, max_baseline, _options, idg::api::BufferSetType::degridding);
 
-	std::unique_ptr<LofarBeamTerm> aTermMaker;
-	ao::uvector<std::complex<float>> aTermBuffer;
 	double aTermUpdateInterval = _settings.beamAtermUpdateTime; // in seconds
-	if(_settings.gridWithBeam)
-	{
-		size_t subgridsize = _bufferset->get_subgridsize();
-		double dl = -_bufferset->get_subgrid_pixelsize();
-		double dm = -_bufferset->get_subgrid_pixelsize();
-		double pdl = PhaseCentreDL() - 0.5*dl, pdm = PhaseCentreDM() + 0.5*dm;
-		aTermMaker.reset(new LofarBeamTerm(ms, subgridsize, subgridsize, dl, dm, pdl, pdm, _settings.useDifferentialLofarBeam));
+	std::unique_ptr<ATermBase> aTermMaker = getATermMaker(msData);
+	ao::uvector<std::complex<float>> aTermBuffer;
+	size_t subgridsize = _bufferset->get_subgridsize();
+	if(aTermMaker)
 		aTermBuffer.resize(subgridsize*subgridsize*4*nr_stations);
-	}
 	
 	ao::uvector<std::complex<float>> buffer(_selectedBands.MaxChannels()*4);
 	int timeIndex = -1;
@@ -347,7 +359,7 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 			currentTime = metaData.time;
 			timeIndex++;
 			
-			if(_settings.gridWithBeam && currentTime - lastATermUpdate > aTermUpdateInterval)
+			if(aTermMaker && (!_settings.gridWithBeam || currentTime - lastATermUpdate > aTermUpdateInterval))
 			{
 				Logger::Debug << "Calculating a-terms for timestep " << timeIndex << "\n";
 				aTermMaker->Calculate(aTermBuffer.data(), currentTime + aTermUpdateInterval*0.5, _selectedBands.CentreFrequency());

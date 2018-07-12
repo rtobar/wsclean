@@ -9,8 +9,7 @@ FitsATerm::FitsATerm(size_t nAntenna, size_t width, size_t height, double dl, do
 	_dl(dl), _dm(dm),
 	_phaseCentreDL(phaseCentreDL),
 	_phaseCentreDM(phaseCentreDM)
-{
-}
+{ }
 
 void FitsATerm::OpenTECFile(const std::string& filename)
 {

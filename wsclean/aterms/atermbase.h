@@ -5,6 +5,7 @@
 
 class ATermBase
 {
+public:
 	virtual void Calculate(std::complex<float>* buffer, double time, double frequency) = 0;
 };
 

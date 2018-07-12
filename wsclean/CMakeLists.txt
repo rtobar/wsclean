@@ -99,7 +99,8 @@ configure_file("${PROJECT_SOURCE_DIR}/wscversion.h.in" "${PROJECT_BINARY_DIR}/ws
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 add_library(wsclean-object OBJECT
-  casamaskreader.cpp dftpredictionalgorithm.cpp fftconvolver.cpp fftresampler.cpp fftwmanager.cpp fitsiochecker.cpp fitsreader.cpp fitswriter.cpp image.cpp imageweights.cpp modelrenderer.cpp multibanddata.cpp nlplfitter.cpp polynomialchannelfitter.cpp polynomialfitter.cpp progressbar.cpp rmsimage.cpp stopwatch.cpp
+  casamaskreader.cpp dftpredictionalgorithm.cpp fftconvolver.cpp fftresampler.cpp fftwmanager.cpp fitsiochecker.cpp fitsreader.cpp fitswriter.cpp image.cpp imageweights.cpp modelrenderer.cpp multibanddata.cpp nlplfitter.cpp parsetreader.cpp polynomialchannelfitter.cpp polynomialfitter.cpp progressbar.cpp rmsimage.cpp stopwatch.cpp
+  aterms/fitsaterm.cpp
   deconvolution/clarkloop.cpp deconvolution/componentlist.cpp deconvolution/deconvolution.cpp deconvolution/deconvolutionalgorithm.cpp deconvolution/genericclean.cpp deconvolution/imageset.cpp deconvolution/paralleldeconvolution.cpp deconvolution/moresane.cpp deconvolution/simpleclean.cpp deconvolution/spectralfitter.cpp
   interface/wscleaninterface.cpp
   iuwt/imageanalysis.cpp iuwt/iuwtdecomposition.cpp iuwt/iuwtdeconvolutionalgorithm.cpp iuwt/iuwtmask.cpp
@@ -162,6 +163,7 @@ if(Boost_FOUND)
 		tests/testimagebufferallocator.cpp
 		tests/testimageset.cpp
 		tests/testmatrix2x2.cpp
+		tests/testparsetreader.cpp
 		tests/testpolynomialchannelfitter.cpp
 		tests/testpolynomialfitter.cpp
 		tests/testradeccoord.cpp
