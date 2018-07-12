@@ -439,7 +439,7 @@ void WSClean::RunClean()
 					if(_settings.deconvolutionIterationCount == 0)
 					{
 						makeMFSImage("image.fits", intervalIndex, *pol, false);
-						if(_settings.applyPrimaryBeam || _settings.gridWithBeam)
+						if(_settings.applyPrimaryBeam || (_settings.gridWithBeam || !_settings.atermConfigFilename.empty()))
 							makeMFSImage("image-pb.fits", intervalIndex, *pol, false);
 					}
 					else 
@@ -447,7 +447,7 @@ void WSClean::RunClean()
 						makeMFSImage("residual.fits", intervalIndex, *pol, false);
 						makeMFSImage("model.fits", intervalIndex, *pol, false);
 						renderMFSImage(intervalIndex, *pol, false, false);
-						if(_settings.applyPrimaryBeam || _settings.gridWithBeam)
+						if(_settings.applyPrimaryBeam || (_settings.gridWithBeam || !_settings.atermConfigFilename.empty()))
 						{
 							makeMFSImage("residual-pb.fits", intervalIndex, *pol, false);
 							makeMFSImage("model-pb.fits", intervalIndex, *pol, false);
@@ -461,14 +461,14 @@ void WSClean::RunClean()
 						if(_settings.deconvolutionIterationCount == 0)
 						{
 								makeMFSImage("image.fits", intervalIndex, *pol, true);
-							if(_settings.applyPrimaryBeam || _settings.gridWithBeam)
+							if(_settings.applyPrimaryBeam || (_settings.gridWithBeam || !_settings.atermConfigFilename.empty()))
 								makeMFSImage("image-pb.fits", intervalIndex, *pol, true);
 						}
 						else {
 							makeMFSImage("residual.fits", intervalIndex, *pol, true);
 							makeMFSImage("model.fits", intervalIndex, *pol, true);
 							renderMFSImage(intervalIndex, *pol, true, false);
-							if(_settings.applyPrimaryBeam || _settings.gridWithBeam)
+							if(_settings.applyPrimaryBeam || (_settings.gridWithBeam || !_settings.atermConfigFilename.empty()))
 							{
 								makeMFSImage("residual-pb.fits", intervalIndex, *pol, true);
 								makeMFSImage("model-pb.fits", intervalIndex, *pol, true);
@@ -756,7 +756,7 @@ void WSClean::saveRestoredImagesForGroup(const ImagingTableEntry& tableEntry) co
 					_primaryBeam->CorrectImages(writer.Writer(), imageName, "model", _imageAllocator);
 				}
 			}
-			else if(_settings.gridWithBeam)
+			else if(_settings.gridWithBeam || !_settings.atermConfigFilename.empty())
 			{
 				IdgMsGridder& idg = static_cast<IdgMsGridder&>(*_gridder);
 				idg.SavePBCorrectedImages(writer.Writer(), imageName, "image", _imageAllocator);
@@ -1065,7 +1065,7 @@ void WSClean::runFirstInversion(ImagingTableEntry& entry)
 		}
 	}
 
-	if (isLastPol && _settings.gridWithBeam)
+	if (isLastPol && (_settings.gridWithBeam || !_settings.atermConfigFilename.empty()))
 	{
 		ImageFilename imageName = ImageFilename(entry.outputChannelIndex, entry.outputIntervalIndex);
 		static_cast<IdgMsGridder&>(*_gridder).SaveBeamImage(entry, imageName);

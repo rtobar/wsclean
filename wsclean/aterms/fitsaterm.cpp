@@ -33,8 +33,6 @@ void FitsATerm::OpenTECFile(const std::string& filename)
 	size_t inWidth = _reader->ImageWidth(), inHeight = _reader->ImageHeight();
 	double inPixelSizeX = _reader->PixelSizeX(), inPixelSizeY = _reader->PixelSizeY();
 	double inPhaseCentreDL = _reader->PhaseCentreDL(), inPhaseCentreDM = _reader->PhaseCentreDM();
-	Logger::Debug << inPixelSizeX << " " << inPixelSizeY << " " << inWidth << " " << inHeight << " " << inPhaseCentreDL << " " << inPhaseCentreDM << '\n';
-	Logger::Debug << _dl << " " << _dm << " " << _width << " " << _height << " " << _phaseCentreDL << " " << _phaseCentreDM << '\n';
 }
 
 #include <iostream>
@@ -130,7 +128,6 @@ void FitsATerm::resample(double* dest, const double* source)
 	}
 }
 
-#include <iostream>
 void FitsATerm::evaluateTEC(std::complex<float>* dest, const double* source, double frequency)
 {
 	for(size_t pixel = 0; pixel != _width*_height; ++pixel)
@@ -140,6 +137,4 @@ void FitsATerm::evaluateTEC(std::complex<float>* dest, const double* source, dou
 		dest[pixel*4 + 2] = 0.0;
 		dest[pixel*4 + 3] = dest[pixel*4];
 	}
-	std::cout << source[0] << " -> " << dest[0] << '\n';
-	std::cout << source[_width*_height-1] << " -> " << dest[_width*_height*4-1] << '\n';
 }

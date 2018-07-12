@@ -215,9 +215,11 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 			
 			if(aTermMaker && (!_settings.gridWithBeam || currentTime - lastATermUpdate > aTermUpdateInterval))
 			{
-				Logger::Debug << "Calculating a-terms for timestep " << timeIndex << "\n";
 				if(aTermMaker->Calculate(aTermBuffer.data(), currentTime + aTermUpdateInterval*0.5, _selectedBands.CentreFrequency()))
+				{
 					_bufferset->get_gridder(metaData.dataDescId)->set_aterm(timeIndex, aTermBuffer.data());
+					Logger::Debug << "Calculated a-terms for timestep " << timeIndex << "\n";
+				}
 				lastATermUpdate = currentTime;
 			}
 		}
