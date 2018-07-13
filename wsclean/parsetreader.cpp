@@ -135,3 +135,17 @@ bool ParsetReader::GetBoolOr(const std::string& key, bool orValue) const
 			throw std::runtime_error("Bad boolean value for key " + key + ": '" + v + "'");
 	}
 }
+
+double ParsetReader::GetDouble(const std::string& key) const
+{
+	return atof(GetString(key).c_str());
+}
+
+double ParsetReader::GetDoubleOr(const std::string& key, double orValue) const
+{
+	auto iter = _entries.find(key);
+	if(iter == _entries.end())
+		return orValue;
+	else
+		return atof(iter->second.GetStringValue().c_str());
+}

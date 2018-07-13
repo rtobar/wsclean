@@ -17,7 +17,7 @@ using namespace LOFAR::StationResponse;
 class LofarBeamTerm : public ATermBase
 {
 public:
-	LofarBeamTerm(casacore::MeasurementSet& ms, size_t width, size_t height, double dl, double dm, double phaseCentreDL, double phaseCentreDM, bool useDifferentialBeam);
+	LofarBeamTerm(casacore::MeasurementSet& ms, size_t width, size_t height, double dl, double dm, double phaseCentreDL, double phaseCentreDM, double aTermUpdateInterval, bool useDifferentialBeam);
 	
 	virtual bool Calculate(std::complex<float>* buffer, double time, double frequency) final override;
 		
@@ -31,6 +31,7 @@ public:
 	void SetSaveATerms(bool saveATerms);
 
 private:
+	void calculateUpdate(std::complex<float>* buffer, double time, double frequency);
 	void calcThread(struct LofarBeamTermThreadData* data);
 	
 	std::vector<LOFAR::StationResponse::Station::Ptr> _stations;
@@ -38,6 +39,7 @@ private:
 	double _subbandFrequency, _phaseCentreRA, _phaseCentreDec, _dl, _dm, _phaseCentreDL, _phaseCentreDM;
 	casacore::MDirection _delayDir, _referenceDir, _tileBeamDir;
 	casacore::MPosition _arrayPos;
+	double _updateInterval, _lastATermUpdate;
 	bool _useDifferentialBeam, _saveATerms;
 };
 

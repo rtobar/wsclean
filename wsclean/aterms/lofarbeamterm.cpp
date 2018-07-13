@@ -18,15 +18,18 @@
 
 #include <thread>
 
-LofarBeamTerm::LofarBeamTerm(casacore::MeasurementSet& ms, size_t width, size_t height, double dl, double dm, double phaseCentreDL, double phaseCentreDM, bool useDifferentialBeam) :
+LofarBeamTerm::LofarBeamTerm(casacore::MeasurementSet& ms, size_t width, size_t height, double dl, double dm, double phaseCentreDL, double phaseCentreDM, double aTermUpdateInterval, bool useDifferentialBeam) :
 	_width(width),
 	_height(height),
 	_dl(dl), _dm(dm),
 	_phaseCentreDL(phaseCentreDL),
 	_phaseCentreDM(phaseCentreDM),
+	_updateInterval(aTermUpdateInterval),
+	_lastATermUpdate(-aTermUpdateInterval-1),
 	_useDifferentialBeam(useDifferentialBeam),
 	_saveATerms(false)
 {
+	std::cout << "dl=" << dl*180.0/M_PI*60.0*60.0 << " asec.\n";
 	casacore::MSAntenna aTable(ms.antenna());
 	casacore::MPosition::ROScalarColumn antPosColumn(aTable, aTable.columnName(casacore::MSAntennaEnums::POSITION));
 	_arrayPos = antPosColumn(0);
@@ -85,6 +88,19 @@ struct LofarBeamTermThreadData
 };
 
 bool LofarBeamTerm::Calculate(std::complex<float>* buffer, double time, double frequency)
+{
+	if(time - _lastATermUpdate > _updateInterval)
+	{
+		calculateUpdate(buffer, time + _updateInterval*0.5, frequency);
+		_lastATermUpdate = time;
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
+void LofarBeamTerm::calculateUpdate(std::complex<float>* buffer, double time, double frequency)
 {
 	size_t nCPUs = System::ProcessorCount();
 	ao::lane<size_t> lane(nCPUs);
@@ -153,7 +169,6 @@ bool LofarBeamTerm::Calculate(std::complex<float>* buffer, double time, double f
 		StoreATerms(f.str(), buffer);
 		++index;
 	}
-	return true;
 }
 
 void LofarBeamTerm::calcThread(struct LofarBeamTermThreadData* data)

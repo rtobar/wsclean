@@ -163,7 +163,7 @@ std::unique_ptr<class ATermBase> IdgMsGridder::getATermMaker(MSGridderBase::MSDa
 			return config;
 		}
 		else
-			return std::unique_ptr<LofarBeamTerm>(new LofarBeamTerm(ms, subgridsize, subgridsize, dl, dm, pdl, pdm, _settings.useDifferentialLofarBeam));
+			return std::unique_ptr<LofarBeamTerm>(new LofarBeamTerm(ms, subgridsize, subgridsize, dl, dm, pdl, pdm, _settings.beamAtermUpdateTime, _settings.useDifferentialLofarBeam));
 	}
 	else {
 		return std::unique_ptr<ATermBase>();

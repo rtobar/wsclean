@@ -40,6 +40,8 @@ public:
 	const std::vector<std::string>& GetStringList(const std::string& key) const;
 	bool GetBool(const std::string& key) const;
 	bool GetBoolOr(const std::string& key, bool orValue) const;
+	double GetDouble(const std::string& key) const;
+	double GetDoubleOr(const std::string& key, double orValue) const;
 	
 private:
 	void read(std::istream& stream);

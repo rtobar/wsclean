@@ -44,9 +44,11 @@ public:
 			}
 			else if(atermType == "beam")
 			{
-				// TODO this whole option is currently specific to lofar...
+				// TODO this option is currently specific to lofar, but should
+				// determine telescope from measurement set, etc.
 				bool differential = reader.GetBoolOr("beam.differential", false);
-				std::unique_ptr<LofarBeamTerm> beam(new LofarBeamTerm(_ms, _width, _height, _dl, _dm, _phaseCentreDL, _phaseCentreDM, differential));
+				double updateInterval = reader.GetDoubleOr("beam.update_interval", 120.0);
+				std::unique_ptr<LofarBeamTerm> beam(new LofarBeamTerm(_ms, _width, _height, _dl, _dm, _phaseCentreDL, _phaseCentreDM, updateInterval, differential));
 				_aterms.emplace_back(std::move(beam));
 			}
 		}
@@ -80,7 +82,7 @@ public:
 				std::copy(_previousAterms[0].begin(), _previousAterms[0].end(), buffer);
 				for(size_t i=1; i!=_aterms.size(); ++i)
 				{
-					for(size_t j=0; j!=_width*_height*4; j+=4)
+					for(size_t j=0; j!=_width*_height*_nAntenna*4; j+=4)
 					{
 						std::complex<float> scratch[4];
 						Matrix2x2::ATimesB(scratch, &_previousAterms[i][j], &buffer[j]);

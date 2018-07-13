@@ -16,7 +16,9 @@ BOOST_AUTO_TEST_CASE( normal_parset )
 		"	amplitude.type = amplitude\n"
 		"	rm.images = [ amplitudesXX.fits amplitudesYY.fits ]\n"
 		"# Comments are allowed\n"
-		"	beam.differential = true\n";
+		"	beam.differential = true\n"
+		"	beam.update_interval = 12.0\n";
+		
 	std::istringstream stream(testparset);
 	ParsetReader reader(stream);
 	
@@ -31,11 +33,15 @@ BOOST_AUTO_TEST_CASE( normal_parset )
 	BOOST_CHECK_EQUAL(reader.GetString("amplitude.type"), "amplitude");
 	BOOST_CHECK_EQUAL(reader.GetString("beam.differential"), "true");
 	BOOST_CHECK_EQUAL(reader.GetBool("beam.differential"), true);
+	BOOST_CHECK_EQUAL(reader.GetDouble("beam.update_interval"), 12.0);
 	
 	// Or values
 	BOOST_CHECK_EQUAL(reader.GetBoolOr("beam.differential", false), true);
 	BOOST_CHECK_EQUAL(reader.GetBoolOr("notexisting", true), true);
 	BOOST_CHECK_EQUAL(reader.GetBoolOr("notexisting", false), false);
+	
+	BOOST_CHECK_EQUAL(reader.GetDoubleOr("beam.update_interval", 60.0), 12.0);
+	BOOST_CHECK_EQUAL(reader.GetDoubleOr("notexisting", 37.3), 37.3);
 	
 	BOOST_CHECK_EQUAL(reader.GetStringOr("rm.type", "-"), "rm");
 	BOOST_CHECK_EQUAL(reader.GetStringOr("notexisting", "!"), "!");

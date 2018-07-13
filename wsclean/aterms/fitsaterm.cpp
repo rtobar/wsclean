@@ -29,10 +29,6 @@ void FitsATerm::OpenTECFile(const std::string& filename)
 	for(size_t i=0; i!=_reader->NTimesteps(); ++i)
 		_timesteps.emplace_back(time0 + i*_reader->TimeDimensionIncr());
 	_curTimeindex = std::numeric_limits<size_t>::max();
-	
-	size_t inWidth = _reader->ImageWidth(), inHeight = _reader->ImageHeight();
-	double inPixelSizeX = _reader->PixelSizeX(), inPixelSizeY = _reader->PixelSizeY();
-	double inPhaseCentreDL = _reader->PhaseCentreDL(), inPhaseCentreDM = _reader->PhaseCentreDM();
 }
 
 #include <iostream>
