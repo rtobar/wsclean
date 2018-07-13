@@ -8,7 +8,7 @@ class ATermBase
 public:
 	/**
 	 * Calculate the a-terms for the given time and frequency, for all stations.
-	 * @param buffer A buffer of size width x height x 4 x nstation, in that order.
+	 * @param buffer A buffer of size 4 x width x height x nstation, in that order.
 	 * @param time The time corresponding to the currently gridded visibilities to
 	 * which the aterm will be applied.
 	 * @param frequency Frequency of currently gridded visibilities.

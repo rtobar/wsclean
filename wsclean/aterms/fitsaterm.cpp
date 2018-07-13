@@ -31,7 +31,6 @@ void FitsATerm::OpenTECFile(const std::string& filename)
 	_curTimeindex = std::numeric_limits<size_t>::max();
 }
 
-#include <iostream>
 bool FitsATerm::Calculate(std::complex<float>* buffer, double time, double frequency)
 {
 	bool newImage = false;

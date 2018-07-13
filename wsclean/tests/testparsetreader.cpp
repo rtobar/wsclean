@@ -17,7 +17,7 @@ BOOST_AUTO_TEST_CASE( normal_parset )
 		"	rm.images = [ amplitudesXX.fits amplitudesYY.fits ]\n"
 		"# Comments are allowed\n"
 		"	beam.differential = true\n"
-		"	beam.update_interval = 12.0\n";
+		"	beam.update_interval = 12.0 # in seconds\n";
 		
 	std::istringstream stream(testparset);
 	ParsetReader reader(stream);
