@@ -74,6 +74,7 @@ void IdgMsGridder::Invert()
 			// For the PSF the aterm is computed but not applied
 			// The aterm is computed so that the average beam can be computed
 			_bufferset->set_apply_aterm(false);
+			_bufferset->unset_matrix_inverse_beam();
 			_bufferset->init_compute_avg_beam(idg::api::compute_flags::compute_and_grid);
 			resetVisibilityCounters();
 			for(size_t i=0; i!=MeasurementSetCount(); ++i)
