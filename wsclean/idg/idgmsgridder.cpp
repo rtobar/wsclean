@@ -91,10 +91,16 @@ void IdgMsGridder::Invert()
 			// Normalize by total weight
 			Logger::Debug << "Total weight: " << totalWeight() << '\n';
 
-			for(size_t ii=0; ii != 4 * width * height; ++ii)
+			double center_pixel_value = _image[height/2 * width + width/2]; // TODO check memory layout, is this correct? for now it does not matter, because width == height
+
+			if (center_pixel_value)
 			{
-				_image[ii] /= totalWeight();
+				for(size_t ii=0; ii != 4 * width * height; ++ii)
+				{
+					_image[ii] /= center_pixel_value;
+				}
 			}
+
 		}
 		else {
 			// Compute a dirty/residual image
