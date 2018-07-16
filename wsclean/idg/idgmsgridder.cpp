@@ -179,6 +179,12 @@ std::unique_ptr<class ATermBase> IdgMsGridder::getATermMaker(MSGridderBase::MSDa
 
 void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 {
+
+	const float max_baseline = msData.maxBaselineInM;
+
+	// Skip this ms if there is no data in it
+	if (!max_baseline) return;
+
 	_selectedBands = msData.SelectedBand();
 
 	// TODO for now we map the ms antennas directly to the gridder's antenna,
@@ -191,7 +197,6 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 	{
 		bands.push_back(std::vector<double>(_selectedBands[i].begin(), _selectedBands[i].end()));
 	}
-	const float max_baseline = msData.maxBaselineInM;
 
 	_bufferset->init_buffers(_buffersize, bands, nr_stations, max_baseline, _options, idg::api::BufferSetType::gridding);
 	
@@ -333,6 +338,8 @@ void IdgMsGridder::setIdgType()
 void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 {
 	const float max_baseline = msData.maxBaselineInM;
+	// Skip this ms if there is no data in it
+	if (!max_baseline) return;
 
 	msData.msProvider->ReopenRW();
 
