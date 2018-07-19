@@ -1,4 +1,3 @@
-#include <algorithm>
 #include "lofarbeamterm.h"
 
 #include "../banddata.h"
@@ -17,6 +16,7 @@
 #include <casacore/measures/TableMeasures/ArrayMeasColumn.h>
 #include <casacore/measures/Measures/MEpoch.h>
 
+#include <algorithm>
 
 LofarBeamTerm::LofarBeamTerm(casacore::MeasurementSet& ms, size_t width, size_t height, double dl, double dm, double phaseCentreDL, double phaseCentreDM, double aTermUpdateInterval, bool useDifferentialBeam) :
 	_width(width),

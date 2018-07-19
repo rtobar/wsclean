@@ -413,7 +413,7 @@ double CommandLine::parse_double(const char* param, double lowerLimit, const cha
 		std::ostringstream msg;
 		msg << "Parameter value for -" << name << " was " << v << " but ";
 		if(inclusive)
-			msg << "is not allowed to smaller than " << lowerLimit;
+			msg << "is not allowed to be smaller than " << lowerLimit;
 		else
 			msg << "has to be larger than " << lowerLimit;
 		throw std::runtime_error(msg.str());
