@@ -57,6 +57,13 @@ public:
 	 */
 	static void Trim(double* output, size_t outWidth, size_t outHeight, const double* input, size_t inWidth, size_t inHeight);
 	
+	Image Trim(size_t outWidth, size_t outHeight) const
+	{
+		Image image(outWidth, outHeight, *_allocator);
+		Trim(image.data(), outWidth, outHeight, data(), Width(), Height());
+		return image;
+	}
+	
 	static void TrimBox(bool* output, size_t x1, size_t y1, size_t boxWidth, size_t boxHeight, const bool* input, size_t inWidth, size_t inHeight);
 	
 	template<typename T>
@@ -67,6 +74,13 @@ public:
 	 * @param outHeight Should be &gt;= inHeight.
 	 */
 	static void Untrim(double* output, size_t outWidth, size_t outHeight, const double* input, size_t inWidth, size_t inHeight);
+	
+	Image Untrim(size_t outWidth, size_t outHeight) const
+	{
+		Image image(outWidth, outHeight, *_allocator);
+		Untrim(image.data(), outWidth, outHeight, data(), Width(), Height());
+		return image;
+	}
 	
 	static double Median(const double* data, size_t size)
 	{

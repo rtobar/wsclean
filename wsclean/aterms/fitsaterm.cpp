@@ -40,18 +40,23 @@ bool FitsATerm::Calculate(std::complex<float>* buffer, double time, double frequ
 		_bufferCache.clear();
 		_curTimeindex = 0;
 	}
-	if(_curTimeindex+1 < _timesteps.size())
+	
+	bool finishedSearch = false;
+	while(_curTimeindex+1 < _timesteps.size() && !finishedSearch)
 	{
 		// Do we need to calculate a next timestep?
 		double curTime = _timesteps[_curTimeindex];
 		double nextTime = _timesteps[_curTimeindex+1];
 		// If we are closer to the next timestep, use the next.
-		// TODO might have to skip multiple timesteps!
 		if(std::fabs(nextTime - time) < std::fabs(curTime - time))
 		{
 			++_curTimeindex;
 			newImage = true;
 			_bufferCache.clear();
+			finishedSearch = false;
+		}
+		else {
+			finishedSearch = true;
 		}
 	}
 	// Do we have this frequency in the cache?

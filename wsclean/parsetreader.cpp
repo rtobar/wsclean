@@ -10,6 +10,8 @@
 ParsetReader::ParsetReader(const std::string& filename)
 {
 	std::ifstream stream(filename);
+	if(!stream)
+		throw std::runtime_error("Could not open parset file '" + filename + "'");
 	read(stream);
 }
 

@@ -17,7 +17,6 @@
 #include "../lane.h"
 #include "../matrix2x2.h"
 
-
 using namespace LOFAR::StationResponse;
 
 class LofarBeamTerm : public ATermBase
