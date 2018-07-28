@@ -29,8 +29,6 @@ LofarBeamTerm::LofarBeamTerm(casacore::MeasurementSet& ms, size_t width, size_t 
 	_useDifferentialBeam(useDifferentialBeam),
 	_saveATerms(true)
 {
-	std::cout << "dl=" << dl*180.0/M_PI*60.0*60.0 << " asec.\n";
-
 	casacore::MSAntenna aTable(ms.antenna());
 
 	size_t nr_stations = ms.nrow();
