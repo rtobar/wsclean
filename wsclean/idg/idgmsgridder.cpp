@@ -35,7 +35,7 @@ IdgMsGridder::IdgMsGridder(const WSCleanSettings& settings) :
 		idg::api::BufferSet::create(_proxyType));
 	if(_settings.gridWithBeam)
 		_options["a_term_kernel_size"] = float(5.0);
-	_options["max_threads"] = settings.threadCount;
+	_options["max_threads"] = int(settings.threadCount);
 }
 
 void IdgMsGridder::Invert()
