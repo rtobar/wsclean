@@ -396,6 +396,18 @@ public:
 		Matrix2x2::Add(_values, rhs._values);
 		return *this;
 	}
+	MC2x2Base<ValType>& operator-=(const MC2x2Base<ValType>& rhs)
+	{
+		Matrix2x2::Subtract(_values, rhs._values);
+		return *this;
+	}
+	MC2x2Base<ValType>& operator*=(const MC2x2Base<ValType>& rhs)
+	{
+		MC2x2Base<ValType> dest;
+		Matrix2x2::ATimesB(dest._values, _values, rhs._values);
+		*this = dest;
+		return *this;
+	}
 	MC2x2Base<ValType>& operator*=(ValType rhs)
 	{
 		Matrix2x2::ScalarMultiply(_values, rhs);
