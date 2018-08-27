@@ -33,7 +33,10 @@ public:
 	 * every time they are calculated.
 	 * @param saveATerms Fits images are saved when set to true.
 	 */
-	void SetSaveATerms(bool saveATerms);
+	void SetSaveATerms(bool saveATerms)
+	{
+		_saveATerms = saveATerms;
+	}
 
 private:
 	void calculateUpdate(std::complex<float>* buffer, double time, double frequency);

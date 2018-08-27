@@ -23,7 +23,7 @@ public:
 
 		po::variables_map vm;
 		Logger::Debug << "trying to open config file\n";
-			std::ifstream ifs("idg.conf");
+		std::ifstream ifs("idg.conf");
 		if (ifs.fail())
 		{
 			Logger::Debug << "could not open config file\n";

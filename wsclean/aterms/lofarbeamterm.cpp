@@ -27,7 +27,7 @@ LofarBeamTerm::LofarBeamTerm(casacore::MeasurementSet& ms, size_t width, size_t 
 	_updateInterval(aTermUpdateInterval),
 	_lastATermUpdate(-aTermUpdateInterval-1),
 	_useDifferentialBeam(useDifferentialBeam),
-	_saveATerms(true)
+	_saveATerms(false)
 {
 	casacore::MSAntenna aTable(ms.antenna());
 

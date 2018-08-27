@@ -10,17 +10,22 @@
 #include "../matrix2x2.h"
 #include "../parsetreader.h"
 
+#include "../wsclean/wscleansettings.h"
+
 class ATermConfig : public ATermBase
 {
 public:
-	ATermConfig(casacore::MeasurementSet& ms, size_t nAntenna, size_t width, size_t height, double dl, double dm, double phaseCentreDL, double phaseCentreDM) :
+	ATermConfig(casacore::MeasurementSet& ms, size_t nAntenna, size_t width, size_t height, double dl, double dm, double phaseCentreDL, double phaseCentreDM,
+		const WSCleanSettings& settings
+	) :
 		_ms(ms),
 		_nAntenna(nAntenna),
 		_width(width),
 		_height(height),
 		_dl(dl), _dm(dm),
 		_phaseCentreDL(phaseCentreDL),
-		_phaseCentreDM(phaseCentreDM)
+		_phaseCentreDM(phaseCentreDM),
+		_settings(settings)
 	{ }
 	
 	void Read(const std::string& parset)
@@ -49,6 +54,7 @@ public:
 				bool differential = reader.GetBoolOr("beam.differential", false);
 				double updateInterval = reader.GetDoubleOr("beam.update_interval", 120.0);
 				std::unique_ptr<LofarBeamTerm> beam(new LofarBeamTerm(_ms, _width, _height, _dl, _dm, _phaseCentreDL, _phaseCentreDM, updateInterval, differential));
+				beam->SetSaveATerms(_settings.saveATerms);
 				_aterms.emplace_back(std::move(beam));
 			}
 		}
@@ -100,6 +106,7 @@ private:
 	double _dl, _dm, _phaseCentreDL, _phaseCentreDM;
 	std::vector<std::unique_ptr<ATermBase>> _aterms;
 	std::vector<ao::uvector<std::complex<float>>> _previousAterms;
+	const WSCleanSettings& _settings;
 };
 
 #endif

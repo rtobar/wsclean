@@ -215,7 +215,6 @@ inline WSCleanSettings::WSCleanSettings() :
 	useMultiscale(false),
 	useClarkOptimization(true),
 	squaredJoins(false),
-	//forceDynamicJoin(false),
 	multiscaleFastSubMinorLoop(true),
 	multiscaleGain(0.2),
 	multiscaleDeconvolutionScaleBias(0.6),

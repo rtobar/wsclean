@@ -167,12 +167,15 @@ std::unique_ptr<class ATermBase> IdgMsGridder::getATermMaker(MSGridderBase::MSDa
 		size_t subgridsize = _bufferset->get_subgridsize();
 		if(!_settings.atermConfigFilename.empty())
 		{
-			std::unique_ptr<ATermConfig> config(new ATermConfig(ms, nr_stations, subgridsize, subgridsize, dl, dm, pdl, pdm));
+			std::unique_ptr<ATermConfig> config(new ATermConfig(ms, nr_stations, subgridsize, subgridsize, dl, dm, pdl, pdm, _settings));
 			config->Read(_settings.atermConfigFilename);
 			return std::move(config);
 		}
-		else
-			return std::unique_ptr<LofarBeamTerm>(new LofarBeamTerm(ms, subgridsize, subgridsize, dl, dm, pdl, pdm, _settings.beamAtermUpdateTime, _settings.useDifferentialLofarBeam));
+		else {
+			std::unique_ptr<LofarBeamTerm> lofarBeamATerm(new LofarBeamTerm(ms, subgridsize, subgridsize, dl, dm, pdl, pdm, _settings.beamAtermUpdateTime, _settings.useDifferentialLofarBeam));
+			lofarBeamATerm->SetSaveATerms(_settings.saveATerms);
+			return std::move(lofarBeamATerm);
+		}
 	}
 	else {
 		return std::unique_ptr<ATermBase>();
