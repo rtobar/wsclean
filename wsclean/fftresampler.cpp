@@ -53,8 +53,8 @@ void FFTResampler::runThread()
 		// TODO this can be done without allocating more mem!
 		std::complex<double>
 			*newfftData = reinterpret_cast<std::complex<double>*>(fftw_malloc(fftOutWidth*_outputHeight*sizeof(std::complex<double>)));
-		memset(newfftData, 0, fftOutWidth*_outputHeight*sizeof(std::complex<double>));
-			
+		std::uninitialized_fill_n(newfftData, fftOutWidth*_outputHeight, std::complex<double>(0));
+		
 		size_t oldMidX = _inputWidth/2;
 		size_t newMidX = _outputWidth/2;
 		
