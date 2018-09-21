@@ -66,6 +66,7 @@ public:
 	size_t primaryBeamUndersampling;
 	bool useIDG;
 	std::string atermConfigFilename;
+	double atermKernelSize;
 	bool gridWithBeam;
 	double beamAtermUpdateTime; // in seconds.
 	bool saveATerms;
@@ -187,6 +188,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	primaryBeamUndersampling(8),
 	useIDG(false),
 	atermConfigFilename(),
+	atermKernelSize(0.0),
 	gridWithBeam(false),
 	beamAtermUpdateTime(300.0),
 	saveATerms(false),

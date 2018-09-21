@@ -33,8 +33,10 @@ IdgMsGridder::IdgMsGridder(const WSCleanSettings& settings) :
 	setIdgType();
 	_bufferset = std::unique_ptr<idg::api::BufferSet>(
 		idg::api::BufferSet::create(_proxyType));
-	if(_settings.gridWithBeam)
+	if(_settings.atermKernelSize == 0.0 && _settings.gridWithBeam)
 		_options["a_term_kernel_size"] = float(5.0);
+	else if(_settings.atermKernelSize != 0.0)
+		_options["a_term_kernel_size"] = float(_settings.atermKernelSize);
 	_options["max_threads"] = int(settings.threadCount);
 }
 

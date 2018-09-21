@@ -188,6 +188,8 @@ void CommandLine::printHelp()
 		"   Apply a-terms to correct for the primary beam. This is only possible when IDG is enabled.\n"
 		"-beam-aterm-update <seconds>\n"
 		"   Set the ATerm update time in seconds. The default is every 300 seconds.\n"
+		"-aterm-kernel-size\n"
+		"   Kernel size reserved for aterms by IDG.\n"
 		"-save-aterms\n"
 		"   Output a fits file for every aterm update, containing the applied image for every station.\n"
 		"\n"
@@ -1145,6 +1147,11 @@ int CommandLine::Run(int argc, char* argv[])
 		{
 			++argi;
 			settings.beamAtermUpdateTime = parse_double(argv[argi], "beam-aterm-update");
+		}
+		else if(param == "aterm-kernel-size")
+		{
+			++argi;
+			settings.atermKernelSize = parse_double(argv[argi], 0.0, "aterm-kernel-size");
 		}
 		else if(param == "save-aterms")
 		{
