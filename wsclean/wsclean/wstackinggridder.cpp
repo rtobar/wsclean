@@ -119,7 +119,7 @@ void WStackingGridder::StartInversionPass(size_t passIndex)
 	size_t nLayersInPass = layerRangeStart(passIndex+1) - layerRangeStart(passIndex);
 	initializeLayeredUVData(nLayersInPass);
 	for(size_t i=0; i!=nLayersInPass; ++i)
-		memset(_layeredUVData[i], 0, _width*_height * sizeof(double)*2);
+		std::uninitialized_fill_n(_layeredUVData[i], _width*_height, 0.0);
 }
 
 void WStackingGridder::StartPredictionPass(size_t passIndex)
