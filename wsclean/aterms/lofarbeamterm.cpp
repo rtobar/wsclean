@@ -182,7 +182,7 @@ void LofarBeamTerm::calcThread(std::complex<float>* buffer, double time, double 
 
 	size_t job_id;
 	while(_lane->read(job_id))
-    {
+	{
 		size_t antennaIndex = job_id % _stations.size();
 		size_t y = job_id / _stations.size();
 		for(size_t x=0; x!=_width; ++x)

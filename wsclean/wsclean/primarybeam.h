@@ -2,7 +2,10 @@
 #define PRIMARY_BEAM_H
 
 #include <string>
+
 #include <boost/filesystem/operations.hpp>
+
+#include <boost/algorithm/string/case_conv.hpp>
 
 #include "imagefilename.h"
 #include "imagingtable.h"
@@ -12,6 +15,8 @@
 #include "../polarization.h"
 
 #include "../lofar/lbeamimagemaker.h"
+#include "../mwa/mwabeam.h"
+
 #include "../fitswriter.h"
 #include "../matrix2x2.h"
 #include "../fitsreader.h"
@@ -61,13 +66,19 @@ public:
 		{
 			Logger::Info << " == Constructing primary beam ==\n";
 			
-			// TODO Find out what telescope array is used in the (first) measurement set
-			
 			PrimaryBeamImageSet beamImages(_settings.trimmedImageWidth, _settings.trimmedImageHeight, allocator);
 			beamImages.SetToZero();
 			
-			makeLOFARImage(beamImages, entry, imageWeightCache, allocator);
-		
+			std::string telescopeName = getTelescopeName();
+			boost::to_upper(telescopeName);
+			
+			if(telescopeName == "LOFAR" || telescopeName == "AARTFAAC")
+				makeLOFARImage(beamImages, entry, imageWeightCache, allocator);
+			else if(telescopeName == "MWA")
+				makeMWAImage(beamImages, entry, allocator);
+			else
+				throw std::runtime_error("Can't make beam for unrecognized telescope " + getTelescopeName());
+			
 			// Save the beam images as fits files
 			PolarizationEnum
 				linPols[4] = { Polarization::XX, Polarization::XY, Polarization::YX, Polarization::YY };
@@ -169,6 +180,7 @@ public:
 	{
 		_msProviders.push_back(std::make_pair(msProvider, selection));
 	}
+	
 private:
 	const WSCleanSettings& _settings;
 	std::vector<std::pair<MSProvider*, MSSelection>> _msProviders;
@@ -198,6 +210,27 @@ private:
 		lbeam.SetImageWeight(imageWeightCache);
 		lbeam.SetUndersampling(_settings.primaryBeamUndersampling);
 		lbeam.Make(beamImages);
+	}
+	
+	void makeMWAImage(PrimaryBeamImageSet& beamImages, const ImagingTableEntry& entry, ImageBufferAllocator& allocator)
+	{
+		MWABeam mwaBeam(&entry, &allocator);
+		for(size_t i=0; i!=_msProviders.size(); ++i)
+			mwaBeam.AddMS(_msProviders[i].first, &_msProviders[i].second, i);
+		mwaBeam.SetImageDetails(_settings.trimmedImageWidth, _settings.trimmedImageHeight, _settings.pixelScaleX, _settings.pixelScaleY, _phaseCentreRA, _phaseCentreDec, _phaseCentreDL, _phaseCentreDM);
+		mwaBeam.SetUndersampling(_settings.primaryBeamUndersampling);
+		mwaBeam.Make(beamImages);
+	}
+	
+	std::string getTelescopeName() const
+	{
+		casacore::MeasurementSet ms = _msProviders.front().first->MS();
+		casacore::MSObservation obsTable = ms.observation();
+		casacore::ROScalarColumn<casacore::String> telescopeNameCol(obsTable, obsTable.columnName(casacore::MSObservationEnums::TELESCOPE_NAME));
+		if(obsTable.nrow() != 0)
+			return telescopeNameCol(0);
+		else
+			return std::string();
 	}
 };
 

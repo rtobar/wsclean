@@ -55,8 +55,8 @@ private:
 	vector3r_t _n_vector_itrf;
 	std::vector<MC2x2F> _inverseCentralGain;
 	vector3r_t _station0, _tile0;
+	
 	ao::lane<size_t> *_lane;
-
 	size_t _nThreads;
 	std::vector<std::thread> _threads;
 };
