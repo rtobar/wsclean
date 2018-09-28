@@ -28,6 +28,15 @@ public:
 		return _frequency < rhs._frequency;
 	}
 	
+	/** Whether the frequency of the lhs is less than that of the rhs.
+	 * @param rhs ChannelInfo to compare with.
+	 * @returns lhs.Frequency() < rhs.Frequency()
+	 */
+	constexpr bool operator>(const ChannelInfo& rhs) const
+	{
+		return _frequency > rhs._frequency;
+	}
+	
 	/** Whether the frequencies of lhs and rhs are the same. The channel width is ignored.
 	 * @param rhs ChannelInfo to compare with
 	 * @returns lhs.Frequency() == rhs.Frequency()

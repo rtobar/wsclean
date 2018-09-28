@@ -1252,7 +1252,6 @@ void WSClean::saveUVImage(const double* image, PolarizationEnum pol, const Imagi
 void WSClean::makeImagingTable(size_t outputIntervalIndex)
 {
 	std::set<ChannelInfo> channelSet;
-	double highestFreq = 0.0;
 	_msBands.assign(_settings.filenames.size(), MultiBandData());
 	for(size_t i=0; i!=_settings.filenames.size(); ++i)
 	{
@@ -1278,18 +1277,27 @@ void WSClean::makeImagingTable(size_t outputIntervalIndex)
 		// accumulate channel info
 		for(const size_t dataDescId : dataDescIds)
 		{
-			for(size_t ch=0; ch!=_msBands[i][dataDescId].ChannelCount(); ++ch)
+			bool increasing = true;
+			if(_msBands[i][dataDescId].ChannelCount() >= 2)
 			{
+				increasing = _msBands[i][dataDescId].Channel(1) > _msBands[i][dataDescId].Channel(0);
+			}
+			channelSet.insert(_msBands[i][dataDescId].Channel(0));
+			for(size_t ch=1; ch!=_msBands[i][dataDescId].ChannelCount(); ++ch)
+			{
+				bool chanIncreasing = _msBands[i][dataDescId].Channel(ch) > _msBands[i][dataDescId].Channel(ch-1);
+				if(chanIncreasing != increasing)
+					throw std::runtime_error("Your measurement set has an incorrect frequency axis: the channels do neither only increase nor only decrease in frequency");
+				if(_msBands[i][dataDescId].Channel(ch) == _msBands[i][dataDescId].Channel(ch-1))
+					throw std::runtime_error("Your measurement set has an incorrect frequency axis: two adjacent channels had the same frequency. Channels should either strictly increase or strictly decrease in frequency.");
 				channelSet.insert(_msBands[i][dataDescId].Channel(ch));
 			}
-			if(_msBands[i][dataDescId].BandEnd() > highestFreq)
-				highestFreq = _msBands[i][dataDescId].BandEnd();
 		}
 	}
 	if(channelSet.size() < _settings.channelsOut)
 	{
 		std::ostringstream str;
-		str << "Parameter '-channelsout' was set to an invalid value: " << _settings.channelsOut << " output channels requested, but combined in all specified measurement sets, there are only " << channelSet.size() << " unique channels.";
+		str << "Parameter '-channels-out' was set to an invalid value: " << _settings.channelsOut << " output channels requested, but combined in all specified measurement sets, there are only " << channelSet.size() << " unique channels.";
 		throw std::runtime_error(str.str());
 	}
 	_inputChannelFrequencies.assign(channelSet.begin(), channelSet.end());
