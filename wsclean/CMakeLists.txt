@@ -19,6 +19,8 @@ endif(PORTABLE)
 # Casacore has a separate CMake file in this directory
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMake)
 
+find_package(HDF5 COMPONENTS C CXX REQUIRED)
+
 SET(CASACORE_MAKE_REQUIRED_EXTERNALS_OPTIONAL TRUE)
 find_package(Casacore REQUIRED COMPONENTS casa ms tables measures fits)
 find_package(CFITSIO REQUIRED)
@@ -71,6 +73,7 @@ include_directories(${Boost_INCLUDE_DIR})
 include_directories(${CFITSIO_INCLUDE_DIR})
 include_directories(${FFTW3_INCLUDE_DIR})
 include_directories(${GSL_INCLUDE_DIR})
+include_directories(${HDF5_INCLUDE_DIRS})
 
 include(CheckCXXSourceCompiles)
 
@@ -108,9 +111,10 @@ add_library(wsclean-object OBJECT
   model/model.cpp
   msproviders/averagingmsrowprovider.cpp msproviders/contiguousms.cpp msproviders/directmsrowprovider.cpp msproviders/msprovider.cpp msproviders/msrowprovider.cpp msproviders/partitionedms.cpp
   multiscale/multiscalealgorithm.cpp multiscale/multiscaletransforms.cpp multiscale/threadeddeconvolutiontools.cpp
+  mwa/beam2016implementation.cpp mwa/mwabeam.cpp mwa/system.cpp mwa/tilebeam2016.cpp mwa/tilebeambase.cpp
   wsclean/commandline.cpp wsclean/imagingtable.cpp wsclean/logger.cpp wsclean/msgridderbase.cpp wsclean/wscfitswriter.cpp wsclean/wsclean.cpp
   wsclean/wscleansettings.cpp wsclean/wsmsgridder.cpp wsclean/lofarcentroidgridding.cpp wsclean/wstackinggridder.cpp
-	${LBEAM_FILES} ${IDG_FILES})
+  ${LBEAM_FILES} ${IDG_FILES})
 
 set_property(TARGET wsclean-object PROPERTY POSITION_INDEPENDENT_CODE 1)
 
@@ -125,13 +129,13 @@ target_link_libraries(wsclean-shared)
 set_target_properties(wsclean-shared PROPERTIES SOVERSION ${WSCLEAN_VERSION_SO})
 
 add_executable(wsclean wscleanmain.cpp)
-target_link_libraries(wsclean wsclean-lib ${CASACORE_LIBRARIES} ${FFTW3_LIB} ${FFTW3_THREADS_LIB} ${Boost_DATE_TIME_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${CFITSIO_LIBRARY} ${GSL_LIB} ${GSL_CBLAS_LIB} ${PTHREAD_LIB} ${LBEAM_LIBS} ${IDGAPI_LIBRARIES})
+target_link_libraries(wsclean wsclean-lib ${CASACORE_LIBRARIES} ${FFTW3_LIB} ${FFTW3_THREADS_LIB} ${Boost_DATE_TIME_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${CFITSIO_LIBRARY} ${GSL_LIB} ${GSL_CBLAS_LIB} ${PTHREAD_LIB} ${LBEAM_LIBS} ${IDGAPI_LIBRARIES} ${HDF5_LIBRARIES})
 
 #add_executable(interfaceexample EXCLUDE_FROM_ALL interface/interfaceexample.c)
 #target_link_libraries(interfaceexample wsclean-lib ${CASACORE_LIBRARIES} ${FFTW3_LIB} ${FFTW3_THREADS_LIB} ${Boost_DATE_TIME_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${CFITSIO_LIBRARY} ${GSL_LIB} ${GSL_CBLAS_LIB} ${LBEAM_LIBS} ${IDGAPI_LIBRARIES})
 
 add_executable(wsuvbinning EXCLUDE_FROM_ALL wsclean/examples/wsuvbinning.cpp ${WSCLEANFILES})
-target_link_libraries(wsuvbinning ${CASACORE_LIBRARIES} ${FFTW3_LIB} ${FFTW3_THREADS_LIB} ${Boost_FILESYSTEM_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${CFITSIO_LIBRARY} ${GSL_LIB} ${GSL_CBLAS_LIB} ${LBEAM_LIBS} ${IDGAPI_LIBRARIES})
+target_link_libraries(wsuvbinning ${CASACORE_LIBRARIES} ${FFTW3_LIB} ${FFTW3_THREADS_LIB} ${Boost_FILESYSTEM_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${CFITSIO_LIBRARY} ${GSL_LIB} ${GSL_CBLAS_LIB} ${LBEAM_LIBS} ${IDGAPI_LIBRARIES} ${HDF5_LIBRARIES})
 
 install(TARGETS wsclean DESTINATION bin)
 install(TARGETS wsclean-lib DESTINATION lib)
@@ -168,7 +172,7 @@ if(Boost_FOUND)
 		tests/testpolynomialfitter.cpp
 		tests/testradeccoord.cpp
 		${WSCLEANFILES})
-  target_link_libraries(runtest ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} ${CASACORE_LIBRARIES} ${FFTW3_LIB} ${FFTW3_THREADS_LIB} ${Boost_DATE_TIME_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${CFITSIO_LIBRARY} ${GSL_LIB} ${GSL_CBLAS_LIB} ${LBEAM_LIBS} ${IDGAPI_LIBRARIES})
+  target_link_libraries(runtest ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} ${CASACORE_LIBRARIES} ${FFTW3_LIB} ${FFTW3_THREADS_LIB} ${Boost_DATE_TIME_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${CFITSIO_LIBRARY} ${GSL_LIB} ${GSL_CBLAS_LIB} ${LBEAM_LIBS} ${IDGAPI_LIBRARIES} ${HDF5_LIBRARIES})
   add_test(runtest runtest)
   add_custom_target(check COMMAND runtest DEPENDS runtest)
 else()
