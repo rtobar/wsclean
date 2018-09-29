@@ -71,7 +71,7 @@ public:
 	{
 		// If Iu is uncorrected and Ic is corrected:
 		// Iu = B Ic B^*
-		// when I is unpolarized (diagonal, constant)
+		// when I is unpolarized (diagonal, scalar)
 		// Iu = Ic B B^*
 		// Ic = Iu (B B^*)^-1
 		// Since we have measured Iu_xx + Iu_yy, and want to know Ic_xx + Ic_yy, let B2 = (B B^*)^-1 and Iu_xx = Iu_yy :

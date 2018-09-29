@@ -8,7 +8,7 @@
 #include <complex>
 
 #include "atermstub.h"
-#include "atermbase.h"
+#include "atermbeam.h"
 
 #ifdef HAVE_LOFAR_BEAM
 
@@ -19,27 +19,13 @@
 
 using namespace LOFAR::StationResponse;
 
-class LofarBeamTerm : public ATermBase
+class LofarBeamTerm : public ATermBeam
 {
 public:
-	LofarBeamTerm(casacore::MeasurementSet& ms, size_t width, size_t height, double dl, double dm, double phaseCentreDL, double phaseCentreDM, double aTermUpdateInterval, bool useDifferentialBeam);
+	LofarBeamTerm(casacore::MeasurementSet& ms, size_t width, size_t height, double dl, double dm, double phaseCentreDL, double phaseCentreDM, bool useDifferentialBeam);
 	
-	virtual bool Calculate(std::complex<float>* buffer, double time, double frequency) final override;
-		
-	void StoreATerms(const std::string& filename, std::complex<float>* buffer);
-	
-	/**
-	 * Set whether a fits image with the a-terms should be written to disk
-	 * every time they are calculated.
-	 * @param saveATerms Fits images are saved when set to true.
-	 */
-	void SetSaveATerms(bool saveATerms)
-	{
-		_saveATerms = saveATerms;
-	}
-
 private:
-	void calculateUpdate(std::complex<float>* buffer, double time, double frequency);
+	bool calculateBeam(std::complex<float>* buffer, double time, double frequency) final override;
 
 	void calcThread(std::complex<float>* buffer, double time, double frequency);
 	
@@ -48,7 +34,6 @@ private:
 	double _subbandFrequency, _phaseCentreRA, _phaseCentreDec, _dl, _dm, _phaseCentreDL, _phaseCentreDM;
 	casacore::MDirection _delayDir, _referenceDir, _tileBeamDir;
 	casacore::MPosition _arrayPos;
-	double _updateInterval, _lastATermUpdate;
 	bool _useDifferentialBeam, _saveATerms;
 	vector3r_t _l_vector_itrf;
 	vector3r_t _m_vector_itrf;

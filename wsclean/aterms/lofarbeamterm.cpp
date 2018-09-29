@@ -5,35 +5,29 @@
 
 #include "../units/imagecoordinates.h"
 
-#include "../wsclean/logger.h"
-
 #include "../system.h"
 
-#include "../fitswriter.h"
 #include "../lane.h"
-#include "../uvector.h"
 
 #include <casacore/measures/TableMeasures/ArrayMeasColumn.h>
 #include <casacore/measures/Measures/MEpoch.h>
 
 #include <algorithm>
 
-LofarBeamTerm::LofarBeamTerm(casacore::MeasurementSet& ms, size_t width, size_t height, double dl, double dm, double phaseCentreDL, double phaseCentreDM, double aTermUpdateInterval, bool useDifferentialBeam) :
+LofarBeamTerm::LofarBeamTerm(casacore::MeasurementSet& ms, size_t width, size_t height, double dl, double dm, double phaseCentreDL, double phaseCentreDM, bool useDifferentialBeam) :
 	_width(width),
 	_height(height),
 	_dl(dl), _dm(dm),
 	_phaseCentreDL(phaseCentreDL),
 	_phaseCentreDM(phaseCentreDM),
-	_updateInterval(aTermUpdateInterval),
-	_lastATermUpdate(-aTermUpdateInterval-1),
 	_useDifferentialBeam(useDifferentialBeam),
 	_saveATerms(false)
 {
 	casacore::MSAntenna aTable(ms.antenna());
 
-	size_t nr_stations = ms.nrow();
+	size_t nStations = aTable.nrow();
 	size_t nCPUs = System::ProcessorCount();
-	_nThreads = std::min(nCPUs, nr_stations);
+	_nThreads = std::min(nCPUs, nStations);
 	_threads.resize(_nThreads);
 
 	casacore::MPosition::ROScalarColumn antPosColumn(aTable, aTable.columnName(casacore::MSAntennaEnums::POSITION));
@@ -81,20 +75,7 @@ void setITRF(const casacore::MDirection& itrfDir, LOFAR::StationResponse::vector
 	itrf[2] = itrfVal[2];
 }
 
-bool LofarBeamTerm::Calculate(std::complex<float>* buffer, double time, double frequency)
-{
-	if(time - _lastATermUpdate > _updateInterval)
-	{
-		calculateUpdate(buffer, time + _updateInterval*0.5, frequency);
-		_lastATermUpdate = time;
-		return true;
-	}
-	else {
-		return false;
-	}
-}
-
-void LofarBeamTerm::calculateUpdate(std::complex<float>* buffer, double time, double frequency)
+bool LofarBeamTerm::calculateBeam(std::complex<float>* buffer, double time, double frequency)
 {
 	ao::lane<size_t> lane(_nThreads);
 	_lane = &lane;
@@ -164,15 +145,10 @@ void LofarBeamTerm::calculateUpdate(std::complex<float>* buffer, double time, do
 	lane.write_end();
 	for(size_t i=0; i!=_nThreads; ++i)
 		_threads[i].join();
+	
+	saveATermsIfNecessary(buffer, _stations.size(), _width, _height);
 
-	if(_saveATerms)
-	{
-		static int index = 0;
-		std::ostringstream f;
-		f << "aterm" << index << ".fits";
-		StoreATerms(f.str(), buffer);
-		++index;
-	}
+	return true;
 }
 
 void LofarBeamTerm::calcThread(std::complex<float>* buffer, double time, double frequency)
@@ -222,28 +198,4 @@ void LofarBeamTerm::calcThread(std::complex<float>* buffer, double time, double 
 			}
 		}
 	}
-}
-
-void LofarBeamTerm::StoreATerms(const std::string& filename, std::complex<float>* buffer)
-{
-	size_t ny = floor(sqrt(_stations.size())), nx = (_stations.size()+ny-1) / ny;
-	Logger::Info << "Storing " << filename << " (" << _stations.size() << " ant, " << nx << " x " << ny << ")\n";
-	ao::uvector<double> img(nx*ny * _width*_height, 0.0);
-	for(size_t ant=0; ant!=_stations.size(); ++ant)
-	{
-		size_t xCorner = (ant%nx)*_width, yCorner = (ant/nx)*_height;
-		for(size_t y=0; y!=_height; ++y)
-		{
-			for(size_t x=0; x!=_width; ++x)
-			{
-				std::complex<float> e1, e2;
-				Matrix2x2::EigenValues(buffer+(_width*(ant*_height + y) + x)*4, e1, e2);
-				double val = std::max(std::abs(e1), std::abs(e2));
-				img[(yCorner + y)*_width*nx + x + xCorner] = val;
-			}
-		}
-	}
-	FitsWriter writer;
-	writer.SetImageDimensions(nx*_width, ny*_height);
-	writer.Write(filename, img.data());
 }

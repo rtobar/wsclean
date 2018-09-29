@@ -14,7 +14,10 @@
 
 #include "../polarization.h"
 
+#include "../aterms/telescope.h"
+
 #include "../lofar/lbeamimagemaker.h"
+
 #include "../mwa/mwabeam.h"
 
 #include "../fitswriter.h"
@@ -69,15 +72,18 @@ public:
 			PrimaryBeamImageSet beamImages(_settings.trimmedImageWidth, _settings.trimmedImageHeight, allocator);
 			beamImages.SetToZero();
 			
-			std::string telescopeName = getTelescopeName();
-			boost::to_upper(telescopeName);
-			
-			if(telescopeName == "LOFAR" || telescopeName == "AARTFAAC")
-				makeLOFARImage(beamImages, entry, imageWeightCache, allocator);
-			else if(telescopeName == "MWA")
-				makeMWAImage(beamImages, entry, allocator);
-			else
-				throw std::runtime_error("Can't make beam for unrecognized telescope " + getTelescopeName());
+			switch(Telescope::GetType(_msProviders.front().first->MS()))
+			{
+				case Telescope::LOFAR:
+				case Telescope::AARTFAAC:
+					makeLOFARImage(beamImages, entry, imageWeightCache, allocator);
+					break;
+				case Telescope::MWA:
+					makeMWAImage(beamImages, entry, allocator);
+					break;
+				default:
+					throw std::runtime_error("Can't make beam for this telescope");
+			}
 			
 			// Save the beam images as fits files
 			PolarizationEnum
@@ -220,17 +226,6 @@ private:
 		mwaBeam.SetImageDetails(_settings.trimmedImageWidth, _settings.trimmedImageHeight, _settings.pixelScaleX, _settings.pixelScaleY, _phaseCentreRA, _phaseCentreDec, _phaseCentreDL, _phaseCentreDM);
 		mwaBeam.SetUndersampling(_settings.primaryBeamUndersampling);
 		mwaBeam.Make(beamImages);
-	}
-	
-	std::string getTelescopeName() const
-	{
-		casacore::MeasurementSet ms = _msProviders.front().first->MS();
-		casacore::MSObservation obsTable = ms.observation();
-		casacore::ROScalarColumn<casacore::String> telescopeNameCol(obsTable, obsTable.columnName(casacore::MSObservationEnums::TELESCOPE_NAME));
-		if(obsTable.nrow() != 0)
-			return telescopeNameCol(0);
-		else
-			return std::string();
 	}
 };
 

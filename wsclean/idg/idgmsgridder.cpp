@@ -19,6 +19,8 @@
 
 #include "../aterms/atermconfig.h"
 #include "../aterms/lofarbeamterm.h"
+#include "../aterms/mwabeamterm.h"
+#include "../aterms/telescope.h"
 
 #include "idgconfiguration.h"
 
@@ -169,14 +171,28 @@ std::unique_ptr<class ATermBase> IdgMsGridder::getATermMaker(MSGridderBase::MSDa
 		size_t subgridsize = _bufferset->get_subgridsize();
 		if(!_settings.atermConfigFilename.empty())
 		{
-			std::unique_ptr<ATermConfig> config(new ATermConfig(ms, nr_stations, subgridsize, subgridsize, dl, dm, pdl, pdm, _settings));
+			std::unique_ptr<ATermConfig> config(new ATermConfig(ms, nr_stations, subgridsize, subgridsize, PhaseCentreRA(), PhaseCentreDec(), dl, dm, pdl, pdm, _settings));
 			config->Read(_settings.atermConfigFilename);
 			return std::move(config);
 		}
 		else {
-			std::unique_ptr<LofarBeamTerm> lofarBeamATerm(new LofarBeamTerm(ms, subgridsize, subgridsize, dl, dm, pdl, pdm, _settings.beamAtermUpdateTime, _settings.useDifferentialLofarBeam));
-			lofarBeamATerm->SetSaveATerms(_settings.saveATerms);
-			return std::move(lofarBeamATerm);
+			switch(Telescope::GetType(ms))
+			{
+				case Telescope::AARTFAAC:
+				case Telescope::LOFAR: {
+					std::unique_ptr<LofarBeamTerm> beam(new LofarBeamTerm(ms, subgridsize, subgridsize, dl, dm, pdl, pdm, _settings.useDifferentialLofarBeam));
+					beam->SetSaveATerms(_settings.saveATerms);
+					beam->SetUpdateInterval(_settings.beamAtermUpdateTime);
+					return std::move(beam);
+				}
+				case Telescope::MWA: {
+					std::unique_ptr<MWABeamTerm> beam(new MWABeamTerm(ms, subgridsize, subgridsize, PhaseCentreRA(), PhaseCentreDec(), dl, dm, pdl, pdm));
+					beam->SetUpdateInterval(_settings.beamAtermUpdateTime);
+					return std::move(beam);
+				}
+				default:
+					throw std::runtime_error("Can't make beam for this telescope");
+			}
 		}
 	}
 	else {

@@ -4,8 +4,11 @@
 #include <string>
 
 #include "atermbase.h"
+#include "atermbeam.h"
 #include "fitsaterm.h"
 #include "lofarbeamterm.h"
+#include "mwabeamterm.h"
+#include "telescope.h"
 
 #include "../matrix2x2.h"
 #include "../parsetreader.h"
@@ -15,13 +18,15 @@
 class ATermConfig : public ATermBase
 {
 public:
-	ATermConfig(casacore::MeasurementSet& ms, size_t nAntenna, size_t width, size_t height, double dl, double dm, double phaseCentreDL, double phaseCentreDM,
+	ATermConfig(casacore::MeasurementSet& ms, size_t nAntenna, size_t width, size_t height, double ra, double dec, double dl, double dm, double phaseCentreDL, double phaseCentreDM,
 		const WSCleanSettings& settings
 	) :
 		_ms(ms),
 		_nAntenna(nAntenna),
 		_width(width),
 		_height(height),
+		_phaseCentreRA(ra),
+		_phaseCentreDec(dec),
 		_dl(dl), _dm(dm),
 		_phaseCentreDL(phaseCentreDL),
 		_phaseCentreDM(phaseCentreDM),
@@ -49,13 +54,24 @@ public:
 			}
 			else if(atermType == "beam")
 			{
-				// TODO this option is currently specific to lofar, but should
-				// determine telescope from measurement set, etc.
-				bool differential = reader.GetBoolOr("beam.differential", false);
+				std::unique_ptr<ATermBeam> beam;
+				switch(Telescope::GetType(_ms))
+				{
+				case Telescope::AARTFAAC:
+				case Telescope::LOFAR: {
+					bool differential = reader.GetBoolOr("beam.differential", false);
+					beam.reset(new LofarBeamTerm(_ms, _width, _height, _dl, _dm, _phaseCentreDL, _phaseCentreDM, differential));
+					break;
+				}
+				case Telescope::MWA: {
+					beam.reset(new MWABeamTerm(_ms, _width, _height, _dl, _dm, _phaseCentreRA, _phaseCentreDec, _phaseCentreDL, _phaseCentreDM));
+					break;
+				}
 				double updateInterval = reader.GetDoubleOr("beam.update_interval", 120.0);
-				std::unique_ptr<LofarBeamTerm> beam(new LofarBeamTerm(_ms, _width, _height, _dl, _dm, _phaseCentreDL, _phaseCentreDM, updateInterval, differential));
 				beam->SetSaveATerms(_settings.saveATerms);
+				beam->SetUpdateInterval(updateInterval);	
 				_aterms.emplace_back(std::move(beam));
+				}
 			}
 		}
 		Logger::Debug << "Constructed an a-term configuration with " << _aterms.size() << " terms.\n";
@@ -103,7 +119,7 @@ public:
 private:
 	casacore::MeasurementSet& _ms;
 	size_t _nAntenna, _width, _height;
-	double _dl, _dm, _phaseCentreDL, _phaseCentreDM;
+	double _phaseCentreRA, _phaseCentreDec, _dl, _dm, _phaseCentreDL, _phaseCentreDM;
 	std::vector<std::unique_ptr<ATermBase>> _aterms;
 	std::vector<ao::uvector<std::complex<float>>> _previousAterms;
 	const WSCleanSettings& _settings;

@@ -18,6 +18,21 @@ public:
 	 * previous aterms, and not reserve extra memory for it etc.
 	 */
 	virtual bool Calculate(std::complex<float>* buffer, double time, double frequency) = 0;
+	
+	void StoreATerms(const std::string& filename, const std::complex<float>* buffer, size_t nStations, size_t width, size_t height);
+	
+	/**
+	 * Set whether a fits image with the a-terms should be written to disk
+	 * every time they are calculated.
+	 * @param saveATerms Fits images are saved when set to true.
+	 */
+	void SetSaveATerms(bool saveATerms)
+	{
+		_saveATerms = saveATerms;
+	}
+	
+protected:
+	bool _saveATerms;
 };
 
 #endif

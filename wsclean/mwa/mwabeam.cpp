@@ -88,13 +88,12 @@ void MWABeam::Make(PrimaryBeamImageSet& beamImages)
 void MWABeam::makeBeamForMS(PrimaryBeamImageSet& beamImages, MSProvider& msProvider, double centralFrequency)
 {
 	/**
-		* Read some meta data from the measurement set
+		* Read meta data from the measurement set
 		*/
 	casacore::MeasurementSet& ms = msProvider.MS();
-	if(ms.nrow() == 0) throw std::runtime_error("Table has no rows (no data)");
-	
 	casacore::MSAntenna aTable = ms.antenna();
 	if(aTable.nrow() == 0) throw std::runtime_error("No antennae in set");
+	
 	casacore::MPosition::ROScalarColumn antPosColumn(aTable, aTable.columnName(casacore::MSAntennaEnums::POSITION));
 	casacore::MPosition arrayPos = antPosColumn(0);
 		
