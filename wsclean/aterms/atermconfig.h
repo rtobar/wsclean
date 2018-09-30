@@ -70,8 +70,8 @@ public:
 				double updateInterval = reader.GetDoubleOr("beam.update_interval", 120.0);
 				beam->SetSaveATerms(_settings.saveATerms);
 				beam->SetUpdateInterval(updateInterval);	
-				_aterms.emplace_back(std::move(beam));
 				}
+				_aterms.emplace_back(std::move(beam));
 			}
 		}
 		Logger::Debug << "Constructed an a-term configuration with " << _aterms.size() << " terms.\n";
