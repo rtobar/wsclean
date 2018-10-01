@@ -5,6 +5,7 @@
 
 #include "atermbase.h"
 #include "atermbeam.h"
+#include "atermstub.h"
 #include "fitsaterm.h"
 #include "lofarbeamterm.h"
 #include "mwabeamterm.h"
@@ -57,20 +58,26 @@ public:
 				std::unique_ptr<ATermBeam> beam;
 				switch(Telescope::GetType(_ms))
 				{
-				case Telescope::AARTFAAC:
-				case Telescope::LOFAR: {
-					bool differential = reader.GetBoolOr("beam.differential", false);
-					beam.reset(new LofarBeamTerm(_ms, _width, _height, _dl, _dm, _phaseCentreDL, _phaseCentreDM, differential));
-					break;
-				}
-				case Telescope::MWA: {
-					beam.reset(new MWABeamTerm(_ms, _width, _height, _dl, _dm, _phaseCentreRA, _phaseCentreDec, _phaseCentreDL, _phaseCentreDM));
-					break;
+					case Telescope::AARTFAAC:
+					case Telescope::LOFAR: {
+						bool differential = reader.GetBoolOr("beam.differential", false);
+						beam.reset(new LofarBeamTerm(_ms, _width, _height, _dl, _dm, _phaseCentreDL, _phaseCentreDM, differential));
+						break;
+					}
+					case Telescope::MWA: {
+						beam.reset(new MWABeamTerm(_ms, _width, _height, _dl, _dm, _phaseCentreRA, _phaseCentreDec, _phaseCentreDL, _phaseCentreDM));
+						break;
+					}
+					default: {
+						// This is here to make sure ATermStub compiles. This call should be the
+						// same as the call for LofarBeamTerm(..)
+						beam.reset(new ATermStub(_ms, _width, _height, _dl, _dm, _phaseCentreDL, _phaseCentreDM, false));
+						break;
+					}
 				}
 				double updateInterval = reader.GetDoubleOr("beam.update_interval", 120.0);
 				beam->SetSaveATerms(_settings.saveATerms);
 				beam->SetUpdateInterval(updateInterval);	
-				}
 				_aterms.emplace_back(std::move(beam));
 			}
 		}

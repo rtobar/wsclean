@@ -1,13 +1,13 @@
 #include "lofarbeamterm.h"
 
 #include "../banddata.h"
+#include "../lane.h"
 #include "../matrix2x2.h"
+#include "../system.h"
 
 #include "../units/imagecoordinates.h"
 
-#include "../system.h"
-
-#include "../lane.h"
+#include "../wsclean/logger.h"
 
 #include <casacore/measures/TableMeasures/ArrayMeasColumn.h>
 #include <casacore/measures/Measures/MEpoch.h>
@@ -121,6 +121,9 @@ bool LofarBeamTerm::calculateBeam(std::complex<float>* buffer, double time, doub
 			_inverseCentralGain[a][1] = gainMatrix[0][1];
 			_inverseCentralGain[a][2] = gainMatrix[1][0];
 			_inverseCentralGain[a][3] = gainMatrix[1][1];
+			Logger::Debug << "Beam centre for differential beam: \n"
+				<< _inverseCentralGain[a][0] << "  " << _inverseCentralGain[a][1] << '\n'
+				<< _inverseCentralGain[a][2] << "  " << _inverseCentralGain[a][3] << '\n';
 			if(!_inverseCentralGain[a].Invert())
 			{
 				_inverseCentralGain[a] = MC2x2F::Zero();
