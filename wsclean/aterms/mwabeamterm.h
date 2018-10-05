@@ -24,6 +24,11 @@ class MWABeamTerm : public ATermBeam
 public:
 	MWABeamTerm(casacore::MeasurementSet& ms, size_t width, size_t height, double ra, double dec, double dl, double dm, double phaseCentreDL, double phaseCentreDM);
 	
+	void SetSearchPath(const std::string& searchPath)
+	{
+		_searchPath = searchPath;
+	}
+	
 private:
 	virtual bool calculateBeam(std::complex<float>* buffer, double time, double frequency) final override;
 
@@ -32,6 +37,7 @@ private:
 	casacore::MPosition _arrayPos;
 	double _delays[16];
 	bool _frequencyInterpolation;
+	std::string _searchPath;
 	std::unique_ptr<TileBeamBase<TileBeam2016>> _tileBeam;
 };
 

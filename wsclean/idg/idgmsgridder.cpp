@@ -188,6 +188,7 @@ std::unique_ptr<class ATermBase> IdgMsGridder::getATermMaker(MSGridderBase::MSDa
 				case Telescope::MWA: {
 					std::unique_ptr<MWABeamTerm> beam(new MWABeamTerm(ms, subgridsize, subgridsize, PhaseCentreRA(), PhaseCentreDec(), dl, dm, pdl, pdm));
 					beam->SetUpdateInterval(_settings.beamAtermUpdateTime);
+					beam->SetSearchPath(_settings.mwaPath);
 					return std::move(beam);
 				}
 				default:

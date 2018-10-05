@@ -16,12 +16,14 @@
 
 #include <boost/math/special_functions/legendre.hpp>
 #include <boost/math/special_functions/factorials.hpp>
+
 #include <boost/filesystem.hpp>
 
 #include <H5Cpp.h>
 
+#include "../system.h"
+
 #include "beam2016implementation.h"
-#include "system.h"
 
 using namespace std;
 using namespace H5;
@@ -64,12 +66,17 @@ int Beam2016Implementation::find_closest_freq(int freq_hz)
    return m_freq_list[0];
 }
 
-Beam2016Implementation::Beam2016Implementation( const double* delays, const double* amps ) : 
+Beam2016Implementation::Beam2016Implementation(
+	const double* delays,
+	const double* amps,
+	const std::string& searchPath
+) : 
   m_CalcModesLastFreqHz(-1),
   m_CalcModesLastDelays(),
   m_CalcModesLastAmps(),
   m_AntennaCount(N_ANT_COUNT),
-  m_pH5File()
+  m_pH5File(),
+  m_searchPath(searchPath)
 {
 	if( !delays ) {
 		delays = m_DefaultDelays;
@@ -102,7 +109,7 @@ void Beam2016Implementation::CalcJonesArray( vector< vector<double> >& azim_arr,
         
         // phi_arr[phi_arr < 0] += 2*math.pi #360 wrap
         if( image_row[x] < 0 ){
-           image_row[x] += 2*M_PI;
+           image_row[x] += 2.0*M_PI;
         }
      }
   }
@@ -691,22 +698,29 @@ void Beam2016Implementation::ReadDataSet( const char* dataset_name, vector< vect
    }
 }
 
-
 // Interface to HDF5 file format and structures to store H5 data 
 // Functions for reading H5 file and its datasets :
 // Read data from H5 file, file name is specified in the object constructor       
 int Beam2016Implementation::Read()
 {
    if( !m_pH5File ) {
-      //if(!boost::filesystem::exists(_h5filename)) {
+		std::string h5_path;
+		if(m_searchPath.empty())
+		{
 			string h5_test_path = DEFAULT_H5_FILE_PATH;
 			h5_test_path += DEFAULT_H5_FILE;
-				
-			std::string h5_path = System::FindPythonFilePath(h5_test_path);
-				
-      m_pH5File.reset(new H5File(h5_path.c_str(), H5F_ACC_RDONLY ));
+			h5_path = System::FindPythonFilePath(h5_test_path);
+		}
+		else {
+			boost::filesystem::path p = boost::filesystem::path(m_searchPath) / DEFAULT_H5_FILE;
+			if(!boost::filesystem::exists(p))
+				throw std::runtime_error("Manually specified MWA directory did not contain H5 beam file: '" + p.string() + "' not found.");
+			h5_path = p.string();
+		}
+		
+		m_pH5File.reset(new H5File(h5_path.c_str(), H5F_ACC_RDONLY ));
    } else {
-      return 1;
+		return 1;
    }
    
    if( m_pH5File ){

@@ -65,7 +65,9 @@ public:
 						break;
 					}
 					case Telescope::MWA: {
-						beam.reset(new MWABeamTerm(_ms, _width, _height, _dl, _dm, _phaseCentreRA, _phaseCentreDec, _phaseCentreDL, _phaseCentreDM));
+						std::unique_ptr<MWABeamTerm> mwaTerm(new MWABeamTerm(_ms, _width, _height, _dl, _dm, _phaseCentreRA, _phaseCentreDec, _phaseCentreDL, _phaseCentreDM));
+						mwaTerm->SetSearchPath(_settings.mwaPath);
+						beam = std::move(mwaTerm);
 						break;
 					}
 					default: {

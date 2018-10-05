@@ -45,8 +45,8 @@ public :
 class Beam2016Implementation
 {
 public :
-   Beam2016Implementation( const double* delays, const double* amps );      
-   ~Beam2016Implementation();
+	Beam2016Implementation(const double* delays, const double* amps, const std::string& searchPath );      
+	~Beam2016Implementation();
    
 
    //-------------------------------------------------------------------- Calculation of Jones matrix ------------------------------------------------------------------------------------------------------------------
@@ -187,6 +187,7 @@ protected:
       
    std::string _h5filename;   // H5 File name 
    std::unique_ptr<H5::H5File> m_pH5File;   
+	 std::string m_searchPath;
    
    // Data structures for H5 file data :
    std::vector<std::string> m_obj_list;  // list of datasets in H5 file 

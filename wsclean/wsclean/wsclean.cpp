@@ -47,12 +47,10 @@ WSClean::WSClean() :
 	_isFirstInversion(true), _doReorder(false),
 	_majorIterationNr(0),
 	_deconvolution(_settings)
-{
-}
+{ }
 
 WSClean::~WSClean()
-{
-}
+{ }
 
 void WSClean::multiplyImage(double factor, double* image) const
 {

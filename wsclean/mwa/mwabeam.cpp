@@ -198,7 +198,7 @@ void MWABeam::makeBeamSnapshot(double** imgPtr, double frequency, casacore::Meas
 	double zenithHa = zenithHaDec.getAngle().getValue()[0];
 	double zenithDec = zenithHaDec.getAngle().getValue()[1];
 
-	TileBeamBase<TileBeam2016> tilebeam(_delays, _frequencyInterpolation);
+	TileBeamBase<TileBeam2016> tilebeam(_delays, _frequencyInterpolation, _searchPath);
 	ProgressBar progressBar("Constructing beam");
 	for(size_t y=0;y!=_sampledHeight;++y)
 	{

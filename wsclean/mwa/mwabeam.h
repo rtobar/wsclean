@@ -46,6 +46,11 @@ public:
 		_undersample = undersamplingFactor;
 	}
 	
+	void SetSearchPath(const std::string& searchPath)
+	{
+		_searchPath = searchPath;
+	}
+	
 private:
 	void makeBeamForMS(PrimaryBeamImageSet& beamImages, MSProvider& msProvider, double centralFrequency);
 
@@ -73,6 +78,7 @@ private:
 	casacore::MDirection _delayDir, _referenceDir, _tileBeamDir;
 	
 	double _delays[16];
+	std::string _searchPath;
 	bool _frequencyInterpolation;
 };
 

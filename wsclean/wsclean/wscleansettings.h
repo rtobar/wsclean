@@ -63,6 +63,7 @@ public:
 	bool useLofarCentroids;
 	size_t fullResOffset, fullResWidth, fullResPad;
 	bool applyPrimaryBeam, reusePrimaryBeam, useDifferentialLofarBeam, savePsfPb;
+	std::string mwaPath;
 	size_t primaryBeamUndersampling;
 	bool useIDG;
 	std::string atermConfigFilename;

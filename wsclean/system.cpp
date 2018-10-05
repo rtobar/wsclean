@@ -1,10 +1,11 @@
 #include "system.h"
 
+#include "wsclean/logger.h"
+
 #include <boost/filesystem.hpp>
 
 #include <cstdlib>
 #include <fstream>
-#include <iostream>
 #include <sstream>
 #include <random>
 
@@ -12,11 +13,12 @@ std::string System::FindPythonFilePath(const std::string& filename)
 {
 	if(boost::filesystem::exists(filename))
 		return filename;
-	std::cout << "Searching " << filename << "... " << std::flush;
+	Logger::Debug << "Searching " << filename << "... ";
+	Logger::Debug.Flush();
 	std::random_device rndDev;
   std::mt19937 gen(rndDev());
 	std::stringstream filenameStr;
-	filenameStr << "/tmp/mwa-ao-python-path-list" << gen() << ".tmp";
+	filenameStr << "/tmp/ao-python-path-list" << gen() << ".tmp";
 	boost::filesystem::path tempPath = filenameStr.str(); //boost::filesystem::unique_path();
 	const std::string tempFilename = tempPath.string();  // optional
 	std::string command =
@@ -42,7 +44,7 @@ std::string System::FindPythonFilePath(const std::string& filename)
 		if(pathExists)
 		{
 			const std::string result = searchPath.string();
-			std::cout << result << '\n';
+			Logger::Debug << result << '\n';
 			searchPathsFile.close();
 			boost::filesystem::remove(tempPath);
 			return result;

@@ -61,7 +61,10 @@ bool MWABeamTerm::calculateBeam(std::complex<float>* buffer, double time, double
 	double zenithDec = zenithHaDec.getAngle().getValue()[1];
 	
 	if(!_tileBeam)
-		_tileBeam.reset(new TileBeamBase<TileBeam2016>(_delays, _frequencyInterpolation));
+	{
+		_tileBeam.reset(new TileBeamBase<TileBeam2016>(
+			_delays, _frequencyInterpolation, _searchPath));
+	}
 	std::complex<float>* bufferPtr = buffer;
 	for(size_t y=0; y!=_height; ++y)
 	{

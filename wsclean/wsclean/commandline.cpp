@@ -66,6 +66,8 @@ void CommandLine::printHelp()
 		"   If a primary beam image exists on disk, reuse those images.\n"
 		"-use-differential-lofar-beam\n"
 		"   Assume the visibilities have already been beam-corrected for the reference direction.\n"
+		"-mwa-path <path>\n"
+		"   Set path where to find the MWA beam file(s).\n"
 		"-save-psf-pb\n"
 		"   When applying beam correction, also save the primary-beam corrected PSF image.\n"
 		"-pb-undersampling <factor>\n"
@@ -196,12 +198,12 @@ void CommandLine::printHelp()
 		"  ** DATA SELECTION OPTIONS **\n"
 		"-pol <list>\n"
 		"   Default: \'I\'. Possible values: XX, XY, YX, YY, I, Q, U, V, RR, RL, LR or LL (case insensitive).\n"
-		"   Multiple values can be separated with commas, e.g.: 'xx,xy,yx,yy'. Two or four polarizations can be\n"
-		"   joinedly cleaned (see '-joinpolarizations'), but this is not the default. I, Q, U and V\n"
-		"   polarizations will be directly calculated from the visibilities, which is not appropriate for\n"
-		"   telescopes with non-orthogonal feeds, such as MWA and LOFAR. The 'xy' polarization will output both\n"
-		"   a real and an imaginary image, which allows calculating true Stokes polarizations for those\n"
-		"   telescopes.\n"
+		"   It is allowed but not necessary to separate with commas, e.g.: 'xx,xy,yx,yy'."
+		"   Two or four polarizations can be joinedly cleaned (see '-joinpolarizations'), but \n"
+		"   this is not the default. I, Q, U and V polarizations will be directly calculated from\n"
+		"   the visibilities, which might require correction to get to real IQUV values. The\n"
+		"   'xy' polarization will output both a real and an imaginary image, which allows calculating\n"
+		"   true Stokes polarizations for those telescopes.\n"
 		"-interval <start-index> <end-index>\n"
 		"   Only image the given time interval. Indices specify the timesteps, end index is exclusive.\n"
 		"   Default: image all time steps.\n"
@@ -634,6 +636,11 @@ int CommandLine::Run(int argc, char* argv[])
 		else if(param == "use-differential-lofar-beam")
 		{
 			settings.useDifferentialLofarBeam = true;
+		}
+		else if(param == "mwa-path")
+		{
+			++argi;
+			settings.mwaPath = argv[argi];
 		}
 		else if(param == "save-psf-pb")
 		{

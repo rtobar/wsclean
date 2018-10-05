@@ -225,6 +225,8 @@ private:
 			mwaBeam.AddMS(_msProviders[i].first, &_msProviders[i].second, i);
 		mwaBeam.SetImageDetails(_settings.trimmedImageWidth, _settings.trimmedImageHeight, _settings.pixelScaleX, _settings.pixelScaleY, _phaseCentreRA, _phaseCentreDec, _phaseCentreDL, _phaseCentreDM);
 		mwaBeam.SetUndersampling(_settings.primaryBeamUndersampling);
+		if(!_settings.mwaPath.empty())
+			mwaBeam.SetSearchPath(_settings.mwaPath);
 		mwaBeam.Make(beamImages);
 	}
 };
