@@ -772,24 +772,24 @@ int main(int argc, char **argv)
 			printPhaseDir(set);
 		}
 		else {
-			MeasurementSet *set;
+			MeasurementSet set;
 			if(show)
-				set = new MeasurementSet(argv[argi]);
+				set = MeasurementSet(argv[argi]);
 			else
-				set = new MeasurementSet(argv[argi], Table::Update);
-			readAntennas(*set, antennas);
+				set = MeasurementSet(argv[argi], Table::Update);
+			readAntennas(set, antennas);
 			MDirection newDirection;
 			if(toZenith)
 			{
-				newDirection = ZenithDirection(*set);
+				newDirection = ZenithDirection(set);
 			}
 			else if(toMinW)
 			{
-				newDirection = MinWDirection(*set);
+				newDirection = MinWDirection(set);
 			}
 			else if(same)
 			{
-				MDirection::ROArrayColumn phaseDirCol(set->field(), set->field().columnName(MSFieldEnums::PHASE_DIR));
+				MDirection::ROArrayColumn phaseDirCol(set.field(), set.field().columnName(MSFieldEnums::PHASE_DIR));
 				Vector<MDirection> phaseDirVector = phaseDirCol(0);
 				newDirection = phaseDirVector[0];
 			}
@@ -808,17 +808,16 @@ int main(int argc, char **argv)
 				newDirection = MDirection(MVDirection(newRA, newDec), MDirection::Ref(MDirection::J2000));
 			}
 			
-			MSField fieldTable = set->field();
+			MSField fieldTable = set.field();
 			for(unsigned fieldIndex=0; fieldIndex!=fieldTable.nrow(); ++fieldIndex)
 			{
 				if(show)
-					showChanges(*set, fieldIndex, fieldTable, newDirection, flipUVWSign);
+					showChanges(set, fieldIndex, fieldTable, newDirection, flipUVWSign);
 				else if(toGeozenith)
-					rotateToGeoZenith(*set, fieldIndex, fieldTable, onlyUVW, flipUVWSign);
+					rotateToGeoZenith(set, fieldIndex, fieldTable, onlyUVW, flipUVWSign);
 				else
-					processField(*set, dataColumn, fieldIndex, fieldTable, newDirection, onlyUVW, shiftback, newDl, newDm, flipUVWSign, force);
+					processField(set, dataColumn, fieldIndex, fieldTable, newDirection, onlyUVW, shiftback, newDl, newDm, flipUVWSign, force);
 			}
-			delete set;
 		}
 	}
 	

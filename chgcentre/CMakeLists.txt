@@ -36,7 +36,7 @@ IF("${isSystemDir}" STREQUAL "-1")
    SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 ENDIF("${isSystemDir}" STREQUAL "-1")
 
-add_executable(chgcentre main.cpp progressbar.cpp)
+add_executable(chgcentre main.cpp multibanddata.cpp progressbar.cpp)
 
 target_link_libraries(chgcentre ${CASACORE_LIBRARIES} ${GSL_LIB} ${GSL_CBLAS_LIB} ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
 
