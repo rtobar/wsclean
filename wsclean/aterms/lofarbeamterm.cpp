@@ -114,7 +114,7 @@ bool LofarBeamTerm::calculateBeam(std::complex<float>* buffer, double time, doub
 	_inverseCentralGain.resize(_stations.size());
 	for(size_t a=0; a!=_stations.size(); ++a)
 	{
-		matrix22c_t gainMatrix = _stations[a]->response(time, frequency, diffBeamCentre, _subbandFrequency, _station0, _tile0);
+		matrix22c_t gainMatrix = _stations[a]->response(time, frequency, diffBeamCentre, frequency, _station0, _tile0);
 		if(_useDifferentialBeam)
 		{
 			_inverseCentralGain[a][0] = gainMatrix[0][0];
@@ -183,7 +183,7 @@ void LofarBeamTerm::calcThread(std::complex<float>* buffer, double time, double 
 			std::complex<float>* baseBuffer = buffer + (x + y*_height) * 4;
 
 			std::complex<float>* antBufferPtr = baseBuffer + antennaIndex*valuesPerAntenna;
-			matrix22c_t gainMatrix = _stations[antennaIndex]->response(time, frequency, itrfDirection, _subbandFrequency, _station0, _tile0);
+			matrix22c_t gainMatrix = _stations[antennaIndex]->response(time, frequency, itrfDirection, frequency, _station0, _tile0);
 			if(_useDifferentialBeam)
 			{
 				MC2x2F stationGains;
