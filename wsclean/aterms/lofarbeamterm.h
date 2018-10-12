@@ -22,7 +22,17 @@ using namespace LOFAR::StationResponse;
 class LofarBeamTerm : public ATermBeam
 {
 public:
-	LofarBeamTerm(casacore::MeasurementSet& ms, size_t width, size_t height, double dl, double dm, double phaseCentreDL, double phaseCentreDM, bool useDifferentialBeam);
+	LofarBeamTerm(casacore::MeasurementSet& ms, size_t width, size_t height, double dl, double dm, double phaseCentreDL, double phaseCentreDM);
+	
+	void SetUseDifferentialBeam(bool useDiffBeam)
+	{
+		_useDifferentialBeam = useDiffBeam;
+	}
+	
+	void SetUseChannelFrequency(bool useChannelFrequency)
+	{
+		_useChannelFrequency = useChannelFrequency;
+	}
 	
 private:
 	bool calculateBeam(std::complex<float>* buffer, double time, double frequency) final override;
@@ -34,7 +44,7 @@ private:
 	double _subbandFrequency, _phaseCentreRA, _phaseCentreDec, _dl, _dm, _phaseCentreDL, _phaseCentreDM;
 	casacore::MDirection _delayDir, _referenceDir, _tileBeamDir;
 	casacore::MPosition _arrayPos;
-	bool _useDifferentialBeam, _saveATerms;
+	bool _useDifferentialBeam, _useChannelFrequency, _saveATerms;
 	vector3r_t _l_vector_itrf;
 	vector3r_t _m_vector_itrf;
 	vector3r_t _n_vector_itrf;

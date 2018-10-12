@@ -61,7 +61,11 @@ public:
 					case Telescope::AARTFAAC:
 					case Telescope::LOFAR: {
 						bool differential = reader.GetBoolOr("beam.differential", false);
-						beam.reset(new LofarBeamTerm(_ms, _width, _height, _dl, _dm, _phaseCentreDL, _phaseCentreDM, differential));
+						bool useChannelFrequency = reader.GetBoolOr("beam.usechannelfreq", true);
+						std::unique_ptr<LofarBeamTerm> lofarBeam(new LofarBeamTerm(_ms, _width, _height, _dl, _dm, _phaseCentreDL, _phaseCentreDM));
+						lofarBeam->SetUseDifferentialBeam(differential);
+						lofarBeam->SetUseChannelFrequency(useChannelFrequency);
+						beam = std::move(lofarBeam);
 						break;
 					}
 					case Telescope::MWA: {

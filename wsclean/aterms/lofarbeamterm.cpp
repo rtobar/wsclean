@@ -14,13 +14,14 @@
 
 #include <algorithm>
 
-LofarBeamTerm::LofarBeamTerm(casacore::MeasurementSet& ms, size_t width, size_t height, double dl, double dm, double phaseCentreDL, double phaseCentreDM, bool useDifferentialBeam) :
+LofarBeamTerm::LofarBeamTerm(casacore::MeasurementSet& ms, size_t width, size_t height, double dl, double dm, double phaseCentreDL, double phaseCentreDM) :
 	_width(width),
 	_height(height),
 	_dl(dl), _dm(dm),
 	_phaseCentreDL(phaseCentreDL),
 	_phaseCentreDM(phaseCentreDM),
-	_useDifferentialBeam(useDifferentialBeam),
+	_useDifferentialBeam(false),
+	_useChannelFrequency(true),
 	_saveATerms(false)
 {
 	casacore::MSAntenna aTable(ms.antenna());
@@ -114,7 +115,8 @@ bool LofarBeamTerm::calculateBeam(std::complex<float>* buffer, double time, doub
 	_inverseCentralGain.resize(_stations.size());
 	for(size_t a=0; a!=_stations.size(); ++a)
 	{
-		matrix22c_t gainMatrix = _stations[a]->response(time, frequency, diffBeamCentre, frequency, _station0, _tile0);
+		double sbFrequency = _useChannelFrequency ? frequency : _subbandFrequency;
+		matrix22c_t gainMatrix = _stations[a]->response(time, frequency, diffBeamCentre, sbFrequency, _station0, _tile0);
 		if(_useDifferentialBeam)
 		{
 			_inverseCentralGain[a][0] = gainMatrix[0][0];
@@ -183,7 +185,8 @@ void LofarBeamTerm::calcThread(std::complex<float>* buffer, double time, double 
 			std::complex<float>* baseBuffer = buffer + (x + y*_height) * 4;
 
 			std::complex<float>* antBufferPtr = baseBuffer + antennaIndex*valuesPerAntenna;
-			matrix22c_t gainMatrix = _stations[antennaIndex]->response(time, frequency, itrfDirection, frequency, _station0, _tile0);
+			double sbFrequency = _useChannelFrequency ? frequency : _subbandFrequency;
+			matrix22c_t gainMatrix = _stations[antennaIndex]->response(time, frequency, itrfDirection, sbFrequency, _station0, _tile0);
 			if(_useDifferentialBeam)
 			{
 				MC2x2F stationGains;
