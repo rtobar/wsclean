@@ -41,7 +41,7 @@ void FitsWriter::writeHeaders(fitsfile *& fptr, const std::string& filename, con
 	naxes[1] = _height;
 	for(size_t i=0; i!=extraDimensions.size(); ++i)
 		naxes[i+2] = extraDimensions[i].size;
-	fits_create_img(fptr, bitPixInt, 4, naxes.data(), &status);
+	fits_create_img(fptr, bitPixInt, naxes.size(), naxes.data(), &status);
 	checkStatus(status, filename);
 	double zero = 0, one = 1, equinox = 2000.0;
 	fits_write_key(fptr, TDOUBLE, "BSCALE", (void*) &one, "", &status); checkStatus(status, filename);
