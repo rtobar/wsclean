@@ -11,11 +11,11 @@
 #include "lbeamevaluator.h"
 
 #include <boost/asio/io_service.hpp>
-#include <boost/thread/thread.hpp>
 #include <boost/thread/barrier.hpp>
 
 #include <complex>
 #include <memory>
+#include <thread>
 
 class LMSPredicter
 {
@@ -65,7 +65,7 @@ public:
 		_bufferedBufferLane.write(data);
 	}
 	
-	boost::mutex &IOMutex() { return _mutex; }
+	std::mutex &IOMutex() { return _mutex; }
 	
 	void SetApplyBeam(bool applyBeam) { _applyBeam = applyBeam; }
 	void SetStartRow(size_t startRow) { _startRow = startRow; }
@@ -81,7 +81,7 @@ private:
 	bool _applyBeam, _useModelColumn;
 	
 	DFTPredictionInput _dftInput;
-	boost::mutex _mutex;
+	std::mutex _mutex;
 	boost::barrier _barrier;
 	boost::asio::io_service _ioService;
 	
@@ -90,8 +90,8 @@ private:
 	lane_read_buffer<RowData> _bufferedOutputLane;
 	lane_write_buffer<RowData> _bufferedBufferLane;
 	
-	std::unique_ptr<boost::thread> _readThread;
-	std::unique_ptr<boost::thread_group> _workThreadGroup;
+	std::unique_ptr<std::thread> _readThread;
+	std::vector<std::thread> _workThreadGroup;
 	std::unique_ptr<DFTPredictionAlgorithm> _predicter;
 	std::vector<MC2x2*> _buffers;
 	BandData _bandData;

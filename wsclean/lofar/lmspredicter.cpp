@@ -7,7 +7,7 @@
 
 LMSPredicter::~LMSPredicter()
 {
-	if(_readThread != 0)
+	if(_readThread != nullptr)
 		_readThread->join();
 	clearBuffers();
 }
@@ -34,7 +34,7 @@ void LMSPredicter::clearBuffers()
 
 void LMSPredicter::Start()
 {
-	boost::mutex::scoped_lock lock(_mutex);
+	std::unique_lock<std::mutex> lock(_mutex);
 	if(_ms.nrow() == 0) throw std::runtime_error("Table has no rows (no data)");
 	
 	casacore::ROArrayColumn<casacore::Complex> dataColumn(_ms, _ms.columnName(casacore::MSMainEnums::DATA));
@@ -78,8 +78,8 @@ void LMSPredicter::Start()
 
 	// Start all threads
 	if(!_useModelColumn)
-		_workThreadGroup.reset(new boost::thread_group());
-	_readThread.reset(new boost::thread(&LMSPredicter::ReadThreadFunc, this));
+		_workThreadGroup.clear();
+	_readThread.reset(new std::thread(&LMSPredicter::ReadThreadFunc, this));
 }
 	
 void LMSPredicter::ReadThreadFunc()
@@ -88,17 +88,14 @@ void LMSPredicter::ReadThreadFunc()
 	boost::asio::io_service::work work(_ioService);
 	if(!_useModelColumn)
 	{
-		//if(_dftInput.ComponentCount() == 0)
-		//	actualThreadCount = 1;
 		for(size_t i=0; i!=actualThreadCount; ++i)
 		{
-			//_workThreadGroup->add_thread(new boost::thread(&LMSPredicter::PredictThreadFunc, this));
-			_workThreadGroup->add_thread(new boost::thread(boost::bind(&boost::asio::io_service::run, &_ioService)));
+			_workThreadGroup.emplace_back(boost::bind(&boost::asio::io_service::run, &_ioService));
 			_ioService.post(boost::bind(&LMSPredicter::PredictThreadFunc, this));
 		}
 	}
 	
-	boost::mutex::scoped_lock lock(_mutex);
+	std::unique_lock<std::mutex> lock(_mutex);
 
 	casacore::ROScalarColumn<int> ant1Column(_ms, _ms.columnName(casacore::MSMainEnums::ANTENNA1));
 	casacore::ROScalarColumn<int> ant2Column(_ms, _ms.columnName(casacore::MSMainEnums::ANTENNA2));
@@ -190,7 +187,9 @@ void LMSPredicter::ReadThreadFunc()
 		_workLane.write_end();
 		_barrier.wait();
 		_ioService.stop();
-		_workThreadGroup->join_all();
+		for(std::thread& t : _workThreadGroup)
+			t.join();
+		_workThreadGroup.clear();
 	}
 	_outputLane.write_end();
 }
