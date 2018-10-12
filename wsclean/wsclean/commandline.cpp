@@ -61,7 +61,7 @@ void CommandLine::printHelp()
 		"   two images will be output: <prefix>-uv-real.fits and <prefix>-uv-imag.fits.\n"
 		"-apply-primary-beam\n"
 		"   Calculate and apply the primary beam and save images for the Jones components, with weighting identical to the\n"
-		"   weighting as used by the imager. Only available for LOFAR.\n"
+		"   weighting as used by the imager. Only available for LOFAR, AARTFAAC and MWA.\n"
 		"-reuse-primary-beam\n"
 		"   If a primary beam image exists on disk, reuse those images.\n"
 		"-use-differential-lofar-beam\n"
