@@ -38,8 +38,8 @@
 class ClarkModel
 {
 public:
-	ClarkModel(size_t width, size_t height) :
-		_width(width), _height(height)
+	ClarkModel(size_t width, size_t /*height*/) :
+		_width(width)
 	{ }
 	
 	void AddPosition(size_t x, size_t y)
@@ -75,7 +75,7 @@ private:
 	std::vector<std::pair<size_t,size_t>> _positions;
 	std::unique_ptr<ImageSet> _residual, _model;
 	Image _rmsFactorImage;
-	size_t _width, _height;
+	size_t _width;
 };
 
 class ClarkLoop

@@ -33,7 +33,7 @@ private:
 	virtual bool calculateBeam(std::complex<float>* buffer, double time, double frequency) final override;
 
 	size_t _width, _height, _nStations;
-	double _subbandFrequency, _phaseCentreRA, _phaseCentreDec, _dl, _dm, _phaseCentreDL, _phaseCentreDM;
+	double _phaseCentreRA, _phaseCentreDec, _dl, _dm, _phaseCentreDL, _phaseCentreDM;
 	casacore::MPosition _arrayPos;
 	double _delays[16];
 	bool _frequencyInterpolation;

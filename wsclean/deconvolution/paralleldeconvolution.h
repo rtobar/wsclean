@@ -35,12 +35,6 @@ public:
 		_allocator = allocator;
 	}
 	
-	[[ deprecated("Use the unique_ptr version") ]]
-	void SetAlgorithm(class DeconvolutionAlgorithm* algorithm)
-	{
-		SetAlgorithm(std::unique_ptr<class DeconvolutionAlgorithm>(algorithm));
-	}
-	
 	void SetAlgorithm(std::unique_ptr<class DeconvolutionAlgorithm> algorithm);
 	
 	void SetRMSFactorImage(class Image&& image);

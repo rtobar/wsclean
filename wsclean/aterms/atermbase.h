@@ -6,6 +6,8 @@
 class ATermBase
 {
 public:
+	virtual ~ATermBase() { }
+	
 	/**
 	 * Calculate the a-terms for the given time and frequency, for all stations.
 	 * @param buffer A buffer of size 4 x width x height x nstation, in that order.

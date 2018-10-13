@@ -48,7 +48,6 @@ class MeasurementSetGridder
 			_verbose(false),
 			_antialiasingKernelSize(7),
 			_overSamplingFactor(63),
-			_normalizeForWeighting(true),
 			_visibilityWeightingMode(NormalVisibilityWeighting),
 			_gridMode(KaiserBesselKernel),
 			_storeImagingWeights(false)
@@ -245,7 +244,6 @@ class MeasurementSetGridder
 		bool _verbose;
 		std::vector<MSSelection> _selections;
 		size_t _antialiasingKernelSize, _overSamplingFactor;
-		bool _normalizeForWeighting;
 		enum VisibilityWeightingMode _visibilityWeightingMode;
 		GridModeEnum _gridMode;
 		bool _storeImagingWeights;

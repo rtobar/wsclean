@@ -1,6 +1,7 @@
 #ifndef CLONED_PTR_H
 #define CLONED_PTR_H
 
+#include <cstddef>
 #include <memory>
 
 namespace ao {
@@ -9,7 +10,7 @@ template<typename T>
 class cloned_ptr {
 public:
 	cloned_ptr() noexcept {}
-	cloned_ptr(nullptr_t) noexcept {}
+	cloned_ptr(std::nullptr_t) noexcept {}
 	cloned_ptr(T* object) noexcept : _ptr(object) {}
 	cloned_ptr(const cloned_ptr<T>& other) :
 		_ptr(other._ptr==nullptr ? nullptr : new T(*other._ptr))
@@ -18,7 +19,7 @@ public:
 		_ptr(std::move(other._ptr))
 	{ }
 	
-	cloned_ptr<T>& operator=(nullptr_t) noexcept
+	cloned_ptr<T>& operator=(std::nullptr_t) noexcept
 	{
 		_ptr.reset();
 	}
@@ -39,7 +40,7 @@ public:
 	T* operator->() const noexcept { return _ptr.get(); }
 	T* get() const { return _ptr.get(); }
 	
-	bool operator==(nullptr_t) const noexcept
+	bool operator==(std::nullptr_t) const noexcept
 	{
 		return _ptr == nullptr;
 	}

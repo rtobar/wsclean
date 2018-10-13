@@ -21,8 +21,7 @@ LofarBeamTerm::LofarBeamTerm(casacore::MeasurementSet& ms, size_t width, size_t 
 	_phaseCentreDL(phaseCentreDL),
 	_phaseCentreDM(phaseCentreDM),
 	_useDifferentialBeam(false),
-	_useChannelFrequency(true),
-	_saveATerms(false)
+	_useChannelFrequency(true)
 {
 	casacore::MSAntenna aTable(ms.antenna());
 

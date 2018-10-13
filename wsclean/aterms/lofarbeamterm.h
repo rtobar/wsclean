@@ -44,7 +44,7 @@ private:
 	double _subbandFrequency, _phaseCentreRA, _phaseCentreDec, _dl, _dm, _phaseCentreDL, _phaseCentreDM;
 	casacore::MDirection _delayDir, _referenceDir, _tileBeamDir;
 	casacore::MPosition _arrayPos;
-	bool _useDifferentialBeam, _useChannelFrequency, _saveATerms;
+	bool _useDifferentialBeam, _useChannelFrequency;
 	vector3r_t _l_vector_itrf;
 	vector3r_t _m_vector_itrf;
 	vector3r_t _n_vector_itrf;
