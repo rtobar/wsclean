@@ -77,7 +77,7 @@ public:
 					default: {
 						// This is here to make sure ATermStub compiles. This call should be the
 						// same as the call for LofarBeamTerm(..)
-						beam.reset(new ATermStub(_ms, _width, _height, _dl, _dm, _phaseCentreDL, _phaseCentreDM, false));
+						beam.reset(new ATermStub(_ms, _width, _height, _dl, _dm, _phaseCentreDL, _phaseCentreDM));
 						break;
 					}
 				}

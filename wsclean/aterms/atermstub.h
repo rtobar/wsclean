@@ -8,14 +8,17 @@
 class ATermStub : public ATermBeam
 {
 public:
-	ATermStub(casacore::MeasurementSet&, size_t, size_t, double, double, double, double, bool)
+	ATermStub(casacore::MeasurementSet&, size_t /*width*/, size_t /*height*/, double /*dl*/, double /*dm*/, double /*phaseCentreDL*/, double /*phaseCentreDM*/)
 	{
 		throw std::runtime_error("ATerm not implemented -- did you forget to turn specific beam options on during the compilation?");
 	}
-	virtual bool calculateBeam(std::complex<float>* buffer, double time, double frequency)
+	virtual bool calculateBeam(std::complex<float>* /*buffer*/, double /*time*/, double /*frequency*/)
 	{
 		throw std::runtime_error("ATerm not implemented -- did you forget to turn specific beam options on during the compilation?");
 	}
+	
+	void SetUseDifferentialBeam(bool) { }
+	void SetUseChannelFrequency(bool) { }
 };
 
 #endif
