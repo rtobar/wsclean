@@ -782,7 +782,7 @@ void WSClean::writeFirstResidualImages(const ImagingTable& groupTable) const
 		size_t ch = entry.outputChannelIndex;
 		if(entry.polarization == Polarization::YX) {
 			_residualImages.Load(ptr.data(), Polarization::XY, ch, true);
-			WSCFitsWriter writer(createWSCFitsWriter(entry, Polarization::XY, true));
+			WSCFitsWriter writer(createWSCFitsWriter(entry, Polarization::XY, true, false));
 			writer.WriteImage("first-residual.fits", ptr.data());
 		}
 		else {
@@ -804,7 +804,7 @@ void WSClean::writeModelImages(const ImagingTable& groupTable) const
 		size_t ch = entry.outputChannelIndex;
 		if(entry.polarization == Polarization::YX) {
 			_modelImages.Load(ptr.data(), Polarization::XY, ch, true);
-			WSCFitsWriter writer(createWSCFitsWriter(entry, Polarization::XY, true));
+			WSCFitsWriter writer(createWSCFitsWriter(entry, Polarization::XY, true, true));
 			writer.WriteImage("model.fits", ptr.data());
 		}
 		else {

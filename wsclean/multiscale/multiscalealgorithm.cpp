@@ -103,8 +103,8 @@ double MultiScaleAlgorithm::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& 
 	}
 	
 	bool hasHitThresholdInSubLoop = false;
-	size_t thresholdCountdown = _scaleInfos.size();
-		
+	size_t thresholdCountdown = std::max(size_t(8), _scaleInfos.size());
+	
 	ImageBufferAllocator::Ptr scratch, scratchB, integratedScratch;
 	_allocator.Allocate(_convolutionWidth*_convolutionHeight, scratch);
 	_allocator.Allocate(_convolutionWidth*_convolutionHeight, scratchB);
@@ -200,7 +200,7 @@ double MultiScaleAlgorithm::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& 
 			firstSubIterationThreshold = firstThreshold;
 			if(!hasHitThresholdInSubLoop)
 			{
-				Logger::Info << "Subminor loop will finish on minor loop threshold.\n";
+				Logger::Info << "Subminor loop is near minor loop threshold. Initiating countdown.\n";
 				hasHitThresholdInSubLoop = true;
 			}
 			thresholdCountdown--;
