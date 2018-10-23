@@ -226,14 +226,15 @@ public:
 		double trHalf = tr*0.5;
 		e1 = trHalf + term;
 		e2 = trHalf - term;
-		if(matrix[2] != 0.0)
+		double limit = std::min(std::fabs(e1), std::fabs(e2)) * 1e-6;
+		if(std::fabs(matrix[2]) > limit)
 		{
 			vec1[0] = matrix[3] - e1;
 			vec1[1] = -matrix[2];
 			vec2[0] = matrix[3] - e2;
 			vec2[1] = -matrix[2];
 		}
-		else if(matrix[1] != 0.0)
+		else if(std::fabs(matrix[1]) > limit)
 		{
 			vec1[0] = -matrix[1];
 			vec1[1] = matrix[0] - e1;
@@ -241,10 +242,20 @@ public:
 			vec2[1] = matrix[0] - e2;
 		}
 		else {
-			vec1[0] = 1.0;
-			vec1[1] = 0.0;
-			vec2[0] = 0.0;
-			vec2[1] = 1.0;
+			// We know that A v = lambda v, and we know that v1 or v2 = [1, 0]:
+			double
+				// Evaluate for v = [1, 0] and see if the error is smaller for e1 than for e2
+				err1_0 = matrix[0] - e1,
+				err2_0 = matrix[0] - e2;
+			if(err1_0*err1_0 < err2_0*err2_0)
+			{
+				vec1[0] = 1.0; vec1[1] = 0.0;
+				vec2[0] = 0.0; vec2[1] = 1.0;
+			}
+			else {
+				vec1[0] = 0.0; vec1[1] = 1.0;
+				vec2[0] = 1.0; vec2[1] = 0.0;
+			}
 		}
 	}
 	

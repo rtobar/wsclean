@@ -53,6 +53,9 @@ void FitsWriter::writeHeaders(fitsfile *& fptr, const std::string& filename, con
 		case JanskyPerBeam:
 			fits_write_key(fptr, TSTRING, "BUNIT", (void*) "JY/BEAM", "Units are in Jansky per beam", &status); checkStatus(status, filename);
 			break;
+		case JanskyPerPixel:
+			fits_write_key(fptr, TSTRING, "BUNIT", (void*) "JY/PIXEL", "Units are in Jansky per pixel", &status); checkStatus(status, filename);
+			break;
 		case Jansky:
 			fits_write_key(fptr, TSTRING, "BUNIT", (void*) "JY", "Units are in Jansky", &status); checkStatus(status, filename);
 			break;

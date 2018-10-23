@@ -304,7 +304,7 @@ void DFTPredictionAlgorithm::predict(MC2x2& dest, double u, double v, double w, 
 	}
 }
 
-void DFTPredictionAlgorithm::UpdateBeam(LBeamEvaluator& beamEvaluator)
+void DFTPredictionAlgorithm::UpdateBeam(LBeamEvaluator& beamEvaluator, size_t startChannel, size_t endChannel)
 {
 	if(!_hasBeam)
 	{
@@ -319,14 +319,10 @@ void DFTPredictionAlgorithm::UpdateBeam(LBeamEvaluator& beamEvaluator)
 		{
 			DFTAntennaInfo& antennaInfo = component->AntennaInfo(antenna);
 			
-			for(size_t channel=0; channel!=antennaInfo.ChannelCount(); ++channel)
+			for(size_t channel=startChannel; channel!=endChannel; ++channel)
 			{
 				double freq = _band.ChannelFrequency(channel);
 				beamEvaluator.Evaluate(posInfo, freq, antenna, antennaInfo.BeamValue(channel));
-				/*if(channel == antennaInfo.ChannelCount()/2 && antenna==0)
-				{
-					std::cout << antennaInfo.BeamValue(channel).ToString() << ' ';
-				}*/
 			}
 		}
 	}

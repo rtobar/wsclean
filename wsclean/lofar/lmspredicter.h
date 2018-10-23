@@ -32,6 +32,8 @@ public:
 	
 	explicit LMSPredicter(casacore::MeasurementSet &ms, size_t threadCount) :
 		_ms(ms),
+		_startChannel(0),
+		_endChannel(0),
 		_applyBeam(false),
 		_useModelColumn(false),
 		_dftInput(),
@@ -71,6 +73,12 @@ public:
 	void SetStartRow(size_t startRow) { _startRow = startRow; }
 	void SetEndRow(size_t endRow) { _endRow = endRow; }
 	void SetUseModelColumn(bool useModelColumn) { _useModelColumn = useModelColumn; }
+	void SetChannelRange(size_t startChannel, size_t endChannel)
+	{
+		_startChannel = startChannel;
+		_endChannel = endChannel;
+	}
+
 private:
 	void ReadThreadFunc();
 	void PredictThreadFunc();
@@ -78,6 +86,7 @@ private:
 	
 	casacore::MeasurementSet &_ms;
 	std::unique_ptr<LBeamEvaluator> _beamEvaluator;
+	size_t _startChannel, _endChannel;
 	bool _applyBeam, _useModelColumn;
 	
 	DFTPredictionInput _dftInput;

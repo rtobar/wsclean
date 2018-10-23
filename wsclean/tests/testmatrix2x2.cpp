@@ -88,6 +88,21 @@ BOOST_AUTO_TEST_CASE( eigenvector4 )
 	BOOST_CHECK_CLOSE(vec2[1]/vec2[0], -3.0, 1e-6); // vec2 = c [-2, 6]
 }
 
+BOOST_AUTO_TEST_CASE( eigenvector5 )
+{
+	double m[4] = { 1.0, 0.0, 0.0, 0.5 };
+	double e1, e2, vec1[2], vec2[2];
+	Matrix2x2::EigenValuesAndVectors(m, e1, e2, vec1, vec2);
+	if(e1 < e2) {
+		std::swap(e1, e2);
+		std::swap(vec1, vec2);
+	}
+	BOOST_CHECK_CLOSE(e1, 1.0, 1e-6);
+	BOOST_CHECK_CLOSE(vec1[1]/vec1[0], 0.0, 1e-6);
+	BOOST_CHECK_CLOSE(e2, 0.5, 1e-6);
+	BOOST_CHECK_CLOSE(vec2[0]/vec2[1], 0.0, 1e-6);
+}
+
 BOOST_AUTO_TEST_CASE( cholesky_real )
 {
 	std::complex<double> matrix[4] = {1., 2., 2., 13.};

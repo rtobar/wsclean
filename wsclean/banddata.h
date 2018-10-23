@@ -261,7 +261,7 @@ class BandData
 		 */
 		double HighestFrequency() const
 		{
-			return _channelFrequencies[_channelCount-1];
+			return _channelCount==0 ? 0 : _channelFrequencies[_channelCount-1];
 		}
 		
 		/** Get the frequency of the first channel.
@@ -269,7 +269,7 @@ class BandData
 		 */
 		double LowestFrequency() const
 		{
-			return _channelFrequencies[0];
+			return _channelCount==0 ? 0 : _channelFrequencies[0];
 		}
 		
 		/** Get the centre frequency.
@@ -309,14 +309,14 @@ class BandData
 		 * @returns longest wavelength. */
 		double LongestWavelength() const
 		{
-			return ChannelWavelength(0);
+			return _channelCount==0 ? 0 :  ChannelWavelength(0);
 		}
 		
 		/** Get the wavelength of the last channel.
 		 * @returns smallest wavelength. */
 		double SmallestWavelength() const
 		{
-			return ChannelWavelength(_channelCount-1);
+			return _channelCount==0 ? 0 :  ChannelWavelength(_channelCount-1);
 		}
 		
 		/** Get the start of the frequency range covered by this band.

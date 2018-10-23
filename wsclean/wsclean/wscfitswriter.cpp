@@ -10,7 +10,7 @@
 
 #include "../deconvolution/deconvolution.h"
 
-WSCFitsWriter::WSCFitsWriter(const ImagingTableEntry& entry, bool isImaginary, const WSCleanSettings& settings, const class Deconvolution& deconvolution, size_t majorIterationNr, const MSGridderBase& gridder, const std::string& commandLine, const OutputChannelInfo& channelInfo)
+WSCFitsWriter::WSCFitsWriter(const ImagingTableEntry& entry, bool isImaginary, const WSCleanSettings& settings, const class Deconvolution& deconvolution, size_t majorIterationNr, const MSGridderBase& gridder, const std::string& commandLine, const OutputChannelInfo& channelInfo, bool isModel)
 {
 	_filenamePrefix = ImageFilename::GetPrefix(settings, entry.polarization, entry.outputChannelIndex, entry.outputIntervalIndex, isImaginary);
 	setGridderConfiguration(settings, gridder);
@@ -20,9 +20,11 @@ WSCFitsWriter::WSCFitsWriter(const ImagingTableEntry& entry, bool isImaginary, c
 	setDeconvolutionKeywords(settings);
 	if(deconvolution.IsInitialized())
 		setDeconvolutionResultKeywords(deconvolution.GetAlgorithm().IterationNumber(), majorIterationNr);
+	if(isModel)
+		_writer.SetUnit(FitsWriter::JanskyPerPixel);
 }
 
-WSCFitsWriter::WSCFitsWriter(const ImagingTableEntry& entry, PolarizationEnum polarization, bool isImaginary, const WSCleanSettings& settings, const Deconvolution& deconvolution, size_t majorIterationNr, const MSGridderBase& gridder, const std::string& commandLine, const OutputChannelInfo& channelInfo)
+WSCFitsWriter::WSCFitsWriter(const ImagingTableEntry& entry, PolarizationEnum polarization, bool isImaginary, const WSCleanSettings& settings, const Deconvolution& deconvolution, size_t majorIterationNr, const MSGridderBase& gridder, const std::string& commandLine, const OutputChannelInfo& channelInfo, bool isModel)
 {
 	_filenamePrefix = ImageFilename::GetPrefix(settings, polarization, entry.outputChannelIndex, entry.outputIntervalIndex, isImaginary);
 	setGridderConfiguration(settings, gridder);
@@ -32,6 +34,8 @@ WSCFitsWriter::WSCFitsWriter(const ImagingTableEntry& entry, PolarizationEnum po
 	setDeconvolutionKeywords(settings);
 	if(deconvolution.IsInitialized())
 		setDeconvolutionResultKeywords(deconvolution.GetAlgorithm().IterationNumber(), majorIterationNr);
+	if(isModel)
+		_writer.SetUnit(FitsWriter::JanskyPerPixel);
 }
 
 WSCFitsWriter::WSCFitsWriter(FitsReader& templateReader) : _writer(templateReader)

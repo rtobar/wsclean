@@ -77,7 +77,6 @@ double MultiScaleAlgorithm::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& 
 		++_convolutionWidth;
 	if(_convolutionHeight%2 != 0)
 		++_convolutionHeight;
-		
 	// The threads always need to be stopped at the end of this function, so we use a scoped
 	// unique ptr.
 	std::unique_ptr<ThreadedDeconvolutionTools> tools(new ThreadedDeconvolutionTools(_threadCount));
@@ -103,6 +102,9 @@ double MultiScaleAlgorithm::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& 
 		_componentList.reset(new ComponentList(_width, _height, _scaleInfos.size(), dirtySet.size(), _allocator));
 	}
 	
+	bool hasHitThresholdInSubLoop = false;
+	size_t thresholdCountdown = _scaleInfos.size();
+		
 	ImageBufferAllocator::Ptr scratch, scratchB, integratedScratch;
 	_allocator.Allocate(_convolutionWidth*_convolutionHeight, scratch);
 	_allocator.Allocate(_convolutionWidth*_convolutionHeight, scratchB);
@@ -132,13 +134,22 @@ double MultiScaleAlgorithm::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& 
 		return 0.0;
 	}
 	
+	bool isFinalThreshold = false;
 	double mGainThreshold = std::fabs(_scaleInfos[scaleWithPeak].maxUnnormalizedImageValue * _scaleInfos[scaleWithPeak].biasFactor) * (1.0 - _mGain);
 	mGainThreshold = std::max(mGainThreshold, MajorIterThreshold());
-	const double firstThreshold = std::max(_threshold, mGainThreshold);
+	double firstThreshold = mGainThreshold;
+	if(_threshold > firstThreshold)
+	{
+		firstThreshold = _threshold;
+		isFinalThreshold = true;
+	}
 	
 	Logger::Info << "Starting multi-scale cleaning. Start peak="
 		<< FluxDensity::ToNiceString(_scaleInfos[scaleWithPeak].maxUnnormalizedImageValue * _scaleInfos[scaleWithPeak].biasFactor)
-		<< ", major iteration threshold=" << FluxDensity::ToNiceString(firstThreshold) << "\n";
+		<< ", major iteration threshold=" << FluxDensity::ToNiceString(firstThreshold);
+	if(isFinalThreshold)
+		Logger::Info << " (final)";
+	Logger::Info << '\n';
 	
 	std::unique_ptr<ImageBufferAllocator::Ptr[]> doubleConvolvedPSFs(
 		new ImageBufferAllocator::Ptr[dirtySet.PSFCount()]);
@@ -156,7 +167,8 @@ double MultiScaleAlgorithm::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& 
 	while(
 		_iterationNumber < MaxNIter() &&
 		std::fabs(_scaleInfos[scaleWithPeak].maxUnnormalizedImageValue * _scaleInfos[scaleWithPeak].biasFactor) > firstThreshold &&
-		(!StopOnNegativeComponents() || _scaleInfos[scaleWithPeak].maxUnnormalizedImageValue>=0.0) )
+		(!StopOnNegativeComponents() || _scaleInfos[scaleWithPeak].maxUnnormalizedImageValue>=0.0) &&
+		thresholdCountdown > 0)
 	{
 		// Create double-convolved PSFs & individually convolved images for this scale
 		ao::uvector<double*> transformList;
@@ -182,7 +194,18 @@ double MultiScaleAlgorithm::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& 
 		//
 		double subIterationGainThreshold =
 			std::fabs(_scaleInfos[scaleWithPeak].maxUnnormalizedImageValue * _scaleInfos[scaleWithPeak].biasFactor) * (1.0 - _multiscaleGain);
-		double firstSubIterationThreshold = std::max(subIterationGainThreshold, firstThreshold);
+		double firstSubIterationThreshold = subIterationGainThreshold;
+		if(firstThreshold > firstSubIterationThreshold)
+		{
+			firstSubIterationThreshold = firstThreshold;
+			if(!hasHitThresholdInSubLoop)
+			{
+				Logger::Info << "Subminor loop will finish on minor loop threshold.\n";
+				hasHitThresholdInSubLoop = true;
+			}
+			thresholdCountdown--;
+			Logger::Info << '(' << thresholdCountdown << ") ";
+		}
 		// TODO we could chose to run the non-fast loop until we hit e.g. 10 iterations in a scale,
 		// because the fast loop takes more constant time and is only efficient when doing
 		// many iterations.
@@ -296,19 +319,19 @@ double MultiScaleAlgorithm::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& 
 	
 	bool
 		maxIterReached = _iterationNumber >= MaxNIter(),
-		finalThresholdReached = std::fabs(_scaleInfos[scaleWithPeak].maxUnnormalizedImageValue * _scaleInfos[scaleWithPeak].biasFactor) <= _threshold,
 		negativeReached = StopOnNegativeComponents() && _scaleInfos[scaleWithPeak].maxUnnormalizedImageValue < 0.0;
+		//finalThresholdReached = std::fabs(_scaleInfos[scaleWithPeak].maxUnnormalizedImageValue * _scaleInfos[scaleWithPeak].biasFactor) <= _threshold;
 	
 	if(maxIterReached)
 		Logger::Info << "Cleaning finished because maximum number of iterations was reached.\n";
-	else if(finalThresholdReached)
-		Logger::Info << "Cleaning finished because the final threshold was reached.\n";
 	else if(negativeReached)
 		Logger::Info << "Cleaning finished because a negative component was found.\n";
+	else if(isFinalThreshold)
+		Logger::Info << "Cleaning finished because the final threshold was reached.\n";
 	else
 		Logger::Info << "Minor loop finished, continuing cleaning after inversion/prediction round.\n";
 	
-	reachedMajorThreshold = !maxIterReached && !finalThresholdReached && !negativeReached;
+	reachedMajorThreshold = !maxIterReached && !isFinalThreshold && !negativeReached;
 	return _scaleInfos[scaleWithPeak].maxUnnormalizedImageValue * _scaleInfos[scaleWithPeak].biasFactor;
 }
 

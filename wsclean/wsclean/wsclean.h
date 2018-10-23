@@ -79,9 +79,9 @@ private:
 	
 	void makeBeam();
 	
-	WSCFitsWriter createWSCFitsWriter(const ImagingTableEntry& entry, bool isImaginary) const;
+	WSCFitsWriter createWSCFitsWriter(const ImagingTableEntry& entry, bool isImaginary, bool isModel) const;
 	
-	WSCFitsWriter createWSCFitsWriter(const ImagingTableEntry& entry, PolarizationEnum polarization, bool isImaginary) const;
+	WSCFitsWriter createWSCFitsWriter(const ImagingTableEntry& entry, PolarizationEnum polarization, bool isImaginary, bool isModel) const;
 	
 	bool preferReordering() const
 	{

@@ -84,7 +84,7 @@ void WSClean::imagePSF(ImagingTableEntry& entry)
 	Logger::Debug << "Normalized PSF by factor of " << normFactor << ".\n";
 		
 	DeconvolutionAlgorithm::RemoveNaNsInPSF(_gridder->ImageRealResult(), _settings.trimmedImageWidth, _settings.trimmedImageHeight);
-	_psfImages.SetFitsWriter(createWSCFitsWriter(entry, false).Writer());
+	_psfImages.SetFitsWriter(createWSCFitsWriter(entry, false, false).Writer());
 	_psfImages.Store(_gridder->ImageRealResult(), *_settings.polarizations.begin(), channelIndex, false);
 	_inversionWatch.Pause();
 	
@@ -112,7 +112,7 @@ void WSClean::imagePSF(ImagingTableEntry& entry)
 	Logger::Info << "Writing psf image... ";
 	Logger::Info.Flush();
 	const std::string name(ImageFilename::GetPSFPrefix(_settings, channelIndex, entry.outputIntervalIndex) + "-psf.fits");
-	WSCFitsWriter fitsFile = createWSCFitsWriter(entry, false);
+	WSCFitsWriter fitsFile = createWSCFitsWriter(entry, false, false);
 	fitsFile.WritePSF(name, _gridder->ImageRealResult());
 	Logger::Info << "DONE\n";
 }
@@ -600,8 +600,9 @@ double WSClean::minTheoreticalBeamSize(const ImagingTable& table) const
 
 void WSClean::runIndependentGroup(ImagingTable& groupTable)
 {
-	WSCFitsWriter writer(createWSCFitsWriter(groupTable.Front(), false));
-	_modelImages.Initialize(writer.Writer(), _settings.polarizations.size(), _settings.channelsOut, _settings.prefixName + "-model", _imageAllocator);
+	WSCFitsWriter modelWriter(createWSCFitsWriter(groupTable.Front(), false, true));
+	_modelImages.Initialize(modelWriter.Writer(), _settings.polarizations.size(), _settings.channelsOut, _settings.prefixName + "-model", _imageAllocator);
+	WSCFitsWriter writer(createWSCFitsWriter(groupTable.Front(), false, false));
 	_residualImages.Initialize(writer.Writer(), _settings.polarizations.size(), _settings.channelsOut, _settings.prefixName + "-residual", _imageAllocator);
 	if(groupTable.Front().polarization == *_settings.polarizations.begin())
 		_psfImages.Initialize(writer.Writer(), 1, groupTable.SquaredGroupCount(), _settings.prefixName + "-psf", _imageAllocator);
@@ -701,7 +702,7 @@ void WSClean::saveRestoredImagesForGroup(const ImagingTableEntry& tableEntry) co
 	for(size_t imageIter=0; imageIter!=tableEntry.imageCount; ++imageIter)
 	{
 		bool isImaginary = (imageIter == 1);
-		WSCFitsWriter writer(createWSCFitsWriter(tableEntry, isImaginary));
+		WSCFitsWriter writer(createWSCFitsWriter(tableEntry, isImaginary, false));
 		double* restoredImage = _imageAllocator.Allocate(_settings.trimmedImageWidth*_settings.trimmedImageHeight);
 		_residualImages.Load(restoredImage, curPol, currentChannelIndex, isImaginary);
 		
@@ -786,7 +787,7 @@ void WSClean::writeFirstResidualImages(const ImagingTable& groupTable) const
 		}
 		else {
 			_residualImages.Load(ptr.data(), entry.polarization, ch, false);
-			WSCFitsWriter writer(createWSCFitsWriter(entry, false));
+			WSCFitsWriter writer(createWSCFitsWriter(entry, false, false));
 			writer.WriteImage("first-residual.fits", ptr.data());
 		}
 	}
@@ -808,7 +809,7 @@ void WSClean::writeModelImages(const ImagingTable& groupTable) const
 		}
 		else {
 			_modelImages.Load(ptr.data(), entry.polarization, ch, false);
-			WSCFitsWriter writer(createWSCFitsWriter(entry, false));
+			WSCFitsWriter writer(createWSCFitsWriter(entry, false, true));
 			writer.WriteImage("model.fits", ptr.data());
 		}
 	}
@@ -886,7 +887,7 @@ void WSClean::readEarlierModelImages(const ImagingTableEntry& entry)
 void WSClean::predictGroup(const ImagingTable& imagingGroup)
 {
 	_modelImages.Initialize(
-		createWSCFitsWriter(imagingGroup.Front(), false).Writer(),
+		createWSCFitsWriter(imagingGroup.Front(), false, true).Writer(),
 		_settings.polarizations.size(), 1, _settings.prefixName + "-model", _imageAllocator
 	);
 	
@@ -992,8 +993,9 @@ void WSClean::runFirstInversion(ImagingTableEntry& entry)
 		
 	if(!_settings.makePSFOnly)
 	{
-		FitsWriter writer(createWSCFitsWriter(entry, false).Writer());
-		_modelImages.SetFitsWriter(writer);
+		FitsWriter mWriter(createWSCFitsWriter(entry, false, true).Writer());
+		_modelImages.SetFitsWriter(mWriter);
+		FitsWriter writer(createWSCFitsWriter(entry, false, false).Writer());
 		_residualImages.SetFitsWriter(writer);
 		
 		imageMainFirst(entry);
@@ -1053,7 +1055,7 @@ void WSClean::runFirstInversion(ImagingTableEntry& entry)
 			for(size_t imageIndex=0; imageIndex!=entry.imageCount; ++imageIndex)
 			{
 				bool isImaginary = (imageIndex==1);
-				WSCFitsWriter writer(createWSCFitsWriter(entry, isImaginary));
+				WSCFitsWriter writer(createWSCFitsWriter(entry, isImaginary, false));
 				double* dirtyImage = _imageAllocator.Allocate(_settings.trimmedImageWidth * _settings.trimmedImageHeight);
 				_residualImages.Load(dirtyImage, entry.polarization, entry.outputChannelIndex, isImaginary);
 				Logger::Info << "Writing dirty image...\n";
@@ -1242,7 +1244,7 @@ void WSClean::saveUVImage(const double* image, PolarizationEnum pol, const Imagi
 	// (also one from the fact that normF excludes a factor of two?)
 	realUV *= _infoPerChannel[entry.outputChannelIndex].normalizationFactor / sqrt(0.5*_settings.trimmedImageWidth * _settings.trimmedImageHeight);
 	imagUV *= _infoPerChannel[entry.outputChannelIndex].normalizationFactor / sqrt(0.5*_settings.trimmedImageWidth * _settings.trimmedImageHeight);
-	WSCFitsWriter writer(createWSCFitsWriter(entry, isImaginary));
+	WSCFitsWriter writer(createWSCFitsWriter(entry, isImaginary, false));
 	writer.WriteUV(prefix+"-real.fits", realUV.data());
 	writer.WriteUV(prefix+"-imag.fits", imagUV.data());
 }
@@ -1493,12 +1495,12 @@ void WSClean::determineBeamSize(double& bMaj, double& bMin, double& bPA, const d
 	}
 }
 
-WSCFitsWriter WSClean::createWSCFitsWriter(const ImagingTableEntry& entry, bool isImaginary) const
+WSCFitsWriter WSClean::createWSCFitsWriter(const ImagingTableEntry& entry, bool isImaginary, bool isModel) const
 {
-	return WSCFitsWriter(entry, isImaginary, _settings, _deconvolution, _majorIterationNr, *_gridder, _commandLine, _infoPerChannel[entry.outputChannelIndex]);
+	return WSCFitsWriter(entry, isImaginary, _settings, _deconvolution, _majorIterationNr, *_gridder, _commandLine, _infoPerChannel[entry.outputChannelIndex], isModel);
 }
 
-WSCFitsWriter WSClean::createWSCFitsWriter(const ImagingTableEntry& entry, PolarizationEnum polarization, bool isImaginary) const
+WSCFitsWriter WSClean::createWSCFitsWriter(const ImagingTableEntry& entry, PolarizationEnum polarization, bool isImaginary, bool isModel) const
 {
-	return WSCFitsWriter(entry, polarization, isImaginary, _settings, _deconvolution, _majorIterationNr, *_gridder, _commandLine, _infoPerChannel[entry.outputChannelIndex]);
+	return WSCFitsWriter(entry, polarization, isImaginary, _settings, _deconvolution, _majorIterationNr, *_gridder, _commandLine, _infoPerChannel[entry.outputChannelIndex], isModel);
 }

@@ -16,6 +16,7 @@ class FitsWriter : protected FitsIOChecker
 public:
 	enum Unit {
 		JanskyPerBeam,
+		JanskyPerPixel,
 		Jansky,
 		Kelvin,
 		MilliKelvin

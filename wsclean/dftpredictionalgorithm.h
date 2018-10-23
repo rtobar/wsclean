@@ -184,7 +184,7 @@ public:
 	
 	void Predict(MC2x2& dest, double u, double v, double w, size_t channelIndex, size_t a1, size_t a2);
 
-	void UpdateBeam(LBeamEvaluator& beamEvaluator);
+	void UpdateBeam(LBeamEvaluator& beamEvaluator, size_t startChannel, size_t endChannel);
 	
 private:
 	void predict(MC2x2& dest, double u, double v, double w, size_t channelIndex, size_t a1, size_t a2, const DFTPredictionComponent& component);
