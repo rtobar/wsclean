@@ -103,7 +103,7 @@ double MultiScaleAlgorithm::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& 
 	}
 	
 	bool hasHitThresholdInSubLoop = false;
-	size_t thresholdCountdown = std::max(size_t(8), _scaleInfos.size());
+	size_t thresholdCountdown = std::max(size_t(8), _scaleInfos.size()*3/2);
 	
 	ImageBufferAllocator::Ptr scratch, scratchB, integratedScratch;
 	_allocator.Allocate(_convolutionWidth*_convolutionHeight, scratch);
