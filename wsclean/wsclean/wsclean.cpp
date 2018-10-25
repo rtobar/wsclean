@@ -630,7 +630,7 @@ void WSClean::runIndependentGroup(ImagingTable& groupTable)
 				_deconvolution.Perform(groupTable, reachedMajorThreshold, _majorIterationNr);
 				_deconvolutionWatch.Pause();
 				
-				if(_majorIterationNr == 1 && _settings.deconvolutionMGain != 1.0)
+				if(_majorIterationNr == 1 && _settings.deconvolutionMGain != 1.0 && _settings.isFirstResidualSaved)
 					writeFirstResidualImages(groupTable);
 		
 				if(!reachedMajorThreshold)

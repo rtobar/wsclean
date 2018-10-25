@@ -1202,6 +1202,10 @@ int CommandLine::Run(int argc, char* argv[])
 		{
 			settings.isDirtySaved = false;
 		}
+		else if(param == "save-first-residual")
+		{
+			settings.isFirstResidualSaved = true;
+		}
 		else {
 			throw std::runtime_error("Unknown parameter: " + param);
 		}
