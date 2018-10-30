@@ -6,6 +6,8 @@
 class ATermBase
 {
 public:
+	ATermBase() : _saveATerms(false) { }
+	
 	virtual ~ATermBase() { }
 	
 	/**
