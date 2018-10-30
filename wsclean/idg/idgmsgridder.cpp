@@ -173,6 +173,7 @@ std::unique_ptr<class ATermBase> IdgMsGridder::getATermMaker(MSGridderBase::MSDa
 		if(!_settings.atermConfigFilename.empty())
 		{
 			std::unique_ptr<ATermConfig> config(new ATermConfig(ms, nr_stations, subgridsize, subgridsize, PhaseCentreRA(), PhaseCentreDec(), dl, dm, pdl, pdm, _settings));
+			config->SetSaveATerms(_settings.saveATerms);
 			config->Read(_settings.atermConfigFilename);
 			return std::move(config);
 		}
