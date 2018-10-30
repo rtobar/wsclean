@@ -51,6 +51,7 @@ public:
 					throw std::runtime_error("A TEC aterm should consist of only one image");
 				std::unique_ptr<FitsATerm> f(new FitsATerm(_nAntenna, _width, _height, _dl, _dm, _phaseCentreDL, _phaseCentreDM));
 				f->OpenTECFile(tecFiles.front());
+				f->SetSaveATerms(false);
 				_aterms.emplace_back(std::move(f));
 			}
 			else if(atermType == "beam")
@@ -69,7 +70,7 @@ public:
 						break;
 					}
 					case Telescope::MWA: {
-						std::unique_ptr<MWABeamTerm> mwaTerm(new MWABeamTerm(_ms, _width, _height, _dl, _dm, _phaseCentreRA, _phaseCentreDec, _phaseCentreDL, _phaseCentreDM));
+						std::unique_ptr<MWABeamTerm> mwaTerm(new MWABeamTerm(_ms, _width, _height, _phaseCentreRA, _phaseCentreDec, _dl, _dm, _phaseCentreDL, _phaseCentreDM));
 						mwaTerm->SetSearchPath(_settings.mwaPath);
 						beam = std::move(mwaTerm);
 						break;
@@ -78,7 +79,7 @@ public:
 						// This is here to make sure ATermStub compiles. This call should be the
 						// same as the call for LofarBeamTerm(..)
 						beam.reset(new ATermStub(_ms, _width, _height, _dl, _dm, _phaseCentreDL, _phaseCentreDM));
-						break;
+						throw std::runtime_error("Can't make beam for this telescope");
 					}
 				}
 				double updateInterval = reader.GetDoubleOr("beam.update_interval", _settings.beamAtermUpdateTime);
