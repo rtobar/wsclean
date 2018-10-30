@@ -72,6 +72,7 @@ void IdgMsGridder::Invert()
 			max_w = std::max(max_w, msDataVector[i].maxWWithFlags);
 		}
 
+		double shiftl = 0.0, shiftm = 0.0, shiftp = 0.0; // TODO
 		_bufferset->init(width, _actualPixelSizeX, max_w+1.0, _options);
 
 		if (DoImagePSF())
@@ -332,6 +333,7 @@ void IdgMsGridder::Predict(double* image)
 			max_w = std::max(max_w, msDataVector[i].maxWWithFlags);
 		}
 
+		float shiftl = 0.0, shiftm = 0.0, shiftp = 0.0; // TODO
 		_bufferset->init(width, _actualPixelSizeX, max_w+1.0, _options);
 		_bufferset->set_image(_image.data(), do_scale);
 

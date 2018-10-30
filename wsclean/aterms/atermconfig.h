@@ -105,7 +105,8 @@ public:
 		if(_aterms.size() == 1)
 		{
 			bool result = _aterms.front()->Calculate(buffer, time, frequency);
-			saveATermsIfNecessary(buffer, _nAntenna, _width, _height);
+			if(result)
+				saveATermsIfNecessary(buffer, _nAntenna, _width, _height);
 			return result;
 		}
 		else {
