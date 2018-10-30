@@ -9,75 +9,71 @@
 #include <sched.h>
 
 namespace ao {
-
-	template<typename Iter>
-	class parallel_for
+	
+template<typename Iter>
+class parallel_for
+{
+public:
+	parallel_for(size_t nThreads) : _nThreads(nThreads)
+	{ }
+	
+/**
+	* Iteratively call a function in parallel.
+	* 
+	* The function is expected to accept two size_t parameters, the loop
+	* index and the thread id, e.g.:
+	*   void loopFunction(size_t iteration, size_t threadID);
+	* It is called (end-start) times.
+	* 
+	* This function is very similar to ThreadPool::For(), but does not
+	* support recursion. For non-recursive loop, this function will be
+	* faster.
+	*/
+	template<typename Function>
+	void Run(Iter start, Iter end, Function function)
 	{
-	public:
-		template<typename Function>
- 		parallel_for(Iter start, Iter end, Function function, bool singleThreaded=false) :
-			_current(start), _end(end)
+		_current = start;
+		_end = end;
+		std::vector<std::thread> threads;
+		if(_nThreads > 1)
 		{
-			unsigned nthreads = cpus();
-			if(nthreads > 0)
-				--nthreads;
-			std::vector<std::thread> threads;
-			if(!singleThreaded)
-			{
-				threads.reserve(nthreads);
-				for(unsigned t=0; t!=nthreads; ++t)
-					threads.push_back(std::thread(&parallel_for::run<Function>, this, function));
-			}
-			run<Function>(function);
-			for(std::thread& thr : threads)
-				thr.join();
+			threads.reserve(_nThreads-1);
+			for(unsigned t=1; t!=_nThreads; ++t)
+				threads.emplace_back(&parallel_for::run<Function>, this, t, function);
 		}
-		
-	private:
-		template<typename Function>
-		void run(Function function)
-		{
-			Iter iter;
-			while(next(iter)) {
-				function(iter);
-			}
+		run<Function>(0, function);
+		for(std::thread& thr : threads)
+			thr.join();
+	}
+	
+	size_t NThreads() const { return _nThreads; }
+private:
+	template<typename Function>
+	void run(size_t thread, Function function)
+	{
+		Iter iter;
+		while(next(iter)) {
+			function(iter, thread);
 		}
-		
-		bool next(Iter& iter)
-		{
-			std::unique_lock<std::mutex> lock(_mutex);
-			if(_current == _end)
-				return false;
-			else {
-				iter = _current;
-				++_current;
-				return true;
-			}
+	}
+	
+	bool next(Iter& iter)
+	{
+		std::lock_guard<std::mutex> lock(_mutex);
+		if(_current == _end)
+			return false;
+		else {
+			iter = _current;
+			++_current;
+			return true;
 		}
-		
-		static unsigned cpus()
-		{
-	#ifdef __APPLE__
-			return sysconf(_SC_NPROCESSORS_ONLN);
-	#else
-			cpu_set_t cs;
-			CPU_ZERO(&cs);
-			sched_getaffinity(0, sizeof cs , &cs);
+	}
+	
+	Iter _current, _end;
+	std::mutex _mutex;
+	size_t _nThreads;
+};
 
-			int count = 0;
-			for (int i = 0; i < CPU_SETSIZE; i++)
-			{
-				if (CPU_ISSET(i, &cs))
-					++count;
-			}
-
-			return count;
-	#endif
-		}
-		
-		Iter _current, _end;
-		std::mutex _mutex;
-	};
 }
 
 #endif

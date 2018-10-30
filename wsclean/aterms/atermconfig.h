@@ -81,8 +81,8 @@ public:
 						break;
 					}
 				}
-				double updateInterval = reader.GetDoubleOr("beam.update_interval", 120.0);
-				beam->SetSaveATerms(_settings.saveATerms);
+				double updateInterval = reader.GetDoubleOr("beam.update_interval", _settings.beamAtermUpdateTime);
+				beam->SetSaveATerms(false); // done by config after combining
 				beam->SetUpdateInterval(updateInterval);	
 				_aterms.emplace_back(std::move(beam));
 			}
@@ -103,7 +103,11 @@ public:
 	virtual bool Calculate(std::complex<float>* buffer, double time, double frequency) final override
 	{
 		if(_aterms.size() == 1)
-			return _aterms.front()->Calculate(buffer, time, frequency);
+		{
+			bool result = _aterms.front()->Calculate(buffer, time, frequency);
+			saveATermsIfNecessary(buffer, _nAntenna, _width, _height);
+			return result;
+		}
 		else {
 			bool isUpdated = false;
 			for(size_t i=0; i!=_aterms.size(); ++i)
@@ -124,6 +128,7 @@ public:
 						Matrix2x2::Assign(&buffer[j], scratch);
 					}
 				}
+				saveATermsIfNecessary(buffer, _nAntenna, _width, _height);
 			}
 			
 			return isUpdated;

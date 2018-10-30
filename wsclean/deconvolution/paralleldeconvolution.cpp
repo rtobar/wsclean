@@ -231,8 +231,8 @@ void ParallelDeconvolution::ExecuteMajorIteration(class ImageSet& dataImage, cla
 		std::mutex mutex;
 		
 		// Find the starting peak over all subimages
-		ao::parallel_for<size_t>(0, _algorithms.size(),
-			[&](size_t index)
+		ao::parallel_for<size_t> loop(System::ProcessorCount());
+		loop.Run(0, _algorithms.size(), [&](size_t index, size_t)
 		{
 			runSubImage(subImages[index], dataImage, modelImage, psfImages, 0.0, true, &mutex);
 		});
@@ -251,8 +251,7 @@ void ParallelDeconvolution::ExecuteMajorIteration(class ImageSet& dataImage, cla
 		double mIterThreshold = maxValue * (1.0-_settings.deconvolutionMGain);
 		
 		// Run the deconvolution
-		ao::parallel_for<size_t>(0, _algorithms.size(),
-			[&](size_t index)
+		loop.Run(0, _algorithms.size(), [&](size_t index, size_t)
 		{
 			runSubImage(subImages[index], dataImage, modelImage, psfImages, mIterThreshold, false, &mutex);
 		});

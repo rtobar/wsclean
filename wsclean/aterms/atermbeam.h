@@ -32,18 +32,6 @@ public:
 protected:
 	virtual bool calculateBeam(std::complex<float>* buffer, double time, double frequency) = 0;
 	
-	void saveATermsIfNecessary(const std::complex<float>* buffer, size_t nStations, size_t width, size_t height)
-	{
-		if(_saveATerms)
-		{
-			static int index = 0;
-			std::ostringstream f;
-			f << "aterm" << index << ".fits";
-			StoreATerms(f.str(), buffer, nStations, width, height);
-			++index;
-		}
-	}
-	
 private:
 	double _updateInterval, _lastATermUpdate;
 };
