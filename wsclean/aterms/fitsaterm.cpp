@@ -4,10 +4,11 @@
 
 #include "../wsclean/logger.h"
 
-FitsATerm::FitsATerm(size_t nAntenna, size_t width, size_t height, double dl, double dm, double phaseCentreDL, double phaseCentreDM) :
+FitsATerm::FitsATerm(size_t nAntenna, size_t width, size_t height, double ra, double dec, double dl, double dm, double phaseCentreDL, double phaseCentreDM) :
 	_nAntenna(nAntenna),
 	_width(width),
 	_height(height),
+	_ra(ra), _dec(dec),
 	_dl(dl), _dm(dm),
 	_phaseCentreDL(phaseCentreDL),
 	_phaseCentreDM(phaseCentreDM)
@@ -101,11 +102,13 @@ void FitsATerm::resample(double* dest, const double* source)
 	size_t inWidth = _reader->ImageWidth(), inHeight = _reader->ImageHeight();
 	double inPixelSizeX = _reader->PixelSizeX(), inPixelSizeY = _reader->PixelSizeY();
 	double inPhaseCentreDL = _reader->PhaseCentreDL(), inPhaseCentreDM = _reader->PhaseCentreDM();
+	
+	double inPhaseCentreRA = _reader->PhaseCentreRA(), inPhaseCentreDec = _reader->PhaseCentreDec();
 	/**
-	 * We assume that the phase centra of input and output are the same, i.e. they have the same
-	 * tangential plane. This saves a few calculations.
+	 * If phase centra of input and output are the same, i.e. they have the same
+	 * tangential plane, a few calculations can be saved.
 	 */
-	//double inPhaseCentreRA = _reader->PhaseCentreRA(), inPhaseCentreDec = _reader->PhaseCentreDec();
+	bool samePlane = inPhaseCentreRA == _ra && inPhaseCentreDec == _dec;
 	
 	size_t index = 0;
 	for(size_t y=0; y!=_height; ++y)
@@ -117,6 +120,12 @@ void FitsATerm::resample(double* dest, const double* source)
 			l += _phaseCentreDL - inPhaseCentreDL;
 			m += _phaseCentreDM - inPhaseCentreDM;
 			int inX, inY;
+			if(!samePlane)
+			{
+				double pixra, pixdec;
+				ImageCoordinates::LMToRaDec(l, m, _ra, _dec, pixra, pixdec);
+				ImageCoordinates::RaDecToLM(pixra, pixdec, inPhaseCentreRA, inPhaseCentreDec, l, m);
+			}
 			ImageCoordinates::LMToXY(l, m, inPixelSizeX, inPixelSizeY, inWidth, inHeight, inX, inY);
 			if(inX < 0 || inY < 0 || inX >= int(inWidth) || inY >= int(inHeight))
 				dest[index] = 0;

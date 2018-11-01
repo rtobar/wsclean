@@ -19,7 +19,7 @@
 class FitsATerm : public ATermBase
 {
 public:
-	FitsATerm(size_t nAntenna, size_t width, size_t height, double dl, double dm, double phaseCentreDL, double phaseCentreDM);
+	FitsATerm(size_t nAntenna, size_t width, size_t height, double ra, double dec, double dl, double dm, double phaseCentreDL, double phaseCentreDM);
 	
 	void OpenTECFile(const std::string& filename);
 	
@@ -33,7 +33,7 @@ private:
 	void evaluateTEC(std::complex<float>* dest, const double* source, double frequency);
 	
 	size_t _nAntenna, _width, _height;
-	double _dl, _dm, _phaseCentreDL, _phaseCentreDM;
+	double _ra, _dec, _dl, _dm, _phaseCentreDL, _phaseCentreDM;
 	std::vector<double> _timesteps;
 	std::map<double, std::vector<std::complex<float>>> _bufferCache;
 	ao::uvector<double> _scratch;
