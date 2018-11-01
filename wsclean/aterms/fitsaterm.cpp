@@ -117,8 +117,8 @@ void FitsATerm::resample(double* dest, const double* source)
 		{
 			double l, m;
 			ImageCoordinates::XYToLM(x, y, _dl, _dm, _width, _height, l, m);
-			l += _phaseCentreDL - inPhaseCentreDL;
-			m += _phaseCentreDM - inPhaseCentreDM;
+			l += _phaseCentreDL;
+			m += _phaseCentreDM;
 			int inX, inY;
 			if(!samePlane)
 			{
@@ -126,6 +126,8 @@ void FitsATerm::resample(double* dest, const double* source)
 				ImageCoordinates::LMToRaDec(l, m, _ra, _dec, pixra, pixdec);
 				ImageCoordinates::RaDecToLM(pixra, pixdec, inPhaseCentreRA, inPhaseCentreDec, l, m);
 			}
+			l -= inPhaseCentreDL;
+			m -= inPhaseCentreDM;
 			ImageCoordinates::LMToXY(l, m, inPixelSizeX, inPixelSizeY, inWidth, inHeight, inX, inY);
 			if(inX < 0 || inY < 0 || inX >= int(inWidth) || inY >= int(inHeight))
 				dest[index] = 0;
