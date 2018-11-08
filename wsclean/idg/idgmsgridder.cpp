@@ -228,7 +228,6 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 	_bufferset->init_buffers(_buffersize, bands, nr_stations, max_baseline, _options, idg::api::BufferSetType::gridding);
 	
 	std::unique_ptr<ATermBase> aTermMaker = getATermMaker(msData);
-	double aTermUpdateInterval = _settings.beamAtermUpdateTime; // in seconds
 	ao::uvector<std::complex<float>> aTermBuffer;
 	size_t subgridsize = _bufferset->get_subgridsize();
 	if(aTermMaker)
@@ -241,7 +240,7 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 	// The gridder doesn't need to know the absolute time index; this value indexes relatively to where we
 	// start in the measurement set, and only increases when the time changes.
 	int timeIndex = -1;
-	double currentTime = -1.0, lastATermUpdate = -aTermUpdateInterval-1;
+	double currentTime = -1.0;
 	for(msData.msProvider->Reset() ; msData.msProvider->CurrentRowAvailable() ; msData.msProvider->NextRow())
 	{
 		MSProvider::MetaData metaData;
@@ -252,14 +251,13 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 			currentTime = metaData.time;
 			timeIndex++;
 			
-			if(aTermMaker && (!_settings.gridWithBeam || currentTime - lastATermUpdate > aTermUpdateInterval))
+			if(aTermMaker)
 			{
-				if(aTermMaker->Calculate(aTermBuffer.data(), currentTime + aTermUpdateInterval*0.5, _selectedBands.CentreFrequency()))
+				if(aTermMaker->Calculate(aTermBuffer.data(), currentTime, _selectedBands.CentreFrequency()))
 				{
 					_bufferset->get_gridder(metaData.dataDescId)->set_aterm(timeIndex, aTermBuffer.data());
 					Logger::Debug << "Calculated a-terms for timestep " << timeIndex << "\n";
 				}
-				lastATermUpdate = currentTime;
 			}
 		}
 		const BandData& curBand(_selectedBands[metaData.dataDescId]);
@@ -385,7 +383,6 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 
 	_bufferset->init_buffers(_buffersize, bands, nr_stations, max_baseline, _options, idg::api::BufferSetType::degridding);
 
-	double aTermUpdateInterval = _settings.beamAtermUpdateTime; // in seconds
 	std::unique_ptr<ATermBase> aTermMaker = getATermMaker(msData);
 	ao::uvector<std::complex<float>> aTermBuffer;
 	size_t subgridsize = _bufferset->get_subgridsize();
@@ -394,7 +391,7 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 	
 	ao::uvector<std::complex<float>> buffer(_selectedBands.MaxChannels()*4);
 	int timeIndex = -1;
-	double currentTime = -1.0, lastATermUpdate = -aTermUpdateInterval-1;
+	double currentTime = -1.0;
 	for(msData.msProvider->Reset() ; msData.msProvider->CurrentRowAvailable() ; msData.msProvider->NextRow())
 	{
 		MSProvider::MetaData metaData;
@@ -406,14 +403,13 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 			currentTime = metaData.time;
 			timeIndex++;
 			
-			if(aTermMaker && (!_settings.gridWithBeam || currentTime - lastATermUpdate > aTermUpdateInterval))
+			if(aTermMaker)
 			{
-				if(aTermMaker->Calculate(aTermBuffer.data(), currentTime + aTermUpdateInterval*0.5, _selectedBands.CentreFrequency()))
+				if(aTermMaker->Calculate(aTermBuffer.data(), currentTime, _selectedBands.CentreFrequency()))
 				{
 					_bufferset->get_degridder(metaData.dataDescId)->set_aterm(timeIndex, aTermBuffer.data());
 					Logger::Debug << "Calculated new a-terms for timestep " << timeIndex << "\n";
 				}
-				lastATermUpdate = currentTime;
 			}
 		}
 		
