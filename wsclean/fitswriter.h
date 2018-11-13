@@ -236,6 +236,8 @@ public:
 	{
 		_extraDimensions.emplace_back(Dimension{type, size});
 	}
+	void SetTimeDirectionStart(double time) { _timeDirectionStart = time; }
+	void SetTimeDirectionInc(double dTime) { _timeDirectionInc = dTime; }
 private:
 	struct Dimension
 	{
@@ -264,6 +266,7 @@ private:
 	std::vector<Dimension> _extraDimensions;
 	std::map<std::string, std::string> _extraStringKeywords;
 	std::map<std::string, double> _extraNumKeywords;
+	double _timeDirectionStart, _timeDirectionInc;
 	
 	void julianDateToYMD(double jd, int &year, int &month, int &day) const;
 	void writeHeaders(fitsfile*& fptr, const std::string& filename) const;

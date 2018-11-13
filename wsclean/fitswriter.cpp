@@ -194,7 +194,8 @@ void FitsWriter::writeHeaders(fitsfile *& fptr, const std::string& filename, con
 		case TimeDimension:
 			fits_write_key(fptr, TSTRING, ctypeDim, (void*) "TIME", "", &status); checkStatus(status, filename);
 			fits_write_key(fptr, TDOUBLE, crpixDim, (void*) &one, "", &status); checkStatus(status, filename);
-			fits_write_key(fptr, TDOUBLE, crvalDim, (void*) &zero, "", &status); checkStatus(status, filename);
+			fits_write_key(fptr, TDOUBLE, crvalDim, (void*) &_timeDirectionStart, "", &status); checkStatus(status, filename);
+			fits_write_key(fptr, TDOUBLE, cdeltDim, (void*) &_timeDirectionInc, "", &status); checkStatus(status, filename);
 			break;
 		}
 	}
