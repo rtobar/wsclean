@@ -81,6 +81,8 @@ static PyObject* wsclean_initialize_func(PyObject* self, PyObject* args)
 	if(!valid) return NULL;
 	p.imageHeight = getIntAttribute(parameters, "imageHeight", &valid);
 	if(!valid) return NULL;
+	p.doNormalize = getIntAttribute(parameters, "doNormalize", &valid);
+	if(!valid) return NULL;
 	const char* scaleStr = getStringAttribute(parameters, "pixelScaleX");
 	if(!scaleStr) return NULL;
 	p.pixelScaleX = wsclean_parse_angle(scaleStr);

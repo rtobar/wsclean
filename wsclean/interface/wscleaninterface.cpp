@@ -21,6 +21,7 @@ struct WSCleanUserData
 	unsigned int height;
 	double pixelScaleX;
 	double pixelScaleY;
+	unsigned int doNormalize;
 	std::string extraParameters;
 	
 	std::string dataColumn;
@@ -72,6 +73,7 @@ void wsclean_initialize(
 	wscUserData->extraParameters = parameters->extraParameters;
 	wscUserData->nACalls = 0;
 	wscUserData->nAtCalls = 0;
+	wscUserData->doNormalize = parameters->doNormalize;
 	(*userData) = static_cast<void*>(wscUserData);
 	
 	// Number of vis is nchannels x selected nrows; calculate both.
@@ -363,6 +365,19 @@ void wsclean_operator_At(void* userData, double* dataOut, const DCOMPLEX* dataIn
 	// Read dirty image and store in dataOut
 	FitsReader reader(prefixName.str() + "-image.fits");
 	reader.Read(dataOut);
+	if(wscUserData->doNormalize == 0)
+	{
+		size_t n = wscUserData->width * wscUserData->height;
+		double normf;
+		if(reader.ReadDoubleKeyIfExists("WSCNORMF", normf))
+		{
+			for(size_t i=0; i!=n; ++i)
+				dataOut[i] *= normf;
+		}
+		else {
+			std::cout << "WSCNORMF keyword not found in fits file.\n";
+		}
+	}
 	// Image 0 is saved until the end to retrieve keywords from...
 	if(wscUserData->nAtCalls != 0)
 		std::remove((prefixName.str() + "-image.fits").c_str());

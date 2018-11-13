@@ -82,6 +82,7 @@ public:
 	 * It is set after the first inversion.
 	 */
 	double imageWeight;
+	double normalizationFactor;
 };
 
 class ImagingTable

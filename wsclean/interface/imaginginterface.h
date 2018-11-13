@@ -45,6 +45,10 @@ typedef struct
 	/** A string containing command line parameters that are passed to WSClean,
 	 * for example "-weight natural" to use natural weighting. */
 	const char* extraParameters;
+	/** Whether the PSF should be normalized to one, as is the normal case.
+	 * When set to true, the image is in Jy/by. When set to false, the image
+	 * is unnormalized. */
+	int doNormalize;
 } imaging_parameters;
 
 /**

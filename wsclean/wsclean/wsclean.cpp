@@ -93,12 +93,13 @@ void WSClean::imagePSF(ImagingTableEntry& entry)
 	double bMaj, bMin, bPA;
 	determineBeamSize(bMaj, bMin, bPA, _gridder->ImageRealResult(), _gridder->BeamSize());
 	entry.imageWeight = _gridder->ImageWeight();
+	entry.normalizationFactor = _gridder->NormalizationFactor();
 	_infoPerChannel[channelIndex].theoreticBeamSize = _gridder->BeamSize();
 	_infoPerChannel[channelIndex].beamMaj = bMaj;
 	_infoPerChannel[channelIndex].beamMin = bMin;
 	_infoPerChannel[channelIndex].beamPA = bPA;
 	_infoPerChannel[channelIndex].weight = entry.imageWeight;
-	_infoPerChannel[channelIndex].normalizationFactor = _gridder->NormalizationFactor();
+	_infoPerChannel[channelIndex].normalizationFactor = entry.normalizationFactor;
 	_infoPerChannel[channelIndex].wGridSize = _gridder->WGridSize();
 	_infoPerChannel[channelIndex].visibilityCount = _gridder->GriddedVisibilityCount();
 	_infoPerChannel[channelIndex].effectiveVisibilityCount = _gridder->EffectiveGriddedVisibilityCount();
@@ -1001,11 +1002,14 @@ void WSClean::runFirstInversion(ImagingTableEntry& entry)
 		imageMainFirst(entry);
 		
 		entry.imageWeight = _gridder->ImageWeight();
+		entry.normalizationFactor = _gridder->NormalizationFactor();
+		
 		// If this was the first polarization of this channel, we need to set
 		// the info for this channel
 		if(isFirstPol)
 		{
 			_infoPerChannel[entry.outputChannelIndex].weight = entry.imageWeight;
+			_infoPerChannel[entry.outputChannelIndex].normalizationFactor = entry.normalizationFactor;
 			// If no PSF is made, also set the beam size. If the PSF was made, these would already be set
 			// after imaging the PSF.
 			if(!doMakePSF)

@@ -13,6 +13,7 @@ class ImagingParameters(object):
 	imageHeight = 512
 	pixelScaleX = '1asec'
 	pixelScaleY = '1asec'
+	doNormalize = 1
 	extraParameters = ''
 
 class ImagingData(object):
@@ -97,7 +98,7 @@ class Operator(object):
 		dataOutCont = numpy.ascontiguousarray(dataOut)
 		dataInCont = numpy.ascontiguousarray(dataIn)
 		_wsclean.operator_A(self._userdata, dataOut, dataIn)
-		
+
 	def backward(self, dataOut, dataIn):
 		"""Perform the backward operation. This is the 'imaging' step:
 		convert visibilities into an image. dataOut should be an array
