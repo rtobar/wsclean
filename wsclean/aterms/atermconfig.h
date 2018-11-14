@@ -63,7 +63,7 @@ public:
 					case Telescope::LOFAR: {
 						bool differential = reader.GetBoolOr("beam.differential", false);
 						bool useChannelFrequency = reader.GetBoolOr("beam.usechannelfreq", true);
-						std::unique_ptr<LofarBeamTerm> lofarBeam(new LofarBeamTerm(_ms, _width, _height, _dl, _dm, _phaseCentreDL, _phaseCentreDM));
+						std::unique_ptr<LofarBeamTerm> lofarBeam(new LofarBeamTerm(_ms, _width, _height, _dl, _dm, _phaseCentreDL, _phaseCentreDM, _settings.dataColumnName));
 						lofarBeam->SetUseDifferentialBeam(differential);
 						lofarBeam->SetUseChannelFrequency(useChannelFrequency);
 						beam = std::move(lofarBeam);
@@ -78,7 +78,7 @@ public:
 					default: {
 						// This is here to make sure ATermStub compiles. This call should be the
 						// same as the call for LofarBeamTerm(..)
-						beam.reset(new ATermStub(_ms, _width, _height, _dl, _dm, _phaseCentreDL, _phaseCentreDM));
+						beam.reset(new ATermStub(_ms, _width, _height, _dl, _dm, _phaseCentreDL, _phaseCentreDM, _settings.dataColumnName));
 						throw std::runtime_error("Can't make beam for this telescope");
 					}
 				}

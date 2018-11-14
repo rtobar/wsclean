@@ -182,7 +182,7 @@ std::unique_ptr<class ATermBase> IdgMsGridder::getATermMaker(MSGridderBase::MSDa
 			{
 				case Telescope::AARTFAAC:
 				case Telescope::LOFAR: {
-					std::unique_ptr<LofarBeamTerm> beam(new LofarBeamTerm(ms, subgridsize, subgridsize, dl, dm, pdl, pdm));
+					std::unique_ptr<LofarBeamTerm> beam(new LofarBeamTerm(ms, subgridsize, subgridsize, dl, dm, pdl, pdm, _settings.dataColumnName));
 					beam->SetUseDifferentialBeam(_settings.useDifferentialLofarBeam);
 					beam->SetSaveATerms(_settings.saveATerms);
 					beam->SetUpdateInterval(_settings.beamAtermUpdateTime);

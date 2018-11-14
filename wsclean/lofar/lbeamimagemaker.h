@@ -115,7 +115,7 @@ private:
 	double _pixelSizeX, _pixelSizeY, _phaseCentreRA, _phaseCentreDec, _phaseCentreDL, _phaseCentreDM;
 	double _sPixelSizeX, _sPixelSizeY, _totalWeightSum;
  	bool _useDifferentialBeam;
-	casacore::MDirection _delayDir, _referenceDir, _tileBeamDir;
+	casacore::MDirection _delayDir, _preappliedDir, _tileBeamDir;
 };
 
 #endif

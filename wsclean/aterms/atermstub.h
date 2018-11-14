@@ -8,7 +8,7 @@
 class ATermStub : public ATermBeam
 {
 public:
-	ATermStub(casacore::MeasurementSet&, size_t /*width*/, size_t /*height*/, double /*dl*/, double /*dm*/, double /*phaseCentreDL*/, double /*phaseCentreDM*/)
+	ATermStub(casacore::MeasurementSet&, size_t /*width*/, size_t /*height*/, double /*dl*/, double /*dm*/, double /*phaseCentreDL*/, double /*phaseCentreDM*/, const std::string& /*dataColumnName*/)
 	{
 		throw std::runtime_error("ATerm not implemented -- did you forget to turn specific beam options on during the compilation?");
 	}

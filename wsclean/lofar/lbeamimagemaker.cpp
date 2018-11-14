@@ -26,6 +26,8 @@ void LBeamImageMaker::Make(PrimaryBeamImageSet&)
 #include "../msproviders/msprovider.h"
 #include "../multibanddata.h"
 
+#include "lofarbeamkeywords.h"
+
 #include <StationResponse/LofarMetaDataUtil.h>
 
 #include <casacore/ms/MeasurementSets/MSField.h>
@@ -116,9 +118,8 @@ void LBeamImageMaker::makeBeamForMS(PrimaryBeamImageSet& beamImages, MSProvider&
 		throw std::runtime_error("Set has multiple fields");
 	_delayDir = delayDirColumn(0);
 	//Logger::Debug << "Using delay direction: " << RaDecCoord::RaDecToString(_delayDir.getAngle().getValue()[0], _delayDir.getAngle().getValue()[1]) << '\n';
-	
-	casacore::ROScalarMeasColumn<casacore::MDirection> referenceDirColumn(fieldTable, casacore::MSField::columnName(casacore::MSFieldEnums::REFERENCE_DIR));
-	_referenceDir = referenceDirColumn(0);
+
+	LOFARBeamKeywords::GetPreappliedBeamDirection(ms, msProvider.DataColumnName(), _useDifferentialBeam, _preappliedDir);
 	
 	if(fieldTable.tableDesc().isColumn("LOFAR_TILE_BEAM_DIR")) {
 		casacore::ROArrayMeasColumn<casacore::MDirection> tileBeamDirColumn(fieldTable, "LOFAR_TILE_BEAM_DIR");
@@ -247,7 +248,7 @@ void LBeamImageMaker::makeBeamSnapshot(const std::vector<Station::Ptr>& stations
 	std::vector<MC2x2> inverseCentralGain;
 	if(_useDifferentialBeam)
 	{
-		dirToITRF(_referenceDir, j2000ToITRFRef, diffBeamCentre);
+		dirToITRF(_preappliedDir, j2000ToITRFRef, diffBeamCentre);
 		inverseCentralGain.resize(stations.size());
 		for(size_t a=0; a!=stations.size(); ++a)
 		{

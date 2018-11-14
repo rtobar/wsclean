@@ -48,6 +48,11 @@ bool FitsATerm::Calculate(std::complex<float>* buffer, double time, double frequ
 		// Do we need to calculate a next timestep?
 		double curTime = _timesteps[_curTimeindex];
 		double nextTime = _timesteps[_curTimeindex+1];
+		std::cout.precision(15);
+		std::cout << 
+			"Searching index for time " << time << 
+			", time[" << _curTimeindex << "]=" << curTime <<
+			", next=" << nextTime << '\n';
 		// If we are closer to the next timestep, use the next.
 		if(std::fabs(nextTime - time) < std::fabs(curTime - time))
 		{
@@ -60,6 +65,7 @@ bool FitsATerm::Calculate(std::complex<float>* buffer, double time, double frequ
 			finishedSearch = true;
 		}
 	}
+	std::cout << "Selected time index = " << _curTimeindex << '\n';
 	// Do we have this frequency in the cache?
 	auto iter = _bufferCache.find(frequency);
 	if(iter == _bufferCache.end())

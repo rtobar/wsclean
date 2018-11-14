@@ -39,6 +39,8 @@ public:
 	
 	virtual casacore::MeasurementSet &MS() = 0;
 	
+	virtual const std::string& DataColumnName() = 0;
+	
 	virtual size_t RowId() const = 0;
 	
 	virtual bool CurrentRowAvailable() = 0;

@@ -5,16 +5,19 @@
 #include "../matrix2x2.h"
 #include "../system.h"
 
+#include "../lofar/lofarbeamkeywords.h"
+
 #include "../units/imagecoordinates.h"
 
 #include "../wsclean/logger.h"
 
 #include <casacore/measures/TableMeasures/ArrayMeasColumn.h>
 #include <casacore/measures/Measures/MEpoch.h>
+#include <casacore/tables/Tables/TableRecord.h>
 
 #include <algorithm>
 
-LofarBeamTerm::LofarBeamTerm(casacore::MeasurementSet& ms, size_t width, size_t height, double dl, double dm, double phaseCentreDL, double phaseCentreDM) :
+LofarBeamTerm::LofarBeamTerm(casacore::MeasurementSet& ms, size_t width, size_t height, double dl, double dm, double phaseCentreDL, double phaseCentreDM, const std::string& dataColumnName) :
 	_width(width),
 	_height(height),
 	_dl(dl), _dm(dm),
@@ -56,15 +59,14 @@ LofarBeamTerm::LofarBeamTerm(casacore::MeasurementSet& ms, size_t width, size_t 
 		throw std::runtime_error("Set has multiple fields");
 	_delayDir = delayDirColumn(0);
 	
-	casacore::ScalarMeasColumn<casacore::MDirection> referenceDirColumn(fieldTable, casacore::MSField::columnName(casacore::MSFieldEnums::REFERENCE_DIR));
-	_referenceDir = referenceDirColumn(0);
-
 	if(fieldTable.tableDesc().isColumn("LOFAR_TILE_BEAM_DIR")) {
 		casacore::ArrayMeasColumn<casacore::MDirection> tileBeamDirColumn(fieldTable, "LOFAR_TILE_BEAM_DIR");
 		_tileBeamDir = *(tileBeamDirColumn(0).data());
 	} else {
 		throw std::runtime_error("LOFAR_TILE_BEAM_DIR column not found");
 	}
+	
+	_useDifferentialBeam = LOFARBeamKeywords::GetPreappliedBeamDirection(ms, dataColumnName, _useDifferentialBeam, _preappliedBeamDir);
 }
 
 void setITRF(const casacore::MDirection& itrfDir, LOFAR::StationResponse::vector3r_t& itrf)
@@ -110,7 +112,7 @@ bool LofarBeamTerm::calculateBeam(std::complex<float>* buffer, double time, doub
 	setITRF(j2000ToITRFRef(nDir), _n_vector_itrf);
 
 	vector3r_t diffBeamCentre;
-	setITRF(j2000ToITRFRef(_referenceDir), diffBeamCentre);
+	setITRF(j2000ToITRFRef(_preappliedBeamDir), diffBeamCentre);
 	_inverseCentralGain.resize(_stations.size());
 	for(size_t a=0; a!=_stations.size(); ++a)
 	{

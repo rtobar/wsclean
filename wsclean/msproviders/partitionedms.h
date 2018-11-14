@@ -43,6 +43,8 @@ public:
 	
 	casacore::MeasurementSet &MS() final override { openMS(); return *_ms; }
 	
+	const std::string& DataColumnName() final override { return _handle._data->_dataColumnName; }
+	
 	size_t RowId() const final override { return _currentRow; }
 	
 	bool CurrentRowAvailable() final override;
