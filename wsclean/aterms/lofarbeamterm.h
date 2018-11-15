@@ -17,8 +17,6 @@
 #include "../lane.h"
 #include "../matrix2x2.h"
 
-using namespace LOFAR::StationResponse;
-
 class LofarBeamTerm : public ATermBeam
 {
 public:
@@ -45,11 +43,11 @@ private:
 	casacore::MDirection _delayDir, _preappliedBeamDir, _tileBeamDir;
 	casacore::MPosition _arrayPos;
 	bool _useDifferentialBeam, _useChannelFrequency;
-	vector3r_t _l_vector_itrf;
-	vector3r_t _m_vector_itrf;
-	vector3r_t _n_vector_itrf;
+	LOFAR::StationResponse::vector3r_t _l_vector_itrf;
+	LOFAR::StationResponse::vector3r_t _m_vector_itrf;
+	LOFAR::StationResponse::vector3r_t _n_vector_itrf;
 	std::vector<MC2x2F> _inverseCentralGain;
-	vector3r_t _station0, _tile0;
+	LOFAR::StationResponse::vector3r_t _station0, _tile0;
 	
 	ao::lane<size_t> *_lane;
 	size_t _nThreads;

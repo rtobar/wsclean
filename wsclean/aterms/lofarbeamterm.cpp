@@ -17,6 +17,8 @@
 
 #include <algorithm>
 
+using namespace LOFAR::StationResponse;
+
 LofarBeamTerm::LofarBeamTerm(casacore::MeasurementSet& ms, size_t width, size_t height, double dl, double dm, double phaseCentreDL, double phaseCentreDM, const std::string& dataColumnName) :
 	_width(width),
 	_height(height),
