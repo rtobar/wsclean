@@ -12,7 +12,7 @@
 class ImageWeightCache
 {
 public:
-	ImageWeightCache(const WeightMode& weightMode, size_t imageWidth, size_t imageHeight, double pixelScaleX, double pixelScaleY, double minUVInLambda, double maxUVInLambda, double rankFilterLevel, size_t rankFilterSize) :
+	ImageWeightCache(const WeightMode& weightMode, size_t imageWidth, size_t imageHeight, double pixelScaleX, double pixelScaleY, double minUVInLambda, double maxUVInLambda, double rankFilterLevel, size_t rankFilterSize, bool weightsAsTaper) :
 		_weightMode(weightMode),
 		_imageWidth(imageWidth),
 		_imageHeight(imageHeight),
@@ -26,6 +26,7 @@ public:
 		_tukeyTaperInLambda(0), _tukeyInnerTaperInLambda(0),
 		_edgeTaperInLambda(0),
 		_edgeTukeyTaperInLambda(0),
+		_weightsAsTaper(weightsAsTaper),
 		_currentWeightChannel(std::numeric_limits<size_t>::max()),
 		_currentWeightInterval(std::numeric_limits<size_t>::max())
 	{
@@ -53,7 +54,7 @@ public:
 	
 	void ResetWeights()
 	{
-		_imageWeights.reset(new ImageWeights(_weightMode, _imageWidth, _imageHeight, _pixelScaleX, _pixelScaleY, _weightMode.SuperWeight()));
+		_imageWeights.reset(new ImageWeights(_weightMode, _imageWidth, _imageHeight, _pixelScaleX, _pixelScaleY, _weightsAsTaper, _weightMode.SuperWeight()));
 	};
 	
 	ImageWeights& Weights()
@@ -118,6 +119,7 @@ private:
 	double _tukeyTaperInLambda, _tukeyInnerTaperInLambda;
 	double _edgeTaperInLambda;
 	double _edgeTukeyTaperInLambda;
+	bool _weightsAsTaper;
 	
 	size_t _currentWeightChannel, _currentWeightInterval;
 };

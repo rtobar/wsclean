@@ -43,6 +43,7 @@ public:
 	double memFraction, absMemLimit, minUVWInMeters, maxUVWInMeters, minUVInLambda, maxUVInLambda, wLimit, rankFilterLevel;
 	size_t rankFilterSize;
 	double gaussianTaperBeamSize, tukeyTaperInLambda, tukeyInnerTaperInLambda, edgeTaperInLambda, edgeTukeyTaperInLambda;
+	bool useWeightsAsTaper;
 	size_t nWLayers, antialiasingKernelSize, overSamplingFactor, threadCount;
 	size_t fieldId;
 	size_t startTimestep, endTimestep;
@@ -160,6 +161,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	gaussianTaperBeamSize(0.0),
 	tukeyTaperInLambda(0.0), tukeyInnerTaperInLambda(0.0),
 	edgeTaperInLambda(0.0), edgeTukeyTaperInLambda(0.0),
+	useWeightsAsTaper(false),
 	nWLayers(0), antialiasingKernelSize(7), overSamplingFactor(63),
 	threadCount(System::ProcessorCount()),
 	fieldId(0),

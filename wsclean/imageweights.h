@@ -14,7 +14,7 @@
 class ImageWeights
 {
 	public:
-		ImageWeights(const WeightMode& weightMode, size_t imageWidth, size_t imageHeight, double pixelScaleX, double pixelScaleY, double superWeight=1.0);
+		ImageWeights(const WeightMode& weightMode, size_t imageWidth, size_t imageHeight, double pixelScaleX, double pixelScaleY, bool weightsAsTaper, double superWeight);
 		
 		double GetWeight(double u, double v) const
 		{
@@ -121,7 +121,7 @@ class ImageWeights
 		
 		ao::uvector<double> _grid;
 		double _totalSum;
-		bool _isGriddingFinished;
+		bool _isGriddingFinished, _weightsAsTaper;
 };
 
 #endif

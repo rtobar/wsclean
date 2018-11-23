@@ -396,7 +396,7 @@ void WSClean::RunClean()
 		
 		_infoPerChannel.assign(_settings.channelsOut, OutputChannelInfo());
 		
-		_imageWeightCache.reset(createWeightCache());
+		_imageWeightCache = createWeightCache();
 		
 		if(_settings.mfsWeighting)
 			initializeMFSImageWeights();
@@ -481,19 +481,20 @@ void WSClean::RunClean()
 	}
 }
 
-ImageWeightCache* WSClean::createWeightCache()
+std::unique_ptr<ImageWeightCache> WSClean::createWeightCache()
 {
-	ImageWeightCache* cache = new ImageWeightCache(
+	std::unique_ptr<ImageWeightCache> cache(new ImageWeightCache(
 		_settings.weightMode,
 		_settings.paddedImageWidth, _settings.paddedImageHeight,
 		_settings.pixelScaleX, _settings.pixelScaleY,
 		_settings.minUVInLambda, _settings.maxUVInLambda,
-		_settings.rankFilterLevel, _settings.rankFilterSize);
+		_settings.rankFilterLevel, _settings.rankFilterSize,
+		_settings.useWeightsAsTaper));
 	cache->SetTaperInfo(
 		_settings.gaussianTaperBeamSize,
 		_settings.tukeyTaperInLambda, _settings.tukeyInnerTaperInLambda,
 		_settings.edgeTaperInLambda, _settings.edgeTukeyTaperInLambda);
-	return cache;
+	return std::move(cache);
 }
 
 void WSClean::RunPredict()
@@ -865,7 +866,7 @@ void WSClean::readEarlierModelImages(const ImagingTableEntry& entry)
 		{
 			// The construction of the weight cache is delayed in prediction mode, because only now
 			// the image size and scale is known.
-			_imageWeightCache.reset(createWeightCache());
+			_imageWeightCache = createWeightCache();
 			if(_settings.mfsWeighting)
 				initializeMFSImageWeights();
 		}

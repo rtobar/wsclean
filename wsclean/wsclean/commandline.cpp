@@ -108,6 +108,11 @@ void CommandLine::printHelp()
 		"-taper-edge-tukey <lambda>\n"
 		"   Taper the edge weights with a Tukey window. Lambda is the size of the Tukey transition. When -taper-edge\n"
 		"   is also specified, the Tukey transition starts inside the inner rectangle.\n"
+		"-use-weights-as-taper\n"
+		"   Will not use visibility weights when determining the imaging weights.\n"
+		"   This has the effect that e.g. uniform weighting can be modified by increasing\n"
+		"   the visibility weight of certain baselines. Without this option, uniform imaging\n"
+		"   weights absorb the visibility weight to make the weighting truly uniform.\n"
 		"-store-imaging-weights\n"
 		"   Will store the imaging weights in a column named 'IMAGING_WEIGHT_SPECTRUM'.\n"
 		"\n"
@@ -837,6 +842,10 @@ int CommandLine::Run(int argc, char* argv[])
 		{
 			++argi;
 			settings.tukeyInnerTaperInLambda = parse_double(argv[argi], 0.0, "taper-inner-tukey");
+		}
+		else if(param == "use-weights-as-taper")
+		{
+			settings.useWeightsAsTaper = true;
 		}
 		else if(param == "store-imaging-weights")
 		{
