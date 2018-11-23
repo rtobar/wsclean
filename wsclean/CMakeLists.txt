@@ -37,8 +37,6 @@ find_library(GSL_LIB NAMES gsl)
 find_path(GSL_INCLUDE_DIR NAMES gsl/gsl_version.h)
 find_library(GSL_CBLAS_LIB NAMES gslcblas)
 
-set(CASA_LIBS ${CASA_MS_LIB} ${CASA_TABLES_LIB} ${CASA_MEASURES_LIB} ${CASA_CASA_LIB} ${CASA_FITS_LIB} ${DL_LIB})
-
 find_path(LOFAR_STATION_RESPONSE_DIR NAMES StationResponse/Station.h)
 find_library(LOFAR_STATION_RESPONSE_LIB stationresponse)
 if(LOFAR_STATION_RESPONSE_DIR AND LOFAR_STATION_RESPONSE_LIB)
