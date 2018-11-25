@@ -699,7 +699,7 @@ void PartitionedMS::openMS()
 		_ms.reset(new casacore::MeasurementSet(_msPath.data()));
 }
 
-void PartitionedMS::MakeIdToMSRowMapping(vector<size_t>& idToMSRow)
+void PartitionedMS::MakeIdToMSRowMapping(std::vector<size_t>& idToMSRow)
 {
 	openMS();
 	const MSSelection& selection = _handle._data->_selection;
@@ -712,7 +712,7 @@ void PartitionedMS::MakeIdToMSRowMapping(vector<size_t>& idToMSRow)
 	getRowRangeAndIDMap(*_ms, selection, startRow, endRow, dataDescIdSet, idToMSRow);
 }
 
-void PartitionedMS::getDataDescIdMap(std::map<size_t, size_t>& dataDescIds, const vector<PartitionedMS::ChannelRange>& channels)
+void PartitionedMS::getDataDescIdMap(std::map<size_t, size_t>& dataDescIds, const std::vector<PartitionedMS::ChannelRange>& channels)
 {
 	size_t spwIndex = 0;
 	for(size_t i=0; i!=channels.size(); ++i)

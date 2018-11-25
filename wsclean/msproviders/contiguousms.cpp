@@ -283,7 +283,7 @@ void ContiguousMS::WriteImagingWeights(size_t rowId, const float* buffer)
 	_imagingWeightsColumn->put(msRowId, _imagingWeightSpectrumArray);
 }
 
-void ContiguousMS::MakeIdToMSRowMapping(vector<size_t>& idToMSRow)
+void ContiguousMS::MakeIdToMSRowMapping(std::vector<size_t>& idToMSRow)
 {
 	idToMSRow = _idToMSRow;
 }

@@ -122,7 +122,7 @@ public:
 private:
 	static void unpartition(const Handle::HandleData& handle);
 	
-	static void getDataDescIdMap(std::map<size_t,size_t>& dataDescIds, const vector<PartitionedMS::ChannelRange>& channels);
+	static void getDataDescIdMap(std::map<size_t,size_t>& dataDescIds, const std::vector<PartitionedMS::ChannelRange>& channels);
 	
 	void openMS();
 	

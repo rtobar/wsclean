@@ -47,7 +47,7 @@ void ImageSet::LoadAndAverage(CachedImageSet& imageSet)
 		multiply(_images[i], 1.0/double(weights[i]));
 }
 
-void ImageSet::LoadAndAveragePSFs(CachedImageSet& psfSet, vector<ao::uvector<double>>& psfImages, PolarizationEnum psfPolarization)
+void ImageSet::LoadAndAveragePSFs(CachedImageSet& psfSet, std::vector<ao::uvector<double>>& psfImages, PolarizationEnum psfPolarization)
 {
 	for(size_t chIndex=0; chIndex!=_channelsInDeconvolution; ++chIndex)
 		psfImages[chIndex].assign(_imageSize, 0.0);

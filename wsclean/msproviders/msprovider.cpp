@@ -568,7 +568,7 @@ void MSProvider::getRowRange(casacore::MeasurementSet& ms, const MSSelection& se
 	}
 }
 
-void MSProvider::getRowRangeAndIDMap(casacore::MeasurementSet& ms, const MSSelection& selection, size_t& startRow, size_t& endRow, const std::set<size_t>& dataDescIds, vector<size_t>& idToMSRow)
+void MSProvider::getRowRangeAndIDMap(casacore::MeasurementSet& ms, const MSSelection& selection, size_t& startRow, size_t& endRow, const std::set<size_t>& dataDescIds, std::vector<size_t>& idToMSRow)
 {
 	startRow = 0;
 	endRow = ms.nrow();
@@ -698,7 +698,7 @@ casacore::ArrayColumn<float> MSProvider::initializeImagingWeightColumn(casacore:
 	}
 }
 
-vector<PolarizationEnum> MSProvider::GetMSPolarizations(casacore::MeasurementSet& ms)
+std::vector<PolarizationEnum> MSProvider::GetMSPolarizations(casacore::MeasurementSet& ms)
 {
 	std::vector<PolarizationEnum> pols;
 	casacore::MSPolarization polTable(ms.polarization());
