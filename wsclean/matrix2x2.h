@@ -451,6 +451,12 @@ public:
 	}
 	std::complex<ValType>* Data() { return _values; }
 	const std::complex<ValType>* Data() const { return _values; }
+	
+	void AssignTo(std::complex<ValType>* destination) const
+	{
+    Matrix2x2::Assign(destination, _values);
+  }
+	
 	MC2x2Base<ValType> Multiply(const MC2x2Base<ValType>& rhs) const
 	{
 		MC2x2Base<ValType> dest;

@@ -493,8 +493,16 @@ void IdgMsGridder::SaveBeamImage(const ImagingTableEntry& entry, ImageFilename& 
 	writer.Write(polName.GetBeamPrefix(_settings) + ".fits", _averageBeam->ScalarBeam()->data());
 }
 
-void IdgMsGridder::SavePBCorrectedImages(FitsWriter& writer, ImageFilename& filename, const std::string& filenameKind, ImageBufferAllocator& allocator) const
+void IdgMsGridder::SavePBCorrectedImages(FitsWriter& writer, const ImageFilename& filename, const std::string& filenameKind, ImageBufferAllocator& allocator) const
 {
+	ImageFilename beamName(filename);
+	beamName.SetPolarization(Polarization::StokesI);
+	FitsReader reader(beamName.GetBeamPrefix(_settings) + ".fits");
+	
+	ImageBufferAllocator::Ptr beam;
+	allocator.Allocate(reader.ImageWidth() * reader.ImageHeight(), beam);
+	reader.Read(beam.data());
+	
 	ImageBufferAllocator::Ptr image;
 	for(size_t polIndex = 0; polIndex != 4; ++polIndex)
 	{
@@ -506,7 +514,6 @@ void IdgMsGridder::SavePBCorrectedImages(FitsWriter& writer, ImageFilename& file
 			allocator.Allocate(reader.ImageWidth() * reader.ImageHeight(), image);
 		reader.Read(image.data());
 		
-		const float* beam = _averageBeam->ScalarBeam()->data();
 		for(size_t i=0; i!=reader.ImageWidth() * reader.ImageHeight(); ++i)
 		{
 			image[i] /= beam[i];
