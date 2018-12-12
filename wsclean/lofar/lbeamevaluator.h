@@ -7,6 +7,7 @@
 
 #ifdef HAVE_LOFAR_BEAM
 #include <StationResponse/Station.h>
+#include <StationResponse/ITRFConverter.h>
 #endif
 
 #include <casacore/measures/Measures/MEpoch.h>
@@ -53,15 +54,12 @@ private:
 	std::vector<LOFAR::StationResponse::Station::Ptr> _stations;
 	double _subbandFrequency, _timeAsDouble;
 	casacore::MDirection _delayDir, _tileBeamDir;
-	casacore::MPosition _arrayPos;
-	casacore::MeasFrame _frame;
-	casacore::MDirection::Ref _j2000Ref, _itrfRef;
-	casacore::MDirection::Convert _j2000ToITRFRef;
+	std::unique_ptr<LOFAR::StationResponse::ITRFConverter> _itrfConverter;
 	LOFAR::StationResponse::vector3r_t _station0, _tile0;
 
 	void dirToITRF(const casacore::MDirection& dir, LOFAR::StationResponse::vector3r_t& itrf)
 	{
-		casacore::MDirection itrfDir = _j2000ToITRFRef(dir);
+		casacore::MDirection itrfDir = _itrfConverter->toDirection(dir);
 		casacore::Vector<double> itrfVal = itrfDir.getValue().getValue();
 		itrf[0] = itrfVal[0];
 		itrf[1] = itrfVal[1];

@@ -25,32 +25,26 @@ class WSMSGridder : public MSGridderBase
 	public:
 		WSMSGridder(class ImageBufferAllocator* imageAllocator, size_t threadCount, double memFraction, double absMemLimit);
 	
-		virtual void Invert();
+		virtual void Invert() final override;
 		
-		virtual void Predict(double* image) { Predict(image, 0); }
-		virtual void Predict(double* real, double* imaginary);
+		virtual void Predict(double* image) final override { Predict(image, 0); }
+		virtual void Predict(double* real, double* imaginary) final override;
 		
-		virtual double *ImageRealResult() { return _gridder->RealImage(); }
-		virtual double *ImageImaginaryResult() {
+		virtual double *ImageRealResult() final override { return _gridder->RealImage(); }
+		virtual double *ImageImaginaryResult() final override {
 			if(!IsComplex())
 				throw std::runtime_error("No imaginary result available for non-complex inversion");
 			return _gridder->ImaginaryImage();
 		}
-		virtual bool HasGriddingCorrectionImage() const { return GridMode() != NearestNeighbourGridding; }
-		virtual void GetGriddingCorrectionImage(double *image) const { _gridder->GetGriddingCorrectionImage(image); }
+		virtual bool HasGriddingCorrectionImage() const final override { return GridMode() != NearestNeighbourGridding; }
+		virtual void GetGriddingCorrectionImage(double *image) const final override { _gridder->GetGriddingCorrectionImage(image); }
 		
-		virtual size_t ActualInversionWidth() const { return _actualInversionWidth; }
-		virtual size_t ActualInversionHeight() const { return _actualInversionHeight; }
+		virtual size_t ActualInversionWidth() const final override { return _actualInversionWidth; }
+		virtual size_t ActualInversionHeight() const final override { return _actualInversionHeight; }
 		
-		virtual void FreeImagingData()
+		virtual void FreeImagingData() final override
 		{
 			_gridder.reset();
-		}
-		
-		void SetGridAtLOFARCentroid(bool gridAtLOFARCentroid, size_t fullResWidth)
-		{
-			_gridAtLOFARCentroid = gridAtLOFARCentroid;
-			_fullResWidth = fullResWidth;
 		}
 		
 	private:
@@ -67,9 +61,8 @@ class WSMSGridder : public MSGridderBase
 		};
 		
 		void gridMeasurementSet(MSData& msData);
-		void gridLOFARCentroidMeasurementSet(MSData& msData);
 		void countSamplesPerLayer(MSData& msData);
-		virtual size_t getSuggestedWGridSize() const  ;
+		virtual size_t getSuggestedWGridSize() const final override;
 
 		void predictMeasurementSet(MSData& msData);
 
@@ -95,8 +88,6 @@ class WSMSGridder : public MSGridderBase
 		std::vector<std::thread> _threadGroup;
 		size_t _cpuCount, _laneBufferSize;
 		int64_t _memSize;
-		bool _gridAtLOFARCentroid;
-		size_t _fullResWidth;
 		ImageBufferAllocator* _imageBufferAllocator;
 };
 

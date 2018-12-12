@@ -179,9 +179,8 @@ void CommandLine::printHelp()
 		"   to calculate this is with <baseline in nr. of lambdas> * 2pi * <acceptable integration in s> / (24*60*60).\n"
 		"-simulate-noise <stddev-in-jy>\n"
 		"   Will replace every visibility by a Gaussian distributed value with given standard deviation before imaging.\n"
-		"-lofar-centroids <nch fullres>\n"
-		"   Place visibilities on the high-resolution centroid uv position, by using the\n"
-		"   LOFAR fullres flag information that is generated when averaging with DPPP.\n"
+		"-direct-ft\n"
+		"   Do not grid the visibilities on the uv grid, but instead perform a fully accurate direct Fourier transform (slow!).\n"
 		"-use-idg\n"
 		"   Use the 'image-domain gridder' (Van der Tol et al.) to do the inversions and predictions.\n"
 		"-idg-mode [cpu/gpu/hybrid]\n"
@@ -1140,12 +1139,6 @@ int CommandLine::Run(int argc, char* argv[])
 			settings.simulateNoise = true;
 			settings.simulatedNoiseStdDev = parse_double(argv[argi], 0.0, "simulate-noise");
 		}
-		else if(param == "lofar-centroids")
-		{
-			settings.useLofarCentroids = true;
-			++argi;
-			settings.fullResWidth = parse_size_t(argv[argi], "lofar-centroids");
-		}
 		else if(param == "aterm-config")
 		{
 			++argi;
@@ -1182,6 +1175,27 @@ int CommandLine::Run(int argc, char* argv[])
 				settings.visibilityWeightingMode = MeasurementSetGridder::UnitVisibilityWeighting;
 			else
 				throw std::runtime_error("Unknown weighting mode: " + modeStr);
+		}
+		else if(param == "direct-ft")
+		{
+			settings.directFT = true;
+			settings.imagePadding = 1.0;
+			settings.smallInversion = false;
+		}
+		else if(param == "direct-ft-precision")
+		{
+			++argi;
+			std::string precStr = argv[argi];
+			if(precStr == "half")
+				settings.directFTPrecision = DirectFTPrecision::Half;
+			else if(precStr == "float")
+				settings.directFTPrecision = DirectFTPrecision::Float;
+			else if(precStr == "double")
+				settings.directFTPrecision = DirectFTPrecision::Double;
+			else if(precStr == "ldouble")
+				settings.directFTPrecision = DirectFTPrecision::LongDouble;
+			else
+				throw std::runtime_error("Invalid direct ft precision specified. Allowed options: float, double and ldouble.");
 		}
 		else if(param == "use-idg")
 		{

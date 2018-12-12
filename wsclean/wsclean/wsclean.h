@@ -79,6 +79,8 @@ private:
 	
 	void makeBeam();
 	
+	std::unique_ptr<MSGridderBase> createGridder() const;
+	
 	WSCFitsWriter createWSCFitsWriter(const ImagingTableEntry& entry, bool isImaginary, bool isModel) const;
 	
 	WSCFitsWriter createWSCFitsWriter(const ImagingTableEntry& entry, PolarizationEnum polarization, bool isImaginary, bool isModel) const;

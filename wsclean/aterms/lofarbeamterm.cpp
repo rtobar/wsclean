@@ -11,6 +11,8 @@
 
 #include "../wsclean/logger.h"
 
+#include <StationResponse/ITRFConverter.h>
+
 #include <casacore/measures/TableMeasures/ArrayMeasColumn.h>
 #include <casacore/measures/Measures/MEpoch.h>
 #include <casacore/tables/Tables/TableRecord.h>
@@ -71,7 +73,7 @@ LofarBeamTerm::LofarBeamTerm(casacore::MeasurementSet& ms, size_t width, size_t 
 	_useDifferentialBeam = LOFARBeamKeywords::GetPreappliedBeamDirection(ms, dataColumnName, _useDifferentialBeam, _preappliedBeamDir);
 }
 
-void setITRF(const casacore::MDirection& itrfDir, LOFAR::StationResponse::vector3r_t& itrf)
+void setITRFVector(const casacore::MDirection& itrfDir, LOFAR::StationResponse::vector3r_t& itrf)
 {
 	const casacore::Vector<double>& itrfVal = itrfDir.getValue().getValue();
 	itrf[0] = itrfVal[0];
@@ -84,37 +86,38 @@ bool LofarBeamTerm::calculateBeam(std::complex<float>* buffer, double time, doub
 	ao::lane<size_t> lane(_nThreads);
 	_lane = &lane;
 
+	/*casacore::MDirection::Ref itrfRef(casacore::MDirection::ITRF, frame);
+	casacore::MDirection::Convert j2000ToITRFRef(j2000Ref, itrfRef);
 	casacore::MEpoch timeEpoch(casacore::Quantity(time, "s"));
 	casacore::MeasFrame frame(_arrayPos, timeEpoch);
 	casacore::MDirection::Ref j2000Ref(casacore::MDirection::J2000, frame);
-	casacore::MDirection::Ref itrfRef(casacore::MDirection::ITRF, frame);
-	casacore::MDirection::Convert j2000ToITRFRef(j2000Ref, itrfRef);
-
-	setITRF(j2000ToITRFRef(_delayDir), _station0);
-	setITRF(j2000ToITRFRef(_tileBeamDir), _tile0);
+*/
+	LOFAR::StationResponse::ITRFConverter itrfConverter(time);
+	setITRFVector(itrfConverter.toDirection(_delayDir), _station0);
+	setITRFVector(itrfConverter.toDirection(_tileBeamDir), _tile0);
 
 	const casacore::Unit radUnit("rad");
 
 	casacore::MDirection lDir(casacore::MVDirection(
 		casacore::Quantity(_phaseCentreRA + M_PI/2, radUnit),
 		casacore::Quantity(0, radUnit)),
-		j2000Ref);
-	setITRF(j2000ToITRFRef(lDir), _l_vector_itrf);
+		casacore::MDirection::J2000);
+	setITRFVector(itrfConverter.toDirection(lDir), _l_vector_itrf);
 
 	casacore::MDirection mDir(casacore::MVDirection(
 		casacore::Quantity(_phaseCentreRA, radUnit),
 		casacore::Quantity(_phaseCentreDec + M_PI/2, radUnit)),
-		j2000Ref);
-	setITRF(j2000ToITRFRef(mDir), _m_vector_itrf);
+		casacore::MDirection::J2000);
+	setITRFVector(itrfConverter.toDirection(mDir), _m_vector_itrf);
 
 	casacore::MDirection nDir(casacore::MVDirection(
 		casacore::Quantity(_phaseCentreRA, radUnit),
 		casacore::Quantity(_phaseCentreDec, radUnit)),
-		j2000Ref);
-	setITRF(j2000ToITRFRef(nDir), _n_vector_itrf);
+		casacore::MDirection::J2000);
+	setITRFVector(itrfConverter.toDirection(nDir), _n_vector_itrf);
 
 	vector3r_t diffBeamCentre;
-	setITRF(j2000ToITRFRef(_preappliedBeamDir), diffBeamCentre);
+	setITRFVector(itrfConverter.toDirection(_preappliedBeamDir), diffBeamCentre);
 	_inverseCentralGain.resize(_stations.size());
 	for(size_t a=0; a!=_stations.size(); ++a)
 	{

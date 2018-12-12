@@ -10,6 +10,8 @@
 #include "../deconvolution/deconvolutionalgorithm.h"
 #include "../multiscale/multiscaletransforms.h"
 
+enum class DirectFTPrecision { Half, Float, Double, LongDouble };
+
 /**
  * This class describes all settings for a single WSClean run.
  * @sa WSClean
@@ -61,11 +63,12 @@ public:
 	bool writeImagingWeightSpectrumColumn;
 	std::string temporaryDirectory;
 	bool forceReorder, forceNoReorder, subtractModel, modelUpdateRequired, mfsWeighting;
-	bool useLofarCentroids;
 	size_t fullResOffset, fullResWidth, fullResPad;
 	bool applyPrimaryBeam, reusePrimaryBeam, useDifferentialLofarBeam, savePsfPb;
 	std::string mwaPath;
 	size_t primaryBeamUndersampling;
+	bool directFT;
+	DirectFTPrecision directFTPrecision;
 	bool useIDG;
 	std::string atermConfigFilename;
 	double atermKernelSize;
@@ -183,12 +186,13 @@ inline WSCleanSettings::WSCleanSettings() :
 	subtractModel(false),
 	modelUpdateRequired(true),
 	mfsWeighting(false),
-	useLofarCentroids(false),
 	fullResOffset(0), fullResWidth(0), fullResPad(0),
 	applyPrimaryBeam(false), reusePrimaryBeam(false),
 	useDifferentialLofarBeam(false),
 	savePsfPb(false),
 	primaryBeamUndersampling(8),
+	directFT(false),
+	directFTPrecision(DirectFTPrecision::Double),
 	useIDG(false),
 	atermConfigFilename(),
 	atermKernelSize(0.0),

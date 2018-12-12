@@ -111,7 +111,7 @@ add_library(wsclean-object OBJECT
   multiscale/multiscalealgorithm.cpp multiscale/multiscaletransforms.cpp multiscale/threadeddeconvolutiontools.cpp
   mwa/beam2016implementation.cpp mwa/mwabeam.cpp mwa/tilebeam2016.cpp mwa/tilebeambase.cpp
   wsclean/commandline.cpp wsclean/imagingtable.cpp wsclean/logger.cpp wsclean/msgridderbase.cpp wsclean/wscfitswriter.cpp wsclean/wsclean.cpp
-  wsclean/wscleansettings.cpp wsclean/wsmsgridder.cpp wsclean/lofarcentroidgridding.cpp wsclean/wstackinggridder.cpp
+  wsclean/wscleansettings.cpp wsclean/wsmsgridder.cpp wsclean/wstackinggridder.cpp
   ${LBEAM_FILES} ${IDG_FILES})
 
 set_property(TARGET wsclean-object PROPERTY POSITION_INDEPENDENT_CODE 1)

@@ -83,6 +83,7 @@ public:
 		}
 		/** Retrieve image element with given index. */
 		double& operator[](size_t index) const { return _data[index]; }
+		
 	private:
 		Ptr(const Ptr&) = delete;
 		void operator=(const Ptr&) = delete;
@@ -136,6 +137,11 @@ public:
 	void Allocate(size_t size, Ptr& ptr)
 	{
 		ptr.reset(Allocate(size), *this);
+	}
+	
+	Ptr AllocatePtr(size_t size)
+	{
+		return Ptr(Allocate(size), *this);
 	}
 	
 	double* Allocate(size_t size)

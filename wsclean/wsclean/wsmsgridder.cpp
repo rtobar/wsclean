@@ -19,7 +19,6 @@ WSMSGridder::WSMSGridder(ImageBufferAllocator* imageAllocator, size_t threadCoun
 	MSGridderBase(),
 	_cpuCount(threadCount),
 	_laneBufferSize(std::max<size_t>(_cpuCount*2,1024)),
-	_gridAtLOFARCentroid(false),
 	_imageBufferAllocator(imageAllocator)
 {
 	long int pageCount = sysconf(_SC_PHYS_PAGES), pageSize = sysconf(_SC_PAGE_SIZE);
@@ -331,7 +330,7 @@ void WSMSGridder::Invert()
 	std::vector<MSData> msDataVector;
 	initializeMSDataVector(msDataVector);
 	
-	_gridder = std::unique_ptr<WStackingGridder>(new WStackingGridder(_actualInversionWidth, _actualInversionHeight, _actualPixelSizeX, _actualPixelSizeY, _cpuCount, _imageBufferAllocator, AntialiasingKernelSize(), OverSamplingFactor()));
+	_gridder.reset(new WStackingGridder(_actualInversionWidth, _actualInversionHeight, _actualPixelSizeX, _actualPixelSizeY, _cpuCount, _imageBufferAllocator, AntialiasingKernelSize(), OverSamplingFactor()));
 	_gridder->SetGridMode(GridMode());
 	if(HasDenormalPhaseCentre())
 		_gridder->SetDenormalPhaseCentre(PhaseCentreDL(), PhaseCentreDM());
@@ -362,10 +361,7 @@ void WSMSGridder::Invert()
 			
 			startInversionWorkThreads(selectedBand.MaxChannels());
 		
-			if(_gridAtLOFARCentroid)
-				gridLOFARCentroidMeasurementSet(msData);
-			else
-				gridMeasurementSet(msData);
+			gridMeasurementSet(msData);
 			
 			finishInversionWorkThreads();
 		}

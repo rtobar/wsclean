@@ -29,6 +29,7 @@ void LBeamImageMaker::Make(PrimaryBeamImageSet&)
 #include "lofarbeamkeywords.h"
 
 #include <StationResponse/LofarMetaDataUtil.h>
+#include <StationResponse/ITRFConverter.h>
 
 #include <casacore/ms/MeasurementSets/MSField.h>
 
@@ -47,7 +48,7 @@ void LBeamImageMaker::Make(PrimaryBeamImageSet&)
 
 using namespace LOFAR::StationResponse;
 
-static void dirToITRF(const casacore::MDirection& dir, casacore::MDirection::Convert& convert, vector3r_t& itrf);
+static void dirToITRFVector(const casacore::MDirection& dir, ITRFConverter& convert, vector3r_t& itrf);
 
 void LBeamImageMaker::Make(PrimaryBeamImageSet& beamImages)
 {
@@ -222,9 +223,9 @@ void LBeamImageMaker::makeBeamForMS(PrimaryBeamImageSet& beamImages, MSProvider&
 	}
 }
 
-static void dirToITRF(const casacore::MDirection& dir, casacore::MDirection::Convert& convert, vector3r_t& itrf)
+static void dirToITRFVector(const casacore::MDirection& dir, ITRFConverter& convert, vector3r_t& itrf)
 {
-	casacore::MDirection itrfDir = convert(dir);
+	casacore::MDirection itrfDir = convert.toDirection(dir);
 	casacore::Vector<double> itrfVal = itrfDir.getValue().getValue();
 	itrf[0] = itrfVal[0];
 	itrf[1] = itrfVal[1];
@@ -236,19 +237,18 @@ void LBeamImageMaker::makeBeamSnapshot(const std::vector<Station::Ptr>& stations
 	static const casacore::Unit radUnit("rad");
 	const casacore::MDirection::Ref itrfRef(casacore::MDirection::ITRF, frame);
 	const casacore::MDirection::Ref j2000Ref(casacore::MDirection::J2000, frame);
-	casacore::MDirection::Convert
-		j2000ToITRFRef(j2000Ref, itrfRef);
+	ITRFConverter converter(time);
 		
 	vector3r_t station0, tile0, diffBeamCentre;
-	dirToITRF(_delayDir, j2000ToITRFRef, station0);
-	dirToITRF(_tileBeamDir, j2000ToITRFRef, tile0);
+	dirToITRFVector(_delayDir, converter, station0);
+	dirToITRFVector(_tileBeamDir, converter, tile0);
 	
 	Logger::Debug << "Time=" << time << '\n';
 	
 	std::vector<MC2x2> inverseCentralGain;
 	if(_useDifferentialBeam)
 	{
-		dirToITRF(_preappliedDir, j2000ToITRFRef, diffBeamCentre);
+		dirToITRFVector(_preappliedDir, converter, diffBeamCentre);
 		inverseCentralGain.resize(stations.size());
 		for(size_t a=0; a!=stations.size(); ++a)
 		{
@@ -280,7 +280,7 @@ void LBeamImageMaker::makeBeamSnapshot(const std::vector<Station::Ptr>& stations
 							j2000Ref);
 			
 			vector3r_t itrfDirection;
-			dirToITRF(imageDir, j2000ToITRFRef, itrfDirection);
+			dirToITRFVector(imageDir, converter, itrfDirection);
 			
 			std::vector<MC2x2> stationGains(stations.size());
 			for(size_t a=0; a!=stations.size(); ++a)

@@ -1,5 +1,6 @@
 #include "wsclean.h"
 
+#include "directmsgridder.h"
 #include "imageweightcache.h"
 #include "measurementsetgridder.h"
 #include "logger.h"
@@ -323,6 +324,33 @@ void WSClean::prepareInversionAlgorithm(PolarizationEnum polarization)
 	_gridder->SetVisibilityWeightingMode(_settings.visibilityWeightingMode);
 }
 
+std::unique_ptr<MSGridderBase> WSClean::createGridder() const
+{
+	if(_settings.useIDG)
+		return std::unique_ptr<MSGridderBase>(new IdgMsGridder(_settings));
+	else if(_settings.directFT)
+	{
+		switch(_settings.directFTPrecision) {
+		case DirectFTPrecision::Half:
+			throw std::runtime_error("Half precision is not implemented");
+			//return std::unique_ptr<MSGridderBase>(new DirectMSGridder<half_float::half>(&_imageAllocator, _settings.threadCount));
+			break;
+		case DirectFTPrecision::Float:
+			return std::unique_ptr<MSGridderBase>(new DirectMSGridder<float>(&_imageAllocator, _settings.threadCount));
+			break;
+		default:
+		case DirectFTPrecision::Double:
+			return std::unique_ptr<MSGridderBase>(new DirectMSGridder<double>(&_imageAllocator, _settings.threadCount));
+			break;
+		case DirectFTPrecision::LongDouble:
+			return std::unique_ptr<MSGridderBase>(new DirectMSGridder<long double>(&_imageAllocator, _settings.threadCount));
+			break;
+		}
+	}
+	else
+		return std::unique_ptr<MSGridderBase>(new WSMSGridder(&_imageAllocator, _settings.threadCount, _settings.memFraction, _settings.absMemLimit));
+}
+
 void WSClean::performReordering(bool isPredictMode)
 {
 	_partitionedMSHandles.clear();
@@ -401,13 +429,7 @@ void WSClean::RunClean()
 		if(_settings.mfsWeighting)
 			initializeMFSImageWeights();
 		
-		if(_settings.useIDG)
-			_gridder.reset(new IdgMsGridder(_settings));
-		else {
-			_gridder.reset(new WSMSGridder(&_imageAllocator, _settings.threadCount, _settings.memFraction, _settings.absMemLimit));
-			static_cast<WSMSGridder*>(_gridder.get())->SetGridAtLOFARCentroid(
-				_settings.useLofarCentroids, _settings.fullResWidth);
-		}
+		_gridder = createGridder();
 		
 		for(size_t groupIndex=0; groupIndex!=_imagingTable.IndependentGroupCount(); ++groupIndex)
 		{
@@ -528,10 +550,7 @@ void WSClean::RunPredict()
 		
 		if(_doReorder) performReordering(true);
 		
-		if(_settings.useIDG)
-			_gridder.reset(new IdgMsGridder(_settings));
-		else
-			_gridder.reset(new WSMSGridder(&_imageAllocator, _settings.threadCount, _settings.memFraction, _settings.absMemLimit));
+		_gridder = createGridder();
 	
 		for(size_t groupIndex=0; groupIndex!=_imagingTable.SquaredGroupCount(); ++groupIndex)
 		{
