@@ -75,7 +75,7 @@ void LBeamImageMaker::Make(PrimaryBeamImageSet& beamImages)
 			centralFrequency += subBand.CentreFrequency();
 		}
 		centralFrequency /= msInfo.bands.size();
-		makeBeamForMS(beamImages, *msProviderInfo.provider, msInfo, selection, centralFrequency);
+		makeBeamForMS(beamImages, *msProviderInfo.provider, selection, centralFrequency);
 	}
 
 	for(size_t i=0; i!=8; ++i)
@@ -99,7 +99,7 @@ void LBeamImageMaker::Make(PrimaryBeamImageSet& beamImages)
 	}
 }
 
-void LBeamImageMaker::makeBeamForMS(PrimaryBeamImageSet& beamImages, MSProvider& msProvider, const ImagingTableEntry::MSInfo& msInfo, const MSSelection& selection, double centralFrequency)
+void LBeamImageMaker::makeBeamForMS(PrimaryBeamImageSet& beamImages, MSProvider& msProvider, const MSSelection& selection, double centralFrequency)
 {
 	/**
 		* Read some meta data from the measurement set
@@ -208,7 +208,7 @@ void LBeamImageMaker::makeBeamForMS(PrimaryBeamImageSet& beamImages, MSProvider&
 				imgPtr[i] = &singleImages[i][0];
 			}
 		
-			makeBeamSnapshot(stations, stationWeights, baselineWeights, imgPtr, timeEpoch.getValue().get()*86400.0, centralFrequency, centralFrequency, frame);
+			makeBeamSnapshot(stations, stationWeights, imgPtr, timeEpoch.getValue().get()*86400.0, centralFrequency, centralFrequency, frame);
 		
 			_totalWeightSum += intervalWeight;
 			for(size_t i=0; i!=8; ++i)
@@ -232,7 +232,7 @@ static void dirToITRFVector(const casacore::MDirection& dir, ITRFConverter& conv
 	itrf[2] = itrfVal[2];
 }
 
-void LBeamImageMaker::makeBeamSnapshot(const std::vector<Station::Ptr>& stations, const ao::uvector<double>& weights, const WeightMatrix& baselineWeights, double** imgPtr, double time, double frequency, double subbandFrequency, const casacore::MeasFrame& frame)
+void LBeamImageMaker::makeBeamSnapshot(const std::vector<Station::Ptr>& stations, const ao::uvector<double>& weights, double** imgPtr, double time, double frequency, double subbandFrequency, const casacore::MeasFrame& frame)
 {
 	static const casacore::Unit radUnit("rad");
 	const casacore::MDirection::Ref itrfRef(casacore::MDirection::ITRF, frame);

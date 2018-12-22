@@ -235,7 +235,7 @@ class BandData
 		/** Get the channelwidth in Hz of a specified channel.
 		 * @param channelIndex Zero-indexed channel index.
 		 */
-		double ChannelWidth(size_t channelIndex) const
+		double ChannelWidth(size_t /*channelIndex*/) const
 		{
 			return _frequencyStep;
 		}

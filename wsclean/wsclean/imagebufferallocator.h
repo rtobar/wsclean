@@ -307,12 +307,15 @@ private:
 			msg << "posix_memalign() failed when allocating " << size*sizeof(double) * 2 << " bytes: ";
 			switch(errVal)
 			{
-				case EINVAL:
-					msg << "the alignment argument was not a power of two, or was not a multiple of sizeof(void *)";
-				case ENOMEM:
-					msg << "there was insufficient memory to fulfill the allocation request.";
-				default:
-					msg << "an unknown error value was returned";
+			case EINVAL:
+				msg << "the alignment argument was not a power of two, or was not a multiple of sizeof(void *)";
+				break;
+			case ENOMEM:
+				msg << "there was insufficient memory to fulfill the allocation request.";
+				break;
+			default:
+				msg << "an unknown error value was returned";
+				break;
 			}
 			throw std::runtime_error(msg.str());
 		}

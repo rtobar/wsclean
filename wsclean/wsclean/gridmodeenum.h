@@ -16,13 +16,27 @@ enum GridModeEnum {
 		*/
 	KaiserBesselKernel,
 	
+	/** Like KB, but it is not multiplied with a low-pass filtering sinc function.
+		*/
+	KaiserBesselWithoutSinc,
+
 	/** Interpolate with a rectangular window. This will give the sharpest
 		* transition at the edge of the image, so will maximally attenuate objects
 		* just outside the image. However, objects further from the edge will not be
 		* as much attenuated compared to the KB window, which has much deeper
 		* sidelobes further out.
 		*/
-	RectangularKernel
+	RectangularKernel,
+	
+	/** Window the low-pass filter with a Gaussian trimmed at 3 sigma.
+		*/
+	GaussianKernel,
+	GaussianKernelWithoutSinc,
+	
+	/** Blackman-nutall window.
+	 */
+	BlackmanNuttallKernel,
+	BlackmanNuttallKernelWithoutSinc
 };
 
 #endif

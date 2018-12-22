@@ -538,13 +538,13 @@ class WStackingGridder
 		}
 		
 		/**
-		 * Acquire a Kaiser-Bessel kernel. This is mostly a debugging/example function.
-		 * @param kernel Array of size @p n
-		 * @param n Size of kernel
-		 * @param multiplyWithSinc True to multiply the kernel with the sinc function, as
-		 * is the case during gridding.
+		 * Acquire the antialising gridding kernel. This is mostly a debugging/example function.
+		 * @param gridMode Type of kernel
+		 * @param kernel Array of size @p oversampling * size
+		 * @param n Oversampling factor of kernel
+		 * @param size UV-cell size of the kernel
 		 */
-		void GetKaiserBesselKernel(double* kernel, size_t n, bool multiplyWithSinc);
+		static void GetKernel(enum GridModeEnum gridMode, double* kernel, size_t oversampling, size_t size);
 		
 		/**
 		 * Get width of image as specified during construction. This is the full width, before
@@ -607,11 +607,16 @@ class WStackingGridder
 		 * - 8.6 ; similar to the Blackmann window
 		 * -  14 ; similar to prolate spheroidal
 		 */
-		void makeKaiserBesselKernel(std::vector<double> &kernel, double alpha, size_t overSamplingFactor, bool withSinc=true);
+		static void makeKaiserBesselKernel(std::vector<double> &kernel, double alpha, size_t overSamplingFactor, bool withSinc=true);
 		
-		void makeRectangularKernel(std::vector<double> &kernel, size_t overSamplingFactor);
+		static void makeRectangularKernel(std::vector<double> &kernel, size_t overSamplingFactor);
 		
-		double bessel0(double x, double precision);
+		static void makeGaussianKernel(std::vector<double> &kernel, size_t overSamplingFactor, bool withSinc=true);
+		
+		static void makeBlackmanNutallKernel(std::vector<double> &kernel, size_t overSamplingFactor, bool withSinc=true);
+		
+		static double bessel0(double x, double precision);
+		
 		template<bool Inverse>
 		void correctImageForKernel(double *image) const;
 		

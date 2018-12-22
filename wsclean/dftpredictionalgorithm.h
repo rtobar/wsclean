@@ -42,7 +42,10 @@ private:
 class DFTPredictionComponent
 {
 public:
-	DFTPredictionComponent() : _isGaussian(false) { }
+	DFTPredictionComponent() : 
+		_ra(0.0), _dec(0.0), _l(0.0), _m(0.0), _lmSqrt(0.0),
+		_isGaussian(false)
+	{ }
 	
 	DFTPredictionComponent(double ra, double dec, double l, double m, std::complex<double> fluxLinear[4], size_t channelCount) :
 		_ra(ra), _dec(dec), _l(l), _m(m), _lmSqrt(sqrt(1.0 - l*l - m*m)),

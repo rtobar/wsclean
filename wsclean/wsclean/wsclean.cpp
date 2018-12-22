@@ -33,7 +33,6 @@
 
 #include "../lofar/lmspredicter.h"
 
-#include "../model/areaparser.h"
 #include "../model/model.h"
 
 #include <iostream>
@@ -108,7 +107,7 @@ void WSClean::imagePSF(ImagingTableEntry& entry)
 		
 	if(_settings.isUVImageSaved)
 	{
-		saveUVImage(_gridder->ImageRealResult(), *_settings.polarizations.begin(), entry, false, "uvpsf");
+		saveUVImage(_gridder->ImageRealResult(), entry, false, "uvpsf");
 	}
 	
 	Logger::Info << "Writing psf image... ";
@@ -731,7 +730,7 @@ void WSClean::saveRestoredImagesForGroup(const ImagingTableEntry& tableEntry) co
 			writer.WriteImage("residual.fits", restoredImage);
 		
 		if(_settings.isUVImageSaved)
-			saveUVImage(restoredImage, curPol, tableEntry, isImaginary, "uv");
+			saveUVImage(restoredImage, tableEntry, isImaginary, "uv");
 		
 		double* modelImage = _imageAllocator.Allocate(_settings.trimmedImageWidth*_settings.trimmedImageHeight);
 		_modelImages.Load(modelImage, curPol, currentChannelIndex, isImaginary);
@@ -1257,7 +1256,7 @@ MSSelection WSClean::selectInterval(MSSelection& fullSelection, size_t intervalI
 	}
 }
 
-void WSClean::saveUVImage(const double* image, PolarizationEnum pol, const ImagingTableEntry& entry, bool isImaginary, const std::string& prefix) const
+void WSClean::saveUVImage(const double* image, const ImagingTableEntry& entry, bool isImaginary, const std::string& prefix) const
 {
 	Image
 		realUV(_settings.trimmedImageWidth, _settings.trimmedImageHeight, _imageAllocator),

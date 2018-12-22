@@ -69,7 +69,7 @@ private:
 	
 	void makeMFSImage(const string& suffix, size_t intervalIndex, PolarizationEnum pol, bool isImaginary, bool isPSF = false);
 	void renderMFSImage(size_t intervalIndex, PolarizationEnum pol, bool isImaginary, bool isPBCorrected) const;
-	void saveUVImage(const double* image, PolarizationEnum pol, const ImagingTableEntry& entry, bool isImaginary, const std::string& prefix) const;
+	void saveUVImage(const double* image, const ImagingTableEntry& entry, bool isImaginary, const std::string& prefix) const;
 	void writeFirstResidualImages(const ImagingTable& groupTable) const;
 	void writeModelImages(const ImagingTable& groupTable) const;
 	

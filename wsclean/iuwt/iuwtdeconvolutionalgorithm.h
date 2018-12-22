@@ -95,7 +95,7 @@ private:
 	
 	bool fillAndDeconvolveStructure(IUWTDecomposition& iuwt, ao::uvector<double>& dirty, class ImageSet& structureModelFull, ao::uvector<double>& scratch, const ao::uvector<double>& psf, const ao::uvector<double>& psfKernel, size_t curEndScale, size_t curMinScale, size_t width, size_t height, const ao::uvector<double>& thresholds, const ImageAnalysis::Component& maxComp, bool allowTrimming, const bool* priorMask);
 	
-	bool findAndDeconvolveStructure(IUWTDecomposition& iuwt, ao::uvector<double>& dirty, const ao::uvector<double>& psf, const ao::uvector<double>& psfKernel, ao::uvector<double>& scratch, class ImageSet& structureModelFull, size_t curEndScale, size_t curMinScale, double gain, std::vector<ValComponent>& maxComponents);
+	bool findAndDeconvolveStructure(IUWTDecomposition& iuwt, ao::uvector<double>& dirty, const ao::uvector<double>& psf, const ao::uvector<double>& psfKernel, ao::uvector<double>& scratch, class ImageSet& structureModelFull, size_t curEndScale, size_t curMinScale, std::vector<ValComponent>& maxComponents);
 	
 	void performSubImageFitAll(IUWTDecomposition& iuwt, const IUWTMask& mask, const ao::uvector<double>& structureModel, ao::uvector<double>& scratchA, ao::uvector<double>& scratchB, const ImageAnalysis::Component& maxComp, ImageSet& fittedModel, const double* psf, const ao::uvector<double>& dirty);
 	

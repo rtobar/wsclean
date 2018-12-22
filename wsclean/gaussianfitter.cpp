@@ -433,7 +433,7 @@ int GaussianFitter::fitting_deriv_circular_centered(const gsl_vector *xvec, void
 	return GSL_SUCCESS;
 }
 
-void GaussianFitter::fit2DGaussianWithAmplitudeInBox(const double* image, size_t width, size_t height, double& val, double& posX, double& posY, double& beamMaj, double& beamMin, double& beamPA, double* floorLevel, size_t xStart, size_t xEnd, size_t yStart, size_t yEnd)
+void GaussianFitter::fit2DGaussianWithAmplitudeInBox(const double* image, size_t width, size_t /*height*/, double& val, double& posX, double& posY, double& beamMaj, double& beamMin, double& beamPA, double* floorLevel, size_t xStart, size_t xEnd, size_t yStart, size_t yEnd)
 {
 	size_t boxWidth = xEnd - xStart;
 	size_t boxHeight = yEnd - yStart;
@@ -462,12 +462,12 @@ void GaussianFitter::fit2DGaussianWithAmplitude(const double* image, size_t widt
 	_scaleFactor = (width + height)/2;
 	
 	if(floorLevel == 0)
-		fit2DGaussianWithAmplitude(image, width, height, val, posX, posY, beamMaj, beamMin, beamPA);
+		fit2DGaussianWithAmplitude(val, posX, posY, beamMaj, beamMin, beamPA);
 	else
-		fit2DGaussianWithAmplitudeWithFloor(image, width, height, val, posX, posY, beamMaj, beamMin, beamPA, *floorLevel);
+		fit2DGaussianWithAmplitudeWithFloor(val, posX, posY, beamMaj, beamMin, beamPA, *floorLevel);
 }
 
-void GaussianFitter::fit2DGaussianWithAmplitude(const double* image, size_t width, size_t height, double& val, double& posX, double& posY, double& beamMaj, double& beamMin, double& beamPA)
+void GaussianFitter::fit2DGaussianWithAmplitude(double& val, double& posX, double& posY, double& beamMaj, double& beamMin, double& beamPA)
 {
 	const gsl_multifit_fdfsolver_type *T = gsl_multifit_fdfsolver_lmsder;
 	gsl_multifit_fdfsolver *solver = gsl_multifit_fdfsolver_alloc (T, _width*_height, 6);
@@ -482,8 +482,8 @@ void GaussianFitter::fit2DGaussianWithAmplitude(const double* image, size_t widt
 	
 	// Using the FWHM formula for a Gaussian:
 	const long double sigmaToBeam = 2.0L * sqrtl(2.0L * logl(2.0L));
-	_xInit = -(posX-width/2)/_scaleFactor;
-	_yInit = -(posY-height/2)/_scaleFactor;
+	_xInit = -(posX-_width/2)/_scaleFactor;
+	_yInit = -(posY-_height/2)/_scaleFactor;
 	double initialValsArray[6] = {
 		val,
 		_xInit,
@@ -509,8 +509,8 @@ void GaussianFitter::fit2DGaussianWithAmplitude(const double* image, size_t widt
 	} while (status == GSL_CONTINUE && iter < 500);
 	
 	val = gsl_vector_get (solver->x, 0);
-	posX = -1.0*gsl_vector_get (solver->x, 1)*_scaleFactor + width/2;
-	posY = -1.0*gsl_vector_get (solver->x, 2)*_scaleFactor + height/2;
+	posX = -1.0*gsl_vector_get (solver->x, 1)*_scaleFactor + _width/2;
+	posY = -1.0*gsl_vector_get (solver->x, 2)*_scaleFactor + _height/2;
 	double
 		sx = gsl_vector_get (solver->x, 3),
 		sy = gsl_vector_get (solver->x, 4),
@@ -523,7 +523,7 @@ void GaussianFitter::fit2DGaussianWithAmplitude(const double* image, size_t widt
 	beamMin *= _scaleFactor;
 }
 
-void GaussianFitter::fit2DGaussianWithAmplitudeWithFloor(const double* image, size_t width, size_t height, double& val, double& posX, double& posY, double& beamMaj, double& beamMin, double& beamPA, double& floorLevel)
+void GaussianFitter::fit2DGaussianWithAmplitudeWithFloor(double& val, double& posX, double& posY, double& beamMaj, double& beamMin, double& beamPA, double& floorLevel)
 {
 	const gsl_multifit_fdfsolver_type *T = gsl_multifit_fdfsolver_lmsder;
 	gsl_multifit_fdfsolver *solver = gsl_multifit_fdfsolver_alloc (T, _width*_height, 7);
@@ -538,8 +538,8 @@ void GaussianFitter::fit2DGaussianWithAmplitudeWithFloor(const double* image, si
 	
 	// Using the FWHM formula for a Gaussian:
 	const long double sigmaToBeam = 2.0L * sqrtl(2.0L * logl(2.0L));
-	_xInit = -(posX-width/2)/_scaleFactor;
-	_yInit = -(posY-height/2)/_scaleFactor;
+	_xInit = -(posX-_width/2)/_scaleFactor;
+	_yInit = -(posY-_height/2)/_scaleFactor;
 	double initialValsArray[7] = {
 		val,
 		_xInit,
@@ -566,8 +566,8 @@ void GaussianFitter::fit2DGaussianWithAmplitudeWithFloor(const double* image, si
 	} while (status == GSL_CONTINUE && iter < 500);
 	
 	val = gsl_vector_get (solver->x, 0);
-	posX = -1.0*gsl_vector_get (solver->x, 1)*_scaleFactor + width/2;
-	posY = -1.0*gsl_vector_get (solver->x, 2)*_scaleFactor + height/2;
+	posX = -1.0*gsl_vector_get (solver->x, 1)*_scaleFactor + _width/2;
+	posY = -1.0*gsl_vector_get (solver->x, 2)*_scaleFactor + _height/2;
 	double
 		sx = gsl_vector_get (solver->x, 3),
 		sy = gsl_vector_get (solver->x, 4),

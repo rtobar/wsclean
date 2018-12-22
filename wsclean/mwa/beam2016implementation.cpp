@@ -566,7 +566,7 @@ void Beam2016Implementation::lpmv( vector<double>& output, int n, double x )
 
 //----------------------------------------------------------------------------------- HDF5 File interface and data structures for H5 data -----------------------------------------------------------------------------------
 // This function goes thorugh all dataset names and records them info list of strings : Beam2016Implementation::m_obj_list
-herr_t Beam2016Implementation::list_obj_iterate(hid_t loc_id, const char *name, const H5O_info_t *info, void *operator_data)
+herr_t Beam2016Implementation::list_obj_iterate(hid_t /*loc_id*/, const char *name, const H5O_info_t *info, void *operator_data)
 {
 	string szTmp;
 	Beam2016Implementation* pBeamModelPtr = (Beam2016Implementation*) operator_data;  

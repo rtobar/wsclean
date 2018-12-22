@@ -140,6 +140,7 @@ LSDeconvolution::LSDeconvolution() : _allocator(nullptr), _data(new LSDeconvolut
 { }
 
 LSDeconvolution::LSDeconvolution(const LSDeconvolution& source) :
+	DeconvolutionAlgorithm(),
 	_allocator(source._allocator), _data(new LSDeconvolutionData(*source._data))
 { }
 
@@ -162,7 +163,7 @@ void LSDeconvolution::getMaskPositions(ao::uvector<std::pair<size_t, size_t>>& m
 	}
 }
 
-void LSDeconvolution::linearFit(double* dataImage, double* modelImage, const double* psfImage, size_t width, size_t height, bool& reachedMajorThreshold)
+void LSDeconvolution::linearFit(double* dataImage, double* modelImage, const double* psfImage, size_t width, size_t height, bool& /*reachedMajorThreshold*/)
 {
 	ao::uvector<std::pair<size_t, size_t>> maskPositions;
 	getMaskPositions(maskPositions, _cleanMask, width, height);
@@ -254,7 +255,7 @@ void LSDeconvolution::linearFit(double* dataImage, double* modelImage, const dou
 	gsl_matrix_free(cov);
 }
 
-void LSDeconvolution::nonLinearFit(double* dataImage, double* modelImage, const double* psfImage, size_t width, size_t height, bool& reachedMajorThreshold)
+void LSDeconvolution::nonLinearFit(double* dataImage, double* modelImage, const double* psfImage, size_t width, size_t height, bool& /*reachedMajorThreshold*/)
 {
 	if(this->_cleanMask == 0)
 		throw std::runtime_error("No mask available");

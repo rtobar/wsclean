@@ -125,13 +125,13 @@ private:
 	 * 
 	 * This function can typically be used for source fitting.
 	 */
-	void fit2DGaussianWithAmplitude(const double* image, size_t width, size_t height, double& val, double& posX, double& posY, double& beamMaj, double& beamMin, double& beamPA);
+	void fit2DGaussianWithAmplitude(double& val, double& posX, double& posY, double& beamMaj, double& beamMin, double& beamPA);
 	
 	/**
 	 * Like fit2DGaussianWithAmplitude(), but includes floorLevel as fitted parameter.
 	 * Floor is the background/zero level on which the Gaussian resides.
 	 */
-	void fit2DGaussianWithAmplitudeWithFloor(const double* image, size_t width, size_t height, double& val, double& posX, double& posY, double& beamMaj, double& beamMin, double& beamPA, double& floorLevel);
+	void fit2DGaussianWithAmplitudeWithFloor(double& val, double& posX, double& posY, double& beamMaj, double& beamMin, double& beamPA, double& floorLevel);
 	
 	static int fitting_func_with_amplitude(const gsl_vector *xvec, void *data, gsl_vector *f);
 	

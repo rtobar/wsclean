@@ -266,7 +266,7 @@ void IUWTDeconvolutionAlgorithm::adjustBox(size_t& x1, size_t& y1, size_t& x2, s
 		y2--;
 }
 
-void IUWTDeconvolutionAlgorithm::trim(ao::uvector<double>& dest, const double* source, size_t oldWidth, size_t oldHeight, size_t x1, size_t y1, size_t x2, size_t y2)
+void IUWTDeconvolutionAlgorithm::trim(ao::uvector<double>& dest, const double* source, size_t oldWidth, size_t /*oldHeight*/, size_t x1, size_t y1, size_t x2, size_t y2)
 {
 	// We do this so that dest and source can be the same image.
 	if(dest.size() < (x2-x1) * (y2-y1))
@@ -570,7 +570,7 @@ void IUWTDeconvolutionAlgorithm::constrainedPSFConvolve(double* image, const dou
 	FFTConvolver::ConvolveSameSize(_fftwManager, image, kernel.data(), width, height);
 }
 
-bool IUWTDeconvolutionAlgorithm::findAndDeconvolveStructure(IUWTDecomposition& iuwt, ao::uvector<double>& dirty, const ao::uvector<double>& psf, const ao::uvector<double>& psfKernel, ao::uvector<double>& scratch, ImageSet& structureModel, size_t curEndScale, size_t curMinScale, double gain, std::vector<IUWTDeconvolutionAlgorithm::ValComponent>& maxComponents)
+bool IUWTDeconvolutionAlgorithm::findAndDeconvolveStructure(IUWTDecomposition& iuwt, ao::uvector<double>& dirty, const ao::uvector<double>& psf, const ao::uvector<double>& psfKernel, ao::uvector<double>& scratch, ImageSet& structureModel, size_t curEndScale, size_t curMinScale, std::vector<IUWTDeconvolutionAlgorithm::ValComponent>& maxComponents)
 {
 	iuwt.Decompose(*_threadPool, dirty.data(), scratch.data(), false);
 	ao::uvector<double> thresholds(curEndScale);
@@ -979,7 +979,7 @@ double IUWTDeconvolutionAlgorithm::PerformMajorIteration(size_t& iterCounter, si
 		FFTConvolver::PrepareKernel(psfKernel.data(), psf.data(), _width, _height);
 		std::vector<ValComponent> maxComponents;
 		ao::uvector<double> scratch(_width * _height);
-		bool succeeded = findAndDeconvolveStructure(*iuwt, dirty, psf, psfKernel, scratch, structureModel, curEndScale, curMinScale, _gain, maxComponents);
+		bool succeeded = findAndDeconvolveStructure(*iuwt, dirty, psf, psfKernel, scratch, structureModel, curEndScale, curMinScale, maxComponents);
 		
 		if(succeeded)
 		{

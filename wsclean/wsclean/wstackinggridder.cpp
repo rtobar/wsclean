@@ -256,10 +256,25 @@ void WStackingGridder::makeKernels()
 	{
 		case NearestNeighbourGridding:
 		case KaiserBesselKernel:
-			makeKaiserBesselKernel(_1dKernel, alpha, _overSamplingFactor);
+			makeKaiserBesselKernel(_1dKernel, alpha, _overSamplingFactor, true);
+			break;
+		case KaiserBesselWithoutSinc:
+			makeKaiserBesselKernel(_1dKernel, alpha, _overSamplingFactor, false);
 			break;
 		case RectangularKernel:
 			makeRectangularKernel(_1dKernel, _overSamplingFactor);
+			break;
+		case GaussianKernel:
+			makeGaussianKernel(_1dKernel, _overSamplingFactor, true);
+			break;
+		case GaussianKernelWithoutSinc:
+			makeGaussianKernel(_1dKernel, _overSamplingFactor, false);
+			break;
+		case BlackmanNuttallKernel:
+			makeBlackmanNutallKernel(_1dKernel, _overSamplingFactor, true);
+			break;
+		case BlackmanNuttallKernelWithoutSinc:
+			makeBlackmanNutallKernel(_1dKernel, _overSamplingFactor, false);
 			break;
 	}
 	
@@ -279,12 +294,38 @@ void WStackingGridder::makeKernels()
 	}
 }
 
-void WStackingGridder::GetKaiserBesselKernel(double* kernel, size_t n, bool multiplyWithSinc)
+void WStackingGridder::GetKernel(enum GridModeEnum gridMode, double* kernel, size_t oversampling, size_t size)
 {
 	double alpha = 8.6;
-	std::vector<double> v(n);
-	makeKaiserBesselKernel(v, alpha, n/7, multiplyWithSinc);
-	for(size_t i=0; i!=n; ++i)
+	std::vector<double> v(oversampling * size);
+	switch(gridMode)
+	{
+		case KaiserBesselKernel:
+			makeKaiserBesselKernel(v, alpha, oversampling, true);
+			break;
+		case KaiserBesselWithoutSinc:
+			makeKaiserBesselKernel(v, alpha, oversampling, false);
+			break;
+		case GaussianKernel:
+			makeGaussianKernel(v, oversampling, true);
+			break;
+		case GaussianKernelWithoutSinc:
+			makeGaussianKernel(v, oversampling, false);
+			break;
+		case RectangularKernel:
+			makeRectangularKernel(v, oversampling);
+			break;
+		case NearestNeighbourGridding:
+			v[oversampling * size/2] = 1.0;
+			break;
+		case BlackmanNuttallKernel:
+			makeBlackmanNutallKernel(v, oversampling, true);
+			break;
+		case BlackmanNuttallKernelWithoutSinc:
+			makeBlackmanNutallKernel(v, oversampling, false);
+			break;
+	}
+	for(size_t i=0; i!=oversampling*size; ++i)
 		kernel[i] = v[i];
 }
 
@@ -323,6 +364,49 @@ void WStackingGridder::makeRectangularKernel(std::vector<double> &kernel, size_t
 	{
 		double x = i;
 		kernel[mid+i] = normFactor * sin(M_PI*filterRatio*x)/(M_PI*x);
+	}
+	for(size_t i=0; i!=mid; i++)
+		kernel[i] = kernel[n-1-i];
+}
+
+void WStackingGridder::makeGaussianKernel(std::vector<double> &kernel, size_t overSamplingFactor, bool withSinc)
+{
+	size_t
+		n = kernel.size(),
+		mid = n/2;
+	const double filterRatio = 1.0 / double(overSamplingFactor);
+	kernel[mid] = 1.0;
+	const double normFactor = double(overSamplingFactor);
+	for(size_t i=1; i!=mid+1; i++)
+	{
+		double x = i, y = x*x*3.0*3.0/(mid*mid);
+		kernel[mid+i] = withSinc ? normFactor * sin(M_PI*filterRatio*x)/(M_PI*x) * exp(y/-2.0) : exp(y/-2.0);
+	}
+	for(size_t i=0; i!=mid; i++)
+		kernel[i] = kernel[n-1-i];
+}
+
+void WStackingGridder::makeBlackmanNutallKernel(std::vector<double> &kernel, size_t overSamplingFactor, bool withSinc)
+{
+	size_t
+		n = kernel.size(),
+		mid = n/2;
+	const double filterRatio = 1.0 / double(overSamplingFactor);
+	kernel[mid] = 1.0;
+	const double normFactor = double(overSamplingFactor);
+	const double
+		a0 = 0.3635819,
+		a1 = 0.4891775,
+		a2 = 0.1365995,
+		a3 = 0.0106411;
+	for(size_t i=1; i!=mid+1; i++)
+	{
+		double x = i, y = mid + i;
+		double bn = a0 - a1 * cos(2.0*M_PI*y/(n-1)) + a2 * cos(4.0*M_PI*y/(n-1)) - a3 * cos(6.0*M_PI*y/(n-1));
+		if(withSinc)
+			kernel[mid+i] = normFactor * sin(M_PI*filterRatio*x)/(M_PI*x) * bn;
+		else
+			kernel[mid+i] = bn;
 	}
 	for(size_t i=0; i!=mid; i++)
 		kernel[i] = kernel[n-1-i];
