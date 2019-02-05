@@ -13,6 +13,7 @@ FitsReader::FitsReader(const FitsReader& source) :
 	_filename(source._filename),
 	_fitsPtr(0),
 	_imgWidth(source._imgWidth), _imgHeight(source._imgHeight),
+	_nMatrixElements(source._nMatrixElements),
 	_nAntennas(source._nAntennas),
 	_nFrequencies(source._nFrequencies),
 	_nTimesteps(source._nTimesteps),
@@ -52,6 +53,7 @@ FitsReader& FitsReader::operator=(const FitsReader& rhs)
 	_filename = rhs._filename;
 	_imgWidth = rhs._imgWidth;
 	_imgHeight = rhs._imgHeight;
+	_nMatrixElements = rhs._nMatrixElements;
 	_nAntennas = rhs._nAntennas;
 	_nFrequencies = rhs._nFrequencies;
 	_nTimesteps = rhs._nTimesteps;
@@ -160,6 +162,7 @@ bool FitsReader::ReadStringKeyIfExists(const char *key, std::string& value, std:
 
 void FitsReader::initialize()
 {
+	_nMatrixElements = 1;
 	_nFrequencies = 1;
 	_nAntennas = 1;
 	_nTimesteps = 1;
@@ -240,11 +243,17 @@ void FitsReader::initialize()
 				if(naxes[i]!=1 && !_allowMultipleImages)
 					throw std::runtime_error("Multiple polarizations given in fits file");
 			}
+			else if(tmp == "MATRIX")
+			{
+				_nMatrixElements = naxes[i];
+			}
 			else if(naxes[i] != 1)
 				throw std::runtime_error("Multiple images given in fits file");
 		}
 	}
 	
+	if(_nMatrixElements != 1 && !_allowMultipleImages)
+		throw std::runtime_error("Multiple matrix elements given in fits file");
 	if(_nFrequencies != 1 && !_allowMultipleImages)
 		throw std::runtime_error("Multiple frequencies given in fits file");
 	if(_nAntennas != 1 && !_allowMultipleImages)

@@ -137,11 +137,11 @@ public:
 	void InitializeFromModel(const class Model& model, long double phaseCentreRA, long double phaseCentreDec, const BandData& band);
 	void AddComponent(const DFTPredictionComponent& component)
 	{
-		_components.push_back(component);
+		_components.emplace_back(component);
 	}
 	DFTPredictionComponent& AddComponent()
 	{
-		_components.push_back(DFTPredictionComponent());
+		_components.emplace_back();
 		return _components.back();
 	}
 	size_t ComponentCount() const { return _components.size(); }

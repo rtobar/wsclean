@@ -25,7 +25,8 @@ public:
 		FrequencyDimension, 
 		PolarizationDimension, 
 		AntennaDimension, 
-		TimeDimension
+		TimeDimension,
+		MatrixDimension
 	};
 	
 	FitsWriter() :

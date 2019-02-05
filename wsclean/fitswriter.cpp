@@ -197,6 +197,11 @@ void FitsWriter::writeHeaders(fitsfile *& fptr, const std::string& filename, con
 			fits_write_key(fptr, TDOUBLE, crvalDim, (void*) &_timeDirectionStart, "", &status); checkStatus(status, filename);
 			fits_write_key(fptr, TDOUBLE, cdeltDim, (void*) &_timeDirectionInc, "", &status); checkStatus(status, filename);
 			break;
+		case MatrixDimension:
+			fits_write_key(fptr, TSTRING, ctypeDim, (void*) "MATRIX", "", &status); checkStatus(status, filename);
+			fits_write_key(fptr, TDOUBLE, crpixDim, (void*) &one, "", &status); checkStatus(status, filename);
+			fits_write_key(fptr, TDOUBLE, crvalDim, (void*) &zero, "", &status); checkStatus(status, filename);
+			break;
 		}
 	}
 	

@@ -48,9 +48,19 @@ public:
 			{
 				std::vector<std::string> tecFiles = reader.GetStringList(atermName + ".images");
 				if(tecFiles.size() != 1)
-					throw std::runtime_error("A TEC aterm should consist of only one image");
+					throw std::runtime_error("A TEC aterm should consist of only one fits file");
 				std::unique_ptr<FitsATerm> f(new FitsATerm(_nAntenna, _width, _height, _phaseCentreRA, _phaseCentreDec, _dl, _dm, _phaseCentreDL, _phaseCentreDM));
 				f->OpenTECFile(tecFiles.front());
+				f->SetSaveATerms(false);
+				_aterms.emplace_back(std::move(f));
+			}
+			else if(atermType == "diagonal")
+			{
+				std::vector<std::string> diagFiles = reader.GetStringList(atermName + ".images");
+				if(diagFiles.size() != 1)
+					throw std::runtime_error("A TEC aterm should consist of only one fits file");
+				std::unique_ptr<FitsATerm> f(new FitsATerm(_nAntenna, _width, _height, _phaseCentreRA, _phaseCentreDec, _dl, _dm, _phaseCentreDL, _phaseCentreDM));
+				f->OpenDiagGainFile(diagFiles.front());
 				f->SetSaveATerms(false);
 				_aterms.emplace_back(std::move(f));
 			}

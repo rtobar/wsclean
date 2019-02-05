@@ -81,6 +81,7 @@ class FitsReader : public FitsIOChecker
 		
 		fitsfile* FitsHandle() const { return _fitsPtr; }
 		
+		size_t NMatrixElements() const { return _nMatrixElements; }
 		size_t NFrequencies() const { return _nFrequencies; }
 		size_t NAntennas() const { return _nAntennas; }
 		size_t NTimesteps() const { return _nTimesteps; }
@@ -99,7 +100,7 @@ class FitsReader : public FitsIOChecker
 		fitsfile *_fitsPtr;
 		
 		size_t _imgWidth, _imgHeight;
-		size_t _nAntennas, _nFrequencies, _nTimesteps;
+		size_t _nMatrixElements, _nAntennas, _nFrequencies, _nTimesteps;
 		double _phaseCentreRA, _phaseCentreDec;
 		double _pixelSizeX, _pixelSizeY;
 		double _phaseCentreDL, _phaseCentreDM;
