@@ -54,6 +54,8 @@ void CommandLine::printHelp()
 		"   the model data column.\n"
 		"-no-dirty\n"
 		"   Do not save the dirty image.\n"
+		"-save-first-residual\n"
+		"   Save the residual after the first iteration.\n"
 		"-save-weights\n"
 		"   Save the gridded weights in the a fits file named <image-prefix>-weights.fits.\n"
 		"-save-uv\n"

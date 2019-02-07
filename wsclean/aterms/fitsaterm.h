@@ -21,17 +21,19 @@ class FitsATerm : public ATermBase
 public:
 	FitsATerm(size_t nAntenna, size_t width, size_t height, double ra, double dec, double dl, double dm, double phaseCentreDL, double phaseCentreDM);
 	
-	void OpenTECFile(const std::string& filename);
-	void OpenDiagGainFile(const std::string& filename);
+	void OpenTECFiles(const std::vector<std::string>& filenames);
+	void OpenDiagGainFiles(const std::vector<std::string>& filenames);
 	
 	virtual bool Calculate(std::complex<float>* buffer, double time, double frequency);
 	
 private:
+	void initializeFromFile();
+	
 	enum Mode { TECMode, DiagonalMode } _mode;
 	
 	void readImages(std::complex<float>* buffer, size_t timeIndex, double frequency);
 	
-	void resample(double* dest, const double* source);
+	void resample(const FitsReader& reader, double* dest, const double* source);
 	
 	void evaluateTEC(std::complex<float>* dest, const double* source, double frequency);
 	
@@ -41,11 +43,16 @@ private:
 	
 	size_t _nAntenna, _nFrequencies, _width, _height;
 	double _ra, _dec, _dl, _dm, _phaseCentreDL, _phaseCentreDM;
-	std::vector<double> _timesteps;
+	struct Timestep {
+		double time;
+		size_t readerIndex;
+		size_t imgIndex;
+	};
+	std::vector<Timestep> _timesteps;
 	std::map<double, std::vector<std::complex<float>>> _bufferCache;
 	ao::uvector<double> _scratch;
 	size_t _curTimeindex;
-	std::unique_ptr<FitsReader> _reader;
+	std::vector<FitsReader> _readers;
 };
 
 #endif

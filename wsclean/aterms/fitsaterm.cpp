@@ -14,43 +14,58 @@ FitsATerm::FitsATerm(size_t nAntenna, size_t width, size_t height, double ra, do
 	_phaseCentreDM(phaseCentreDM)
 { }
 
-void FitsATerm::OpenTECFile(const std::string& filename)
+void FitsATerm::OpenTECFiles(const std::vector<std::string>& filenames)
 {
 	_mode = TECMode;
-	_reader.reset(new FitsReader(filename, true, true));
-	if(_reader->NFrequencies() != 1)
-		throw std::runtime_error("FITS file for TEC A-terms has multiple frequencies in it");
-	_nFrequencies = 1;
-	if(_reader->NAntennas() != _nAntenna)
+	_readers.reserve(filenames.size());
+	for(const std::string& filename : filenames)
 	{
-		std::ostringstream str;
-		str << "FITS file for TEC A-terms has incorrect number of antennas. Measurement set has "
-		<< _nAntenna << " antennas, a-term FITS file has " << _reader->NAntennas() << " antennas.";
-		throw std::runtime_error(str.str());
+		_readers.emplace_back(filename, true, true);
+		if(_readers.back().NFrequencies() != 1)
+			throw std::runtime_error("FITS file for TEC A-terms has multiple frequencies in it");
 	}
-	double time0 = _reader->TimeDimensionStart();
-	for(size_t i=0; i!=_reader->NTimesteps(); ++i)
-		_timesteps.emplace_back(time0 + i*_reader->TimeDimensionIncr());
-	_curTimeindex = std::numeric_limits<size_t>::max();
+	initializeFromFile();
 }
 
-void FitsATerm::OpenDiagGainFile(const std::string& filename)
+void FitsATerm::OpenDiagGainFiles(const std::vector<std::string>& filenames)
 {
 	_mode = DiagonalMode;
-	_reader.reset(new FitsReader(filename, true, true));
-	_nFrequencies = _reader->NFrequencies();
-	if(_reader->NMatrixElements() != 4)
-		throw std::runtime_error("FITS file for diagonal gains did not have 4 matrix elements in it");
-	if(_reader->NAntennas() != _nAntenna)
+	_readers.reserve(filenames.size());
+	for(const std::string& filename : filenames)
 	{
-		std::ostringstream str;
-		str << "FITS file for diagonal gains A-terms has incorrect number of antennas. Measurement set has "
-		<< _nAntenna << " antennas, a-term FITS file has " << _reader->NAntennas() << " antennas.";
-		throw std::runtime_error(str.str());
+		_readers.emplace_back(filename, true, true);
+		if(_readers.back().NMatrixElements() != 4)
+			throw std::runtime_error("FITS file for diagonal gains did not have 4 matrix elements in it");
 	}
-	double time0 = _reader->TimeDimensionStart();
-	for(size_t i=0; i!=_reader->NTimesteps(); ++i)
-		_timesteps.emplace_back(time0 + i*_reader->TimeDimensionIncr());
+	initializeFromFile();
+}
+
+void FitsATerm::initializeFromFile()
+{
+	// Sort the readers on observation time
+	std::sort(_readers.begin(), _readers.end(), [](const FitsReader& a, const FitsReader& b)->bool
+		{ return a.TimeDimensionStart() < b.TimeDimensionStart(); }
+	);
+	_nFrequencies = _readers.front().NFrequencies();
+	for(size_t readerIndex=0; readerIndex!=_readers.size(); ++readerIndex)
+	{
+		const FitsReader& reader = _readers[readerIndex];
+		if(_nFrequencies != reader.NFrequencies())
+			throw std::runtime_error("A-term FITS files have inconsistent number of frequencies");
+		if(reader.NAntennas() != _nAntenna)
+		{
+			std::ostringstream str;
+			str << "FITS file for A-terms has incorrect number of antennas. Measurement set has "
+			<< _nAntenna << " antennas, a-term FITS file has " << reader.NAntennas() << " antennas.";
+			throw std::runtime_error(str.str());
+		}
+		double time0 = reader.TimeDimensionStart();
+		if(!_timesteps.empty() && time0 < _timesteps.back().time)
+			throw std::runtime_error("Time axis of FITS files seem to overlap (start of fitsfile " + std::to_string(readerIndex) +
+				" (t=" + std::to_string(time0) + " was before end of previous fitsfile)");
+		for(size_t i=0; i!=reader.NTimesteps(); ++i)
+			_timesteps.emplace_back(Timestep{time0 + i*reader.TimeDimensionIncr(), readerIndex, i});
+	}
 	_curTimeindex = std::numeric_limits<size_t>::max();
 }
 
@@ -68,8 +83,8 @@ bool FitsATerm::Calculate(std::complex<float>* buffer, double time, double frequ
 	while(_curTimeindex+1 < _timesteps.size() && !finishedSearch)
 	{
 		// Do we need to calculate a next timestep?
-		double curTime = _timesteps[_curTimeindex];
-		double nextTime = _timesteps[_curTimeindex+1];
+		double curTime = _timesteps[_curTimeindex].time;
+		double nextTime = _timesteps[_curTimeindex+1].time;
 		/*std::cout.precision(15);
 		std::cout << 
 			"Searching index for time " << time << 
@@ -89,10 +104,10 @@ bool FitsATerm::Calculate(std::complex<float>* buffer, double time, double frequ
 	}
 	//std::cout << "Selected time index = " << _curTimeindex << '\n';
 	// Do we have this frequency in the cache?
-	auto iter = _bufferCache.find(frequency);
-	if(iter == _bufferCache.end())
+	if(!newImage)
 	{
-		newImage = true;
+		if(_bufferCache.find(frequency) == _bufferCache.end())
+			newImage = true;
 	}
 	
 	if(newImage)
@@ -108,7 +123,9 @@ bool FitsATerm::Calculate(std::complex<float>* buffer, double time, double frequ
 void FitsATerm::readImages(std::complex<float>* buffer, size_t timeIndex, double frequency)
 {
 	_scratch.resize(_width*_height);
-	ao::uvector<double> image(_reader->ImageWidth() * _reader->ImageHeight());
+	const size_t imgIndex = _timesteps[timeIndex].imgIndex;
+	FitsReader& reader = _readers[_timesteps[timeIndex].readerIndex];
+	ao::uvector<double> image(reader.ImageWidth() * reader.ImageHeight());
 	for(size_t antennaIndex = 0; antennaIndex != _nAntenna; ++antennaIndex)
 	{
 		std::complex<float>* antennaBuffer = buffer + antennaIndex * _width*_height*4;
@@ -120,9 +137,9 @@ void FitsATerm::readImages(std::complex<float>* buffer, size_t timeIndex, double
 				// be possible to skip reading and resampling, and immediately call evaluateTEC()
 				// with the "scratch" data still there.
 				
-				_reader->ReadIndex(image.data(), antennaIndex + timeIndex*_nAntenna);
+				reader.ReadIndex(image.data(), antennaIndex + imgIndex*_nAntenna);
 				
-				resample(_scratch.data(), image.data());
+				resample(reader, _scratch.data(), image.data());
 				
 				evaluateTEC(antennaBuffer, _scratch.data(), frequency);
 			} break;
@@ -130,12 +147,12 @@ void FitsATerm::readImages(std::complex<float>* buffer, size_t timeIndex, double
 			case DiagonalMode: {
 				for(size_t p=0; p!=2; ++p)
 				{
-					_reader->ReadIndex(image.data(), (antennaIndex + timeIndex*_nAntenna) * 4 + p*2);
-					resample(_scratch.data(), image.data());
+					reader.ReadIndex(image.data(), (antennaIndex + imgIndex*_nAntenna) * 4 + p*2);
+					resample(reader, _scratch.data(), image.data());
 					copyToRealPolarization(antennaBuffer, _scratch.data(), p*3);
 					
-					_reader->ReadIndex(image.data(), (antennaIndex + timeIndex*_nAntenna) * 4 + p*2 + 1);
-					resample(_scratch.data(), image.data());
+					reader.ReadIndex(image.data(), (antennaIndex + imgIndex*_nAntenna) * 4 + p*2 + 1);
+					resample(reader, _scratch.data(), image.data());
 					copyToImaginaryPolarization(antennaBuffer, _scratch.data(), p*3);
 				}
 				setPolarization(antennaBuffer, 1, std::complex<float>(0.0, 0.0));
@@ -145,13 +162,13 @@ void FitsATerm::readImages(std::complex<float>* buffer, size_t timeIndex, double
 	}
 }
 
-void FitsATerm::resample(double* dest, const double* source)
+void FitsATerm::resample(const FitsReader& reader, double* dest, const double* source)
 {
-	size_t inWidth = _reader->ImageWidth(), inHeight = _reader->ImageHeight();
-	double inPixelSizeX = _reader->PixelSizeX(), inPixelSizeY = _reader->PixelSizeY();
-	double inPhaseCentreDL = _reader->PhaseCentreDL(), inPhaseCentreDM = _reader->PhaseCentreDM();
+	size_t inWidth = reader.ImageWidth(), inHeight = reader.ImageHeight();
+	double inPixelSizeX = reader.PixelSizeX(), inPixelSizeY = reader.PixelSizeY();
+	double inPhaseCentreDL = reader.PhaseCentreDL(), inPhaseCentreDM = reader.PhaseCentreDM();
+	double inPhaseCentreRA = reader.PhaseCentreRA(), inPhaseCentreDec = reader.PhaseCentreDec();
 	
-	double inPhaseCentreRA = _reader->PhaseCentreRA(), inPhaseCentreDec = _reader->PhaseCentreDec();
 	/**
 	 * If phase centra of input and output are the same, i.e. they have the same
 	 * tangential plane, a few calculations can be saved.
