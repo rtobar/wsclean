@@ -23,7 +23,9 @@ public:
 	 */
 	virtual bool Calculate(std::complex<float>* buffer, double time, double frequency) = 0;
 	
-	void StoreATerms(const std::string& filename, const std::complex<float>* buffer, size_t nStations, size_t width, size_t height);
+	void StoreATermsEigenvalues(const std::string& filename, const std::complex<float>* buffer, size_t nStations, size_t width, size_t height);
+	
+	void StoreATermsReal(const std::string& filename, const std::complex<float>* buffer, size_t nStations, size_t width, size_t height);
 	
 	/**
 	 * Set whether a fits image with the a-terms should be written to disk
@@ -42,8 +44,8 @@ protected:
 		{
 			static int index = 0;
 			std::ostringstream f;
-			f << "aterm" << index << ".fits";
-			StoreATerms(f.str(), buffer, nStations, width, height);
+			StoreATermsEigenvalues("aterm-ev" + std::to_string(index) + ".fits", buffer, nStations, width, height);
+			StoreATermsReal("aterm-realxx" + std::to_string(index) + ".fits", buffer, nStations, width, height);
 			++index;
 		}
 	}
