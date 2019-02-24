@@ -199,7 +199,7 @@ void FFTResampler::makeWindow(ao::uvector<double>& data, size_t width) const
 			data[x] = 1.0;
 		}
 		else {
-			double pos = xSh / (width + _tukeyInsetSize) - 1.0;
+			double pos = (xSh - (width + _tukeyInsetSize)) / (width - _tukeyInsetSize);
 			data[x] = (std::cos(pos * M_PI) + 1.0) * 0.5;
 		}
 	}
