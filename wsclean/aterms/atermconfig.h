@@ -50,7 +50,7 @@ public:
 				std::unique_ptr<FitsATerm> f(new FitsATerm(_nAntenna, _width, _height, _phaseCentreRA, _phaseCentreDec, _dl, _dm, _phaseCentreDL, _phaseCentreDM, _settings.atermKernelSize));
 				f->OpenTECFiles(tecFiles);
 				f->SetSaveATerms(false);
-				bool useTukey = reader.GetBoolOr(atermName + ".tukeywindow", true);
+				bool useTukey = reader.GetBoolOr(atermName + ".tukeywindow", false);
 				if(useTukey)
 					f->SetTukeyWindow(double(_settings.paddedImageWidth) / _settings.trimmedImageWidth);
 				_aterms.emplace_back(std::move(f));
@@ -61,7 +61,7 @@ public:
 				std::unique_ptr<FitsATerm> f(new FitsATerm(_nAntenna, _width, _height, _phaseCentreRA, _phaseCentreDec, _dl, _dm, _phaseCentreDL, _phaseCentreDM, _settings.atermKernelSize));
 				f->OpenDiagGainFiles(diagFiles);
 				f->SetSaveATerms(false);
-				bool useTukey = reader.GetBoolOr(atermName + ".tukeywindow", true);
+				bool useTukey = reader.GetBoolOr(atermName + ".tukeywindow", false);
 				if(useTukey)
 					f->SetTukeyWindow(double(_settings.paddedImageWidth) / _settings.trimmedImageWidth);
 				_aterms.emplace_back(std::move(f));
