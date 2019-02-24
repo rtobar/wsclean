@@ -47,17 +47,23 @@ public:
 			if(atermType == "tec")
 			{
 				std::vector<std::string> tecFiles = reader.GetStringList(atermName + ".images");
-				std::unique_ptr<FitsATerm> f(new FitsATerm(_nAntenna, _width, _height, _phaseCentreRA, _phaseCentreDec, _dl, _dm, _phaseCentreDL, _phaseCentreDM));
+				std::unique_ptr<FitsATerm> f(new FitsATerm(_nAntenna, _width, _height, _phaseCentreRA, _phaseCentreDec, _dl, _dm, _phaseCentreDL, _phaseCentreDM, _settings.atermKernelSize));
 				f->OpenTECFiles(tecFiles);
 				f->SetSaveATerms(false);
+				bool useTukey = reader.GetBoolOr(atermName + ".tukeywindow", true);
+				if(useTukey)
+					f->SetTukeyWindow(double(_settings.paddedImageWidth) / _settings.trimmedImageWidth);
 				_aterms.emplace_back(std::move(f));
 			}
 			else if(atermType == "diagonal")
 			{
 				std::vector<std::string> diagFiles = reader.GetStringList(atermName + ".images");
-				std::unique_ptr<FitsATerm> f(new FitsATerm(_nAntenna, _width, _height, _phaseCentreRA, _phaseCentreDec, _dl, _dm, _phaseCentreDL, _phaseCentreDM));
+				std::unique_ptr<FitsATerm> f(new FitsATerm(_nAntenna, _width, _height, _phaseCentreRA, _phaseCentreDec, _dl, _dm, _phaseCentreDL, _phaseCentreDM, _settings.atermKernelSize));
 				f->OpenDiagGainFiles(diagFiles);
 				f->SetSaveATerms(false);
+				bool useTukey = reader.GetBoolOr(atermName + ".tukeywindow", true);
+				if(useTukey)
+					f->SetTukeyWindow(double(_settings.paddedImageWidth) / _settings.trimmedImageWidth);
 				_aterms.emplace_back(std::move(f));
 			}
 			else if(atermType == "beam")

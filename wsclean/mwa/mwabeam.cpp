@@ -79,7 +79,7 @@ void MWABeam::Make(PrimaryBeamImageSet& beamImages)
 		_allocator->Allocate(_width*_height, scratch);
 		for(size_t p=0; p!=8; ++p)
 		{
-			resampler.RunSingle(&beamImages[p][0], scratch.data());
+			resampler.Resample(&beamImages[p][0], scratch.data());
 			memcpy(&beamImages[p][0], scratch.data(), sizeof(double)*_width*_height);
 		}
 	}

@@ -24,7 +24,7 @@ MWABeamTerm::MWABeamTerm(casacore::MeasurementSet& ms, size_t width, size_t heig
 	
 	casacore::MPosition::ROScalarColumn antPosColumn(aTable, aTable.columnName(casacore::MSAntennaEnums::POSITION));
 	_arrayPos = antPosColumn(0);
-		
+	
 	casacore::Table mwaTilePointing = ms.keywordSet().asTable("MWA_TILE_POINTING");
 	casacore::ROArrayColumn<int> delaysCol(mwaTilePointing, "DELAYS");
 	casacore::Array<int> delaysArr = delaysCol(0);

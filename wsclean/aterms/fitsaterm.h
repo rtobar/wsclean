@@ -19,12 +19,14 @@
 class FitsATerm : public ATermBase
 {
 public:
-	FitsATerm(size_t nAntenna, size_t width, size_t height, double ra, double dec, double dl, double dm, double phaseCentreDL, double phaseCentreDM);
+	FitsATerm(size_t nAntenna, size_t width, size_t height, double ra, double dec, double dl, double dm, double phaseCentreDL, double phaseCentreDM, size_t atermSize);
 	
 	void OpenTECFiles(const std::vector<std::string>& filenames);
 	void OpenDiagGainFiles(const std::vector<std::string>& filenames);
 	
 	virtual bool Calculate(std::complex<float>* buffer, double time, double frequency);
+	
+	void SetTukeyWindow(double padding) { _tukeyWindow = true; _padding = padding; }
 	
 private:
 	void initializeFromFile();
@@ -43,6 +45,9 @@ private:
 	
 	size_t _nAntenna, _nFrequencies, _width, _height;
 	double _ra, _dec, _dl, _dm, _phaseCentreDL, _phaseCentreDM;
+	size_t _atermWidth, _atermHeight;
+	bool _tukeyWindow;
+	double _padding;
 	struct Timestep {
 		double time;
 		size_t readerIndex;
@@ -50,7 +55,7 @@ private:
 	};
 	std::vector<Timestep> _timesteps;
 	std::map<double, std::vector<std::complex<float>>> _bufferCache;
-	ao::uvector<double> _scratch;
+	ao::uvector<double> _scratchA, _scratchB;
 	size_t _curTimeindex;
 	std::vector<FitsReader> _readers;
 };

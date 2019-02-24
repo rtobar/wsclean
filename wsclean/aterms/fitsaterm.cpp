@@ -4,14 +4,20 @@
 
 #include "../wsclean/logger.h"
 
-FitsATerm::FitsATerm(size_t nAntenna, size_t width, size_t height, double ra, double dec, double dl, double dm, double phaseCentreDL, double phaseCentreDM) :
+#include "../fftresampler.h"
+
+FitsATerm::FitsATerm(size_t nAntenna, size_t width, size_t height, double ra, double dec, double dl, double dm, double phaseCentreDL, double phaseCentreDM, size_t atermSize) :
 	_nAntenna(nAntenna),
 	_width(width),
 	_height(height),
 	_ra(ra), _dec(dec),
 	_dl(dl), _dm(dm),
 	_phaseCentreDL(phaseCentreDL),
-	_phaseCentreDM(phaseCentreDM)
+	_phaseCentreDM(phaseCentreDM),
+	_atermWidth(atermSize),
+	_atermHeight(atermSize),
+	_tukeyWindow(false),
+	_padding(1.0)
 { }
 
 void FitsATerm::OpenTECFiles(const std::vector<std::string>& filenames)
@@ -122,10 +128,13 @@ bool FitsATerm::Calculate(std::complex<float>* buffer, double time, double frequ
 
 void FitsATerm::readImages(std::complex<float>* buffer, size_t timeIndex, double frequency)
 {
-	_scratch.resize(_width*_height);
+	_scratchA.resize(_atermWidth * _atermHeight);
+	_scratchB.resize(_width * _height);
 	const size_t imgIndex = _timesteps[timeIndex].imgIndex;
 	FitsReader& reader = _readers[_timesteps[timeIndex].readerIndex];
 	ao::uvector<double> image(reader.ImageWidth() * reader.ImageHeight());
+	FFTResampler resampler(_atermWidth, _atermHeight, _width, _height, 1, false);
+	resampler.SetTukeyWindow(double(_atermWidth) / _padding, false);
 	for(size_t antennaIndex = 0; antennaIndex != _nAntenna; ++antennaIndex)
 	{
 		std::complex<float>* antennaBuffer = buffer + antennaIndex * _width*_height*4;
@@ -139,21 +148,23 @@ void FitsATerm::readImages(std::complex<float>* buffer, size_t timeIndex, double
 				
 				reader.ReadIndex(image.data(), antennaIndex + imgIndex*_nAntenna);
 				
-				resample(reader, _scratch.data(), image.data());
-				
-				evaluateTEC(antennaBuffer, _scratch.data(), frequency);
+				resample(reader, _scratchA.data(), image.data());
+				resampler.Resample(_scratchA.data(), _scratchB.data());
+				evaluateTEC(antennaBuffer, _scratchB.data(), frequency);
 			} break;
 			
 			case DiagonalMode: {
 				for(size_t p=0; p!=2; ++p)
 				{
 					reader.ReadIndex(image.data(), (antennaIndex + imgIndex*_nAntenna) * 4 + p*2);
-					resample(reader, _scratch.data(), image.data());
-					copyToRealPolarization(antennaBuffer, _scratch.data(), p*3);
+					resample(reader, _scratchA.data(), image.data());
+					resampler.Resample(_scratchA.data(), _scratchB.data());
+					copyToRealPolarization(antennaBuffer, _scratchB.data(), p*3);
 					
 					reader.ReadIndex(image.data(), (antennaIndex + imgIndex*_nAntenna) * 4 + p*2 + 1);
-					resample(reader, _scratch.data(), image.data());
-					copyToImaginaryPolarization(antennaBuffer, _scratch.data(), p*3);
+					resample(reader, _scratchA.data(), image.data());
+					resampler.Resample(_scratchA.data(), _scratchB.data());
+					copyToImaginaryPolarization(antennaBuffer, _scratchB.data(), p*3);
 				}
 				setPolarization(antennaBuffer, 1, std::complex<float>(0.0, 0.0));
 				setPolarization(antennaBuffer, 2, std::complex<float>(0.0, 0.0));
@@ -176,12 +187,12 @@ void FitsATerm::resample(const FitsReader& reader, double* dest, const double* s
 	bool samePlane = inPhaseCentreRA == _ra && inPhaseCentreDec == _dec;
 	
 	size_t index = 0;
-	for(size_t y=0; y!=_height; ++y)
+	for(size_t y=0; y!=_atermHeight; ++y)
 	{
-		for(size_t x=0; x!=_width; ++x)
+		for(size_t x=0; x!=_atermWidth; ++x)
 		{
 			double l, m;
-			ImageCoordinates::XYToLM(x, y, _dl, _dm, _width, _height, l, m);
+			ImageCoordinates::XYToLM(x, y, _dl, _dm, _atermWidth, _atermHeight, l, m);
 			l += _phaseCentreDL;
 			m += _phaseCentreDM;
 			if(!samePlane)

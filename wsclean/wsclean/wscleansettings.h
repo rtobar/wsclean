@@ -195,7 +195,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	directFTPrecision(DirectFTPrecision::Double),
 	useIDG(false),
 	atermConfigFilename(),
-	atermKernelSize(0.0),
+	atermKernelSize(5.0),
 	gridWithBeam(false),
 	beamAtermUpdateTime(300.0),
 	saveATerms(false),

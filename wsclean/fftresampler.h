@@ -8,6 +8,8 @@
 #include <fftw3.h>
 #include <boost/thread/thread.hpp>
 
+#include "uvector.h"
+
 class FFTResampler
 {
 private:
@@ -44,22 +46,43 @@ public:
 		_tasks.clear();
 	}
 	
-	void RunSingle(double* input, double* output)
+	void Resample(double* input, double* output)
 	{
-		AddTask(input, output);
-		_tasks.write_end();
-		runThread();
-		_tasks.clear();
+		Task task;
+		task.input = input;
+		task.output = output;
+		runSingle(task, false);
 	}
 	
 	void SingleFT(const double* input, double* realOutput, double* imaginaryOutput);
 	
+	/**
+	 * Only to be used with SingleFT (it makes resampling thread unsafe!)
+	 */
+	void SetTukeyWindow(double insetSize, bool correctWindow)
+	{
+		_tukeyInsetSize = insetSize;
+		_correctWindow = correctWindow;
+		_windowRowIn.clear();
+		_windowColIn.clear();
+		_windowOut.clear();
+	}
+	
 private:
 	void runThread();
+	void runSingle(const Task& task, bool skipWindow) const;
+	void applyWindow(double* data) const;
+	void unapplyWindow(double* data) const;
+	void makeWindow(ao::uvector<double>& data, size_t width) const;
 	
 	size_t _inputWidth, _inputHeight;
 	size_t _outputWidth, _outputHeight;
 	size_t _fftWidth, _fftHeight;
+	double _tukeyInsetSize;
+	mutable ao::uvector<double> _windowRowIn;
+	mutable ao::uvector<double> _windowColIn;
+	mutable ao::uvector<double> _windowOut;
+	bool _correctWindow;
 	
 	fftw_plan _inToFPlan, _fToOutPlan;
 	

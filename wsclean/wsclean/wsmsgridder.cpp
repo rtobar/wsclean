@@ -410,7 +410,7 @@ void WSMSGridder::Invert()
 		}
 		else {
 			double *resized = _imageBufferAllocator->Allocate(ImageWidth() * ImageHeight());
-			resampler.RunSingle(_gridder->RealImage(), resized);
+			resampler.Resample(_gridder->RealImage(), resized);
 			_gridder->ReplaceRealImageBuffer(resized);
 		}
 	}
@@ -486,7 +486,7 @@ void WSMSGridder::Predict(double* real, double* imaginary)
 		_imageBufferAllocator->Allocate(ImageWidth() * ImageHeight(), resampledReal);
 		if(imaginary == 0)
 		{
-			resampler.RunSingle(real, resampledReal.data());
+			resampler.Resample(real, resampledReal.data());
 		}
 		else {
 			_imageBufferAllocator->Allocate(ImageWidth() * ImageHeight(), resampledImag);
