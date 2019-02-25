@@ -1,6 +1,8 @@
 #ifndef OUTPUT_CHANNEL_INFO_H
 #define OUTPUT_CHANNEL_INFO_H
 
+#include <cstring>
+
 struct OutputChannelInfo {
 	OutputChannelInfo() :
 		weight(0.0),
@@ -13,7 +15,7 @@ struct OutputChannelInfo {
 		psfNormalizationFactor(1.0)
 	{ }
 	double weight, normalizationFactor;
-	size_t wGridSize, visibilityCount;
+	std::size_t wGridSize, visibilityCount;
 	double effectiveVisibilityCount, visibilityWeightSum;
 	double beamMaj, beamMin, beamPA;
 	double theoreticBeamSize, psfNormalizationFactor;

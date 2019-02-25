@@ -11,16 +11,9 @@
 #include "polarization.h"
 #include "fitsiochecker.h"
 
-class FitsWriter : protected FitsIOChecker
+class FitsWriter : public FitsIOChecker
 {
 public:
-	enum Unit {
-		JanskyPerBeam,
-		JanskyPerPixel,
-		Jansky,
-		Kelvin,
-		MilliKelvin
-	};
 	enum DimensionType { 
 		FrequencyDimension, 
 		PolarizationDimension, 
