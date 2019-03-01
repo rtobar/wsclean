@@ -11,6 +11,7 @@ protected:
 public:
 	enum Unit {
 		JanskyPerBeam,
+		JanskyPerPixel,
 		Jansky,
 		Kelvin,
 		MilliKelvin
