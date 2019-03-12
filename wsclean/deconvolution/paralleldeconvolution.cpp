@@ -12,7 +12,7 @@
 
 #include "subdivision.h"
 
-#include "../aocommon/parallel_for.h"
+#include "../aocommon/parallelfor.h"
 
 void ParallelDeconvolution::SetAlgorithm(std::unique_ptr<class DeconvolutionAlgorithm> algorithm)
 {
@@ -231,7 +231,7 @@ void ParallelDeconvolution::ExecuteMajorIteration(class ImageSet& dataImage, cla
 		std::mutex mutex;
 		
 		// Find the starting peak over all subimages
-		ao::parallel_for<size_t> loop(System::ProcessorCount());
+		ao::ParallelFor<size_t> loop(System::ProcessorCount());
 		loop.Run(0, _algorithms.size(), [&](size_t index, size_t)
 		{
 			runSubImage(subImages[index], dataImage, modelImage, psfImages, 0.0, true, &mutex);

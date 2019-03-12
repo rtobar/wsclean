@@ -22,9 +22,10 @@
 #include "../modelrenderer.h"
 #include "../msselection.h"
 #include "../msproviders/contiguousms.h"
-#include "../parallelfor.h"
 #include "../progressbar.h"
 #include "../uvector.h"
+
+#include "../aocommon/parallelfor.h"
 
 #include "../deconvolution/deconvolutionalgorithm.h"
 #include "../deconvolution/imageset.h"
@@ -380,7 +381,7 @@ void WSClean::performReordering(bool isPredictMode)
 	if(_settings.parallelReordering!=1)
 		Logger::Info << "Reordering...\n";
 	
-	ParallelFor<size_t> loop(_settings.parallelReordering);
+	ao::ParallelFor<size_t> loop(_settings.parallelReordering);
 	loop.Run(0, _settings.filenames.size(), [&](size_t i, size_t)
 	{
 		std::vector<PartitionedMS::ChannelRange> channels;

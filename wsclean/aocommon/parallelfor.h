@@ -12,60 +12,84 @@
 
 #include <sched.h>
 
-#include <iostream>
-
 namespace ao {
 
   template<typename Iter>
-  class parallel_for
+  class ParallelFor
   {
   public:
-    parallel_for(size_t nThreads) :
+    ParallelFor(size_t nThreads) :
       _nThreads(nThreads), _barrier(nThreads, [&](){ _hasTasks=false; } ), _stop(false), _hasTasks(false)
     {
-      startThreads();
     }
     
-    ~parallel_for()
+    ~ParallelFor()
     {
       std::unique_lock<std::mutex> lock(_mutex);
-      _stop = true;
-      _hasTasks = true;
-      _conditionChanged.notify_all();
-      lock.unlock();
-      for(std::thread& thr : _threads)
-        thr.join();
+      if(!_threads.empty())
+      {
+        _stop = true;
+        _hasTasks = true;
+        _conditionChanged.notify_all();
+        lock.unlock();
+        for(std::thread& thr : _threads)
+          thr.join();
+      }
     }
 
-  /**
-   * Iteratively call a function in parallel.
-   * 
-   * The function is expected to accept two size_t parameters, the loop
-   * index and the thread id, e.g.:
-   *   void loopFunction(size_t iteration, size_t threadID);
-   * It is called (end-start) times.
-   * 
-   * This function is very similar to ThreadPool::For(), but does not
-   * support recursion. For non-recursive loop, this function will be
-   * faster.
-   */
+    /**
+     * Iteratively call a function in parallel.
+     * 
+     * The function is expected to accept two size_t parameters, the loop
+     * index and the thread id, e.g.:
+     *   void loopFunction(size_t iteration, size_t threadID);
+     * It is called (end-start) times.
+     * 
+     * This function is very similar to ThreadPool::For(), but does not
+     * support recursion. For non-recursive loop, this function will be
+     * faster.
+     */
     void Run(Iter start, Iter end, std::function<void(size_t, size_t)> function)
     {
-      std::unique_lock<std::mutex> lock(_mutex);
-      _current = start;
-      _end = end;
-      _loopFunction = std::move(function);
-      _hasTasks = true;
-      _conditionChanged.notify_all();
-      lock.unlock();
-      loop(0);
-      _barrier.wait();
+      if(end == start+1)
+      {
+        function(start, 0);
+      }
+      else {
+        if(_threads.empty())
+          startThreads();
+        std::unique_lock<std::mutex> lock(_mutex);
+        _current = start;
+        _end = end;
+        _loopFunction = std::move(function);
+        _hasTasks = true;
+        _conditionChanged.notify_all();
+        lock.unlock();
+        loop(0);
+        _barrier.wait();
+      }
     }
     
     size_t NThreads() const { return _nThreads; }
     
+    /**
+     * This method is only allowed to be called before Run() is
+     * called.
+     */
+    void SetNThreads(size_t nThreads)
+    {
+      if(_threads.empty())
+      {
+        _nThreads = nThreads;
+        _barrier = Barrier(nThreads, [&](){ _hasTasks=false; });
+      }
+      else {
+        throw std::runtime_error("Can not set NThreads after calling Run()");
+      }
+    }
+    
   private:
-    parallel_for(const parallel_for&) = delete;
+    ParallelFor(const ParallelFor&) = delete;
     
     void loop(size_t thread)
     {
@@ -80,7 +104,7 @@ namespace ao {
       waitForTasks();
       while(!_stop) {
         loop(thread);
-      _barrier.wait();
+        _barrier.wait();
         waitForTasks();
       }
     }
@@ -110,7 +134,7 @@ namespace ao {
       {
         _threads.reserve(_nThreads-1);
         for(unsigned t=1; t!=_nThreads; ++t)
-          _threads.emplace_back(&parallel_for::run, this, t);
+          _threads.emplace_back(&ParallelFor::run, this, t);
       }
     }
     
