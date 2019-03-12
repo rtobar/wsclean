@@ -37,7 +37,7 @@ find_library(GSL_LIB NAMES gsl)
 find_path(GSL_INCLUDE_DIR NAMES gsl/gsl_version.h)
 find_library(GSL_CBLAS_LIB NAMES gslcblas)
 
-find_path(LOFAR_STATION_RESPONSE_DIR NAMES StationResponse/Station.h)
+find_path(LOFAR_STATION_RESPONSE_DIR NAMES StationResponse/ITRFConverter.h)
 find_library(LOFAR_STATION_RESPONSE_LIB stationresponse)
 if(LOFAR_STATION_RESPONSE_DIR AND LOFAR_STATION_RESPONSE_LIB)
   include_directories(${LOFAR_STATION_RESPONSE_DIR})
