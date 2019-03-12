@@ -24,12 +24,13 @@
 
 #include "idgconfiguration.h"
 
-IdgMsGridder::IdgMsGridder(const WSCleanSettings& settings) :
+IdgMsGridder::IdgMsGridder(const WSCleanSettings& settings, ImageBufferAllocator& allocator) :
 	_averageBeam(nullptr),
 	_outputProvider(nullptr),
 	_settings(settings),
 	_proxyType(idg::api::Type::CPU_OPTIMIZED),
-	_buffersize(256)
+	_buffersize(256),
+	_allocator(allocator)
 {
 	IdgConfiguration::Read(_proxyType, _buffersize, _options);
 	setIdgType();
@@ -157,7 +158,7 @@ void IdgMsGridder::Invert()
 
 std::unique_ptr<class ATermBase> IdgMsGridder::getATermMaker(MSGridderBase::MSData& msData)
 {
-	casacore::MeasurementSet& ms = msData.msProvider->MS();
+	casacore::MeasurementSet ms = msData.msProvider->MS();
 	size_t nr_stations = ms.antenna().nrow();
 	std::unique_ptr<ATermBase> aTermMaker;
 	ao::uvector<std::complex<float>> aTermBuffer;
@@ -214,8 +215,7 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 
 	// TODO for now we map the ms antennas directly to the gridder's antenna,
 	// including non-selected antennas. Later this can be made more efficient.
-	casacore::MeasurementSet& ms = msData.msProvider->MS();
-	size_t nr_stations = ms.antenna().nrow();
+	size_t nr_stations = msData.msProvider->MS().antenna().nrow();
 	
 	std::vector<std::vector<double>> bands;
 	for(size_t i=0; i!=_selectedBands.BandCount(); ++i)
@@ -281,7 +281,7 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 	_bufferset->finished();
 }
 
-void IdgMsGridder::Predict(double* image)
+void IdgMsGridder::Predict(ImageBufferAllocator::Ptr image)
 {
 	const size_t untrimmedWidth = ImageWidth();
 	const size_t width = TrimWidth(), height = TrimHeight();
@@ -370,8 +370,7 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 	_selectedBands = msData.SelectedBand();
 	_outputProvider = msData.msProvider;
 	
-	casacore::MeasurementSet& ms = msData.msProvider->MS();
-	size_t nr_stations = ms.antenna().nrow();
+	size_t nr_stations = msData.msProvider->MS().antenna().nrow();
 
 	std::vector<std::vector<double>> bands;
 	for(size_t i=0; i!=_selectedBands.BandCount(); ++i)
@@ -446,19 +445,21 @@ void IdgMsGridder::computePredictionBuffer(size_t dataDescId)
 	_bufferset->get_degridder(dataDescId)->finished_reading();
 }
 
-void IdgMsGridder::Predict(double* /*real*/, double* /*imaginary*/)
+void IdgMsGridder::Predict(ImageBufferAllocator::Ptr /*real*/, ImageBufferAllocator::Ptr /*imaginary*/)
 {
 	throw std::runtime_error("IDG gridder cannot make complex images");
 }
 
-double* IdgMsGridder::ImageRealResult()
+ImageBufferAllocator::Ptr IdgMsGridder::ImageRealResult()
 {
 	const size_t width = TrimWidth(), height = TrimHeight();
 	size_t polIndex = Polarization::StokesToIndex(Polarization());
-	return _image.data() + height*width*polIndex;
+	ImageBufferAllocator::Ptr image = _allocator.AllocatePtr(height*width);
+	std::copy_n(_image.data()+polIndex*width*height, width*height, image.data());
+	return std::move(image);
 }
 
-double* IdgMsGridder::ImageImaginaryResult()
+ImageBufferAllocator::Ptr IdgMsGridder::ImageImaginaryResult()
 {
 	throw std::runtime_error("IDG gridder cannot make complex images");
 }

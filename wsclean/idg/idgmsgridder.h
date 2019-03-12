@@ -3,6 +3,7 @@
 
 #ifdef HAVE_IDG
 
+#include "../wsclean/imagebufferallocator.h"
 #include "../wsclean/msgridderbase.h"
 
 //#include "interface.h"
@@ -16,19 +17,19 @@
 class IdgMsGridder : public MSGridderBase
 {
 public:
-	IdgMsGridder(const class WSCleanSettings& settings);
+	IdgMsGridder(const class WSCleanSettings& settings, ImageBufferAllocator& allocator);
 	
 	virtual ~IdgMsGridder() final override { }
 	
 	virtual void Invert() final override;
 	
-	virtual void Predict(double* real) final override;
+	virtual void Predict(ImageBufferAllocator::Ptr real) final override;
 	
-	virtual void Predict(double* real, double* imaginary) final override;
+	virtual void Predict(ImageBufferAllocator::Ptr real, ImageBufferAllocator::Ptr imaginary) final override;
 	
-	virtual double* ImageRealResult() final override;
+	virtual ImageBufferAllocator::Ptr ImageRealResult() final override;
 	
-	virtual double* ImageImaginaryResult() final override;
+	virtual ImageBufferAllocator::Ptr ImageImaginaryResult() final override;
 	
 	virtual void GetGriddingCorrectionImage(double* image) const final override;
 	
@@ -102,6 +103,7 @@ private:
 	idg::api::Type _proxyType;
 	int _buffersize;
 	idg::api::options_type _options;
+	ImageBufferAllocator& _allocator;
 };
 
 void init_optimal_taper_1D(int subgridsize, int gridsize, float kernelsize, float padding, float* taper_subgrid, float* taper_grid);
