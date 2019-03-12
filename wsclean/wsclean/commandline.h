@@ -4,10 +4,13 @@
 #include <string>
 #include <cstring>
 
+#include "wscleansettings.h"
+
 class CommandLine
 {
 public:
-	static int Run(int argc, char *argv[]);
+	static bool Parse(class WSClean& wsclean, int argc, char *argv[]);
+	static void Run(class WSClean& wsclean);
 	
 private:
 	static void deprecated(const std::string& param, const std::string& replacement);

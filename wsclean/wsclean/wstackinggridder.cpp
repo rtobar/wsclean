@@ -1,5 +1,4 @@
 #include "wstackinggridder.h"
-#include "imagebufferallocator.h"
 #include "logger.h"
 
 #include <fftw3.h>
@@ -24,24 +23,22 @@ WStackingGridder::WStackingGridder(size_t width, size_t height, double pixelSize
 	_gridMode(KaiserBesselKernel),
 	_overSamplingFactor(overSamplingFactor),
 	_kernelSize(kernelSize),
-	_imageData(fftThreadCount, 0),
-	_imageDataImaginary(fftThreadCount, 0),
+	_imageData(fftThreadCount),
+	_imageDataImaginary(fftThreadCount),
 	_nFFTThreads(fftThreadCount),
 	_imageBufferAllocator(allocator)
 {
 	makeKernels();
+	fftw_make_planner_thread_safe();
 }
 
 WStackingGridder::~WStackingGridder()
 {
 	try {
-		for(size_t i=0; i!=_nFFTThreads; ++i)
-		{
-			_imageBufferAllocator->Free(_imageData[i]);
-			_imageBufferAllocator->Free(_imageDataImaginary[i]);
-		}
+		_imageData.clear();
+		_imageDataImaginary.clear();
 		freeLayeredUVData();
-		fftw_cleanup();
+		//fftw_cleanup();
 	} catch(std::exception& e) { }
 }
 
@@ -80,12 +77,12 @@ void WStackingGridder::PrepareWLayers(size_t nWLayers, double maxMem, double min
 	size_t imgSize = _height * _width;
 	for(size_t i=0; i!=_nFFTThreads; ++i)
 	{
-		_imageData[i] = _imageBufferAllocator->Allocate(imgSize);
-		memset(_imageData[i], 0, imgSize * sizeof(double));
+		_imageData[i] = _imageBufferAllocator->AllocatePtr(imgSize);
+		std::fill_n(_imageData[i].data(), imgSize, 0.0);
 		if(_isComplex)
 		{
-			_imageDataImaginary[i] = _imageBufferAllocator->Allocate(imgSize);
-			memset(_imageDataImaginary[i], 0, imgSize * sizeof(double));
+			_imageDataImaginary[i] = _imageBufferAllocator->AllocatePtr(imgSize);
+			std::fill_n(_imageDataImaginary[i].data(), imgSize, 0.0);
 		}
 	}
 	
@@ -633,19 +630,19 @@ void WStackingGridder::FinalizeImage(double multiplicationFactor, bool correctFF
 		finalizeImage(multiplicationFactor, _imageDataImaginary);
 }
 
-void WStackingGridder::finalizeImage(double multiplicationFactor, std::vector<double*>& dataArray)
+void WStackingGridder::finalizeImage(double multiplicationFactor, std::vector<ImageBufferAllocator::Ptr>& dataArray)
 {
 	for(size_t i=1;i!=_nFFTThreads;++i)
 	{
-		double *primaryData = dataArray[0];
-		double *endPtr = dataArray[i] + (_width * _height);
-		for(double *dataPtr = dataArray[i]; dataPtr!=endPtr; ++dataPtr)
+		double *primaryData = dataArray[0].data();
+		double *endPtr = dataArray[i].data() + (_width * _height);
+		for(double *dataPtr = dataArray[i].data(); dataPtr!=endPtr; ++dataPtr)
 		{
 			*primaryData += *dataPtr;
 			++primaryData;
 		}
 	}
-	double *dataPtr = dataArray[0];
+	double *dataPtr = dataArray[0].data();
 	for(size_t y=0;y!=_height;++y)
 	{
 		//double m = ((double) y-(_height/2)) * _pixelSizeY + _phaseCentreDM;
@@ -658,7 +655,7 @@ void WStackingGridder::finalizeImage(double multiplicationFactor, std::vector<do
 	}
 	
 	if(_gridMode != NearestNeighbourGridding)
-		correctImageForKernel<false>(dataArray[0]);
+		correctImageForKernel<false>(dataArray[0].data());
 }
 
 template<bool Inverse>
@@ -721,10 +718,10 @@ void WStackingGridder::GetGriddingCorrectionImage(double *image) const
 	correctImageForKernel<true>(image);
 }
 
-void WStackingGridder::initializePrediction(const double* image, std::vector<double*>& dataArray)
+void WStackingGridder::initializePrediction(ImageBufferAllocator::Ptr image, std::vector<ImageBufferAllocator::Ptr>& dataArray)
 {
-	double *dataPtr = dataArray[0];
-	const double *inPtr = image;
+	double *dataPtr = dataArray[0].data();
+	const double *inPtr = image.data();
 	for(size_t y=0;y!=_height;++y)
 	{
 		double m = ((double) y-(_height/2)) * _pixelSizeY + _phaseCentreDM;
@@ -741,7 +738,7 @@ void WStackingGridder::initializePrediction(const double* image, std::vector<dou
 	}
 	if(_gridMode != NearestNeighbourGridding)
 	{
-		correctImageForKernel<false>(dataArray[0]);
+		correctImageForKernel<false>(dataArray[0].data());
 	}
 }
 
@@ -773,9 +770,9 @@ void WStackingGridder::initializeSqrtLMLookupTable()
 template<bool IsComplexImpl>
 void WStackingGridder::projectOnImageAndCorrect(const std::complex<double> *source, double w, size_t threadIndex)
 {
-	double *dataReal = _imageData[threadIndex], *dataImaginary;
+	double *dataReal = _imageData[threadIndex].data(), *dataImaginary;
 	if(IsComplexImpl)
-		dataImaginary = _imageDataImaginary[threadIndex];
+		dataImaginary = _imageDataImaginary[threadIndex].data();
 	
 	const double twoPiW = -2.0 * M_PI * w;
 	std::vector<double>::const_iterator sqrtLMIter = _sqrtLMLookupTable.begin();
@@ -842,9 +839,9 @@ void WStackingGridder::initializeSqrtLMLookupTableForSampling()
 template<bool IsComplexImpl>
 void WStackingGridder::copyImageToLayerAndInverseCorrect(std::complex<double> *dest, double w)
 {
-	double *dataReal = _imageData[0], *dataImaginary;
+	double *dataReal = _imageData[0].data(), *dataImaginary;
 	if(IsComplexImpl)
-		dataImaginary = _imageDataImaginary[0];
+		dataImaginary = _imageDataImaginary[0].data();
 	
 	const double twoPiW = 2.0 * M_PI * w;
 	std::vector<double>::const_iterator sqrtLMIter = _sqrtLMLookupTable.begin();
@@ -883,16 +880,14 @@ void WStackingGridder::copyImageToLayerAndInverseCorrect(std::complex<double> *d
 	}
 }
 
-void WStackingGridder::ReplaceRealImageBuffer(double* newBuffer)
+void WStackingGridder::ReplaceRealImageBuffer(ImageBufferAllocator::Ptr newBuffer)
 {
-	_imageBufferAllocator->Free(_imageData[0]);
-	_imageData[0] = newBuffer;
+	_imageData[0] = std::move(newBuffer);
 }
 
-void WStackingGridder::ReplaceImaginaryImageBuffer(double* newBuffer)
+void WStackingGridder::ReplaceImaginaryImageBuffer(ImageBufferAllocator::Ptr newBuffer)
 {
-	_imageBufferAllocator->Free(_imageDataImaginary[0]);
-	_imageDataImaginary[0] = newBuffer;
+	_imageDataImaginary[0] = std::move(newBuffer);
 }
 
 #ifndef AVOID_CASACORE

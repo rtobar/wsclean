@@ -403,7 +403,7 @@ class lane
 			std::unique_lock<std::mutex> lock(_mutex);
 			while(_capacity != _free_write_space)
 			{
-				_reading_possible_condition.wait(lock);
+				_writing_possible_condition.wait(lock);
 			}
 		}
 		

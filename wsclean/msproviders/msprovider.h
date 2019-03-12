@@ -37,7 +37,7 @@ public:
 
 	virtual ~MSProvider() { }
 	
-	virtual casacore::MeasurementSet &MS() = 0;
+	virtual casacore::MeasurementSet MS() = 0;
 	
 	virtual const std::string& DataColumnName() = 0;
 	

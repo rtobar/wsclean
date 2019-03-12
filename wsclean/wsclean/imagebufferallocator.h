@@ -31,6 +31,8 @@ public:
 		/** Construct empty pointer */
 		Ptr()
 			: _data(nullptr), _allocator(nullptr) { }
+		Ptr(std::nullptr_t)
+			: _data(nullptr), _allocator(nullptr) { }
 		/** Construct initialized pointer
 			* @param data databuffer
 			* @param allocator corresponding allocator

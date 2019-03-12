@@ -16,14 +16,14 @@ public:
 
 	virtual void Invert() final override;
 	
-	virtual void Predict(double* image) final override;
-	virtual void Predict(double* /*real*/, double* /*imaginary*/) final override
+	virtual void Predict(ImageBufferAllocator::Ptr image) final override;
+	virtual void Predict(ImageBufferAllocator::Ptr /*real*/, ImageBufferAllocator::Ptr /*imaginary*/) final override
 	{
 		throw std::runtime_error("Direct FT imager can not predict complex images");
 	}
 	
-	virtual double *ImageRealResult() final override { return _image.data(); }
-	virtual double *ImageImaginaryResult() final override {
+	virtual ImageBufferAllocator::Ptr ImageRealResult() final override { return std::move(_image); }
+	virtual ImageBufferAllocator::Ptr ImageImaginaryResult() final override {
 		throw std::runtime_error("Direct FT imager can not make complex images");
 	}
 	virtual bool HasGriddingCorrectionImage() const final override { return false; }

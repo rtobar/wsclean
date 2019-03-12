@@ -233,7 +233,7 @@ void SimpleClean::PartialSubtractImage(double *image, const double *psf, size_t 
 	}
 }
 
-void SimpleClean::PartialSubtractImage(double *image, size_t imgWidth, size_t imgHeight, const double *psf, size_t psfWidth, size_t psfHeight, size_t x, size_t y, double factor, size_t startY, size_t endY)
+void SimpleClean::PartialSubtractImage(double *image, size_t imgWidth, size_t /*imgHeight*/, const double *psf, size_t psfWidth, size_t psfHeight, size_t x, size_t y, double factor, size_t startY, size_t endY)
 {
 	size_t startX, endX;
 	int offsetX = (int) x - psfWidth/2, offsetY = (int) y - psfHeight/2;
@@ -270,7 +270,7 @@ void SimpleClean::PartialSubtractImage(double *image, size_t imgWidth, size_t im
 }
 
 #if defined __AVX__ && defined USE_INTRINSICS
-void SimpleClean::PartialSubtractImageAVX(double *image, size_t imgWidth, size_t imgHeight, const double *psf, size_t psfWidth, size_t psfHeight, size_t x, size_t y, double factor, size_t startY, size_t endY)
+void SimpleClean::PartialSubtractImageAVX(double *image, size_t imgWidth, size_t /*imgHeight*/, const double *psf, size_t psfWidth, size_t psfHeight, size_t x, size_t y, double factor, size_t startY, size_t endY)
 {
 	size_t startX, endX;
 	int offsetX = (int) x - psfWidth/2, offsetY = (int) y - psfHeight/2;

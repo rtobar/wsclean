@@ -29,6 +29,11 @@ void CommandLine::printHelp()
 		"-j <threads>\n"
 		"   Specify number of computing threads to use, i.e., number of cpu cores that will be used.\n"
 		"   Default: use all cpu cores.\n"
+		"-parallel-gridding <n>\n"
+		"   Will execute multiple gridders simultaneously. This can make things faster in certain cases,\n"
+		"   but will increase memory usage. \n"
+		"-parallel-reordering <n>\n"
+		"   Process the reordering with multipliple threads. \n"
 		"-mem <percentage>\n"
 		"   Limit memory usage to the given fraction of the total system memory. This is an approximate value.\n"
 		"   Default: 100.\n"
@@ -427,16 +432,15 @@ double CommandLine::parse_double(const char* param, double lowerLimit, const cha
 	return v;
 }
 
-int CommandLine::Run(int argc, char* argv[])
+bool CommandLine::Parse(WSClean& wsclean, int argc, char* argv[])
 {
 	if(argc < 2)
 	{
 		printHeader();
 		printHelp();
-		return -1;
+		return false;
 	}
 	
-	WSClean wsclean;
 	WSCleanSettings& settings = wsclean.Settings();
 	int argi = 1;
 	bool mfsWeighting = false, noMFSWeighting = false;
@@ -452,13 +456,13 @@ int CommandLine::Run(int argc, char* argv[])
 #ifdef HAVE_IDG
 			Logger::Info << "IDG is available.\n";
 #endif
-			return 0;
+			return false;
 		}
 		else if(param == "help")
 		{
 			printHeader();
 			printHelp();
-			return -1;
+			return false;
 		}
 		else if(param == "quiet")
 		{
@@ -1098,6 +1102,16 @@ int CommandLine::Run(int argc, char* argv[])
 			++argi;
 			settings.threadCount = parse_size_t(argv[argi], "j");
 		}
+		else if(param == "parallel-reordering")
+		{
+			++argi;
+			settings.parallelReordering = parse_size_t(argv[argi], "parallel-reordering");
+		}
+		else if(param == "parallel-gridding")
+		{
+			++argi;
+			settings.parallelGridding = parse_size_t(argv[argi], "parallel-gridding");
+		}
 		else if(param == "mem")
 		{
 			++argi;
@@ -1268,6 +1282,12 @@ int CommandLine::Run(int argc, char* argv[])
 	
 	settings.Validate();
 	
+	return true;
+}
+
+void CommandLine::Run(class WSClean& wsclean)
+{
+	WSCleanSettings& settings = wsclean.Settings();
 	switch(settings.mode)
 	{
 		case WSCleanSettings::RestoreMode:
@@ -1280,7 +1300,6 @@ int CommandLine::Run(int argc, char* argv[])
 			wsclean.RunClean();
 			break;
 	}
-	return 0;
 }
 
 void CommandLine::deprecated(const std::string& param, const std::string& replacement)

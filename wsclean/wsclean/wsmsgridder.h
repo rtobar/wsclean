@@ -27,11 +27,11 @@ class WSMSGridder : public MSGridderBase
 	
 		virtual void Invert() final override;
 		
-		virtual void Predict(double* image) final override { Predict(image, 0); }
-		virtual void Predict(double* real, double* imaginary) final override;
+		virtual void Predict(ImageBufferAllocator::Ptr image) final override { Predict(std::move(image), 0); }
+		virtual void Predict(ImageBufferAllocator::Ptr real, ImageBufferAllocator::Ptr imaginary) final override;
 		
-		virtual double *ImageRealResult() final override { return _gridder->RealImage(); }
-		virtual double *ImageImaginaryResult() final override {
+		virtual ImageBufferAllocator::Ptr ImageRealResult() final override { return _gridder->RealImage(); }
+		virtual ImageBufferAllocator::Ptr ImageImaginaryResult() final override {
 			if(!IsComplex())
 				throw std::runtime_error("No imaginary result available for non-complex inversion");
 			return _gridder->ImaginaryImage();

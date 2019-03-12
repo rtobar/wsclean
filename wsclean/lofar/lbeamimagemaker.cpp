@@ -66,7 +66,7 @@ void LBeamImageMaker::Make(PrimaryBeamImageSet& beamImages)
 	{
 		const ImagingTableEntry::MSInfo& msInfo = _tableEntry->msData[msProviderInfo.msIndex];
 		const MSSelection& selection = *msProviderInfo.selection;
-		casacore::MeasurementSet& ms = msProviderInfo.provider->MS();
+		casacore::MeasurementSet ms = msProviderInfo.provider->MS();
 		MultiBandData band(ms.spectralWindow(), ms.dataDescription());
 		double centralFrequency = 0.0;
 		for(size_t dataDescId=0; dataDescId!=band.DataDescCount(); ++dataDescId)
@@ -104,7 +104,7 @@ void LBeamImageMaker::makeBeamForMS(PrimaryBeamImageSet& beamImages, MSProvider&
 	/**
 		* Read some meta data from the measurement set
 		*/
-	casacore::MeasurementSet& ms = msProvider.MS();
+	casacore::MeasurementSet ms = msProvider.MS();
 	
 	casacore::MSAntenna aTable = ms.antenna();
 	if(aTable.nrow() == 0) throw std::runtime_error("No antennae in set");
@@ -334,7 +334,7 @@ void LBeamImageMaker::makeBeamSnapshot(const std::vector<Station::Ptr>& stations
 
 void LBeamImageMaker::calculateStationWeights(const ImageWeights& imageWeights, double& totalWeight, ao::uvector<double>& weights, WeightMatrix& baselineWeights, MSProvider& msProvider, const MSSelection& selection, double endTime)
 {
-	casacore::MeasurementSet& ms = msProvider.MS();
+	casacore::MeasurementSet ms = msProvider.MS();
 	casacore::MSAntenna antTable(ms.antenna());
 	totalWeight = 0.0;
 	weights.assign(antTable.nrow(), 0.0);

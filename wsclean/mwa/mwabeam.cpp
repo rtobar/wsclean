@@ -52,7 +52,7 @@ void MWABeam::Make(PrimaryBeamImageSet& beamImages)
 	{
 		const ImagingTableEntry::MSInfo& msInfo = _tableEntry->msData[msProviderInfo.msIndex];
 		const MSSelection& selection = *msProviderInfo.selection;
-		casacore::MeasurementSet& ms = msProviderInfo.provider->MS();
+		casacore::MeasurementSet ms = msProviderInfo.provider->MS();
 		MultiBandData band(ms.spectralWindow(), ms.dataDescription());
 		double centralFrequency = 0.0;
 		for(size_t dataDescId=0; dataDescId!=band.DataDescCount(); ++dataDescId)
@@ -90,7 +90,7 @@ void MWABeam::makeBeamForMS(PrimaryBeamImageSet& beamImages, MSProvider& msProvi
 	/**
 		* Read meta data from the measurement set
 		*/
-	casacore::MeasurementSet& ms = msProvider.MS();
+	casacore::MeasurementSet ms = msProvider.MS();
 	casacore::MSAntenna aTable = ms.antenna();
 	if(aTable.nrow() == 0) throw std::runtime_error("No antennae in set");
 	

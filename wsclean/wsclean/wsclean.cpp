@@ -1,14 +1,14 @@
 #include "wsclean.h"
 
 #include "directmsgridder.h"
-#include "imageweightcache.h"
-#include "measurementsetgridder.h"
-#include "logger.h"
-#include "wscfitswriter.h"
-#include "wsmsgridder.h"
-#include "primarybeam.h"
 #include "imagefilename.h"
 #include "imageoperations.h"
+#include "imageweightcache.h"
+#include "griddingtaskmanager.h"
+#include "logger.h"
+#include "measurementsetgridder.h"
+#include "primarybeam.h"
+#include "wscfitswriter.h"
 
 #include "../units/angle.h"
 
@@ -22,6 +22,7 @@
 #include "../modelrenderer.h"
 #include "../msselection.h"
 #include "../msproviders/contiguousms.h"
+#include "../parallelfor.h"
 #include "../progressbar.h"
 #include "../uvector.h"
 
@@ -35,6 +36,7 @@
 #include "../model/model.h"
 
 #include <iostream>
+#include <functional>
 #include <memory>
 
 std::string commandLine;
@@ -60,119 +62,182 @@ void WSClean::multiplyImage(double factor, double* image) const
 
 void WSClean::imagePSF(ImagingTableEntry& entry)
 {
-	size_t channelIndex = entry.outputChannelIndex;
 	Logger::Info.Flush();
 	Logger::Info << " == Constructing PSF ==\n";
 	_inversionWatch.Start();
-	_gridder->SetDoImagePSF(true);
-	_gridder->SetDoSubtractModel(false);
-	_gridder->SetVerbose(_isFirstInversion);
-	_gridder->SetMetaDataCache(&_msGridderMetaCache[entry.index]);
-	_gridder->SetStoreImagingWeights(_settings.writeImagingWeightSpectrumColumn);
-	_gridder->Invert();
+	GriddingTask task;
+	task.operation = GriddingTask::Invert;
+	task.imagePSF = true;
+	task.polarization = entry.polarization;
+	task.subtractModel = false;
+	task.verbose = _isFirstInversion;
+	task.cache = &_msGridderMetaCache[entry.index];
+	task.storeImagingWeights = _settings.writeImagingWeightSpectrumColumn;
+	initializeCurMSProviders(entry, task);
+	task.precalculatedWeightInfo = &initializeImageWeights(entry, task.msList);
 	
+	_griddingTaskManager->Run(task, std::bind(&WSClean::imagePSFCallback, this, std::ref(entry), std::placeholders::_1));
+}
+
+void WSClean::imagePSFCallback(ImagingTableEntry& entry, GriddingResult& result)
+{
 	size_t centralIndex = _settings.trimmedImageWidth/2 + (_settings.trimmedImageHeight/2) * _settings.trimmedImageWidth;
-	
 	double normFactor;
-	if(_gridder->ImageRealResult()[centralIndex] != 0.0)
-		normFactor = 1.0/_gridder->ImageRealResult()[centralIndex];
+	if(result.imageRealResult[centralIndex] != 0.0)
+		normFactor = 1.0/result.imageRealResult[centralIndex];
 	else
 		normFactor = 0.0;
+	
+	size_t channelIndex = entry.outputChannelIndex;
 	_infoPerChannel[channelIndex].psfNormalizationFactor = normFactor;
-	multiplyImage(normFactor, _gridder->ImageRealResult());
+	multiplyImage(normFactor, result.imageRealResult);
 	Logger::Debug << "Normalized PSF by factor of " << normFactor << ".\n";
 		
-	DeconvolutionAlgorithm::RemoveNaNsInPSF(_gridder->ImageRealResult(), _settings.trimmedImageWidth, _settings.trimmedImageHeight);
+	DeconvolutionAlgorithm::RemoveNaNsInPSF(result.imageRealResult.data(), _settings.trimmedImageWidth, _settings.trimmedImageHeight);
 	_psfImages.SetFitsWriter(createWSCFitsWriter(entry, false, false).Writer());
-	_psfImages.Store(_gridder->ImageRealResult(), *_settings.polarizations.begin(), channelIndex, false);
+	_psfImages.Store(result.imageRealResult.data(), *_settings.polarizations.begin(), channelIndex, false);
 	_inversionWatch.Pause();
 	
-	_isFirstInversion = false;
+	_phaseCentreRA = result.phaseCentreRA;
+	_phaseCentreDec = result.phaseCentreDec;
 	
 	double bMaj, bMin, bPA;
-	ImageOperations::DetermineBeamSize(_settings, bMaj, bMin, bPA, _gridder->ImageRealResult(), _gridder->BeamSize());
-	entry.imageWeight = _gridder->ImageWeight();
-	entry.normalizationFactor = _gridder->NormalizationFactor();
-	_infoPerChannel[channelIndex].theoreticBeamSize = _gridder->BeamSize();
+	ImageOperations::DetermineBeamSize(_settings, bMaj, bMin, bPA, result.imageRealResult.data(), result.beamSize);
+	entry.imageWeight = result.imageWeight;
+	entry.normalizationFactor = result.normalizationFactor;
+	_infoPerChannel[channelIndex].theoreticBeamSize = result.beamSize;
 	_infoPerChannel[channelIndex].beamMaj = bMaj;
 	_infoPerChannel[channelIndex].beamMin = bMin;
 	_infoPerChannel[channelIndex].beamPA = bPA;
 	_infoPerChannel[channelIndex].weight = entry.imageWeight;
 	_infoPerChannel[channelIndex].normalizationFactor = entry.normalizationFactor;
-	_infoPerChannel[channelIndex].wGridSize = _gridder->WGridSize();
-	_infoPerChannel[channelIndex].visibilityCount = _gridder->GriddedVisibilityCount();
-	_infoPerChannel[channelIndex].effectiveVisibilityCount = _gridder->EffectiveGriddedVisibilityCount();
-	_infoPerChannel[channelIndex].visibilityWeightSum = _gridder->VisibilityWeightSum();
+	_infoPerChannel[channelIndex].wGridSize = result.actualWGridSize;
+	_infoPerChannel[channelIndex].visibilityCount = result.griddedVisibilityCount;
+	_infoPerChannel[channelIndex].effectiveVisibilityCount = result.effectiveGriddedVisibilityCount;
+	_infoPerChannel[channelIndex].visibilityWeightSum = result.visibilityWeightSum;
 		
 	if(_settings.isUVImageSaved)
 	{
-		saveUVImage(_gridder->ImageRealResult(), entry, false, "uvpsf");
+		saveUVImage(result.imageRealResult.data(), entry, false, "uvpsf");
 	}
 	
 	Logger::Info << "Writing psf image... ";
 	Logger::Info.Flush();
 	const std::string name(ImageFilename::GetPSFPrefix(_settings, channelIndex, entry.outputIntervalIndex) + "-psf.fits");
 	WSCFitsWriter fitsFile = createWSCFitsWriter(entry, false, false);
-	fitsFile.WritePSF(name, _gridder->ImageRealResult());
+	fitsFile.WritePSF(name, result.imageRealResult.data());
 	Logger::Info << "DONE\n";
-}
-
-void WSClean::imageGridding()
-{
-	Logger::Info << "Writing gridding correction image... ";
-	Logger::Info.Flush();
-	double* gridding = _imageAllocator.Allocate(_gridder->ActualInversionWidth() * _gridder->ActualInversionHeight());
-	_gridder->GetGriddingCorrectionImage(&gridding[0]);
-	FitsWriter fitsWriter;
-	fitsWriter.SetImageDimensions(_gridder->ActualInversionWidth(), _gridder->ActualInversionHeight());
-	fitsWriter.Write(_settings.prefixName + "-gridding.fits", &gridding[0]);
-	_imageAllocator.Free(gridding);
-	Logger::Info << "DONE\n";
-}
-
-void WSClean::imageMainFirst(const ImagingTableEntry& entry)
-{
-	size_t joinedChannelIndex = entry.outputChannelIndex;
 	
-	Logger::Info.Flush();
-	Logger::Info << " == Constructing image ==\n";
-	_inversionWatch.Start();
-	_gridder->SetDoImagePSF(false);
-	_gridder->SetDoSubtractModel(_settings.subtractModel || _settings.continuedRun);
-	_gridder->SetVerbose(_isFirstInversion);
-	_gridder->SetMetaDataCache(&_msGridderMetaCache[entry.index]);
-	_gridder->SetStoreImagingWeights(_settings.writeImagingWeightSpectrumColumn);
-	_gridder->Invert();
-	_inversionWatch.Pause();
-	_gridder->SetVerbose(false);
-	
-	multiplyImage(_infoPerChannel[joinedChannelIndex].psfNormalizationFactor, _gridder->ImageRealResult());
-	storeAndCombineXYandYX(_residualImages, entry.polarization, joinedChannelIndex, false, _gridder->ImageRealResult());
-	if(Polarization::IsComplex(entry.polarization))
+	if(_settings.isGriddingImageSaved && _isFirstInversion && result.hasGriddingCorrectionImage)
 	{
-		multiplyImage(_infoPerChannel[joinedChannelIndex].psfNormalizationFactor, _gridder->ImageImaginaryResult());
-		storeAndCombineXYandYX(_residualImages, entry.polarization, joinedChannelIndex, true, _gridder->ImageImaginaryResult());
+		Logger::Info << "Writing gridding correction image... ";
+		Logger::Info.Flush();
+		double* gridding = _imageAllocator.Allocate(result.actualInversionWidth * result.actualInversionHeight);
+		_griddingTaskManager->Gridder()->GetGriddingCorrectionImage(&gridding[0]);
+		FitsWriter fitsWriter;
+		fitsWriter.SetImageDimensions(result.actualInversionWidth, result.actualInversionHeight);
+		fitsWriter.Write(_settings.prefixName + "-gridding.fits", &gridding[0]);
+		_imageAllocator.Free(gridding);
+		Logger::Info << "DONE\n";
 	}
+	
+	_isFirstInversion = false;
 }
 
-void WSClean::imageMainNonFirst(const ImagingTableEntry& entry)
+void WSClean::imageMain(ImagingTableEntry& entry, bool isFirst, bool updateBeamInfo, bool isInitialInversion)
 {
-	size_t joinedChannelIndex = entry.outputChannelIndex;
-	
 	Logger::Info.Flush();
 	Logger::Info << " == Constructing image ==\n";
 	_inversionWatch.Start();
-	_gridder->SetDoSubtractModel(true);
-	_gridder->SetMetaDataCache(&_msGridderMetaCache[entry.index]);
-	_gridder->Invert();
-	_inversionWatch.Pause();
 	
-	multiplyImage(_infoPerChannel[joinedChannelIndex].psfNormalizationFactor, _gridder->ImageRealResult());
-	storeAndCombineXYandYX(_residualImages, entry.polarization, joinedChannelIndex, false, _gridder->ImageRealResult());
+	GriddingTask task;
+	task.operation = GriddingTask::Invert;
+	task.imagePSF = false;
+	task.polarization = entry.polarization;
+	task.subtractModel = !isFirst || _settings.subtractModel || _settings.continuedRun;
+	task.verbose = isFirst && _isFirstInversion;
+	task.cache = &_msGridderMetaCache[entry.index];
+	task.storeImagingWeights = !isFirst && _settings.writeImagingWeightSpectrumColumn;
+	initializeCurMSProviders(entry, task);
+	task.precalculatedWeightInfo = &initializeImageWeights(entry, task.msList);
+	
+	_griddingTaskManager->Run(task, std::bind(&WSClean::imageMainCallback, this, std::ref(entry), std::placeholders::_1, updateBeamInfo, isInitialInversion));
+	
+	_inversionWatch.Pause();
+}
+
+void WSClean::imageMainCallback(ImagingTableEntry& entry, GriddingResult& result, bool updateBeamInfo, bool isInitialInversion)
+{
+	size_t joinedChannelIndex = entry.outputChannelIndex;
+	
+	multiplyImage(_infoPerChannel[joinedChannelIndex].psfNormalizationFactor, result.imageRealResult);
+	storeAndCombineXYandYX(_residualImages, entry.polarization, joinedChannelIndex, false, result.imageRealResult.data());
 	if(Polarization::IsComplex(entry.polarization))
 	{
-		multiplyImage(_infoPerChannel[joinedChannelIndex].psfNormalizationFactor, _gridder->ImageImaginaryResult());
-		storeAndCombineXYandYX(_residualImages, entry.polarization, joinedChannelIndex, true, _gridder->ImageImaginaryResult());
+		multiplyImage(_infoPerChannel[joinedChannelIndex].psfNormalizationFactor, result.imageImaginaryResult);
+		storeAndCombineXYandYX(_residualImages, entry.polarization, joinedChannelIndex, true, result.imageImaginaryResult.data());
+	}
+	entry.imageWeight = result.imageWeight;
+	entry.normalizationFactor = result.normalizationFactor;
+	_infoPerChannel[entry.outputChannelIndex].weight = result.imageWeight;
+	_infoPerChannel[entry.outputChannelIndex].normalizationFactor = result.normalizationFactor;
+	
+	// If no PSF is made, also set the beam size. If the PSF was made, these would already be set
+	// after imaging the PSF.
+	if(updateBeamInfo)
+	{
+		if(_settings.theoreticBeam) {
+			_infoPerChannel[entry.outputChannelIndex].beamMaj = result.beamSize;
+			_infoPerChannel[entry.outputChannelIndex].beamMin = result.beamSize;
+			_infoPerChannel[entry.outputChannelIndex].beamPA = 0.0;
+		}
+		else if(_settings.manualBeamMajorSize != 0.0) {
+			_infoPerChannel[entry.outputChannelIndex].beamMaj = _settings.manualBeamMajorSize;
+			_infoPerChannel[entry.outputChannelIndex].beamMin = _settings.manualBeamMinorSize;
+			_infoPerChannel[entry.outputChannelIndex].beamPA = _settings.manualBeamPA;
+		}
+		else {
+			_infoPerChannel[entry.outputChannelIndex].beamMaj = std::numeric_limits<double>::quiet_NaN();
+			_infoPerChannel[entry.outputChannelIndex].beamMin = std::numeric_limits<double>::quiet_NaN();
+			_infoPerChannel[entry.outputChannelIndex].beamPA = std::numeric_limits<double>::quiet_NaN();
+		}
+	}
+	
+	if(isInitialInversion)
+	{
+		_modelImages.SetFitsWriter( createWSCFitsWriter(entry, false, true).Writer() );
+		_residualImages.SetFitsWriter( createWSCFitsWriter(entry, false, false).Writer() );
+		
+		if(_settings.continuedRun)
+		{
+			readEarlierModelImages(entry);
+		}
+		else {
+			// Set model to zero: already done if this is YX of XY/YX imaging combi
+			if(!(entry.polarization == Polarization::YX && _settings.polarizations.count(Polarization::XY)!=0))
+			{
+				double* modelImage = _imageAllocator.Allocate(_settings.trimmedImageWidth * _settings.trimmedImageHeight);
+				memset(modelImage, 0, _settings.trimmedImageWidth * _settings.trimmedImageHeight * sizeof(double));
+				_modelImages.Store(modelImage, entry.polarization, entry.outputChannelIndex, false);
+				if(Polarization::IsComplex(entry.polarization))
+					_modelImages.Store(modelImage, entry.polarization, entry.outputChannelIndex, true);
+				_imageAllocator.Free(modelImage);
+			}
+		}
+		
+		if(_settings.isDirtySaved)
+		{
+			for(size_t imageIndex=0; imageIndex!=entry.imageCount; ++imageIndex)
+			{
+				bool isImaginary = (imageIndex==1);
+				WSCFitsWriter writer(createWSCFitsWriter(entry, isImaginary, false));
+				double* dirtyImage = _imageAllocator.Allocate(_settings.trimmedImageWidth * _settings.trimmedImageHeight);
+				_residualImages.Load(dirtyImage, entry.polarization, entry.outputChannelIndex, isImaginary);
+				Logger::Info << "Writing dirty image...\n";
+				writer.WriteImage("dirty.fits", dirtyImage);
+				_imageAllocator.Free(dirtyImage);
+			}
+		}
 	}
 }
 
@@ -207,48 +272,55 @@ void WSClean::predict(const ImagingTableEntry& entry)
 	Logger::Info.Flush();
 	Logger::Info << " == Converting model image to visibilities ==\n";
 	const size_t size = _settings.trimmedImageWidth*_settings.trimmedImageHeight;
-	double
-		*modelImageReal = _imageAllocator.Allocate(size),
-		*modelImageImaginary = 0;
+	ImageBufferAllocator::Ptr
+		modelImageReal(_imageAllocator.AllocatePtr(size)),
+		modelImageImaginary;
 		
 	if(entry.polarization == Polarization::YX)
 	{
-		_modelImages.Load(modelImageReal, Polarization::XY, entry.outputChannelIndex, false);
-		modelImageImaginary = _imageAllocator.Allocate(size);
-		_modelImages.Load(modelImageImaginary, Polarization::XY, entry.outputChannelIndex, true);
+		_modelImages.Load(modelImageReal.data(), Polarization::XY, entry.outputChannelIndex, false);
+		modelImageImaginary = _imageAllocator.AllocatePtr(size);
+		_modelImages.Load(modelImageImaginary.data(), Polarization::XY, entry.outputChannelIndex, true);
 		for(size_t i=0; i!=size; ++i)
 			modelImageImaginary[i] = -modelImageImaginary[i];
 	}
 	else {
-		_modelImages.Load(modelImageReal, entry.polarization, entry.outputChannelIndex, false);
+		_modelImages.Load(modelImageReal.data(), entry.polarization, entry.outputChannelIndex, false);
 		if(Polarization::IsComplex(entry.polarization))
 		{
-			modelImageImaginary = _imageAllocator.Allocate(size);
-			_modelImages.Load(modelImageImaginary, entry.polarization, entry.outputChannelIndex, true);
+			modelImageImaginary = _imageAllocator.AllocatePtr(size);
+			_modelImages.Load(modelImageImaginary.data(), entry.polarization, entry.outputChannelIndex, true);
 		}
 	}
 	
 	_predictingWatch.Start();
-	_gridder->SetAddToModel(false);
-	_gridder->SetMetaDataCache(&_msGridderMetaCache[entry.index]);
-	if(Polarization::IsComplex(entry.polarization))
-		_gridder->Predict(modelImageReal, modelImageImaginary);
-	else
-		_gridder->Predict(modelImageReal);
+	GriddingTask task;
+	task.operation = GriddingTask::Predict;
+	task.polarization = entry.polarization;
+	task.addToModel = false;
+	task.cache = &_msGridderMetaCache[entry.index];
+	task.verbose = false;
+	task.storeImagingWeights = false;
+	task.modelImageReal = std::move(modelImageReal);
+	task.modelImageImaginary = std::move(modelImageImaginary);
+	initializeCurMSProviders(entry, task);
+	task.precalculatedWeightInfo = &initializeImageWeights(entry, task.msList);
+	_griddingTaskManager->Run(task, std::bind(&WSClean::predictCallback, this, std::ref(entry), std::placeholders::_1));
 	_predictingWatch.Pause();
-	_imageAllocator.Free(modelImageReal);
-	_imageAllocator.Free(modelImageImaginary);
 }
 
-void WSClean::initializeImageWeights(const ImagingTableEntry& entry)
+void WSClean::predictCallback(const ImagingTableEntry&, GriddingResult&)
+{ }
+
+ImageWeights& WSClean::initializeImageWeights(const ImagingTableEntry& entry, std::vector<std::pair<std::unique_ptr<MSProvider>, MSSelection>>& msList)
 {
 	if(!_settings.mfsWeighting)
 	{
-		_imageWeightCache->Update(*_gridder, entry.outputChannelIndex, entry.outputIntervalIndex);
+		_imageWeightCache->Update(msList, entry.outputChannelIndex, entry.outputIntervalIndex);
 		if(_settings.isWeightImageSaved)
 			_imageWeightCache->Weights().Save(_settings.prefixName+"-weights.fits");
 	}
-	_gridder->SetPrecalculatedWeightInfo(&_imageWeightCache->Weights());
+	return _imageWeightCache->Weights(); // task.precalculatedWeightInfo =
 }
 
 void WSClean::initializeMFSImageWeights()
@@ -298,61 +370,18 @@ void WSClean::initializeMFSImageWeights()
 		_imageWeightCache->Weights().Save(_settings.prefixName+"-weights.fits");
 }
 
-void WSClean::prepareInversionAlgorithm(PolarizationEnum polarization)
-{
-	_gridder->SetGridMode(_settings.gridMode);
-	_gridder->SetImageWidth(_settings.paddedImageWidth);
-	_gridder->SetImageHeight(_settings.paddedImageHeight);
-	_gridder->SetTrimSize(_settings.trimmedImageWidth, _settings.trimmedImageHeight);
-	_gridder->SetNWSize(_settings.widthForNWCalculation, _settings.heightForNWCalculation);
-	_gridder->SetPixelSizeX(_settings.pixelScaleX);
-	_gridder->SetPixelSizeY(_settings.pixelScaleY);
-	if(_settings.nWLayers != 0)
-		_gridder->SetWGridSize(_settings.nWLayers);
-	else
-		_gridder->SetNoWGridSize();
-	_gridder->SetAntialiasingKernelSize(_settings.antialiasingKernelSize);
-	_gridder->SetOverSamplingFactor(_settings.overSamplingFactor);
-	_gridder->SetPolarization(polarization);
-	_gridder->SetIsComplex(polarization == Polarization::XY || polarization == Polarization::YX);
-	_gridder->SetDataColumnName(_settings.dataColumnName);
-	_gridder->SetWeighting(_settings.weightMode);
-	_gridder->SetWLimit(_settings.wLimit/100.0);
-	_gridder->SetSmallInversion(_settings.smallInversion);
-	_gridder->SetVisibilityWeightingMode(_settings.visibilityWeightingMode);
-}
-
-std::unique_ptr<MSGridderBase> WSClean::createGridder() const
-{
-	if(_settings.useIDG)
-		return std::unique_ptr<MSGridderBase>(new IdgMsGridder(_settings));
-	else if(_settings.directFT)
-	{
-		switch(_settings.directFTPrecision) {
-		case DirectFTPrecision::Half:
-			throw std::runtime_error("Half precision is not implemented");
-			//return std::unique_ptr<MSGridderBase>(new DirectMSGridder<half_float::half>(&_imageAllocator, _settings.threadCount));
-			break;
-		case DirectFTPrecision::Float:
-			return std::unique_ptr<MSGridderBase>(new DirectMSGridder<float>(&_imageAllocator, _settings.threadCount));
-			break;
-		default:
-		case DirectFTPrecision::Double:
-			return std::unique_ptr<MSGridderBase>(new DirectMSGridder<double>(&_imageAllocator, _settings.threadCount));
-			break;
-		case DirectFTPrecision::LongDouble:
-			return std::unique_ptr<MSGridderBase>(new DirectMSGridder<long double>(&_imageAllocator, _settings.threadCount));
-			break;
-		}
-	}
-	else
-		return std::unique_ptr<MSGridderBase>(new WSMSGridder(&_imageAllocator, _settings.threadCount, _settings.memFraction, _settings.absMemLimit));
-}
-
 void WSClean::performReordering(bool isPredictMode)
 {
-	_partitionedMSHandles.clear();
-	for(size_t i=0; i != _settings.filenames.size(); ++i)
+	std::mutex mutex;
+	_partitionedMSHandles.resize(_settings.filenames.size());
+	bool useModel = _settings.deconvolutionMGain != 1.0 || isPredictMode || _settings.subtractModel || _settings.continuedRun;
+	bool initialModelRequired = _settings.subtractModel || _settings.continuedRun;
+	
+	if(_settings.parallelReordering!=1)
+		Logger::Info << "Reordering...\n";
+	
+	ParallelFor<size_t> loop(_settings.parallelReordering);
+	loop.Run(0, _settings.filenames.size(), [&](size_t i, size_t)
 	{
 		std::vector<PartitionedMS::ChannelRange> channels;
 		std::map<PolarizationEnum, size_t> nextIndex;
@@ -383,10 +412,12 @@ void WSClean::performReordering(bool isPredictMode)
 			}
 		}
 		
-		bool useModel = _settings.deconvolutionMGain != 1.0 || isPredictMode || _settings.subtractModel || _settings.continuedRun;
-		bool initialModelRequired = _settings.subtractModel || _settings.continuedRun;
-		_partitionedMSHandles.push_back(PartitionedMS::Partition(_settings.filenames[i], channels, _globalSelection, _settings.dataColumnName, useModel, initialModelRequired, _settings));
-	}
+		PartitionedMS::Handle partMS = PartitionedMS::Partition(_settings.filenames[i], channels, _globalSelection, _settings.dataColumnName, useModel, initialModelRequired, _settings);
+		std::lock_guard<std::mutex> lock(mutex);
+		_partitionedMSHandles[i] = std::move(partMS);
+		if(_settings.parallelReordering!=1)
+			Logger::Info << "Finished reordering " << _settings.filenames[i] << " [" << i << "]\n";
+	});
 }
 
 void WSClean::RunClean()
@@ -427,7 +458,7 @@ void WSClean::RunClean()
 		if(_settings.mfsWeighting)
 			initializeMFSImageWeights();
 		
-		_gridder = createGridder();
+		_griddingTaskManager.reset(new GriddingTaskManager(_settings, _imageAllocator));
 		
 		std::unique_ptr<PrimaryBeam> primaryBeam;
 		for(size_t groupIndex=0; groupIndex!=_imagingTable.IndependentGroupCount(); ++groupIndex)
@@ -437,7 +468,7 @@ void WSClean::RunClean()
 		}
 
 		// Needs to be destructed before image allocator, or image allocator will report error caused by leaked memory
-		_gridder.reset();
+		_griddingTaskManager.reset();
 	
 		if(_settings.channelsOut > 1)
 		{
@@ -549,7 +580,7 @@ void WSClean::RunPredict()
 		
 		if(_doReorder) performReordering(true);
 		
-		_gridder = createGridder();
+		_griddingTaskManager.reset(new GriddingTaskManager(_settings, _imageAllocator));
 	
 		for(size_t groupIndex=0; groupIndex!=_imagingTable.SquaredGroupCount(); ++groupIndex)
 		{
@@ -557,7 +588,7 @@ void WSClean::RunPredict()
 		}
 	
 		// Needs to be destructed before image allocator, or image allocator will report error caused by leaked memory
-		_gridder.reset();
+		_griddingTaskManager.reset();
 	}
 }
 
@@ -632,9 +663,19 @@ void WSClean::runIndependentGroup(ImagingTable& groupTable, std::unique_ptr<Prim
 	for(size_t joinedIndex=0; joinedIndex!=groupTable.EntryCount(); ++joinedIndex)
 	{
 		ImagingTableEntry& entry = groupTable[joinedIndex];
-		runFirstInversion(entry, primaryBeam);
+		bool isFirstPol = entry.polarization == *_settings.polarizations.begin();
+		bool doMakePSF = _settings.deconvolutionIterationCount > 0 || _settings.makePSF || _settings.makePSFOnly;
+		if(doMakePSF && isFirstPol)
+			imagePSF(entry);
 	}
+	_griddingTaskManager->Finish();
 	
+	for(size_t joinedIndex=0; joinedIndex!=groupTable.EntryCount(); ++joinedIndex)
+	{
+		runFirstInversion(groupTable[joinedIndex], primaryBeam);
+	}
+	_griddingTaskManager->Finish();
+
 	_deconvolution.InitializeDeconvolutionAlgorithm(groupTable, *_settings.polarizations.begin(), &_imageAllocator, minTheoreticalBeamSize(groupTable), _settings.threadCount);
 
 	if(!_settings.makePSFOnly)
@@ -658,28 +699,47 @@ void WSClean::runIndependentGroup(ImagingTable& groupTable, std::unique_ptr<Prim
 		
 				if(_settings.deconvolutionMGain != 1.0)
 				{
-					for(size_t sGroupIndex=0; sGroupIndex!=groupTable.SquaredGroupCount(); ++sGroupIndex)
+					if(_settings.useIDG)
 					{
-						const ImagingTable sGroupTable = groupTable.GetSquaredGroup(sGroupIndex);
-						for(size_t e=0; e!=sGroupTable.EntryCount(); ++e)
+						// For now in the case of IDG we have to directly ask for all Four polarizations. This can't 
+						// be parallelized yet in the current structure.
+						for(size_t sGroupIndex=0; sGroupIndex!=groupTable.SquaredGroupCount(); ++sGroupIndex)
 						{
-							prepareInversionAlgorithm(sGroupTable[e].polarization);
-							std::vector<std::unique_ptr<MSProvider>> msList;
-							initializeCurMSProviders(sGroupTable[e], msList);
-							initializeImageWeights(sGroupTable[e]);
-		
-							predict(sGroupTable[e]);
+							ImagingTable sGroupTable = groupTable.GetSquaredGroup(sGroupIndex);
+							for(size_t e=0; e!=sGroupTable.EntryCount(); ++e)
+							{
+								predict(sGroupTable[e]);
+							}
+							_griddingTaskManager->Finish();
+							for(size_t e=0; e!=sGroupTable.EntryCount(); ++e)
+							{
+								imageMain(sGroupTable[e], false, false, false);
+							} // end of polarization loop
+							_griddingTaskManager->Finish();
+						} // end of joined channels loop
+					}
+					
+					else { // not using IDG
+						for(size_t sGroupIndex=0; sGroupIndex!=groupTable.SquaredGroupCount(); ++sGroupIndex)
+						{
+							ImagingTable sGroupTable = groupTable.GetSquaredGroup(sGroupIndex);
+							for(size_t e=0; e!=sGroupTable.EntryCount(); ++e)
+							{
+								predict(sGroupTable[e]);
+							}
 						}
-						for(size_t e=0; e!=sGroupTable.EntryCount(); ++e)
+						_griddingTaskManager->Finish();
+						
+						for(size_t sGroupIndex=0; sGroupIndex!=groupTable.SquaredGroupCount(); ++sGroupIndex)
 						{
-							prepareInversionAlgorithm(sGroupTable[e].polarization);
-							std::vector<std::unique_ptr<MSProvider>> msList;
-							initializeCurMSProviders(sGroupTable[e], msList);
-							initializeImageWeights(sGroupTable[e]);
-							
-							imageMainNonFirst(sGroupTable[e]);
-						} // end of polarization loop
-					} // end of joined channels loop
+							ImagingTable sGroupTable = groupTable.GetSquaredGroup(sGroupIndex);
+							for(size_t e=0; e!=sGroupTable.EntryCount(); ++e)
+							{
+								imageMain(sGroupTable[e], false, false, false);
+							} // end of polarization loop
+						} // end of joined channels loop
+						_griddingTaskManager->Finish();
+					}
 				}
 				
 				++_majorIterationNr;
@@ -689,17 +749,17 @@ void WSClean::runIndependentGroup(ImagingTable& groupTable, std::unique_ptr<Prim
 			Logger::Info << _majorIterationNr << " major iterations were performed.\n";
 		}
 		
-		_gridder->FreeImagingData();
+		//_gridder->FreeImagingData();
 		
 		for(size_t joinedIndex=0; joinedIndex!=groupTable.EntryCount(); ++joinedIndex)
 			saveRestoredImagesForGroup(groupTable[joinedIndex], primaryBeam);
 		
 		if(_settings.saveSourceList)
     {
-			_deconvolution.SaveSourceList(groupTable, _gridder->PhaseCentreRA(), _gridder->PhaseCentreDec());
+			_deconvolution.SaveSourceList(groupTable, _phaseCentreRA, _phaseCentreDec);
 			if(_settings.applyPrimaryBeam)
 			{
-				_deconvolution.SavePBSourceList(groupTable, _gridder->PhaseCentreRA(), _gridder->PhaseCentreDec());
+				_deconvolution.SavePBSourceList(groupTable, _phaseCentreRA, _phaseCentreDec);
 			}
     }
 	}
@@ -777,7 +837,7 @@ void WSClean::saveRestoredImagesForGroup(const ImagingTableEntry& tableEntry, st
 			}
 			else if(_settings.gridWithBeam || !_settings.atermConfigFilename.empty())
 			{
-				IdgMsGridder& idg = static_cast<IdgMsGridder&>(*_gridder);
+				IdgMsGridder& idg = static_cast<IdgMsGridder&>(*_griddingTaskManager->Gridder());
 				idg.SavePBCorrectedImages(writer.Writer(), imageName, "image", _imageAllocator);
 				if(_settings.savePsfPb)
 					idg.SavePBCorrectedImages(writer.Writer(), imageName, "psf", _imageAllocator);
@@ -919,11 +979,6 @@ void WSClean::predictGroup(const ImagingTable& imagingGroup)
 		
 		readEarlierModelImages(entry);
 		
-		prepareInversionAlgorithm(entry.polarization);
-		std::vector<std::unique_ptr<MSProvider>> msList;
-		initializeCurMSProviders(entry, msList);
-		initializeImageWeights(entry);
-
 		predict(entry);
 	} // end of polarization loop
 	
@@ -942,9 +997,9 @@ std::unique_ptr<MSProvider> WSClean::initializeMSProvider(const ImagingTableEntr
 		return std::unique_ptr<MSProvider>(new ContiguousMS(_settings.filenames[filenameIndex], _settings.dataColumnName, selection, pol, dataDescId));
 }
 
-void WSClean::initializeCurMSProviders(const ImagingTableEntry& entry, std::vector<std::unique_ptr<MSProvider>>& msList)
+void WSClean::initializeCurMSProviders(const ImagingTableEntry& entry, GriddingTask& task)
 {
-	_gridder->ClearMeasurementSetList();
+	task.msList.clear();
 	for(size_t i=0; i != _settings.filenames.size(); ++i)
 	{
 		for(size_t d=0; d!=_msBands[i].DataDescCount(); ++d)
@@ -954,14 +1009,13 @@ void WSClean::initializeCurMSProviders(const ImagingTableEntry& entry, std::vect
 			{
 				std::unique_ptr<MSProvider> msProvider(
 					initializeMSProvider(entry, selection, i, d));
-				_gridder->AddMeasurementSet(msProvider.get(), selection);
-				msList.emplace_back(std::move(msProvider));
+				task.msList.emplace_back(std::move(msProvider), selection);
 			}
 		}
 	}
 }
 
-void WSClean::initializeMSProvidersForPB(const ImagingTableEntry& entry, std::vector<std::unique_ptr<MSProvider>>& msList, PrimaryBeam& pb)
+void WSClean::initializeMSProvidersForPB(const ImagingTableEntry& entry, std::vector<std::pair<std::unique_ptr<MSProvider>, MSSelection>>& msList, PrimaryBeam& pb)
 {
 	for(size_t i=0; i != _settings.filenames.size(); ++i)
 	{
@@ -972,7 +1026,7 @@ void WSClean::initializeMSProvidersForPB(const ImagingTableEntry& entry, std::ve
 			{
 				std::unique_ptr<MSProvider> msProvider = initializeMSProvider(entry, selection, i, d);
 				pb.AddMS(msProvider.get(), selection);
-				msList.emplace_back(std::move(msProvider));
+				msList.emplace_back(std::move(msProvider), selection);
 			}
 		}
 	}
@@ -980,19 +1034,8 @@ void WSClean::initializeMSProvidersForPB(const ImagingTableEntry& entry, std::ve
 
 void WSClean::runFirstInversion(ImagingTableEntry& entry, std::unique_ptr<class PrimaryBeam>& primaryBeam)
 {
-	std::vector<std::unique_ptr<MSProvider>> msList;
-	initializeCurMSProviders(entry, msList);
-	initializeImageWeights(entry);
-	
-	prepareInversionAlgorithm(entry.polarization);
-	
-	const bool firstBeforePSF = _isFirstInversion;
-
-	bool isFirstPol = entry.polarization == *_settings.polarizations.begin();
 	bool isLastPol = entry.polarization == *_settings.polarizations.rbegin();
 	bool doMakePSF = _settings.deconvolutionIterationCount > 0 || _settings.makePSF || _settings.makePSFOnly;
-	if(doMakePSF && isFirstPol)
-		imagePSF(entry);
 	
 	if(isLastPol)
 	{
@@ -1000,11 +1043,12 @@ void WSClean::runFirstInversion(ImagingTableEntry& entry, std::unique_ptr<class 
 		if(_settings.applyPrimaryBeam)
 		{
 			primaryBeam.reset(new PrimaryBeam(_settings));
-			std::vector<std::unique_ptr<MSProvider>> pbmsList;
+			std::vector<std::pair<std::unique_ptr<MSProvider>, MSSelection>> pbmsList;
 			initializeMSProvidersForPB(entry, pbmsList, *primaryBeam);
-			// we don't have to call initializeImageWeights(entry), because they're still set ok.
+			initializeImageWeights(entry, pbmsList);
 			double ra, dec, dl, dm;
-			MSGridderBase::GetPhaseCentreInfo(pbmsList.front()->MS(), _settings.fieldId, ra, dec, dl, dm);
+			casacore::MeasurementSet ms(pbmsList.front().first->MS());
+			MSGridderBase::GetPhaseCentreInfo(ms, _settings.fieldId, ra, dec, dl, dm);
 			primaryBeam->SetPhaseCentre(ra, dec, dl, dm);
 			primaryBeam->MakeBeamImages(imageName, entry, _imageWeightCache.get(), _imageAllocator);
 		}
@@ -1012,85 +1056,15 @@ void WSClean::runFirstInversion(ImagingTableEntry& entry, std::unique_ptr<class 
 	
 	if(!_settings.makePSFOnly)
 	{
-		FitsWriter mWriter(createWSCFitsWriter(entry, false, true).Writer());
-		_modelImages.SetFitsWriter(mWriter);
-		FitsWriter writer(createWSCFitsWriter(entry, false, false).Writer());
-		_residualImages.SetFitsWriter(writer);
-		
-		imageMainFirst(entry);
-		
-		entry.imageWeight = _gridder->ImageWeight();
-		entry.normalizationFactor = _gridder->NormalizationFactor();
-		
-		// If this was the first polarization of this channel, we need to set
-		// the info for this channel
-		if(isFirstPol)
-		{
-			_infoPerChannel[entry.outputChannelIndex].weight = entry.imageWeight;
-			_infoPerChannel[entry.outputChannelIndex].normalizationFactor = entry.normalizationFactor;
-			// If no PSF is made, also set the beam size. If the PSF was made, these would already be set
-			// after imaging the PSF.
-			if(!doMakePSF)
-			{
-				if(_settings.theoreticBeam) {
-					_infoPerChannel[entry.outputChannelIndex].beamMaj = _gridder->BeamSize();
-					_infoPerChannel[entry.outputChannelIndex].beamMin = _gridder->BeamSize();
-					_infoPerChannel[entry.outputChannelIndex].beamPA = 0.0;
-				}
-				else if(_settings.manualBeamMajorSize != 0.0) {
-					_infoPerChannel[entry.outputChannelIndex].beamMaj = _settings.manualBeamMajorSize;
-					_infoPerChannel[entry.outputChannelIndex].beamMin = _settings.manualBeamMinorSize;
-					_infoPerChannel[entry.outputChannelIndex].beamPA = _settings.manualBeamPA;
-				}
-				else {
-					_infoPerChannel[entry.outputChannelIndex].beamMaj = std::numeric_limits<double>::quiet_NaN();
-					_infoPerChannel[entry.outputChannelIndex].beamMin = std::numeric_limits<double>::quiet_NaN();
-					_infoPerChannel[entry.outputChannelIndex].beamPA = std::numeric_limits<double>::quiet_NaN();
-				}
-			}
-		}
-		
-		if(_settings.isGriddingImageSaved && firstBeforePSF && _gridder->HasGriddingCorrectionImage())
-			imageGridding();
+		imageMain(entry, true, !doMakePSF, true);
 		
 		_isFirstInversion = false;
-		
-		if(_settings.continuedRun)
-		{
-			readEarlierModelImages(entry);
-		}
-		else {
-			// Set model to zero: already done if this is YX of XY/YX imaging combi
-			if(!(entry.polarization == Polarization::YX && _settings.polarizations.count(Polarization::XY)!=0))
-			{
-				double* modelImage = _imageAllocator.Allocate(_settings.trimmedImageWidth * _settings.trimmedImageHeight);
-				memset(modelImage, 0, _settings.trimmedImageWidth * _settings.trimmedImageHeight * sizeof(double));
-				_modelImages.Store(modelImage, entry.polarization, entry.outputChannelIndex, false);
-				if(Polarization::IsComplex(entry.polarization))
-					_modelImages.Store(modelImage, entry.polarization, entry.outputChannelIndex, true);
-				_imageAllocator.Free(modelImage);
-			}
-		}
-		
-		if(_settings.isDirtySaved)
-		{
-			for(size_t imageIndex=0; imageIndex!=entry.imageCount; ++imageIndex)
-			{
-				bool isImaginary = (imageIndex==1);
-				WSCFitsWriter writer(createWSCFitsWriter(entry, isImaginary, false));
-				double* dirtyImage = _imageAllocator.Allocate(_settings.trimmedImageWidth * _settings.trimmedImageHeight);
-				_residualImages.Load(dirtyImage, entry.polarization, entry.outputChannelIndex, isImaginary);
-				Logger::Info << "Writing dirty image...\n";
-				writer.WriteImage("dirty.fits", dirtyImage);
-				_imageAllocator.Free(dirtyImage);
-			}
-		}
 	}
 
 	if (isLastPol && (_settings.gridWithBeam || !_settings.atermConfigFilename.empty()))
 	{
 		ImageFilename imageName(entry.outputChannelIndex, entry.outputIntervalIndex);
-		static_cast<IdgMsGridder&>(*_gridder).SaveBeamImage(entry, imageName);
+		static_cast<IdgMsGridder&>(*_griddingTaskManager->Gridder()).SaveBeamImage(entry, imageName);
 	}
 }
 
@@ -1342,10 +1316,10 @@ void WSClean::addPolarizationsToImagingTable(size_t& joinedGroupIndex, size_t& s
 
 WSCFitsWriter WSClean::createWSCFitsWriter(const ImagingTableEntry& entry, bool isImaginary, bool isModel) const
 {
-	return WSCFitsWriter(entry, isImaginary, _settings, _deconvolution, _majorIterationNr, *_gridder, _commandLine, _infoPerChannel[entry.outputChannelIndex], isModel);
+	return WSCFitsWriter(entry, isImaginary, _settings, _deconvolution, _majorIterationNr, *_griddingTaskManager->Gridder(), _commandLine, _infoPerChannel[entry.outputChannelIndex], isModel);
 }
 
 WSCFitsWriter WSClean::createWSCFitsWriter(const ImagingTableEntry& entry, PolarizationEnum polarization, bool isImaginary, bool isModel) const
 {
-	return WSCFitsWriter(entry, polarization, isImaginary, _settings, _deconvolution, _majorIterationNr, *_gridder, _commandLine, _infoPerChannel[entry.outputChannelIndex], isModel);
+	return WSCFitsWriter(entry, polarization, isImaginary, _settings, _deconvolution, _majorIterationNr, *_griddingTaskManager->Gridder(), _commandLine, _infoPerChannel[entry.outputChannelIndex], isModel);
 }

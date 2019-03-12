@@ -41,7 +41,10 @@ public:
 	PartitionedMS(const PartitionedMS&) = delete;
 	PartitionedMS& operator=(const PartitionedMS&) = delete;
 	
-	casacore::MeasurementSet &MS() final override { openMS(); return *_ms; }
+	casacore::MeasurementSet MS() final override
+	{
+		return casacore::MeasurementSet(_msPath.data());
+	}
 	
 	const std::string& DataColumnName() final override { return _handle._data->_dataColumnName; }
 	
@@ -81,6 +84,8 @@ public:
 	
 	class Handle {
 	public:
+		Handle() = default;
+		
 		friend class PartitionedMS;
 	private:
 		struct HandleData
@@ -124,12 +129,9 @@ private:
 	
 	static void getDataDescIdMap(std::map<size_t,size_t>& dataDescIds, const std::vector<PartitionedMS::ChannelRange>& channels);
 	
-	void openMS();
-	
 	Handle _handle;
 	std::string _msPath;
 	size_t _partIndex;
-	std::unique_ptr<casacore::MeasurementSet> _ms;
 	std::ifstream _metaFile, _weightFile, _dataFile;
 	char *_modelFileMap;
 	size_t _currentRow;

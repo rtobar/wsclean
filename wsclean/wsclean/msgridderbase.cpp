@@ -39,7 +39,8 @@ MSGridderBase::MSGridderBase() :
 	_griddedVisibilityCount(0),
 	_totalWeight(0.0),
 	_maxGriddedWeight(0.0),
-	_visibilityWeightSum(0.0)
+	_visibilityWeightSum(0.0),
+	_casacoreMutex(nullptr)
 { }
 
 MSGridderBase::~MSGridderBase()
@@ -142,7 +143,7 @@ void MSGridderBase::calculateWLimits(MSGridderBase::MSData& msData)
 						uInL = uInM/wavelength, vInL = vInM/wavelength,
 						x = uInL * PixelSizeX() * ImageWidth(),
 						y = vInL * PixelSizeY() * ImageHeight(),
-						imagingWeight = this->PrecalculatedWeightInfo()->GetWeight(uInL, vInL);
+						imagingWeight = PrecalculatedWeightInfo()->GetWeight(uInL, vInL);
 					if(imagingWeight != 0.0)
 					{
 						if(floor(x) > -halfWidth  && ceil(x) < halfWidth &&
@@ -216,9 +217,13 @@ void MSGridderBase::initializeMetaData(casacore::MeasurementSet& ms, size_t fiel
 
 void MSGridderBase::initializeMeasurementSet(MSGridderBase::MSData& msData, MetaDataCache::Entry& cacheEntry, bool isCacheInitialized)
 {
+	std::unique_lock<std::mutex> lock;
+	if(_casacoreMutex)
+		lock = std::unique_lock<std::mutex>(*_casacoreMutex);
+	
 	MSProvider& msProvider = MeasurementSet(msData.msIndex);
 	msData.msProvider = &msProvider;
-	casacore::MeasurementSet& ms(msProvider.MS());
+	casacore::MeasurementSet ms(msProvider.MS());
 	if(ms.nrow() == 0) throw std::runtime_error("Table has no rows (no data)");
 	
 	initializeBandData(ms, msData);
@@ -311,7 +316,9 @@ void MSGridderBase::calculateOverallMetaData(const MSData* msDataVector)
 	{
 		size_t suggestedGridSize = getSuggestedWGridSize();
 		if(!HasWGridSize())
-			SetWGridSize(suggestedGridSize);
+			SetActualWGridSize(suggestedGridSize);
+		else
+			SetActualWGridSize(WGridSize());
 	}
 }
 

@@ -15,20 +15,29 @@ public:
 	
 	static TelescopeType GetType(casacore::MeasurementSet& ms)
 	{
-		std::string telescopeName = GetTelescopeName(ms);
-		boost::to_upper(telescopeName);
-		
-		if(telescopeName == "LOFAR")
+		return GetType(GetTelescopeName(ms));
+	}
+	
+	static TelescopeType GetType(casacore::MeasurementSet&& ms)
+	{
+		return GetType(GetTelescopeName(ms));
+	}
+	
+	static TelescopeType GetType(const std::string& telescopeName)
+	{
+		std::string up = boost::to_upper_copy(telescopeName);
+		if(up == "LOFAR")
 			return LOFAR;
-		else if(telescopeName == "AARTFAAC")
+		else if(up == "AARTFAAC")
 			return AARTFAAC;
-		else if(telescopeName == "MWA")
+		else if(up == "MWA")
 			return MWA;
 		else
 			throw std::runtime_error("Telescope name not recognized: " + telescopeName);
 	}
 	
-	static std::string GetTelescopeName(casacore::MeasurementSet& ms)
+	template<typename MS>
+	static std::string GetTelescopeName(MS ms)
 	{
 		casacore::MSObservation obsTable = ms.observation();
 		casacore::ScalarColumn<casacore::String> telescopeNameCol(obsTable, obsTable.columnName(casacore::MSObservationEnums::TELESCOPE_NAME));

@@ -22,7 +22,7 @@ public:
 	
 	ContiguousMS& operator=(const ContiguousMS&) = delete;
 	
-	casacore::MeasurementSet& MS() final override { return _ms; }
+	casacore::MeasurementSet MS() final override { return _ms; }
 	
 	const std::string& DataColumnName() final override { return _dataColumnName; }
 	

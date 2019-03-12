@@ -14,6 +14,8 @@
 #include "../fitsreader.h"
 #include "../fitswriter.h"
 
+#include "../wsclean/wsclean.h"
+
 struct WSCleanUserData
 {
 	std::string msPath;
@@ -40,20 +42,17 @@ std::string str(T i)
 
 void wsclean_main(const std::vector<std::string>& parms)
 {
-	char** argv = new char*[parms.size()];
+	std::vector<char*> argv(parms.size());
 	for(size_t i=0; i!=parms.size(); ++i)
 	{
 		std::cout << parms[i] << ' ';
-		argv[i] = new char[parms[i].size()+1];
-		memcpy(argv[i], parms[i].c_str(), parms[i].size()+1);
+		argv[i] = const_cast<char*>(parms[i].c_str());
 	}
 	std::cout << '\n';
 
-	CommandLine::Run(parms.size(), argv);
-	
-	for(size_t i=0; i!=parms.size(); ++i)
-		delete[] argv[i];
-	delete[] argv;
+	WSClean wsclean;
+	if(CommandLine::Parse(wsclean, parms.size(), argv.data()))
+		CommandLine::Run(wsclean);
 }
 
 void wsclean_initialize(

@@ -11,6 +11,7 @@
 #endif
 
 #include "gridmodeenum.h"
+#include "imagebufferallocator.h"
 
 #include <cmath>
 #include <cstring>
@@ -321,9 +322,9 @@ class WStackingGridder
 		 * @param image The model image that is to be predicted for. This is an
 		 * array of width * height size, index by (x + width*y).
 		 */
-		void InitializePrediction(const double *image)
+		void InitializePrediction(ImageBufferAllocator::Ptr image)
 		{
-			initializePrediction(image, _imageData);
+			initializePrediction(std::move(image), _imageData);
 		}
 		
 		/**
@@ -334,10 +335,10 @@ class WStackingGridder
 		 * @param real Array of width * height giving the real (model) image values.
 		 * @param imaginary Array of width * height giving the imaginary (model) image values.
 		 */
-		void InitializePrediction(const double *real, const double *imaginary)
+		void InitializePrediction(ImageBufferAllocator::Ptr real, ImageBufferAllocator::Ptr imaginary)
 		{
-			initializePrediction(real, _imageData);
-			initializePrediction(imaginary, _imageDataImaginary);
+			initializePrediction(std::move(real), _imageData);
+			initializePrediction(std::move(imaginary), _imageDataImaginary);
 		}
 
 		/**
@@ -407,13 +408,13 @@ class WStackingGridder
 		 * If a complex image is produced, this image returns the real part. The imaginary part can
 		 * be acquired with @ref ImaginaryImage().
 		 */
-		double *RealImage() { return _imageData[0]; }
+		ImageBufferAllocator::Ptr RealImage() { return std::move(_imageData[0]); }
 		
 		/**
 		 * Get the imaginary part of a complex image after inversion. Otherwise similar to
 		 * @ref RealImage().
 		 */
-		double *ImaginaryImage() { return _imageDataImaginary[0]; }
+		ImageBufferAllocator::Ptr ImaginaryImage() { return std::move(_imageDataImaginary[0]); }
 		
 		/**
 		 * Get the number of threads used when performing the FFTs. The w-layers are divided over
@@ -514,7 +515,7 @@ class WStackingGridder
 		 * ImageBufferAllocator.
 		 * @see ReplaceImaginaryImageBuffer().
 		 */
-		void ReplaceRealImageBuffer(double* newBuffer);
+		void ReplaceRealImageBuffer(ImageBufferAllocator::Ptr newBuffer);
 		
 		/**
 		 * Replace the current imaginary result of the imaging with a new image.
@@ -522,7 +523,7 @@ class WStackingGridder
 		 * part.
 		 * @param newBuffer The new imaginary buffer part.
 		 */
-		void ReplaceImaginaryImageBuffer(double* newBuffer);
+		void ReplaceImaginaryImageBuffer(ImageBufferAllocator::Ptr newBuffer);
 		
 		/**
 		 * Retrieve a gridded uv layer. This function can be called after
@@ -594,8 +595,8 @@ class WStackingGridder
 		void freeLayeredUVData() { initializeLayeredUVData(0); }
 		void fftToImageThreadFunction(std::mutex *mutex, std::stack<size_t> *tasks, size_t threadIndex);
 		void fftToUVThreadFunction(std::mutex *mutex, std::stack<size_t> *tasks);
-		void finalizeImage(double multiplicationFactor, std::vector<double*>& dataArray);
-		void initializePrediction(const double *image, std::vector<double*>& dataArray);
+		void finalizeImage(double multiplicationFactor, std::vector<ImageBufferAllocator::Ptr>& dataArray);
+		void initializePrediction(ImageBufferAllocator::Ptr image, std::vector<ImageBufferAllocator::Ptr>& dataArray);
 		
 		void makeKernels();
 		/**
@@ -635,7 +636,7 @@ class WStackingGridder
 		std::vector<std::vector<double>> _griddingKernels;
 		
 		std::vector<std::complex<double>*> _layeredUVData;
-		std::vector<double*> _imageData, _imageDataImaginary;
+		std::vector<ImageBufferAllocator::Ptr> _imageData, _imageDataImaginary;
 		std::vector<double> _sqrtLMLookupTable;
 		size_t _nFFTThreads;
 		ImageBufferAllocator* _imageBufferAllocator;

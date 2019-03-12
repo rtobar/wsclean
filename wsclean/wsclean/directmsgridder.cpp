@@ -180,7 +180,7 @@ void DirectMSGridder<num_t>::invertMeasurementSet(const MSGridderBase::MSData& m
 }
 
 template<typename num_t>
-void DirectMSGridder<num_t>::Predict(double* /*image*/)
+void DirectMSGridder<num_t>::Predict(ImageBufferAllocator::Ptr /*image*/)
 {
 	throw std::runtime_error("Prediction not yet implemented for direct FT gridding");
 }

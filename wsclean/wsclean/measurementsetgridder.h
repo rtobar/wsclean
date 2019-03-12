@@ -2,6 +2,7 @@
 #define MEASUREMENT_SET_GRIDDER_H
 
 #include "gridmodeenum.h"
+#include "imagebufferallocator.h"
 
 #include "../polarization.h"
 #include "../msselection.h"
@@ -34,6 +35,7 @@ class MeasurementSetGridder
 			_pixelSizeX((1.0 / 60.0) * M_PI / 180.0),
 			_pixelSizeY((1.0 / 60.0) * M_PI / 180.0),
 			_wGridSize(0),
+			_actualWGridSize(0),
 			_measurementSets(),
 			_dataColumnName("DATA"),
 			_doImagePSF(false),
@@ -41,7 +43,7 @@ class MeasurementSetGridder
 			_addToModel(false),
 			_smallInversion(false),
 			_wLimit(0.0),
-			_precalculatedWeightInfo(0),
+			_precalculatedWeightInfo(nullptr),
 			_polarization(Polarization::StokesI),
 			_isComplex(false),
 			_weighting(WeightMode::UniformWeighted),
@@ -63,6 +65,7 @@ class MeasurementSetGridder
 		double PixelSizeY() const { return _pixelSizeY; }
 		bool HasWGridSize() const { return _wGridSize != 0; }
 		size_t WGridSize() const { return _wGridSize; }
+		size_t ActualWGridSize() const { return _actualWGridSize; }
 		
 		void ClearMeasurementSetList() { _measurementSets.clear(); _selections.clear(); }
 		class MSProvider& MeasurementSet(size_t index) const { return *_measurementSets[index]; }
@@ -110,6 +113,10 @@ class MeasurementSetGridder
 		void SetWGridSize(size_t wGridSize)
 		{
 			_wGridSize = wGridSize;
+		}
+		void SetActualWGridSize(size_t actualWGridSize)
+		{
+			_actualWGridSize = actualWGridSize;
 		}
 		void SetNoWGridSize()
 		{
@@ -178,11 +185,11 @@ class MeasurementSetGridder
 		
 		virtual void Invert() = 0;
 		
-		virtual void Predict(double* image) = 0;
-		virtual void Predict(double* real, double* imaginary) = 0;
+		virtual void Predict(ImageBufferAllocator::Ptr image) = 0;
+		virtual void Predict(ImageBufferAllocator::Ptr real, ImageBufferAllocator::Ptr imaginary) = 0;
 		
-		virtual double *ImageRealResult() = 0;
-		virtual double *ImageImaginaryResult() = 0;
+		virtual ImageBufferAllocator::Ptr ImageRealResult() = 0;
+		virtual ImageBufferAllocator::Ptr ImageImaginaryResult() = 0;
 		virtual double PhaseCentreRA() const = 0;
 		virtual double PhaseCentreDec() const = 0;
 		virtual bool HasDenormalPhaseCentre() const { return false; }
@@ -232,7 +239,7 @@ class MeasurementSetGridder
 		size_t _trimWidth, _trimHeight;
 		size_t _nwWidth, _nwHeight;
 		double _pixelSizeX, _pixelSizeY;
-		size_t _wGridSize;
+		size_t _wGridSize, _actualWGridSize;
 		std::vector<MSProvider*> _measurementSets;
 		std::string _dataColumnName;
 		bool _doImagePSF, _doSubtractModel, _addToModel, _smallInversion;

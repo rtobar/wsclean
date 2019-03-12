@@ -41,14 +41,14 @@ public:
 		_edgeTukeyTaperInLambda = edgeTukeyTaperInLambda;
 	}
 	
-	void Update(MeasurementSetGridder& gridder, size_t outChannelIndex, size_t outIntervalIndex)
+	void Update(const std::vector<std::pair<std::unique_ptr<MSProvider>, MSSelection>>& msList, size_t outChannelIndex, size_t outIntervalIndex)
 	{
 		if(outChannelIndex != _currentWeightChannel || outIntervalIndex != _currentWeightInterval)
 		{
 			_currentWeightChannel = outChannelIndex;
 			_currentWeightInterval = outIntervalIndex;
 			
-			recalculateWeights(gridder);
+			recalculateWeights(msList);
 		}
 	}
 	
@@ -92,15 +92,15 @@ public:
 	}
 
 private:
-	void recalculateWeights(MeasurementSetGridder& gridder)
+	void recalculateWeights(const std::vector<std::pair<std::unique_ptr<MSProvider>, MSSelection>>& msList)
 	{
 		Logger::Info << "Precalculating weights for " << _weightMode.ToString() << " weighting... ";
 		Logger::Info.Flush();
 		ResetWeights();
-		for(size_t i=0; i!=gridder.MeasurementSetCount(); ++i)
+		for(size_t i=0; i!=msList.size(); ++i)
 		{
-			_imageWeights->Grid(gridder.MeasurementSet(i), gridder.Selection(i));
-			if(gridder.MeasurementSetCount() > 1)
+			_imageWeights->Grid(*msList[i].first, msList[i].second);
+			if(msList.size() > 1)
 				(Logger::Info << i << ' ').Flush();
 		}
 		_imageWeights->FinishGridding();

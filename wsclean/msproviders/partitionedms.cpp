@@ -382,7 +382,8 @@ PartitionedMS::Handle PartitionedMS::Partition(const string& msPath, const std::
 	const casacore::IPosition shape(rowProvider->DataShape());
 	size_t channelCount = shape[1];
 	
-	Logger::Info << "Reordering " << msPath << " into " << channelParts << " x " << polsOut.size() << " parts.\n";
+	if(settings.parallelReordering == 1)
+		Logger::Info << "Reordering " << msPath << " into " << channelParts << " x " << polsOut.size() << " parts.\n";
 
 	// Write header of meta file, one meta file for each data desc id
 	// TODO rather than writing we can just skip and write later
@@ -411,13 +412,17 @@ PartitionedMS::Handle PartitionedMS::Partition(const string& msPath, const std::
 	casacore::Array<std::complex<float>> dataArray(shape), modelArray(shape);
 	casacore::Array<float> weightSpectrumArray(shape);
 	casacore::Array<bool> flagArray(shape);
-	ProgressBar progress1("Reordering");
+	
+	std::unique_ptr<ProgressBar> progress1;
+	if(settings.parallelReordering == 1)
+		progress1.reset(new ProgressBar("Reordering"));
 	
 	size_t selectedRowsTotal = 0;
 	ao::uvector<size_t> selectedRowCountPerSpwIndex(selectedDataDescIds.size(), 0);
 	while(!rowProvider->AtEnd())
 	{
-		progress1.SetProgress(rowProvider->CurrentProgress(), rowProvider->TotalProgress());
+		if(progress1)
+			progress1->SetProgress(rowProvider->CurrentProgress(), rowProvider->TotalProgress());
 		
 		MetaRecord meta;
 		memset(&meta, 0, sizeof(MetaRecord));
@@ -478,7 +483,7 @@ PartitionedMS::Handle PartitionedMS::Partition(const string& msPath, const std::
 		
 		rowProvider->NextRow();
 	}
-	progress1.SetProgress(rowProvider->TotalProgress(), rowProvider->TotalProgress());
+	progress1.reset();
 	Logger::Debug << "Total selected rows: " << selectedRowsTotal << '\n';
 	rowProvider->OutputStatistics();
 	
@@ -504,7 +509,7 @@ PartitionedMS::Handle PartitionedMS::Partition(const string& msPath, const std::
 	fileIndex = 0;
 	dataBuffer.assign(channelCount * polarizationsPerFile, 0.0);
 	std::unique_ptr<ProgressBar> progress2;
-	if(includeModel && !initialModelRequired)
+	if(includeModel && !initialModelRequired && settings.parallelReordering == 1)
 		progress2.reset(new ProgressBar("Initializing model visibilities"));
 	for(size_t part=0; part!=channelParts; ++part)
 	{
@@ -533,7 +538,8 @@ PartitionedMS::Handle PartitionedMS::Partition(const string& msPath, const std::
 				for(size_t i=0; i!=selectedRowCount; ++i)
 				{
 					modelFile.write(reinterpret_cast<char*>(dataBuffer.data()), header.channelCount * sizeof(std::complex<float>) * polarizationsPerFile);
-					progress2->SetProgress(part*selectedRowCount + i, channelParts*selectedRowCount);
+					if(progress2)
+						progress2->SetProgress(part*selectedRowCount + i, channelParts*selectedRowCount);
 				}
 			}
 		}
@@ -693,15 +699,8 @@ PartitionedMS::Handle::HandleData::~HandleData()
 	}
 }
 
-void PartitionedMS::openMS()
-{
-	if(_ms == 0)
-		_ms.reset(new casacore::MeasurementSet(_msPath.data()));
-}
-
 void PartitionedMS::MakeIdToMSRowMapping(std::vector<size_t>& idToMSRow)
 {
-	openMS();
 	const MSSelection& selection = _handle._data->_selection;
 	std::map<size_t, size_t> dataDescIds;
 	getDataDescIdMap(dataDescIds, _handle._data->_channels);
@@ -709,7 +708,8 @@ void PartitionedMS::MakeIdToMSRowMapping(std::vector<size_t>& idToMSRow)
 	for(std::map<size_t, size_t>::const_iterator i=dataDescIds.begin(); i!=dataDescIds.end(); ++i)
 		dataDescIdSet.insert(i->first);
 	size_t startRow, endRow;
-	getRowRangeAndIDMap(*_ms, selection, startRow, endRow, dataDescIdSet, idToMSRow);
+	casacore::MeasurementSet ms = MS();
+	getRowRangeAndIDMap(ms, selection, startRow, endRow, dataDescIdSet, idToMSRow);
 }
 
 void PartitionedMS::getDataDescIdMap(std::map<size_t, size_t>& dataDescIds, const std::vector<PartitionedMS::ChannelRange>& channels)

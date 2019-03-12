@@ -41,15 +41,14 @@ private:
 	void predictGroup(const ImagingTable& imagingGroup);
 	
 	void runFirstInversion(ImagingTableEntry& entry, std::unique_ptr<class PrimaryBeam>& primaryBeam);
-	void prepareInversionAlgorithm(PolarizationEnum polarization);
 	
 	void performReordering(bool isPredictMode);
 	
-	void initializeImageWeights(const ImagingTableEntry& entry);
+	ImageWeights& initializeImageWeights(const ImagingTableEntry& entry, std::vector<std::pair<std::unique_ptr<MSProvider>, MSSelection>>& msList);
 	void initializeMFSImageWeights();
 	std::unique_ptr<MSProvider> initializeMSProvider(const ImagingTableEntry& entry, const MSSelection& selection, size_t filenameIndex, size_t dataDescId);
-	void initializeCurMSProviders(const ImagingTableEntry& entry, std::vector<std::unique_ptr<MSProvider>>& msList);
-	void initializeMSProvidersForPB(const ImagingTableEntry& entry, std::vector<std::unique_ptr<MSProvider>>& msList, class PrimaryBeam& pb);
+	void initializeCurMSProviders(const ImagingTableEntry& entry, class GriddingTask& task);
+	void initializeMSProvidersForPB(const ImagingTableEntry& entry, std::vector<std::pair<std::unique_ptr<MSProvider>, MSSelection>>& msList, class PrimaryBeam& pb);
 	void storeAndCombineXYandYX(CachedImageSet& dest, PolarizationEnum polarization, size_t joinedChannelIndex, bool isImaginary, const double* image);
 	bool selectChannels(MSSelection& selection, size_t msIndex, size_t bandIndex, const ImagingTableEntry& entry);
 	MSSelection selectInterval(MSSelection& fullSelection, size_t intervalIndex);
@@ -61,11 +60,17 @@ private:
 	std::unique_ptr<class ImageWeightCache> createWeightCache();
 	
 	void multiplyImage(double factor, double* image) const;
+	void multiplyImage(double factor, ImageBufferAllocator::Ptr& image) const { multiplyImage(factor, image.data()); }
+	
 	void imagePSF(ImagingTableEntry& entry);
+	void imagePSFCallback(ImagingTableEntry& entry, class GriddingResult& result);
+	
 	void imageGridding();
-	void imageMainFirst(const ImagingTableEntry& entry);
-	void imageMainNonFirst(const ImagingTableEntry& entry);
+	void imageMain(ImagingTableEntry& entry, bool isFirst, bool updateBeamInfo, bool isInitialInversion);
+	void imageMainCallback(ImagingTableEntry& entry, class GriddingResult& result, bool updateBeamInfo, bool isInitialInversion);
+	
 	void predict(const ImagingTableEntry& entry);
+	void predictCallback(const ImagingTableEntry& entry, class GriddingResult& result);
 	
 	//void makeMFSImage(const string& suffix, size_t intervalIndex, PolarizationEnum pol, bool isImaginary, bool isPSF = false);
 	//void renderMFSImage(size_t intervalIndex, PolarizationEnum pol, bool isImaginary, bool isPBCorrected) const;
@@ -76,8 +81,6 @@ private:
 	double minTheoreticalBeamSize(const ImagingTable& table) const;
 	
 	void makeBeam();
-	
-	std::unique_ptr<MSGridderBase> createGridder() const;
 	
 	WSCFitsWriter createWSCFitsWriter(const ImagingTableEntry& entry, bool isImaginary, bool isModel) const;
 	
@@ -108,7 +111,7 @@ private:
 	OutputChannelInfo _infoForMFS;
 	std::map<size_t, MSGridderBase::MetaDataCache> _msGridderMetaCache;
 	
-	std::unique_ptr<class MSGridderBase> _gridder;
+	std::unique_ptr<class GriddingTaskManager> _griddingTaskManager;
 	std::unique_ptr<class ImageWeightCache> _imageWeightCache;
 	Stopwatch _inversionWatch, _predictingWatch, _deconvolutionWatch;
 	bool _isFirstInversion, _doReorder;
@@ -118,6 +121,7 @@ private:
 	std::vector<MultiBandData> _msBands;
 	Deconvolution _deconvolution;
 	ImagingTable _imagingTable;
+	double _phaseCentreRA, _phaseCentreDec;
 };
 
 #endif
