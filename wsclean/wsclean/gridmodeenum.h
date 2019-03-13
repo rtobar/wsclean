@@ -36,7 +36,11 @@ enum GridModeEnum {
 	/** Blackman-nutall window.
 	 */
 	BlackmanNuttallKernel,
-	BlackmanNuttallKernelWithoutSinc
+	BlackmanNuttallKernelWithoutSinc,
+	
+	/** Blackman-Harris window.
+	 */
+	BlackmanHarrisKernel
 };
 
 #endif

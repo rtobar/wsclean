@@ -158,6 +158,7 @@ void FitsReader::initialize()
 	_meta.frequency = 0.0;
 	_meta.bandwidth = 0.0;
 	_meta.polarization = Polarization::StokesI;
+	_meta.unit = JanskyPerBeam;
 	
 	int status = 0;
 	fits_open_file(&_fitsPtr, _meta.filename.c_str(), READONLY, &status);

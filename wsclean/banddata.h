@@ -253,23 +253,31 @@ class BandData
 		 */
 		double ChannelWavelength(size_t channelIndex) const
 		{
-			return 299792458.0L / _channelFrequencies[channelIndex];
+			return c() / _channelFrequencies[channelIndex];
 		}
 		
-		/** Get the frequency of the last channel.
+		/** 
+		 * Get the frequency of the last channel.
+		 * In case the frequencies are stored in reverse channel order, the frequency of the first channel is returned.
 		 * @returns Highest frequency.
 		 */
 		double HighestFrequency() const
 		{
-			return _channelCount==0 ? 0 : _channelFrequencies[_channelCount-1];
+			return _channelCount==0 ? 0 :
+				lastChannel() > firstChannel() ?
+				lastChannel() : firstChannel();
 		}
 		
-		/** Get the frequency of the first channel.
+		/**
+		 * Get the frequency of the first channel.
+		 * In case the frequencies are stored in reverse channel order, the frequency of the last channel is returned.
 		 * @returns Lowest frequency.
 		 */
 		double LowestFrequency() const
 		{
-			return _channelCount==0 ? 0 : _channelFrequencies[0];
+			return _channelCount==0 ? 0 :
+				(firstChannel() < lastChannel() ?
+				firstChannel() : lastChannel());
 		}
 		
 		/** Get the centre frequency.
@@ -286,7 +294,7 @@ class BandData
 		 */
 		static double FrequencyToLambda(double frequencyHz)
 		{
-			return 299792458.0L / frequencyHz;
+			return c() / frequencyHz;
 		}
 		
 		/** Get the wavelength of the central channel.
@@ -294,7 +302,7 @@ class BandData
 		 */
 		double CentreWavelength() const
 		{
-			return 299792458.0L / ((HighestFrequency() + LowestFrequency()) * 0.5);
+			return c() / ((HighestFrequency() + LowestFrequency()) * 0.5);
 		}
 		
 		/** Get the distance between channels in Hz.
@@ -309,18 +317,21 @@ class BandData
 		 * @returns longest wavelength. */
 		double LongestWavelength() const
 		{
-			return _channelCount==0 ? 0 :  ChannelWavelength(0);
+			return _channelCount==0 ? 0 : c() / LowestFrequency();
 		}
 		
-		/** Get the wavelength of the last channel.
-		 * @returns smallest wavelength. */
+		/**
+		 * Get the wavelength of the last channel.
+		 * @returns smallest wavelength.
+		 */
 		double SmallestWavelength() const
 		{
-			return _channelCount==0 ? 0 :  ChannelWavelength(_channelCount-1);
+			return _channelCount==0 ? 0 : c() / HighestFrequency();
 		}
 		
 		/** Get the start of the frequency range covered by this band.
-		 * @returns Start of the band in Hz. */
+		 * @returns Start of the band in Hz.
+		 */
 		double BandStart() const
 		{
 			return LowestFrequency() - FrequencyStep()*0.5;
@@ -388,9 +399,14 @@ class BandData
 			_frequencyStep /= double(index);
 		}
 		
+		double firstChannel() const { return _channelFrequencies[0]; }
+		double lastChannel() const { return _channelFrequencies[_channelCount-1]; }
+		
 		size_t _channelCount;
 		std::unique_ptr<double[]> _channelFrequencies;
 		double _frequencyStep;
+		
+		constexpr static long double c() { return 299792458.0L; }
 };
 
 #endif

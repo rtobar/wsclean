@@ -27,7 +27,7 @@ class WSMSGridder : public MSGridderBase
 	
 		virtual void Invert() final override;
 		
-		virtual void Predict(ImageBufferAllocator::Ptr image) final override { Predict(std::move(image), 0); }
+		virtual void Predict(ImageBufferAllocator::Ptr image) final override { Predict(std::move(image), nullptr); }
 		virtual void Predict(ImageBufferAllocator::Ptr real, ImageBufferAllocator::Ptr imaginary) final override;
 		
 		virtual ImageBufferAllocator::Ptr ImageRealResult() final override { return _gridder->RealImage(); }

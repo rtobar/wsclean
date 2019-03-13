@@ -733,6 +733,8 @@ bool CommandLine::Parse(WSClean& wsclean, int argc, char* argv[])
 				settings.gridMode = KaiserBesselKernel;
 			else if(gridModeStr == "bn")
 				settings.gridMode = BlackmanNuttallKernel;
+			else if(gridModeStr == "bh")
+				settings.gridMode = BlackmanHarrisKernel;
 			else if(gridModeStr == "gaus")
 				settings.gridMode = GaussianKernel;
 			else if(gridModeStr == "rect")
@@ -742,7 +744,7 @@ bool CommandLine::Parse(WSClean& wsclean, int argc, char* argv[])
 			else if(gridModeStr == "nn" || gridModeStr == "nearestneighbour")
 				settings.gridMode = NearestNeighbourGridding;
 			else
-				throw std::runtime_error("Invalid gridding mode: should be either kb (Kaiser-Bessel), nn (NearestNeighbour), bn, gaus, kb-no-sinc or rect");
+				throw std::runtime_error("Invalid gridding mode: should be either kb (Kaiser-Bessel), nn (NearestNeighbour), bn, bh, gaus, kb-no-sinc or rect");
 			if(param == "gridmode")
 				deprecated(param, "grid-mode");
 		}

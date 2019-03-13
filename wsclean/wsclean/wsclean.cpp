@@ -983,6 +983,8 @@ void WSClean::predictGroup(const ImagingTable& imagingGroup)
 		predict(entry);
 	} // end of polarization loop
 	
+	_griddingTaskManager->Finish();
+	
 	_imageAllocator.ReportStatistics();
 	Logger::Info << "Inversion: " << _inversionWatch.ToString() << ", prediction: " << _predictingWatch.ToString() << ", cleaning: " << _deconvolutionWatch.ToString() << '\n';
 	

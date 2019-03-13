@@ -16,6 +16,17 @@ public:
 		Kelvin,
 		MilliKelvin
 	};
+	static const char* UnitName(Unit unit) {
+		switch(unit)
+		{
+			case JanskyPerBeam: return "Jansky/beam";
+			case JanskyPerPixel: return "Jansky/pixel";
+			case Jansky: return "Jansky";
+			case Kelvin: return "Kelvin";
+			case MilliKelvin: return "Milli-Kelvin";
+		}
+		return "";
+	}
 };
 
 #endif
