@@ -273,6 +273,8 @@ void WStackingGridder::makeKernels()
 		case BlackmanNuttallKernelWithoutSinc:
 			makeBlackmanNutallKernel(_1dKernel, _overSamplingFactor, false);
 			break;
+		case BlackmanHarrisKernel:
+			throw std::runtime_error("Blackman-Harris kernel not supported by W-Stacking gridder");
 	}
 	
 	std::vector<std::vector<double>>::iterator gridKernelIter = _griddingKernels.begin();
@@ -321,6 +323,8 @@ void WStackingGridder::GetKernel(enum GridModeEnum gridMode, double* kernel, siz
 		case BlackmanNuttallKernelWithoutSinc:
 			makeBlackmanNutallKernel(v, oversampling, false);
 			break;
+		case BlackmanHarrisKernel:
+			throw std::runtime_error("Blackman-Harris kernel not supported by W-Stacking gridder");
 	}
 	for(size_t i=0; i!=oversampling*size; ++i)
 		kernel[i] = v[i];

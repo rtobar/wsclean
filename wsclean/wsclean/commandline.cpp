@@ -295,7 +295,7 @@ void CommandLine::printHelp()
 		"   Size of step made in the subminor loop of multi-scale. Default currently 0.2, but shows sign of instability.\n"
 		"   A value of 0.1 might be more stable.\n"
 		"-multiscale-convolution-padding <padding>\n"
-		"   Size of zero-padding for convolutions during the multi-scale cleaning.\n"
+		"   Size of zero-padding for convolutions during the multi-scale cleaning. Default: 1.1\n"
 		"-no-multiscale-fast-subminor\n"
 		"   Disable the 'fast subminor loop' optimization, that will only search a part of the\n"
 		"   image during the multi-scale subminor loop. The optimization is on by default.\n"

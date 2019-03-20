@@ -17,6 +17,8 @@ void MSProvider::copyData(std::complex<float>* dest, size_t startChannel, size_t
 	size_t polIndex;
 	if(polOut == Polarization::Instrumental)
 	{
+		if(polsIn.size() != 4)
+			throw std::runtime_error("This mode requires the four polarizations to be present in the measurement set");
 		for(size_t ch=0; ch!=selectedChannelCount*polsIn.size(); ++ch)
 		{
 			if(isfinite(*inPtr))

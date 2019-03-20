@@ -39,6 +39,8 @@ IdgMsGridder::IdgMsGridder(const WSCleanSettings& settings, ImageBufferAllocator
 	if(settings.gridWithBeam || !settings.atermConfigFilename.empty())
 		_options["a_term_kernel_size"] = float(_settings.atermKernelSize);
 	_options["max_threads"] = int(settings.threadCount);
+	if(settings.gridMode == BlackmanHarrisKernel)
+		_options["taper"] = std::string("blackman-harris");
 }
 
 void IdgMsGridder::Invert()
@@ -64,7 +66,6 @@ void IdgMsGridder::Invert()
 		std::vector<MSData> msDataVector;
 		initializeMSDataVector(msDataVector);
 		
-
 		double max_w = 0;
 		for(size_t i=0; i!=MeasurementSetCount(); ++i)
 		{
