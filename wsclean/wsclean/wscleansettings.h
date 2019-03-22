@@ -168,7 +168,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	tukeyTaperInLambda(0.0), tukeyInnerTaperInLambda(0.0),
 	edgeTaperInLambda(0.0), edgeTukeyTaperInLambda(0.0),
 	useWeightsAsTaper(false),
-	nWLayers(0), nWLayersFactor(1.0), antialiasingKernelSize(7), overSamplingFactor(63),
+	nWLayers(0), nWLayersFactor(1.0), antialiasingKernelSize(7), overSamplingFactor(1023),
 	threadCount(System::ProcessorCount()),
 	parallelReordering(1),
 	parallelGridding(1),
