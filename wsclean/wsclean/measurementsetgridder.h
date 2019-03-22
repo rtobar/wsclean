@@ -32,6 +32,7 @@ class MeasurementSetGridder
 			_imageHeight(0),
 			_trimWidth(0), _trimHeight(0),
 			_nwWidth(0), _nwHeight(0),
+			_nwFactor(1.0),
 			_pixelSizeX((1.0 / 60.0) * M_PI / 180.0),
 			_pixelSizeY((1.0 / 60.0) * M_PI / 180.0),
 			_wGridSize(0),
@@ -230,14 +231,17 @@ class MeasurementSetGridder
 		}
 		size_t NWWidth() const { return _nwWidth; }
 		size_t NWHeight() const { return _nwHeight; }
+		double NWFactor() const { return _nwFactor; }
 		void SetNWSize(size_t nwWidth, size_t nwHeight) {
 			_nwWidth = nwWidth;
 			_nwHeight = nwHeight;
 		}
+		void SetNWFactor(double factor) { _nwFactor = factor; }
 	private:
 		size_t _imageWidth, _imageHeight;
 		size_t _trimWidth, _trimHeight;
 		size_t _nwWidth, _nwHeight;
+		double _nwFactor;
 		double _pixelSizeX, _pixelSizeY;
 		size_t _wGridSize, _actualWGridSize;
 		std::vector<MSProvider*> _measurementSets;

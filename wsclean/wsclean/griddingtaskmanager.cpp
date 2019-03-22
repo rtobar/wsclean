@@ -167,6 +167,7 @@ void GriddingTaskManager::prepareGridder(MSGridderBase& gridder)
 	gridder.SetImageHeight(_settings.paddedImageHeight);
 	gridder.SetTrimSize(_settings.trimmedImageWidth, _settings.trimmedImageHeight);
 	gridder.SetNWSize(_settings.widthForNWCalculation, _settings.heightForNWCalculation);
+	gridder.SetNWFactor(_settings.nWLayersFactor);
 	gridder.SetPixelSizeX(_settings.pixelScaleX);
 	gridder.SetPixelSizeY(_settings.pixelScaleY);
 	if(_settings.nWLayers != 0)

@@ -95,7 +95,7 @@ size_t WSMSGridder::getSuggestedWGridSize() const
 		radiansForAllLayers = 2 * M_PI * (_maxW - cMinW) * (1.0 - sqrt(1.0 - lmSq));
 	else
 		radiansForAllLayers = 2 * M_PI * (_maxW - cMinW);
-	size_t suggestedGridSize = size_t(ceil(radiansForAllLayers));
+	size_t suggestedGridSize = size_t(ceil(radiansForAllLayers * NWFactor()));
 	if(suggestedGridSize == 0) suggestedGridSize = 1;
 	if(suggestedGridSize < _cpuCount)
 	{

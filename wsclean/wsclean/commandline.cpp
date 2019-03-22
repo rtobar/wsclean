@@ -540,6 +540,11 @@ bool CommandLine::Parse(WSClean& wsclean, int argc, char* argv[])
 			++argi;
 			settings.nWLayers = parse_size_t(argv[argi], "nwlayers");
 		}
+		else if(param == "nwlayers-factor")
+		{
+			++argi;
+			settings.nWLayersFactor = parse_double(argv[argi], 0.0, "nwlayers-factor", false);
+		}
 		else if(param == "nwlayers-for-size")
 		{
 			settings.widthForNWCalculation = parse_size_t(argv[argi+1], "nwlayers-for-size");
