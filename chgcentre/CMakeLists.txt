@@ -2,7 +2,11 @@ cmake_minimum_required(VERSION 2.8.8)
 
 project(chgcentre)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -O3 -Wall -DNDEBUG -march=native")
+if(PORTABLE)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -Wall -DNDEBUG -std=c++11")
+else()
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -Wall -Wextra -DNDEBUG -march=native -std=c++11")
+endif(PORTABLE)
 
 # Casacore has a separate CMake file in this directory
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMake)
@@ -41,3 +45,6 @@ add_executable(chgcentre main.cpp multibanddata.cpp progressbar.cpp)
 target_link_libraries(chgcentre ${CASACORE_LIBRARIES} ${GSL_LIB} ${GSL_CBLAS_LIB} ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
 
 install (TARGETS chgcentre DESTINATION bin)
+
+message(STATUS "Flags passed to C++ compiler: " ${CMAKE_CXX_FLAGS})
+
