@@ -46,7 +46,9 @@ public:
 	size_t rankFilterSize;
 	double gaussianTaperBeamSize, tukeyTaperInLambda, tukeyInnerTaperInLambda, edgeTaperInLambda, edgeTukeyTaperInLambda;
 	bool useWeightsAsTaper;
-	size_t nWLayers, antialiasingKernelSize, overSamplingFactor, threadCount, parallelReordering, parallelGridding;
+	size_t nWLayers;
+	double nWLayersFactor;
+	size_t antialiasingKernelSize, overSamplingFactor, threadCount, parallelReordering, parallelGridding;
 	bool useMPI;
 	size_t fieldId;
 	size_t startTimestep, endTimestep;
@@ -166,7 +168,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	tukeyTaperInLambda(0.0), tukeyInnerTaperInLambda(0.0),
 	edgeTaperInLambda(0.0), edgeTukeyTaperInLambda(0.0),
 	useWeightsAsTaper(false),
-	nWLayers(0), antialiasingKernelSize(7), overSamplingFactor(63),
+	nWLayers(0), nWLayersFactor(1.0), antialiasingKernelSize(7), overSamplingFactor(1023),
 	threadCount(System::ProcessorCount()),
 	parallelReordering(1),
 	parallelGridding(1),
