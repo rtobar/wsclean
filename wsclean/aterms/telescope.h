@@ -10,7 +10,7 @@
 class Telescope {
 public:
 	enum TelescopeType {
-		AARTFAAC, LOFAR, MWA
+		AARTFAAC, ATCA, LOFAR, MWA
 	};
 	
 	static TelescopeType GetType(casacore::MeasurementSet& ms)
@@ -32,6 +32,8 @@ public:
 			return AARTFAAC;
 		else if(up == "MWA")
 			return MWA;
+		else if(up.substr(0, 4) == "ATCA")
+			return ATCA;
 		else
 			throw std::runtime_error("Telescope name not recognized: " + telescopeName);
 	}

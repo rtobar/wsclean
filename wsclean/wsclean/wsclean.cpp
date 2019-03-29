@@ -56,9 +56,12 @@ WSClean::~WSClean()
 
 void WSClean::multiplyImage(double factor, double* image) const
 {
-	size_t nPix = _settings.trimmedImageWidth * _settings.trimmedImageHeight;
-	for(size_t i=0; i!=nPix; ++i)
-		image[i] *= factor;
+	if(factor != 1.0)
+	{
+		size_t nPix = _settings.trimmedImageWidth * _settings.trimmedImageHeight;
+		for(size_t i=0; i!=nPix; ++i)
+			image[i] *= factor;
+	}
 }
 
 void WSClean::imagePSF(ImagingTableEntry& entry)
@@ -116,7 +119,7 @@ void WSClean::imagePSFCallback(ImagingTableEntry& entry, GriddingResult& result)
 	_infoPerChannel[channelIndex].visibilityCount = result.griddedVisibilityCount;
 	_infoPerChannel[channelIndex].effectiveVisibilityCount = result.effectiveGriddedVisibilityCount;
 	_infoPerChannel[channelIndex].visibilityWeightSum = result.visibilityWeightSum;
-		
+	
 	if(_settings.isUVImageSaved)
 	{
 		saveUVImage(result.imageRealResult.data(), entry, false, "uvpsf");
