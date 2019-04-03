@@ -18,8 +18,8 @@ void DirectMSGridder<num_t>::Invert()
 {
 	initializeSqrtLMLookupTable();
 	const size_t
-		width = ImageWidth(),
-		height = ImageHeight();
+		width = TrimWidth(),
+		height = TrimHeight();
 	
 	std::vector<MSData> msDataVector;
 	initializeMSDataVector(msDataVector);
@@ -63,7 +63,7 @@ void DirectMSGridder<num_t>::Invert()
 	}
 	
 	// Wrap the image correctly and normalize it
-	_image = _imageAllocator->AllocatePtr(ImageWidth()*ImageHeight());
+	_image = _imageAllocator->AllocatePtr(TrimWidth()*TrimHeight());
 	double wFactor = 1.0 / totalWeight();
 	for(size_t y=0; y!=height; ++y)
 	{
@@ -99,8 +99,8 @@ inline void DirectMSGridder<num_t>::gridSample(const InversionSample& sample, si
 	num_t* layer = _layers[layerIndex];
 	const std::complex<num_t> val = sample.sample;
 	const size_t
-		width = ImageWidth(),
-		height = ImageHeight();
+		width = TrimWidth(),
+		height = TrimHeight();
 	const num_t
 		minTwoPi = num_t(-2.0 * M_PIl),
 		u = sample.uInLambda,
@@ -189,8 +189,8 @@ template<typename num_t>
 void DirectMSGridder<num_t>::initializeSqrtLMLookupTable()
 {
 	const size_t
-		width = ImageWidth(),
-		height = ImageHeight();
+		width = TrimWidth(),
+		height = TrimHeight();
 	_sqrtLMTable = allocate();
 	num_t* iter = _sqrtLMTable;
 	for(size_t y=0;y!=height;++y)

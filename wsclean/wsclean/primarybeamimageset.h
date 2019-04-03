@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "../matrix2x2.h"
+#include "../polarization.h"
 
 #include "../wsclean/imagebufferallocator.h"
 

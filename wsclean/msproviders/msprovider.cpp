@@ -239,7 +239,9 @@ void MSProvider::copyWeights(NumType* dest, size_t startChannel, size_t endChann
 		for(size_t ch=0; ch!=selectedChannelCount * polsIn.size(); ++ch)
 		{
 			if(!*flagPtr && isfinite(*inPtr))
-				dest[ch] = *weightPtr;
+				// The factor of 4 is to be consistent with StokesI
+				// It is for having conjugate visibilities and because IDG doesn't separately count XX and YY visibilities
+				dest[ch] = *weightPtr * 4.0f; 
 			else
 				dest[ch] = 0.0f;
 			inPtr++;
