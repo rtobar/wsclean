@@ -21,7 +21,7 @@ else
     mkdir /tmp/wsclean/wsclean
     mkdir /tmp/wsclean/wsclean/examples
     cd ..
-    cp -v CMakeLists.txt CMakeVersionInfo.txt wscversion.h.in Doxyfile.in application.* areaset.* banddata.* buffered_lane.* casamaskreader.* dftpredictionalgorithm.* fftconvolver.* fftresampler.* fftwmanager.* fitsiochecker.* fitsreader.* fitswriter.* gaussianfitter.h image.* imageweights.* lane.* multibanddata.* nlplfitter.* numberlist.* matrix2x2.* modelrenderer.* msselection.* ndppp.* polarization.* polynomialchannelfitter.* polynomialfitter.* progressbar.* rmsimage.* stopwatch.* system.* threadpool.* uvector.* weightmode.* wscleanmain.cpp /tmp/wsclean/
+    cp -v CMakeLists.txt CMakeVersionInfo.txt wscversion.h.in Doxyfile.in application.* areaset.* banddata.* buffered_lane.* casamaskreader.* dftpredictionalgorithm.* fftconvolver.* fftresampler.* fftwmanager.* fitsiochecker.* fitsreader.* fitswriter.* gaussianfitter.* image.* imageweights.* lane.* multibanddata.* nlplfitter.* numberlist.* matrix2x2.* modelrenderer.* msselection.* ndppp.* polarization.* polynomialchannelfitter.* polynomialfitter.* progressbar.* rmsimage.* stopwatch.* system.* threadpool.* uvector.* weightmode.* wscleanmain.cpp /tmp/wsclean/
     cp -v aocommon/cloned_ptr.h aocommon/lane.h aocommon/lane_11.h aocommon/parallel_for.h aocommon/uvector_11.h /tmp/wsclean/aocommon/
     cp -v aterms/*.{h,cpp} /tmp/wsclean/aterms/
     cp -v CMake/*.cmake /tmp/wsclean/CMake/
