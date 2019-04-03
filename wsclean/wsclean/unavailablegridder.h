@@ -9,21 +9,21 @@
 class UnavailableGridder : public MSGridderBase
 {
 public:
-	UnavailableGridder(const WSCleanSettings&) { doThrow(); }
+	UnavailableGridder(const class WSCleanSettings&, class ImageBufferAllocator&) { doThrow(); }
 	
 	virtual ~UnavailableGridder() final override { doThrow(); }
 	
 	virtual void Invert() final override { doThrow(); }
 	
-	virtual void Predict(double* real) final override { doThrow(); }
+	virtual void Predict(ImageBufferAllocator::Ptr) final override { doThrow(); }
 	
-	virtual void Predict(double* real, double* imaginary) final override { doThrow(); }
+	virtual void Predict(ImageBufferAllocator::Ptr, ImageBufferAllocator::Ptr) final override { doThrow(); }
 	
-	virtual double* ImageRealResult() final override { doThrow(); return 0; }
+	virtual ImageBufferAllocator::Ptr ImageRealResult() final override { doThrow(); return 0; }
 	
-	virtual double* ImageImaginaryResult() final override { doThrow(); return 0; }
+	virtual ImageBufferAllocator::Ptr ImageImaginaryResult() final override { doThrow(); return 0; }
 	
-	virtual void GetGriddingCorrectionImage(double* image) const final override { doThrow(); }
+	virtual void GetGriddingCorrectionImage(double*) const final override { doThrow(); }
 	
 	virtual bool HasGriddingCorrectionImage() const final override { doThrow(); return false; }
 	

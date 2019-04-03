@@ -172,13 +172,13 @@ ao::uvector<double> VoltagePattern::InterpolateValues(double freq) const
 		if (freq <= frequencies[ifit]) break;
 	}
 	if (ifit==0) {
-		Logger::Debug << "Using voltage pattern coefficients for " << frequencies[0]*1e-6 << " MHz instead of requested " << freq*1e-6 << '\n';
+		Logger::Info << "Using voltage pattern coefficients for " << frequencies[0]*1e-6 << " MHz instead of requested " << freq*1e-6 << '\n';
 		result.assign(values.begin(), values.begin() + NSamples());
 	} else if (ifit==nFreq) {
-		Logger::Debug << "Using voltage pattern coefficients for " << frequencies[nFreq-1]*1e-6 << " MHz instead of requested " << freq*1e-6 << '\n';
+		Logger::Info << "Using voltage pattern coefficients for " << frequencies[nFreq-1]*1e-6 << " MHz instead of requested " << freq*1e-6 << '\n';
 		result.assign(values.begin() + (nFreq-1) * NSamples(), values.end());
 	} else {
-		Logger::Debug << "Interpolating voltage pattern coefficients from " << frequencies[ifit-1]*1e-6 << " and " << frequencies[ifit]*1e-6 << " MHz to " << freq*1e-6 << " MHz.\n";
+		Logger::Info << "Interpolating voltage pattern coefficients from " << frequencies[ifit-1]*1e-6 << " and " << frequencies[ifit]*1e-6 << " MHz to " << freq*1e-6 << " MHz.\n";
 		size_t n = NSamples();
 		double l = (freq - frequencies[ifit-1]) / (frequencies[ifit] - frequencies[ifit-1]);
 		const double *vpA = FreqIndexValues(ifit-1);
