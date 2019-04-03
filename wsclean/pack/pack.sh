@@ -1,3 +1,4 @@
+NCPU=16
 if [[ "$1" == "" ]] ; then
     echo Syntax: ./pack.sh \<version\>
 else
@@ -6,6 +7,7 @@ else
     rm -rf /tmp/wsclean /tmp/wsclean-${VERSION}
     mkdir /tmp/wsclean
     mkdir /tmp/wsclean/aocommon
+    mkdir /tmp/wsclean/atca
     mkdir /tmp/wsclean/aterms
     mkdir /tmp/wsclean/CMake
     mkdir /tmp/wsclean/deconvolution
@@ -16,13 +18,15 @@ else
     mkdir /tmp/wsclean/model
     mkdir /tmp/wsclean/msproviders
     mkdir /tmp/wsclean/multiscale
+    mkdir /tmp/wsclean/mwa
     mkdir /tmp/wsclean/tests
     mkdir /tmp/wsclean/units
     mkdir /tmp/wsclean/wsclean
     mkdir /tmp/wsclean/wsclean/examples
     cd ..
-    cp -v CMakeLists.txt CMakeVersionInfo.txt wscversion.h.in Doxyfile.in application.* areaset.* banddata.* buffered_lane.* casamaskreader.* dftpredictionalgorithm.* fftconvolver.* fftresampler.* fftwmanager.* fitsiochecker.* fitsreader.* fitswriter.* gaussianfitter.* image.* imageweights.* lane.* multibanddata.* nlplfitter.* numberlist.* matrix2x2.* modelrenderer.* msselection.* ndppp.* polarization.* polynomialchannelfitter.* polynomialfitter.* progressbar.* rmsimage.* stopwatch.* system.* threadpool.* uvector.* weightmode.* wscleanmain.cpp /tmp/wsclean/
-    cp -v aocommon/cloned_ptr.h aocommon/lane.h aocommon/lane_11.h aocommon/parallel_for.h aocommon/uvector_11.h /tmp/wsclean/aocommon/
+    cp -v CMakeLists.txt CMakeVersionInfo.txt wscversion.h.in Doxyfile.in application.* areaset.* banddata.* buffered_lane.* casamaskreader.* dftpredictionalgorithm.* fftconvolver.* fftresampler.* fftwmanager.* fitsiochecker.* fitsreader.* fitswriter.* gaussianfitter.* image.* imageweights.* lane.* multibanddata.* nlplfitter.* numberlist.* matrix2x2.* modelrenderer.* msselection.* ndppp.* parsetreader.* polarization.* polynomialchannelfitter.* polynomialfitter.* progressbar.* rmsimage.* stopwatch.* system.* threadpool.* uvector.* weightmode.* wscleanmain.cpp /tmp/wsclean/
+    cp -v aocommon/barrier.h aocommon/cloned_ptr.h aocommon/lane.h aocommon/lane_11.h aocommon/parallelfor.h aocommon/uvector_11.h /tmp/wsclean/aocommon/
+    cp -v atca/*.{h,cpp} /tmp/wsclean/atca/
     cp -v aterms/*.{h,cpp} /tmp/wsclean/aterms/
     cp -v CMake/*.cmake /tmp/wsclean/CMake/
     cp -v deconvolution/*.{h,cpp} /tmp/wsclean/deconvolution/
@@ -33,6 +37,7 @@ else
     cp -v model/*.{h,cpp} /tmp/wsclean/model/
     cp -v msproviders/*.{h,cpp} /tmp/wsclean/msproviders
     cp -v multiscale/*.{h,cpp} /tmp/wsclean/multiscale
+    cp -v mwa/*.{h,cpp} /tmp/wsclean/mwa
     cp -v tests/*.cpp /tmp/wsclean/tests
     cp -v units/*.h /tmp/wsclean/units
     cp -v wsclean/*.{h,cpp} /tmp/wsclean/wsclean
@@ -48,7 +53,7 @@ else
     mkdir build
     cd build
     cmake ../
-    make -j 4 && make check -j 4
+    make -j ${NCPU} && make check -j ${NCPU}
     cd ..
     
     echo Building WITH LOFAR lib
@@ -56,7 +61,7 @@ else
     mkdir build
     cd build
     cmake ../ -DCMAKE_PREFIX_PATH="/home/anoko/Software/LOFAR-install"
-    make -j 4 && make check -j 4
+    make -j ${NCPU} && make check -j ${NCPU}
     cd ..
     
     echo Building WITH LOFAR lib AND IDG
@@ -64,7 +69,7 @@ else
     mkdir build
     cd build
     cmake ../ -DCMAKE_PREFIX_PATH="/home/anoko/Software/LOFAR-install;/home/anoko/Software/git-idg/install"
-    make -j 4 && make check -j 4
+    make -j ${NCPU} && make check -j ${NCPU}
     cd ..
     cat CMakeVersionInfo.txt
 fi
