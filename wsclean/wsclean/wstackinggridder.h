@@ -63,8 +63,8 @@ class ImageBufferAllocator;
  * - Construct an instance with @ref WStackingGridder()
  * - Set settings if necessary
  * - Call @ref PrepareWLayers();
+   - Call @ref InitializePrediction();
  * - For each pass if multiple passes are necessary (or once otherwise) :
- *   - Call @ref InitializePrediction();
  *   - Call @ref StartPredictionPass();
  *   - Get the predicted visibilities with @ref SampleDataSample();
  * 
@@ -316,8 +316,9 @@ class WStackingGridder
 		 * each pass, i.e., before each call to @ref StartPredictionPass().
 		 * 
 		 * This method is used for prediction of non-complex (IsComplex()==false)
-		 * images. Use @ref InitializePrediction(const double*, const double*) for
-		 * complex prediction -- see @ref SetIsComplex() for more info.
+		 * images. Use
+		 * @ref InitializePrediction(ImageBufferAllocator::Ptr, ImageBufferAllocator::Ptr)
+		 * for complex prediction -- see @ref SetIsComplex() for more info.
 		 * 
 		 * @param image The model image that is to be predicted for. This is an
 		 * array of width * height size, index by (x + width*y).

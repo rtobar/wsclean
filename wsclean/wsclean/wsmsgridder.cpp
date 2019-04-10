@@ -507,15 +507,15 @@ void WSMSGridder::Predict(ImageBufferAllocator::Ptr real, ImageBufferAllocator::
 		real = std::move(resampledReal);
 	}
 	
+	if(imaginary == nullptr)
+		_gridder->InitializePrediction(std::move(real));
+	else
+		_gridder->InitializePrediction(std::move(real), std::move(imaginary));
 	for(size_t pass=0; pass!=_gridder->NPasses(); ++pass)
 	{
 		Logger::Info << "Fourier transforms for pass " << pass << "... ";
 		if(Verbose()) Logger::Info << '\n';
 		else Logger::Info.Flush();
-		if(imaginary == nullptr)
-			_gridder->InitializePrediction(std::move(real));
-		else
-			_gridder->InitializePrediction(std::move(real), std::move(imaginary));
 		
 		_gridder->StartPredictionPass(pass);
 		

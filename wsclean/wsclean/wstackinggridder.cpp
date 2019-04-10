@@ -187,9 +187,7 @@ void WStackingGridder::fftToUVThreadFunction(std::mutex *mutex, std::stack<size_
 {
 	const size_t imgSize = _width * _height;
 	std::complex<double> *fftwIn = _imageBufferAllocator->AllocateComplex(imgSize);
-		// reinterpret_cast<std::complex<double>*>(fftw_malloc(imgSize * sizeof(double) * 2));
 	std::complex<double> *fftwOut = _imageBufferAllocator->AllocateComplex(imgSize);
-		// reinterpret_cast<std::complex<double>*>(fftw_malloc(imgSize * sizeof(double) * 2));
 	
 	std::unique_lock<std::mutex> lock(*mutex);
 	fftw_plan plan =
@@ -214,7 +212,7 @@ void WStackingGridder::fftToUVThreadFunction(std::mutex *mutex, std::stack<size_
 		// Fourier transform the layer
 		fftw_execute(plan);
 		std::complex<double> *uvData = _layeredUVData[layer];
-		memcpy(uvData, fftwOut, imgSize * sizeof(double) * 2);
+		std::copy_n(fftwOut, imgSize, uvData);
 		
 		// lock for accessing tasks in guard
 		lock.lock();

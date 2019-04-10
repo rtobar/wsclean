@@ -9,6 +9,7 @@
 
 #include <complex>
 #include <set>
+#include <vector>
 
 namespace casacore {
 	class MeasurementSet;

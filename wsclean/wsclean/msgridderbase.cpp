@@ -320,6 +320,8 @@ void MSGridderBase::calculateOverallMetaData(const MSData* msDataVector)
 		else
 			SetActualWGridSize(WGridSize());
 	}
+	else 
+		SetActualWGridSize(WGridSize());
 }
 
 template<size_t PolarizationCount>
