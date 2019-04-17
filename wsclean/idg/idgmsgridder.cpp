@@ -61,7 +61,7 @@ void IdgMsGridder::Invert()
 	if(Polarization() == Polarization::StokesI)
 	{
 		if (!_metaDataCache->average_beam) _metaDataCache->average_beam.reset(new AverageBeam());
-		_averageBeam = static_cast<AverageBeam*>(_metaDataCache->average_beam.get());
+		_averageBeam = static_cast<AverageBeam*>(_metaDataCache->averageBeam.get());
 
 		std::vector<MSData> msDataVector;
 		initializeMSDataVector(msDataVector);
@@ -74,6 +74,7 @@ void IdgMsGridder::Invert()
 
 		double shiftl = 0.0, shiftm = 0.0, shiftp = 0.0; // TODO
 		_bufferset->init(width, _actualPixelSizeX, max_w+1.0, shiftl, shiftm, shiftp, _options);
+		Logger::Debug << "IDG subgrid size: " << _bufferset->get_subgridsize() << '\n';
 
 		if (DoImagePSF())
 		{
@@ -95,7 +96,6 @@ void IdgMsGridder::Invert()
 			_image.assign(4 * width * height, 0.0);
 			_bufferset->get_image(_image.data());
 
-			// Normalize by total weight
 			Logger::Debug << "Total weight: " << totalWeight() << '\n';
 
 			double center_pixel_value = _image[height/2 * width + width/2]; // TODO check memory layout, is this correct? for now it does not matter, because width == height
@@ -295,12 +295,12 @@ void IdgMsGridder::Predict(ImageBufferAllocator::Ptr image)
 	if (Polarization() == Polarization::StokesI)
 	{
 		_image.assign(4 * width * height, 0.0);
-		if (!_metaDataCache->average_beam)
+		if (!_metaDataCache->averageBeam)
 		{
 			Logger::Info << "no average_beam in cache, creating an empty one.\n";
 			_metaDataCache->average_beam.reset(new AverageBeam());
 		}
-		_averageBeam = static_cast<AverageBeam*>(_metaDataCache->average_beam.get());
+		_averageBeam = static_cast<AverageBeam*>(_metaDataCache->averageBeam.get());
 	}
 
 	size_t polIndex = Polarization::StokesToIndex(Polarization());

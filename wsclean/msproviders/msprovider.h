@@ -129,6 +129,7 @@ protected:
 	}
 	
 	MSProvider() { }
+	
 private:
 	MSProvider(const MSProvider&) { }
 	void operator=(const MSProvider&) { }

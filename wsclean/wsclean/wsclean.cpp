@@ -457,6 +457,7 @@ void WSClean::RunClean()
 		
 		_infoPerChannel.assign(_settings.channelsOut, OutputChannelInfo());
 		
+		_msGridderMetaCache.clear();
 		_imageWeightCache = createWeightCache();
 		
 		if(_settings.mfsWeighting)
@@ -577,6 +578,7 @@ void WSClean::RunPredict()
 		}
 		
 		_infoPerChannel.assign(_settings.channelsOut, OutputChannelInfo());
+		_msGridderMetaCache.clear();
 		
 		_globalSelection = selectInterval(fullSelection, intervalIndex);
 		

@@ -63,14 +63,14 @@ private:
 	void multiplyImage(double factor, ImageBufferAllocator::Ptr& image) const { multiplyImage(factor, image.data()); }
 	
 	void imagePSF(ImagingTableEntry& entry);
-	void imagePSFCallback(ImagingTableEntry& entry, class GriddingResult& result);
+	void imagePSFCallback(ImagingTableEntry& entry, struct GriddingResult& result);
 	
 	void imageGridding();
 	void imageMain(ImagingTableEntry& entry, bool isFirst, bool updateBeamInfo, bool isInitialInversion);
-	void imageMainCallback(ImagingTableEntry& entry, class GriddingResult& result, bool updateBeamInfo, bool isInitialInversion);
+	void imageMainCallback(ImagingTableEntry& entry, struct GriddingResult& result, bool updateBeamInfo, bool isInitialInversion);
 	
 	void predict(const ImagingTableEntry& entry);
-	void predictCallback(const ImagingTableEntry& entry, class GriddingResult& result);
+	void predictCallback(const ImagingTableEntry& entry, struct GriddingResult& result);
 	
 	//void makeMFSImage(const string& suffix, size_t intervalIndex, PolarizationEnum pol, bool isImaginary, bool isPSF = false);
 	//void renderMFSImage(size_t intervalIndex, PolarizationEnum pol, bool isImaginary, bool isPBCorrected) const;

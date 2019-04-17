@@ -66,7 +66,7 @@ public:
 			double minW, maxW, maxWWithFlags, maxBaselineUVW, maxBaselineInM;
 		};
 		std::vector<Entry> msDataVector;
-		std::unique_ptr<AverageBeamBase> average_beam;
+		std::unique_ptr<AverageBeamBase> averageBeam;
 	};
 	
 	void SetMetaDataCache(MetaDataCache* cache) { _metaDataCache = cache; }
