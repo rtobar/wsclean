@@ -65,7 +65,7 @@ public:
 	bool smallInversion, makePSF, makePSFOnly, isWeightImageSaved, isUVImageSaved, isDirtySaved, isFirstResidualSaved, isGriddingImageSaved;
 	bool writeImagingWeightSpectrumColumn;
 	std::string temporaryDirectory;
-	bool forceReorder, forceNoReorder, subtractModel, modelUpdateRequired, mfsWeighting;
+	bool forceReorder, forceNoReorder, subtractModel, modelUpdateRequired, mfWeighting;
 	size_t fullResOffset, fullResWidth, fullResPad;
 	bool applyPrimaryBeam, reusePrimaryBeam, useDifferentialLofarBeam, savePsfPb;
 	std::string mwaPath;
@@ -191,7 +191,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	forceReorder(false), forceNoReorder(false),
 	subtractModel(false),
 	modelUpdateRequired(true),
-	mfsWeighting(false),
+	mfWeighting(false),
 	fullResOffset(0), fullResWidth(0), fullResPad(0),
 	applyPrimaryBeam(false), reusePrimaryBeam(false),
 	useDifferentialLofarBeam(false),

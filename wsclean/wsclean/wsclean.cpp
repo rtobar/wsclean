@@ -318,7 +318,7 @@ void WSClean::predictCallback(const ImagingTableEntry&, GriddingResult&)
 
 ImageWeights& WSClean::initializeImageWeights(const ImagingTableEntry& entry, std::vector<std::pair<std::unique_ptr<MSProvider>, MSSelection>>& msList)
 {
-	if(!_settings.mfsWeighting)
+	if(!_settings.mfWeighting)
 	{
 		_imageWeightCache->Update(msList, entry.outputChannelIndex, entry.outputIntervalIndex);
 		if(_settings.isWeightImageSaved)
@@ -329,7 +329,7 @@ ImageWeights& WSClean::initializeImageWeights(const ImagingTableEntry& entry, st
 
 void WSClean::initializeMFSImageWeights()
 {
-	Logger::Info << "Precalculating MFS weights for " << _settings.weightMode.ToString() << " weighting...\n";
+	Logger::Info << "Precalculating MF weights for " << _settings.weightMode.ToString() << " weighting...\n";
 	_imageWeightCache->ResetWeights();
 	if(_doReorder)
 	{
@@ -460,7 +460,7 @@ void WSClean::RunClean()
 		_msGridderMetaCache.clear();
 		_imageWeightCache = createWeightCache();
 		
-		if(_settings.mfsWeighting)
+		if(_settings.mfWeighting)
 			initializeMFSImageWeights();
 		
 		_griddingTaskManager.reset(new GriddingTaskManager(_settings, _imageAllocator));
@@ -951,7 +951,7 @@ void WSClean::readEarlierModelImages(const ImagingTableEntry& entry)
 			// The construction of the weight cache is delayed in prediction mode, because only now
 			// the image size and scale is known.
 			_imageWeightCache = createWeightCache();
-			if(_settings.mfsWeighting)
+			if(_settings.mfWeighting)
 				initializeMFSImageWeights();
 		}
 		

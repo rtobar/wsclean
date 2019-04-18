@@ -68,7 +68,7 @@ void CommandLine::printHelp()
 		"   two images will be output: <prefix>-uv-real.fits and <prefix>-uv-imag.fits.\n"
 		"-apply-primary-beam\n"
 		"   Calculate and apply the primary beam and save images for the Jones components, with weighting identical to the\n"
-		"   weighting as used by the imager. Only available for LOFAR, AARTFAAC and MWA.\n"
+		"   weighting as used by the imager. Only available for LOFAR, AARTFAAC, MWA and ATCA.\n"
 		"-reuse-primary-beam\n"
 		"   If a primary beam image exists on disk, reuse those images.\n"
 		"-use-differential-lofar-beam\n"
@@ -89,13 +89,13 @@ void CommandLine::printHelp()
 		"-super-weight <factor>\n"
 		"   Increase the weight gridding box size, similar to Casa's superuniform weighting scheme. Default: 1.0\n"
 		"   The factor can be rational and can be less than one for subpixel weighting.\n"
-		"-mfs-weighting\n"
-		"   In spectral mode, calculate the weights as if the image was made using MFS. This makes sure that the sum of\n"
-		"   channel images equals the MFS weights. Otherwise, the channel image will become a bit more naturally weighted.\n"
+		"-mf-weighting\n"
+		"   In spectral mode, calculate the weights as if the image was made using MF. This makes sure that the sum of\n"
+		"   channel images equals the MF weights. Otherwise, the channel image will become a bit more naturally weighted.\n"
 		"   This is only relevant for weighting modes that require gridding (i.e., Uniform, Briggs').\n"
 		"   Default: off, unless -join-channels is specified.\n"
-		"-no-mfs-weighting\n"
-		"   Opposite of -mfs-weighting; can be used to turn off MFS weighting in -join-channels mode.\n"
+		"-no-mf-weighting\n"
+		"   Opposite of -ms-weighting; can be used to turn off MF weighting in -join-channels mode.\n"
 		"-weighting-rank-filter <level>\n"
 		"   Filter the weights and set high weights to the local mean. The level parameter specifies\n"
 		"   the filter level; any value larger than level*localmean will be set to level*localmean.\n"
@@ -276,8 +276,8 @@ void CommandLine::printHelp()
 		"   Links all polarizations to be cleaned from the given list: components are found in the\n"
 		"   given list, but cleaned from all polarizations. \n"
 		"-join-channels\n"
-		"   Perform cleaning by searching for peaks in the MFS image, but subtract components from individual channels.\n"
-		"   This will turn on mfsweighting by default. Default: off.\n"
+		"   Perform cleaning by searching for peaks in the MF image, but subtract components from individual channels.\n"
+		"   This will turn on mf-weighting by default. Default: off.\n"
 		"-multiscale\n"
 		"   Clean on different scales. This is a new algorithm. Default: off.\n"
 		"   This parameter invokes the v1.9 multiscale algorithm, which is slower but more accurate\n"
@@ -443,7 +443,7 @@ bool CommandLine::Parse(WSClean& wsclean, int argc, char* argv[])
 	
 	WSCleanSettings& settings = wsclean.Settings();
 	int argi = 1;
-	bool mfsWeighting = false, noMFSWeighting = false;
+	bool mfWeighting = false, noMFWeighting = false;
 	while(argi < argc && argv[argi][0] == '-')
 	{
 		const std::string param = argv[argi][1]=='-' ? (&argv[argi][2]) : (&argv[argi][1]);
@@ -823,17 +823,18 @@ bool CommandLine::Parse(WSClean& wsclean, int argc, char* argv[])
 			if(param == "joinchannels")
 				deprecated(param, "join-channels");
 		}
-		else if(param == "mfs-weighting" || param == "mfsweighting")
+		else if(param == "mf-weighting" || param == "mfs-weighting" || param == "mfsweighting")
 		{
-			mfsWeighting = true;
-			if(param == "mfsweighting")
-				deprecated(param, "mfs-weighting");
+			// mfs was renamed to mf in wsclean 2.7
+			mfWeighting = true;
+			if(param != "mf-weighting")
+				deprecated(param, "mf-weighting");
 		}
-		else if(param == "no-mfs-weighting" || param == "nomfsweighting")
+		else if(param == "no-mf-weighting" || param == "no-mfs-weighting" || param == "nomfsweighting")
 		{
-			noMFSWeighting = true;
-			if(param == "nomfsweighting")
-				deprecated(param, "no-mfs-weighting");
+			noMFWeighting = true;
+			if(param != "no-mf-weighting")
+				deprecated(param, "no-mf-weighting");
 		}
 		else if(param == "taper-gaussian")
 		{
@@ -1270,7 +1271,7 @@ bool CommandLine::Parse(WSClean& wsclean, int argc, char* argv[])
 	// and possibly set to quiet.
 	printHeader();
 	
-	settings.mfsWeighting = (settings.joinedFrequencyCleaning && !noMFSWeighting) || mfsWeighting;
+	settings.mfWeighting = (settings.joinedFrequencyCleaning && !noMFWeighting) || mfWeighting;
 	
 	// Joined polarizations is implemented by linking all polarizations
 	if(settings.joinedPolarizationCleaning && settings.linkedPolarizations.empty())

@@ -174,6 +174,22 @@ void ImageOperations::RenderMFSImage(const WSCleanSettings& settings, const Outp
 	}
 	Logger::Info << "Rendering sources to restored image " + beamStr + "... ";
 	Logger::Info.Flush();
+	bool hasWarned = false;
+	for(double& v : modelImage)
+	{
+		if(!std::isfinite(v))
+		{
+			if(!hasWarned)
+			{
+				Logger::Warn <<
+					"\nWarning: Some beam corrected model components are NaN. These won't be restored on the pb mf image.\n"
+					"This can be caused by an undefined or zero beam inside the FOV. Be sure to check the individual model\n"
+					"images to check if the mf image is as expected.\n";
+				hasWarned = true;
+			}
+			v = 0.0;
+		}
+	}
 	ModelRenderer::Restore(image.data(), modelImage.data(), settings.trimmedImageWidth, settings.trimmedImageHeight, beamMaj, beamMin, beamPA, settings.pixelScaleX, settings.pixelScaleY);
 	Logger::Info << "DONE\n";
 	
