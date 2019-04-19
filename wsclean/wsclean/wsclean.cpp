@@ -664,6 +664,15 @@ void WSClean::runIndependentGroup(ImagingTable& groupTable, std::unique_ptr<Prim
 	if(groupTable.Front().polarization == *_settings.polarizations.begin())
 		_psfImages.Initialize(writer.Writer(), 1, groupTable.SquaredGroupCount(), _settings.prefixName + "-psf", _imageAllocator);
 	
+	// In the case of IDG we have to directly ask for all Four polarizations. This can't 
+	// be parallelized in the current structure, but is also not necessary since IDG handles this
+	bool parallelizeChannels = !_settings.useIDG;
+	// In case XY/YX polarizations are requested, we should not parallelize over those since they
+	// need to be combined after imaging, and this currently requires XY before YX.
+	bool parallelizePolarizations =
+		_settings.polarizations.count(Polarization::XY)==0 &&
+		_settings.polarizations.count(Polarization::YX)==0;
+	
 	const std::string rootPrefix = _settings.prefixName;
 		
 	for(size_t joinedIndex=0; joinedIndex!=groupTable.EntryCount(); ++joinedIndex)
@@ -676,11 +685,32 @@ void WSClean::runIndependentGroup(ImagingTable& groupTable, std::unique_ptr<Prim
 	}
 	_griddingTaskManager->Finish();
 	
-	for(size_t joinedIndex=0; joinedIndex!=groupTable.EntryCount(); ++joinedIndex)
+	if(parallelizePolarizations)
 	{
-		runFirstInversion(groupTable[joinedIndex], primaryBeam);
+		for(size_t joinedIndex=0; joinedIndex!=groupTable.EntryCount(); ++joinedIndex)
+		{
+			runFirstInversion(groupTable[joinedIndex], primaryBeam);
+		}
+		_griddingTaskManager->Finish();
 	}
-	_griddingTaskManager->Finish();
+	else {
+		bool hasMore;
+		size_t sIndex = 0;
+		do {
+			hasMore = false;
+			for(size_t sGroupIndex=0; sGroupIndex!=groupTable.SquaredGroupCount(); ++sGroupIndex)
+			{
+				ImagingTable sGroupTable = groupTable.GetSquaredGroup(sGroupIndex);
+				if(sIndex < sGroupTable.EntryCount())
+				{
+					hasMore = true;
+					runFirstInversion(sGroupTable[sIndex], primaryBeam);
+				}
+			}
+			++sIndex;
+			_griddingTaskManager->Finish();
+		} while(hasMore);
+	}
 
 	_deconvolution.InitializeDeconvolutionAlgorithm(groupTable, *_settings.polarizations.begin(), &_imageAllocator, minTheoreticalBeamSize(groupTable), _settings.threadCount);
 
@@ -705,27 +735,8 @@ void WSClean::runIndependentGroup(ImagingTable& groupTable, std::unique_ptr<Prim
 		
 				if(_settings.deconvolutionMGain != 1.0)
 				{
-					if(_settings.useIDG)
+					if(parallelizeChannels && parallelizePolarizations)
 					{
-						// For now in the case of IDG we have to directly ask for all Four polarizations. This can't 
-						// be parallelized yet in the current structure.
-						for(size_t sGroupIndex=0; sGroupIndex!=groupTable.SquaredGroupCount(); ++sGroupIndex)
-						{
-							ImagingTable sGroupTable = groupTable.GetSquaredGroup(sGroupIndex);
-							for(size_t e=0; e!=sGroupTable.EntryCount(); ++e)
-							{
-								predict(sGroupTable[e]);
-							}
-							_griddingTaskManager->Finish();
-							for(size_t e=0; e!=sGroupTable.EntryCount(); ++e)
-							{
-								imageMain(sGroupTable[e], false, false, false);
-							} // end of polarization loop
-							_griddingTaskManager->Finish();
-						} // end of joined channels loop
-					}
-					
-					else { // not using IDG
 						for(size_t sGroupIndex=0; sGroupIndex!=groupTable.SquaredGroupCount(); ++sGroupIndex)
 						{
 							ImagingTable sGroupTable = groupTable.GetSquaredGroup(sGroupIndex);
@@ -745,6 +756,58 @@ void WSClean::runIndependentGroup(ImagingTable& groupTable, std::unique_ptr<Prim
 							} // end of polarization loop
 						} // end of joined channels loop
 						_griddingTaskManager->Finish();
+					}
+					
+					else if(parallelizePolarizations) {
+						for(size_t sGroupIndex=0; sGroupIndex!=groupTable.SquaredGroupCount(); ++sGroupIndex)
+						{
+							ImagingTable sGroupTable = groupTable.GetSquaredGroup(sGroupIndex);
+							for(size_t e=0; e!=sGroupTable.EntryCount(); ++e)
+							{
+								predict(sGroupTable[e]);
+							}
+							_griddingTaskManager->Finish();
+							for(size_t e=0; e!=sGroupTable.EntryCount(); ++e)
+							{
+								imageMain(sGroupTable[e], false, false, false);
+							} // end of polarization loop
+							_griddingTaskManager->Finish();
+						} // end of joined channels loop
+					}
+					
+					else { // only parallize channels
+						bool hasMore;
+						size_t sIndex = 0;
+						do {
+							hasMore = false;
+							for(size_t sGroupIndex=0; sGroupIndex!=groupTable.SquaredGroupCount(); ++sGroupIndex)
+							{
+								ImagingTable sGroupTable = groupTable.GetSquaredGroup(sGroupIndex);
+								if(sIndex < sGroupTable.EntryCount())
+								{
+									hasMore = true;
+									predict(sGroupTable[sIndex]);
+								}
+							}
+							++sIndex;
+							_griddingTaskManager->Finish();
+						} while(hasMore);
+						
+						sIndex = 0;
+						do {
+							hasMore = false;
+							for(size_t sGroupIndex=0; sGroupIndex!=groupTable.SquaredGroupCount(); ++sGroupIndex)
+							{
+								ImagingTable sGroupTable = groupTable.GetSquaredGroup(sGroupIndex);
+								if(sIndex < sGroupTable.EntryCount())
+								{
+									hasMore = true;
+									imageMain(sGroupTable[sIndex], false, false, false);
+								}
+							}
+							++sIndex;
+							_griddingTaskManager->Finish();
+						} while(hasMore);
 					}
 				}
 				
