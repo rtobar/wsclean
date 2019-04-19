@@ -53,23 +53,26 @@ else
     mkdir build
     cd build
     cmake ../
-    make -j ${NCPU} && make check -j ${NCPU}
+    make -j ${NCPU} && make check -j ${NCPU} && ./wsclean --version|tee ../runs.txt
     cd ..
     
     echo Building WITH LOFAR lib
     rm build -rf
     mkdir build
     cd build
-    cmake ../ -DCMAKE_PREFIX_PATH="/home/anoko/Software/LOFAR-install"
-    make -j ${NCPU} && make check -j ${NCPU}
+    cmake ../ -DCMAKE_PREFIX_PATH="/home/anoko/Software/LOFARBeam-install"
+    make -j ${NCPU} && make check -j ${NCPU} && ./wsclean --version|tee -a ../runs.txt
     cd ..
     
     echo Building WITH LOFAR lib AND IDG
     rm build -rf
     mkdir build
     cd build
-    cmake ../ -DCMAKE_PREFIX_PATH="/home/anoko/Software/LOFAR-install;/home/anoko/Software/git-idg/install"
-    make -j ${NCPU} && make check -j ${NCPU}
+    cmake ../ -DCMAKE_PREFIX_PATH="/home/anoko/Software/LOFARBeam-install;/home/anoko/Software/idg-install"
+    make -j ${NCPU} && make check -j ${NCPU} && ./wsclean --version|tee -a ../runs.txt
     cd ..
+    
+    cat runs.txt
+    rm -f runs.txt
     cat CMakeVersionInfo.txt
 fi
