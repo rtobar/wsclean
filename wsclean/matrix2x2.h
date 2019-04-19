@@ -374,8 +374,7 @@ public:
 	template<typename T>
 	static void RotationMatrix(std::complex<T>* matrix, double alpha)
 	{
-		T cosAlpha, sinAlpha;
-		sincos(alpha, &sinAlpha, &cosAlpha);
+		T cosAlpha = std::cos(alpha), sinAlpha = std::sin(alpha);
 		matrix[0] = cosAlpha; matrix[1] = -sinAlpha;
 		matrix[2] = sinAlpha; matrix[3] = cosAlpha;
 	}
