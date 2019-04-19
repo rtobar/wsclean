@@ -60,7 +60,7 @@ void IdgMsGridder::Invert()
 	// is the dirty of Stokes I, which should thus overwrite all images.
 	if(Polarization() == Polarization::StokesI)
 	{
-		if (!_metaDataCache->average_beam) _metaDataCache->average_beam.reset(new AverageBeam());
+		if (!_metaDataCache->averageBeam) _metaDataCache->averageBeam.reset(new AverageBeam());
 		_averageBeam = static_cast<AverageBeam*>(_metaDataCache->averageBeam.get());
 
 		std::vector<MSData> msDataVector;
@@ -298,7 +298,7 @@ void IdgMsGridder::Predict(ImageBufferAllocator::Ptr image)
 		if (!_metaDataCache->averageBeam)
 		{
 			Logger::Info << "no average_beam in cache, creating an empty one.\n";
-			_metaDataCache->average_beam.reset(new AverageBeam());
+			_metaDataCache->averageBeam.reset(new AverageBeam());
 		}
 		_averageBeam = static_cast<AverageBeam*>(_metaDataCache->averageBeam.get());
 	}
