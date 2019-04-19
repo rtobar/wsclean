@@ -1154,7 +1154,7 @@ MSSelection WSClean::selectInterval(MSSelection& fullSelection, size_t intervalI
 			casacore::MeasurementSet ms(_settings.filenames[0]);
 			Logger::Info << "Counting number of scans... ";
 			Logger::Info.Flush();
-			casacore::ROScalarColumn<double> timeColumn(ms, casacore::MS::columnName(casacore::MSMainEnums::TIME));
+			casacore::ScalarColumn<double> timeColumn(ms, casacore::MS::columnName(casacore::MSMainEnums::TIME));
 			double time = timeColumn(0);
 			size_t timestepIndex = 1;
 			for(size_t row = 0; row!=ms.nrow(); ++row)

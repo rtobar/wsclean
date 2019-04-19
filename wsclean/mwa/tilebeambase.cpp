@@ -86,11 +86,9 @@ void TileBeamBase<Implementation>::PrecalculatePositionInfo(TileBeamBase::Precal
 	casacore::MDirection hadec = j2000ToHaDec(imageDir);
 	posInfo.ha = hadec.getValue().get()[0];
 	posInfo.dec = decRad;
-	double sinLat, cosLat;
-	sincos(arrLatitude, &sinLat, &cosLat);
-	double sinDec, cosDec;
-	sincos(decRad, &sinDec, &cosDec);
-	double cosHA = cos(posInfo.ha);
+	double sinLat = std::sin(arrLatitude), cosLat = std::cos(arrLatitude);
+	double sinDec = std::sin(decRad), cosDec = std::cos(decRad);
+	double cosHA = std::cos(posInfo.ha);
 	posInfo.zenithAngle = acos(sinLat * sinDec + cosLat * cosDec * cosHA);
 	casacore::MDirection azel = j2000ToAzelGeo(imageDir);
 	posInfo.azimuth = azel.getValue().get()[0];
