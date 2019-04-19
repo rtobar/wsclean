@@ -102,7 +102,7 @@ inline void DirectMSGridder<num_t>::gridSample(const InversionSample& sample, si
 		width = TrimWidth(),
 		height = TrimHeight();
 	const num_t
-		minTwoPi = num_t(-2.0 * M_PIl),
+		minTwoPi = num_t(-2.0 * M_PI),
 		u = sample.uInLambda,
 		v = sample.vInLambda,
 		w = sample.wInLambda;
