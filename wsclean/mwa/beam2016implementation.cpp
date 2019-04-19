@@ -458,8 +458,8 @@ int Beam2016Implementation::P1sin( int nmax, double theta, vector<double>& p1sin
 	p1sin_out.resize(size);
 	p1_out.resize(size);
 
-	double sin_th, u;
-	sincos(theta, &sin_th, &u);
+	double sin_th = std::sin(theta);
+	double u = std::cos(theta);
 	double delu=1e-6;
 	
 	vector<double> P, Pm1, Pm_sin, Pu_mdelu, Pm_sin_merged, Pm1_merged;
