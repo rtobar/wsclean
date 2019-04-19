@@ -300,7 +300,7 @@ void SimpleClean::PartialSubtractImageAVX(double *image, size_t imgWidth, size_t
 			__m256d
 				imgVal = _mm256_loadu_pd(imageIter),
 				psfVal = _mm256_loadu_pd(psfIter);
-#ifdef __FMA4__
+#ifdef __FMA__
 			_mm256_storeu_pd(imageIter, _mm256_fmadd_pd(psfVal, mFactor, imgVal));
 #else
 			_mm256_storeu_pd(imageIter, _mm256_add_pd(imgVal, _mm256_mul_pd(psfVal, mFactor)));
