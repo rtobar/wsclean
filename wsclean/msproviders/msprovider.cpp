@@ -13,7 +13,7 @@ void MSProvider::copyData(std::complex<float>* dest, size_t startChannel, size_t
 	const size_t polCount = polsIn.size();
 	casacore::Array<std::complex<float> >::const_contiter inPtr = data.cbegin() + startChannel * polCount;
 	const size_t selectedChannelCount = endChannel - startChannel;
-		
+	
 	size_t polIndex;
 	if(polOut == Polarization::Instrumental)
 	{
@@ -232,7 +232,7 @@ void MSProvider::copyWeights(NumType* dest, size_t startChannel, size_t endChann
 	casacore::Array<float>::const_contiter weightPtr = weights.cbegin() + startChannel * polCount;
 	casacore::Array<bool>::const_contiter flagPtr = flags.cbegin() + startChannel * polCount;
 	const size_t selectedChannelCount = endChannel - startChannel;
-		
+	
 	size_t polIndex;
 	if(polOut == Polarization::Instrumental)
 	{
@@ -313,17 +313,19 @@ void MSProvider::copyWeights(NumType* dest, size_t startChannel, size_t endChann
 		flagPtr += polIndexA;
 		for(size_t ch=0; ch!=selectedChannelCount; ++ch)
 		{
+			NumType w;
 			if(!*flagPtr && isfinite(*inPtr))
-				dest[ch] = *weightPtr * 2.0f;
+				w = *weightPtr * 4.0f;
 			else
-				dest[ch] = 0.0f;
+				w = 0.0f;
 			inPtr += polIndexB-polIndexA;
 			weightPtr += polIndexB-polIndexA;
 			flagPtr += polIndexB-polIndexA;
 			if(!*flagPtr && isfinite(*inPtr))
-				dest[ch] += *weightPtr * 2.0f;
+				w = std::min<NumType>(w, *weightPtr * 4.0f);
 			else
-				dest[ch] = 0.0f;
+				w = 0.0f;
+			dest[ch] = w;
 			weightPtr += polCount - polIndexB + polIndexA;
 			inPtr += polCount - polIndexB + polIndexA;
 			flagPtr += polCount - polIndexB + polIndexA;
