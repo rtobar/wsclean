@@ -26,6 +26,7 @@ public:
 		const std::string& Key() const { return _key; }
 		const std::string& GetStringValue() const;
 		const std::vector<std::string>& GetStringListValue() const;
+		
 	private:
 		struct Value { virtual ~Value() { } };
 		struct StringValue : public Value { std::string _value; } ;
@@ -38,8 +39,10 @@ public:
 	const std::string& GetString(const std::string& key) const;
 	const std::string& GetStringOr(const std::string& key, const std::string& orValue) const;
 	const std::vector<std::string>& GetStringList(const std::string& key) const;
+	
 	bool GetBool(const std::string& key) const;
 	bool GetBoolOr(const std::string& key, bool orValue) const;
+	
 	double GetDouble(const std::string& key) const;
 	double GetDoubleOr(const std::string& key, double orValue) const;
 	

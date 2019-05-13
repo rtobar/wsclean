@@ -1,5 +1,6 @@
 #include "deconvolution.h"
 
+#include "imageset.h"
 #include "simpleclean.h"
 #include "moresane.h"
 #include "iuwtdeconvolution.h"
@@ -39,9 +40,9 @@ void Deconvolution::Perform(const class ImagingTable& groupTable, bool& reachedM
 	
 	_imageAllocator->FreeUnused();
 	ImageSet
-		residualSet(&groupTable, *_imageAllocator, _settings.deconvolutionChannelCount, _settings.squaredJoins, _settings.linkedPolarizations, _imgWidth, _imgHeight),
-		modelSet(&groupTable, *_imageAllocator, _settings.deconvolutionChannelCount, _settings.squaredJoins, _settings.linkedPolarizations, _imgWidth, _imgHeight);
-		
+		residualSet(&groupTable, *_imageAllocator, _settings, _imgWidth, _imgHeight),
+		modelSet(&groupTable, *_imageAllocator, _settings, _imgWidth, _imgHeight);
+	
 	residualSet.LoadAndAverage(*_residualImages);
 	modelSet.LoadAndAverage(*_modelImages);
 	
@@ -234,9 +235,8 @@ void Deconvolution::InitializeDeconvolutionAlgorithm(const ImagingTable& groupTa
 	algorithm->SetThreadCount(threadCount);
 	algorithm->SetSpectralFittingMode(_settings.spectralFittingMode, _settings.spectralFittingTerms);
 	
-	ao::uvector<double> frequencies, weights;
-	calculateDeconvolutionFrequencies(groupTable, frequencies, weights);
-	algorithm->InitializeFrequencies(frequencies, weights);
+	ImageSet::CalculateDeconvolutionFrequencies(groupTable, _channelFrequencies, _channelWeights, _settings.deconvolutionChannelCount);
+	algorithm->InitializeFrequencies(_channelFrequencies, _channelWeights);
 	_parallelDeconvolution.SetAlgorithm(std::move(algorithm));
 	
 	readMask(groupTable);
@@ -282,25 +282,3 @@ void Deconvolution::readMask(const ImagingTable& groupTable)
 		_parallelDeconvolution.SetCleanMask(_cleanMask.data());
 	}
 }
-
-void Deconvolution::calculateDeconvolutionFrequencies(const ImagingTable& groupTable, ao::uvector<double>& frequencies, ao::uvector<double>& weights)
-{
-	size_t deconvolutionChannels = _settings.deconvolutionChannelCount;
-	if(deconvolutionChannels == 0) deconvolutionChannels = _summedCount;
-	frequencies.assign(deconvolutionChannels, 0.0);
-	weights.assign(deconvolutionChannels, 0.0);
-	ao::uvector<size_t> counts(deconvolutionChannels, 0);
-	for(size_t i=0; i!=_summedCount; ++i)
-	{
-		const ImagingTableEntry& entry = groupTable.GetSquaredGroup(i)[0];
-		double freq = entry.CentralFrequency();
-		size_t deconvolutionChannel = i * deconvolutionChannels / _summedCount;
-		frequencies[deconvolutionChannel] += freq;
-		Logger::Debug << "Weight: " << entry.imageWeight << '\n';
-		weights[deconvolutionChannel] += entry.imageWeight;
-		counts[deconvolutionChannel]++;
-	}
-	for(size_t i=0; i!=deconvolutionChannels; ++i)
-		frequencies[i] /= counts[i];
-}
-

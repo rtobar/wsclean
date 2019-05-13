@@ -158,8 +158,7 @@ double MultiScaleAlgorithm::ExecuteMajorIteration(ImageSet& dirtySet, ImageSet& 
 		_allocator.Allocate(_width*_height, doubleConvolvedPSFs[i]);
 	}
 	
-	ImageSet individualConvolvedImages(&dirtySet.Table(), dirtySet.Allocator(), dirtySet.ChannelsInDeconvolution(), dirtySet.SquareJoinedChannels(),
-	dirtySet.LinkedPolarizations(), _width, _height);
+	ImageSet individualConvolvedImages(&dirtySet.Table(), dirtySet.Allocator(), dirtySet.Settings(), _width, _height);
 	
 	//
 	// The minor iteration loop

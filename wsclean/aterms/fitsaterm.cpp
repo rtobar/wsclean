@@ -16,7 +16,7 @@ FitsATerm::FitsATerm(size_t nAntenna, size_t width, size_t height, double ra, do
 	_phaseCentreDM(phaseCentreDM),
 	_atermWidth(atermSize),
 	_atermHeight(atermSize),
-	_tukeyWindow(false),
+	_window(WindowFunction::Rectangular),
 	_padding(1.0)
 { }
 
@@ -91,11 +91,6 @@ bool FitsATerm::Calculate(std::complex<float>* buffer, double time, double frequ
 		// Do we need to calculate a next timestep?
 		double curTime = _timesteps[_curTimeindex].time;
 		double nextTime = _timesteps[_curTimeindex+1].time;
-		/*std::cout.precision(15);
-		std::cout << 
-			"Searching index for time " << time << 
-			", time[" << _curTimeindex << "]=" << curTime <<
-			", next=" << nextTime << '\n';*/
 		// If we are closer to the next timestep, use the next.
 		if(std::fabs(nextTime - time) < std::fabs(curTime - time))
 		{
@@ -134,7 +129,10 @@ void FitsATerm::readImages(std::complex<float>* buffer, size_t timeIndex, double
 	FitsReader& reader = _readers[_timesteps[timeIndex].readerIndex];
 	ao::uvector<double> image(reader.ImageWidth() * reader.ImageHeight());
 	FFTResampler resampler(_atermWidth, _atermHeight, _width, _height, 1, false);
-	resampler.SetTukeyWindow(double(_atermWidth) / _padding, false);
+	if(_window == WindowFunction::Tukey)
+		resampler.SetTukeyWindow(double(_atermWidth) / _padding, false);
+	else
+		resampler.SetWindowFunction(_window, true);
 	for(size_t antennaIndex = 0; antennaIndex != _nAntenna; ++antennaIndex)
 	{
 		std::complex<float>* antennaBuffer = buffer + antennaIndex * _width*_height*4;

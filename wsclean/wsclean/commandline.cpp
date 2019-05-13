@@ -152,6 +152,10 @@ void CommandLine::printHelp()
 		"-gap-channel-division\n"
 		"   In case of irregular frequency spacing, this option can be used to not try and split channels\n"
 		"   to make the output channel bandwidth similar, but instead to split largest gaps first.\n"
+		"-channel-division-frequencies <list>\n"
+		"   Split the bandwidth at the specified frequencies (in Hz) before the normal bandwidth\n"
+		"   division is performed. This can e.g. be useful for imaging multiple bands with irregular\n"
+		"   number of channels.\n"
 		"-nwlayers <nwlayers>\n"
 		"   Number of w-layers to use. Default: minimum suggested #w-layers for first MS.\n"
 		"-nwlayers-for-size <width> <height>\n"
@@ -278,6 +282,11 @@ void CommandLine::printHelp()
 		"-join-channels\n"
 		"   Perform cleaning by searching for peaks in the MF image, but subtract components from individual channels.\n"
 		"   This will turn on mf-weighting by default. Default: off.\n"
+		"-spectral-correction <reffreq> <term list>\n"
+		"   Enable correction of the given spectral function inside deconvolution.\n"
+		"   This can e.g. avoid downweighting higher frequencies because of\n"
+		"   reduced flux density. 1st term is total flux, 2nd is si, 3rd curvature, etc. \n"
+		"   Example: -spectral-correction 150e6 83.084,-0.699,-0.110\n"
 		"-multiscale\n"
 		"   Clean on different scales. This is a new algorithm. Default: off.\n"
 		"   This parameter invokes the v1.9 multiscale algorithm, which is slower but more accurate\n"
@@ -708,7 +717,7 @@ bool CommandLine::Parse(WSClean& wsclean, int argc, char* argv[])
 		else if(param == "moresane-sl")
 		{
 			++argi;
-			NumberList::ParseDoubleList(argv[argi], settings.moreSaneSigmaLevels);
+			settings.moreSaneSigmaLevels = NumberList::ParseDoubleList(argv[argi]);
 		}
 		else if(param == "make-psf")
 		{
@@ -805,6 +814,11 @@ bool CommandLine::Parse(WSClean& wsclean, int argc, char* argv[])
 		{
 			settings.divideChannelsByGaps = true;
 		}
+		else if(param == "channel-division-frequencies")
+		{
+			++argi;
+			settings.divideChannelFrequencies = NumberList::ParseDoubleList(argv[argi]);
+		}
 		else if(param == "join-polarizations" || param == "joinpolarizations")
 		{
 			settings.joinedPolarizationCleaning = true;
@@ -835,6 +849,13 @@ bool CommandLine::Parse(WSClean& wsclean, int argc, char* argv[])
 			noMFWeighting = true;
 			if(param != "no-mf-weighting")
 				deprecated(param, "no-mf-weighting");
+		}
+		else if(param == "spectral-correction")
+		{
+			settings.spectralCorrectionFrequency =
+				parse_double(argv[argi+1], 0.0, "spectral-correction", false);
+			settings.spectralCorrection = NumberList::ParseDoubleList(argv[argi+2]);
+			argi += 2;
 		}
 		else if(param == "taper-gaussian")
 		{
@@ -892,7 +913,7 @@ bool CommandLine::Parse(WSClean& wsclean, int argc, char* argv[])
 		else if(param == "multiscale-scales")
 		{
 			++argi;
-			NumberList::ParseDoubleList(argv[argi], settings.multiscaleScaleList);
+			settings.multiscaleScaleList = NumberList::ParseDoubleList(argv[argi]);
 		}
 		else if(param == "multiscale-shape")
 		{
@@ -983,8 +1004,7 @@ bool CommandLine::Parse(WSClean& wsclean, int argc, char* argv[])
 		else if(param == "spws")
 		{
 			++argi;
-			ao::uvector<int> list;
-			NumberList::ParseIntList(argv[argi], list);
+			ao::uvector<int> list = NumberList::ParseIntList(argv[argi]);
 			settings.spectralWindows.insert(list.begin(), list.end());
 		}
 		else if(param == "weight")

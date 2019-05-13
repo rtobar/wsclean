@@ -1,10 +1,51 @@
 #include "imageset.h"
 #include "spectralfitter.h"
 
+#include "../nlplfitter.h"
+
 #include "../wsclean/cachedimageset.h"
 #include "../wsclean/logger.h"
 #include "../wsclean/primarybeam.h"
 #include "../wsclean/primarybeamimageset.h"
+
+void ImageSet::initializeIndices()
+{
+	size_t lastDeconvolutionChannel = 0;
+	size_t deconvolutionChannelStartIndex = 0, lastOutChannel = 0;
+	size_t imgIndex = 0;
+	for(size_t i=0; i!=_imagingTable.EntryCount(); ++i)
+	{
+		const ImagingTableEntry& entry = _imagingTable[i];
+		size_t outChannel = entry.outputChannelIndex;
+		size_t chIndex = (outChannel*_channelsInDeconvolution)/_imagingTable.SquaredGroupCount();
+		if(outChannel != lastOutChannel && chIndex == lastDeconvolutionChannel)
+		{
+			// New output channel maps to an earlier deconvolution channel:
+			// start at index of previous deconvolution channel
+			imgIndex = deconvolutionChannelStartIndex;
+		}
+		if(chIndex != lastDeconvolutionChannel)
+		{
+			deconvolutionChannelStartIndex = imgIndex;
+		}
+		_tableIndexToImageIndex.insert(
+			std::make_pair(entry.index, imgIndex));
+		lastOutChannel = outChannel;
+		lastDeconvolutionChannel = chIndex;
+		++imgIndex;
+	}
+	for(size_t channel = 0; channel!=_channelsInDeconvolution; ++channel)
+	{
+		size_t sqIndex = channelToSqIndex(channel);
+		ImagingTable subTable = _imagingTable.GetSquaredGroup(sqIndex);
+		for(size_t eIndex = 0; eIndex!=subTable.EntryCount(); ++eIndex)
+		{
+			const ImagingTableEntry& entry = subTable[eIndex];
+			size_t imageIndex = _tableIndexToImageIndex.find(entry.index)->second;
+			_imageIndexToPSFIndex[imageIndex] = channel;
+		}
+	}
+}
 
 void ImageSet::LoadAndAverage(CachedImageSet& imageSet)
 {
@@ -219,8 +260,9 @@ void ImageSet::getSquareIntegratedWithNormalChannels(double* dest, double* scrat
 		double weightSum = 0.0;
 		for(size_t chIndex = 0; chIndex!=_channelsInDeconvolution; ++chIndex)
 		{
-			ImagingTable subTable = _imagingTable.GetSquaredGroup(chIndex);
-			const double groupWeight = subTable.Front().imageWeight;
+			size_t sqIndex = channelToSqIndex(chIndex);
+			ImagingTable subTable = _imagingTable.GetSquaredGroup(sqIndex);
+			const double groupWeight = _weights[chIndex];
 			weightSum += groupWeight;
 			if(subTable.EntryCount() == 1)
 			{
@@ -265,8 +307,10 @@ void ImageSet::getSquareIntegratedWithSquaredChannels(double* dest) const
 {
 	bool isFirst = true;
 	const bool useAllPolarizations = _linkedPolarizations.empty();
-	for(size_t sqIndex = 0; sqIndex!=_channelsInDeconvolution; ++sqIndex)
+	for(size_t channel = 0; channel!=_channelsInDeconvolution; ++channel)
 	{
+		// TODO this should be weighted
+		size_t sqIndex = channelToSqIndex(channel);
 		ImagingTable subTable = _imagingTable.GetSquaredGroup(sqIndex);
 		for(size_t eIndex = 0; eIndex!=subTable.EntryCount(); ++eIndex)
 		{
@@ -305,10 +349,11 @@ void ImageSet::getLinearIntegratedWithNormalChannels(double* dest) const
 	else {
 		bool isFirst = true;
 		double weightSum = 0.0;
-		for(size_t sqIndex = 0; sqIndex!=_channelsInDeconvolution; ++sqIndex)
+		for(size_t channel = 0; channel!=_channelsInDeconvolution; ++channel)
 		{
+			size_t sqIndex = channelToSqIndex(channel);
 			ImagingTable subTable = _imagingTable.GetSquaredGroup(sqIndex);
-			const double groupWeight = subTable.Front().imageWeight;
+			const double groupWeight = _weights[channel];
 			weightSum += groupWeight;
 			for(size_t eIndex = 0; eIndex!=subTable.EntryCount(); ++eIndex)
 			{
@@ -332,4 +377,24 @@ void ImageSet::getLinearIntegratedWithNormalChannels(double* dest) const
 		else
 			assign(dest, 0.0);
 	}
+}
+
+void ImageSet::CalculateDeconvolutionFrequencies(const ImagingTable& groupTable, ao::uvector<double>& frequencies, ao::uvector<double>& weights, size_t nDeconvolutionChannels)
+{
+	size_t nInputChannels = groupTable.SquaredGroupCount();
+	if(nDeconvolutionChannels == 0) nDeconvolutionChannels = nInputChannels;
+	frequencies.assign(nDeconvolutionChannels, 0.0);
+	weights.assign(nDeconvolutionChannels, 0.0);
+	ao::uvector<size_t> counts(nDeconvolutionChannels, 0);
+	for(size_t i=0; i!=nInputChannels; ++i)
+	{
+		const ImagingTableEntry& entry = groupTable.GetSquaredGroup(i)[0];
+		double freq = entry.CentralFrequency();
+		size_t deconvolutionChannel = i * nDeconvolutionChannels / nInputChannels;
+		frequencies[deconvolutionChannel] += freq;
+		weights[deconvolutionChannel] += entry.imageWeight;
+		counts[deconvolutionChannel]++;
+	}
+	for(size_t i=0; i!=nDeconvolutionChannels; ++i)
+		frequencies[i] /= counts[i];
 }

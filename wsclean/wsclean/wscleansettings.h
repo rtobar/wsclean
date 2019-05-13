@@ -36,6 +36,7 @@ public:
 	size_t channelsOut, intervalsOut;
 	enum MSSelection::EvenOddSelection evenOddTimesteps;
 	bool divideChannelsByGaps;
+	ao::uvector<double> divideChannelFrequencies;
 	double pixelScaleX, pixelScaleY;
 	std::string restoreModel, restoreInput, restoreOutput;
 	double manualBeamMajorSize, manualBeamMinorSize, manualBeamPA;
@@ -98,7 +99,8 @@ public:
 	size_t deconvolutionIterationCount, majorIterationCount;
 	bool allowNegativeComponents, stopOnNegativeComponents;
 	bool useMultiscale, useClarkOptimization, squaredJoins;
-	//bool forceDynamicJoin;
+	double spectralCorrectionFrequency;
+	ao::uvector<double> spectralCorrection;
 	bool multiscaleFastSubMinorLoop;
 	double multiscaleGain, multiscaleDeconvolutionScaleBias;
 	bool multiscaleNormalizeResponse;
@@ -154,6 +156,7 @@ inline WSCleanSettings::WSCleanSettings() :
 	channelsOut(1), intervalsOut(1),
 	evenOddTimesteps(MSSelection::AllTimesteps),
 	divideChannelsByGaps(false),
+	divideChannelFrequencies(),
 	pixelScaleX(0.0), pixelScaleY(0.0),
 	restoreModel(), restoreInput(), restoreOutput(),
 	manualBeamMajorSize(0.0), manualBeamMinorSize(0.0),
@@ -230,6 +233,8 @@ inline WSCleanSettings::WSCleanSettings() :
 	useMultiscale(false),
 	useClarkOptimization(true),
 	squaredJoins(false),
+	spectralCorrectionFrequency(0.0),
+	spectralCorrection(),
 	multiscaleFastSubMinorLoop(true),
 	multiscaleGain(0.2),
 	multiscaleDeconvolutionScaleBias(0.6),

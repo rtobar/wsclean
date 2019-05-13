@@ -4,6 +4,7 @@
 #include "../uvector.h"
 #include "../wsclean/imagingtable.h"
 #include "../wsclean/imagebufferallocator.h"
+#include "../wsclean/wscleansettings.h"
 
 #include <vector>
 #include <map>
@@ -12,14 +13,18 @@
 class ImageSet
 {
 public:
-	ImageSet(const ImagingTable* table, ImageBufferAllocator& allocator, size_t requestedChannelsInDeconvolution, bool squareJoinedChannels, const std::set<PolarizationEnum>& linkedPolarizations) :
+	ImageSet(const ImagingTable* table, ImageBufferAllocator& allocator, const WSCleanSettings& settings) :
 		_images(),
 		_imageSize(0),
-		_channelsInDeconvolution((requestedChannelsInDeconvolution==0) ? table->SquaredGroupCount() : requestedChannelsInDeconvolution),
-		_squareJoinedChannels(squareJoinedChannels),
+		_channelsInDeconvolution(
+			(settings.deconvolutionChannelCount==0)
+			? table->SquaredGroupCount()
+			: settings.deconvolutionChannelCount),
+		_squareJoinedChannels(settings.squaredJoins),
 		_imagingTable(*table),
 		_imageIndexToPSFIndex(),
-		_linkedPolarizations(linkedPolarizations),
+		_linkedPolarizations(settings.linkedPolarizations),
+		_settings(settings),
 		_allocator(allocator)
 	{
 		size_t nPol = table->GetSquaredGroup(0).EntryCount();
@@ -29,16 +34,21 @@ public:
 		
 		initializePolFactor();
 		initializeIndices();
+		CalculateDeconvolutionFrequencies(*table, _frequencies, _weights, _channelsInDeconvolution);
 	}
 	
-	ImageSet(const ImagingTable* table, ImageBufferAllocator& allocator, size_t requestedChannelsInDeconvolution, bool squareJoinedChannels, const std::set<PolarizationEnum>& linkedPolarizations, size_t width, size_t height) :
+	ImageSet(const ImagingTable* table, ImageBufferAllocator& allocator, const WSCleanSettings& settings, size_t width, size_t height) :
 		_images(),
 		_imageSize(width*height),
-		_channelsInDeconvolution((requestedChannelsInDeconvolution==0) ? table->SquaredGroupCount() : requestedChannelsInDeconvolution),
-		_squareJoinedChannels(squareJoinedChannels),
+		_channelsInDeconvolution(
+			(settings.deconvolutionChannelCount==0)
+			? table->SquaredGroupCount()
+			: settings.deconvolutionChannelCount),
+		_squareJoinedChannels(settings.squaredJoins),
 		_imagingTable(*table),
 		_imageIndexToPSFIndex(),
-		_linkedPolarizations(linkedPolarizations),
+		_linkedPolarizations(settings.linkedPolarizations),
+		_settings(settings),
 		_allocator(allocator)
 	{
 		size_t nPol = table->GetSquaredGroup(0).EntryCount();
@@ -48,6 +58,7 @@ public:
 		
 		initializePolFactor();
 		initializeIndices();
+		CalculateDeconvolutionFrequencies(*table, _frequencies, _weights, _channelsInDeconvolution);
 		allocateImages();
 	}
 	
@@ -135,8 +146,10 @@ public:
 	}
 	
 	/**
-	 * This function will calculate the 'linear' integration over all images.
-	 * This will return the average of all images. Normally, @ref GetSquareIntegrated
+	 * This function will calculate the 'linear' integration over all images, unless
+	 * joined channels are requested to be squared.
+	 * The method will return the weighted average of all images. Normally,
+	 * @ref GetSquareIntegrated
 	 * should be used for peak finding, but in case negative values should remain
 	 * negative, such as with multiscale (otherwise a sidelobe will be fitted with
 	 * large scales), this function can be used.
@@ -153,7 +166,7 @@ public:
 
 	void GetIntegratedPSF(double* dest, const ao::uvector<const double*>& psfs)
 	{
-		memcpy(dest, psfs[0], sizeof(double) * _imageSize);
+		std::copy_n(psfs[0], _imageSize, dest);
 		for(size_t i = 1; i!=PSFCount(); ++i)
 		{
 			add(dest, psfs[i]);
@@ -190,7 +203,7 @@ public:
 	
 	std::unique_ptr<ImageSet> Trim(size_t x1, size_t y1, size_t x2, size_t y2, size_t oldWidth) const
 	{
-		std::unique_ptr<ImageSet> p(new ImageSet(&_imagingTable, _allocator, _channelsInDeconvolution, _squareJoinedChannels, _linkedPolarizations, x2-x1, y2-y1));
+		std::unique_ptr<ImageSet> p(new ImageSet(&_imagingTable, _allocator, _settings, x2-x1, y2-y1));
 		for(size_t i=0; i!=_images.size(); ++i)
 		{
 			copySmallerPart(_images[i], p->_images[i], x1, y1, x2, y2, oldWidth);
@@ -248,6 +261,11 @@ public:
 	{
 		return _linkedPolarizations;
 	}
+	
+	const WSCleanSettings& Settings() const { return _settings; }
+	
+	static void CalculateDeconvolutionFrequencies(const ImagingTable& groupTable, ao::uvector<double>& frequencies, ao::uvector<double>& weights, size_t nDeconvolutionChannels);
+	
 private:
 	ImageSet(const ImageSet&) = delete;
 	ImageSet& operator=(const ImageSet&) = delete;
@@ -335,24 +353,7 @@ private:
 		}
 	}
 	
-	void initializeIndices()
-	{
-		for(size_t i=0; i!=_imagingTable.EntryCount(); ++i)
-		{
-			_tableIndexToImageIndex.insert(
-				std::make_pair(_imagingTable[i].index, i));
-		}
-		for(size_t sqIndex = 0; sqIndex!=_channelsInDeconvolution; ++sqIndex)
-		{
-			ImagingTable subTable = _imagingTable.GetSquaredGroup(sqIndex);
-			for(size_t eIndex = 0; eIndex!=subTable.EntryCount(); ++eIndex)
-			{
-				const ImagingTableEntry& entry = subTable[eIndex];
-				size_t imageIndex = _tableIndexToImageIndex.find(entry.index)->second;
-				_imageIndexToPSFIndex[imageIndex] = sqIndex;
-			}
-		}
-	}
+	void initializeIndices();
 	
 	void initializePolFactor()
 	{
@@ -421,14 +422,22 @@ private:
 	
 	void getLinearIntegratedWithNormalChannels(double* dest) const;
 	
+	size_t channelToSqIndex(size_t channel) const
+	{
+		return channel * _imagingTable.SquaredGroupCount() / _channelsInDeconvolution;
+	}
+	
 	ao::uvector<double*> _images;
 	size_t _imageSize, _channelsInDeconvolution;
+	// These vectors contain the info per deconvolution channel
+	ao::uvector<double> _frequencies, _weights;
 	bool _squareJoinedChannels;
 	const ImagingTable& _imagingTable;
 	std::map<size_t, size_t> _tableIndexToImageIndex;
 	ao::uvector<size_t> _imageIndexToPSFIndex;
 	double _polarizationNormalizationFactor;
 	std::set<PolarizationEnum> _linkedPolarizations;
+	const WSCleanSettings& _settings;
 	ImageBufferAllocator& _allocator;
 };
 

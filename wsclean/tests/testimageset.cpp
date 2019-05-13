@@ -8,20 +8,20 @@
 
 struct ImageSetFixtureBase
 {
-	void addToImageSet(ImagingTable& table, size_t index, size_t j, size_t c, size_t s, PolarizationEnum p, size_t frequencyMHz)
+	void addToImageSet(ImagingTable& table, size_t index, size_t joinedGroup, size_t outChannel, size_t squaredIndex, PolarizationEnum pol, size_t frequencyMHz, double imageWeight = 1.0)
 	{
 		ImagingTableEntry& e = table.AddEntry();
 		e.index = index;
-		e.joinedGroupIndex = j;
-		e.outputChannelIndex = c;
-		e.squaredDeconvolutionIndex = s;
-		e.polarization = p;
+		e.joinedGroupIndex = joinedGroup;
+		e.outputChannelIndex = outChannel;
+		e.squaredDeconvolutionIndex = squaredIndex;
+		e.polarization = pol;
 		e.lowestFrequency = frequencyMHz;
 		e.highestFrequency = frequencyMHz;
 		e.bandStartFrequency = frequencyMHz;
 		e.bandEndFrequency = frequencyMHz;
 		e.imageCount = 1;
-		e.imageWeight = 1.0;
+		e.imageWeight = imageWeight;
 	}
 	
 	void checkLinearValue(size_t index, double value, const ImageSet& dset)
@@ -40,12 +40,17 @@ struct ImageSetFixtureBase
 	
 	ImagingTable table;
 	ImageBufferAllocator allocator;
+	WSCleanSettings settings;
 };
 
 struct ImageSetFixture : public ImageSetFixtureBase
 {
 	ImageSetFixture()
 	{
+		settings.deconvolutionChannelCount = 1;
+		settings.squaredJoins = false;
+		settings.linkedPolarizations = std::set<PolarizationEnum>();
+	
 		addToImageSet(table, 0, 0, 0, 0, Polarization::XX, 100);
 		addToImageSet(table, 1, 0, 0, 0, Polarization::YY, 100);
 		addToImageSet(table, 2, 0, 1, 1, Polarization::XX, 200);
@@ -74,13 +79,21 @@ BOOST_AUTO_TEST_CASE( entriesInGroup )
 
 BOOST_AUTO_TEST_CASE( psfCount1 )
 {
-	ImageSet dset(&table, allocator, 1, false, std::set<PolarizationEnum>(), 2, 2);
+	WSCleanSettings settings;
+	settings.deconvolutionChannelCount = 1;
+	settings.squaredJoins = false;
+	settings.linkedPolarizations = std::set<PolarizationEnum>();
+	ImageSet dset(&table, allocator, settings, 2, 2);
 	BOOST_CHECK_EQUAL(dset.PSFCount(), 1);
 }
 
 BOOST_AUTO_TEST_CASE( psfCount2 )
 {
-	ImageSet dset(&table, allocator, 2, false, std::set<PolarizationEnum>(), 2, 2);
+	WSCleanSettings settings;
+	settings.deconvolutionChannelCount = 2;
+	settings.squaredJoins = false;
+	settings.linkedPolarizations = std::set<PolarizationEnum>();
+	ImageSet dset(&table, allocator, settings, 2, 2);
 	BOOST_CHECK_EQUAL(dset.PSFCount(), 2);
 }
 
@@ -114,7 +127,7 @@ BOOST_FIXTURE_TEST_CASE( load , AdvImageSetFixture)
 	
 BOOST_FIXTURE_TEST_CASE( loadAndAverage , AdvImageSetFixture)
 {
-	ImageSet dset(&table, allocator, 1, false, std::set<PolarizationEnum>(), 2, 2);
+	ImageSet dset(&table, allocator, settings, 2, 2);
 	dset.LoadAndAverage(cSet);
 	BOOST_CHECK_CLOSE_FRACTION(dset[0][0], 0.5*( 2.0 + 20.0), 1e-8);
 	BOOST_CHECK_CLOSE_FRACTION(dset[1][0], 0.5*(-1.0 - 10.0), 1e-8);
@@ -122,7 +135,8 @@ BOOST_FIXTURE_TEST_CASE( loadAndAverage , AdvImageSetFixture)
 
 BOOST_FIXTURE_TEST_CASE( interpolateAndStore , AdvImageSetFixture)
 {
-	ImageSet dset(&table, allocator, 2, false, std::set<PolarizationEnum>(), 2, 2);
+	settings.deconvolutionChannelCount = 2;
+	ImageSet dset(&table, allocator, settings, 2, 2);
 	SpectralFitter fitter(NoSpectralFitting, 2);
 	dset.LoadAndAverage(cSet);
 	dset.InterpolateAndStore(cSet, fitter);
@@ -132,10 +146,10 @@ BOOST_FIXTURE_TEST_CASE( interpolateAndStore , AdvImageSetFixture)
 
 BOOST_FIXTURE_TEST_CASE( xxNormalization , ImageSetFixtureBase )
 {
+	settings.linkedPolarizations = std::set<PolarizationEnum>{ Polarization::XX };
 	addToImageSet(table, 0, 0, 0, 0, Polarization::XX, 100);
 	table.Update();
-	std::set<PolarizationEnum> pols{ Polarization::XX };
-	ImageSet dset(&table, allocator, 1, false, pols, 2, 2);
+	ImageSet dset(&table, allocator, settings, 2, 2);
 	dset[0][1] = 5.0;
 	checkLinearValue(1, 5.0, dset);
 	checkSquaredValue(1, 5.0, dset);
@@ -145,8 +159,8 @@ BOOST_FIXTURE_TEST_CASE( iNormalization , ImageSetFixtureBase )
 {
 	addToImageSet(table, 0, 0, 0, 0, Polarization::StokesI, 100);
 	table.Update();
-	std::set<PolarizationEnum> pols{ Polarization::StokesI };
-	ImageSet dset(&table, allocator, 1, false, pols, 2, 2);
+	settings.linkedPolarizations = std::set<PolarizationEnum>{ Polarization::StokesI };
+	ImageSet dset(&table, allocator, settings, 2, 2);
 	dset[0][2] = 6.0;
 	checkLinearValue(2, 6.0, dset);
 	checkSquaredValue(2, 6.0, dset);
@@ -157,8 +171,10 @@ BOOST_FIXTURE_TEST_CASE( i_2channel_Normalization , ImageSetFixtureBase )
 	addToImageSet(table, 0, 0, 0, 0, Polarization::StokesI, 100);
 	addToImageSet(table, 1, 0, 1, 1, Polarization::StokesI, 200);
 	table.Update();
+	settings.deconvolutionChannelCount = 2;
+	settings.linkedPolarizations = std::set<PolarizationEnum>{ Polarization::StokesI };
 	std::set<PolarizationEnum> pols{ Polarization::StokesI };
-	ImageSet dset(&table, allocator, 2, false, pols, 2, 2);
+	ImageSet dset(&table, allocator, settings, 2, 2);
 	dset[0][0] = 12.0;
 	dset[1][0] = 13.0;
 	checkLinearValue(0, 12.5, dset);
@@ -170,8 +186,8 @@ BOOST_FIXTURE_TEST_CASE( xxyyNormalization , ImageSetFixtureBase )
 	addToImageSet(table, 0, 0, 0, 0, Polarization::XX, 100);
 	addToImageSet(table, 1, 0, 0, 0, Polarization::YY, 100);
 	table.Update();
-	std::set<PolarizationEnum> pols{ Polarization::XX, Polarization::YY };
-	ImageSet dset(&table, allocator, 1, false, pols, 2, 2);
+	settings.linkedPolarizations = std::set<PolarizationEnum>{ Polarization::XX, Polarization::YY };
+	ImageSet dset(&table, allocator, settings, 2, 2);
 	dset[0][3] = 7.0;
 	dset[1][3] = 8.0;
 	checkLinearValue(3, 7.5, dset);
@@ -184,8 +200,8 @@ BOOST_FIXTURE_TEST_CASE( iqNormalization , ImageSetFixtureBase )
 	addToImageSet(table, 0, 0, 0, 0, Polarization::StokesI, 100);
 	addToImageSet(table, 1, 0, 0, 0, Polarization::StokesQ, 100);
 	table.Update();
-	std::set<PolarizationEnum> pols{ Polarization::StokesI, Polarization::StokesQ };
-	ImageSet dset(&table, allocator, 1, false, pols, 2, 2);
+	settings.linkedPolarizations = std::set<PolarizationEnum>{ Polarization::StokesI, Polarization::StokesQ };
+	ImageSet dset(&table, allocator, settings, 2, 2);
 	dset[0][0] = 6.0;
 	dset[1][0] = -1.0;
 	checkLinearValue(0, 5.0, dset);
@@ -197,8 +213,8 @@ BOOST_FIXTURE_TEST_CASE( linkedINormalization , ImageSetFixtureBase )
 	addToImageSet(table, 0, 0, 0, 0, Polarization::StokesI, 100);
 	addToImageSet(table, 1, 0, 0, 0, Polarization::StokesQ, 100);
 	table.Update();
-	std::set<PolarizationEnum> pols{ Polarization::StokesI };
-	ImageSet dset(&table, allocator, 1, false, pols, 2, 2);
+	settings.linkedPolarizations = std::set<PolarizationEnum>{ Polarization::StokesI };
+	ImageSet dset(&table, allocator, settings, 2, 2);
 	dset[0][0] = 3.0;
 	dset[1][0] = -1.0;
 	checkLinearValue(0, 3.0, dset);
@@ -212,11 +228,11 @@ BOOST_FIXTURE_TEST_CASE( iquvNormalization , ImageSetFixtureBase )
 	addToImageSet(table, 2, 0, 0, 0, Polarization::StokesU, 100);
 	addToImageSet(table, 3, 0, 0, 0, Polarization::StokesV, 100);
 	table.Update();
-	std::set<PolarizationEnum> pols{
+	settings.linkedPolarizations = std::set<PolarizationEnum>{
 		Polarization::StokesI, Polarization::StokesQ,
 		Polarization::StokesU, Polarization::StokesV
 	};
-	ImageSet dset(&table, allocator, 1, false, pols, 2, 2);
+	ImageSet dset(&table, allocator, settings, 2, 2);
 	dset[0][0] = 9.0;
 	dset[1][0] = 0.2;
 	dset[2][0] = 0.2;
@@ -232,11 +248,11 @@ BOOST_FIXTURE_TEST_CASE( xx_xy_yx_yyNormalization , ImageSetFixtureBase )
 	addToImageSet(table, 2, 0, 0, 0, Polarization::YX, 100);
 	addToImageSet(table, 3, 0, 0, 0, Polarization::YY, 100);
 	table.Update();
-	std::set<PolarizationEnum> pols{
+	settings.linkedPolarizations = std::set<PolarizationEnum>{
 		Polarization::XX, Polarization::XY,
 		Polarization::YX, Polarization::YY
 	};
-	ImageSet dset(&table, allocator, 1, false, pols, 2, 2);
+	ImageSet dset(&table, allocator, settings, 2, 2);
 	dset[0][1] = 10.0;
 	dset[1][1] = 0.25;
 	dset[2][1] = 0.25;
@@ -256,11 +272,12 @@ BOOST_FIXTURE_TEST_CASE( xx_xy_yx_yy_2channel_Normalization , ImageSetFixtureBas
 	addToImageSet(table, 6, 0, 1, 1, Polarization::YX, 200);
 	addToImageSet(table, 7, 0, 1, 1, Polarization::YY, 200);
 	table.Update();
-	std::set<PolarizationEnum> pols{
+	settings.deconvolutionChannelCount = 2;
+	settings.linkedPolarizations = std::set<PolarizationEnum>{
 		Polarization::XX, Polarization::XY,
 		Polarization::YX, Polarization::YY
 	};
-	ImageSet dset(&table, allocator, 2, false, pols, 2, 2);
+	ImageSet dset(&table, allocator, settings, 2, 2);
 	dset[0][2] = 5.0;
 	dset[1][2] = 0.1;
 	dset[2][2] = 0.2;
@@ -292,10 +309,11 @@ BOOST_FIXTURE_TEST_CASE( linked_xx_yy_2channel_Normalization , ImageSetFixtureBa
 	addToImageSet(table, 6, 0, 1, 1, Polarization::YX, 200);
 	addToImageSet(table, 7, 0, 1, 1, Polarization::YY, 200);
 	table.Update();
-	std::set<PolarizationEnum> pols{
+	settings.deconvolutionChannelCount = 2;
+	settings.linkedPolarizations = std::set<PolarizationEnum>{
 		Polarization::XX, Polarization::YY
 	};
-	ImageSet dset(&table, allocator, 2, false, pols, 2, 2);
+	ImageSet dset(&table, allocator, settings, 2, 2);
 	dset[0][2] = 7.5;
 	dset[1][2] = 0.1;
 	dset[2][2] = -0.2;
@@ -322,8 +340,9 @@ BOOST_FIXTURE_TEST_CASE( linked_xx_2channel_Normalization , ImageSetFixtureBase 
 	addToImageSet(table, 6, 0, 1, 1, Polarization::YX, 200);
 	addToImageSet(table, 7, 0, 1, 1, Polarization::YY, 200);
 	table.Update();
-	std::set<PolarizationEnum> pols{ Polarization::XX };
-	ImageSet dset(&table, allocator, 2, false, pols, 2, 2);
+	settings.deconvolutionChannelCount = 2;
+	settings.linkedPolarizations = std::set<PolarizationEnum>{ Polarization::XX };
+	ImageSet dset(&table, allocator, settings, 2, 2);
 	dset[0][2] = 7.5;
 	dset[1][2] = 0.1;
 	dset[2][2] = -0.2;
@@ -337,6 +356,65 @@ BOOST_FIXTURE_TEST_CASE( linked_xx_2channel_Normalization , ImageSetFixtureBase 
 		sqVal2 = dset[4][2] * dset[4][2];
 	checkLinearValue(2, 32.0*0.25, dset);
 	checkSquaredValue(2, (sqrt(sqVal1) + sqrt(sqVal2))*0.5, dset);
+}
+
+BOOST_FIXTURE_TEST_CASE( deconvchannels_normalization , ImageSetFixtureBase )
+{
+	addToImageSet(table, 0, 0, 0, 0, Polarization::StokesI, 100, 1);
+	addToImageSet(table, 1, 0, 1, 1, Polarization::StokesI, 200, 1);
+	addToImageSet(table, 2, 0, 2, 2, Polarization::StokesI, 300, 2);
+	addToImageSet(table, 3, 0, 3, 3, Polarization::StokesI, 400, 2);
+	table.Update();
+	settings.deconvolutionChannelCount = 2;
+	settings.linkedPolarizations = std::set<PolarizationEnum>{ Polarization::StokesI };
+	ImageSet dset(&table, allocator, settings, 2, 2);
+	dset[0][0] = 10.0;
+	dset[1][0] = 13.0;
+	checkLinearValue(0, 12.0, dset);
+	checkSquaredValue(0, 12.0, dset);
+}
+
+BOOST_FIXTURE_TEST_CASE( deconvchannels_zeroweight , ImageSetFixtureBase )
+{
+	addToImageSet(table, 0, 0, 0, 0, Polarization::StokesI, 100, 1);
+	addToImageSet(table, 1, 0, 1, 1, Polarization::StokesI, 200, 0);
+	addToImageSet(table, 2, 0, 2, 2, Polarization::StokesI, 300, 2);
+	addToImageSet(table, 3, 0, 3, 3, Polarization::StokesI, 400, 2);
+	table.Update();
+	settings.deconvolutionChannelCount = 2;
+	settings.linkedPolarizations = std::set<PolarizationEnum>{ Polarization::StokesI };
+	ImageSet dset(&table, allocator, settings, 2, 2);
+	dset[0][0] = 10.0;
+	dset[1][0] = 5.0;
+	checkLinearValue(0, 6.0, dset);
+	checkSquaredValue(0, 6.0, dset);
+}
+
+BOOST_FIXTURE_TEST_CASE( psfindex , ImageSetFixtureBase )
+{
+	for(size_t ch=0; ch!=4; ++ch)
+	{
+		addToImageSet(table, ch*4+0, 0, ch, ch, Polarization::XX, 100, 1);
+		addToImageSet(table, ch*4+1, 0, ch, ch, Polarization::XY, 200, 0);
+		addToImageSet(table, ch*4+2, 0, ch, ch, Polarization::YX, 300, 2);
+		addToImageSet(table, ch*4+3, 0, ch, ch, Polarization::YY, 400, 2);
+	}
+	table.Update();
+	settings.deconvolutionChannelCount = 2;
+	settings.linkedPolarizations = std::set<PolarizationEnum>{
+		Polarization::XX, Polarization::XY,
+		Polarization::YX, Polarization::YY
+	};
+	ImageSet dset(&table, allocator, settings, 2, 2);
+	
+	BOOST_CHECK_EQUAL(dset.PSFIndex(0), 0);
+	BOOST_CHECK_EQUAL(dset.PSFIndex(1), 0);
+	BOOST_CHECK_EQUAL(dset.PSFIndex(2), 0);
+	BOOST_CHECK_EQUAL(dset.PSFIndex(3), 0);
+	BOOST_CHECK_EQUAL(dset.PSFIndex(4), 1);
+	BOOST_CHECK_EQUAL(dset.PSFIndex(5), 1);
+	BOOST_CHECK_EQUAL(dset.PSFIndex(6), 1);
+	BOOST_CHECK_EQUAL(dset.PSFIndex(7), 1);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

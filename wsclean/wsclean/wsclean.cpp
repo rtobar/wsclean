@@ -22,6 +22,7 @@
 #include "../modelrenderer.h"
 #include "../msselection.h"
 #include "../msproviders/contiguousms.h"
+#include "../nlplfitter.h"
 #include "../progressbar.h"
 #include "../uvector.h"
 
@@ -94,7 +95,7 @@ void WSClean::imagePSFCallback(ImagingTableEntry& entry, GriddingResult& result)
 	
 	size_t channelIndex = entry.outputChannelIndex;
 	_infoPerChannel[channelIndex].psfNormalizationFactor = normFactor;
-	multiplyImage(normFactor, result.imageRealResult);
+	multiplyImage(normFactor * entry.siCorrection, result.imageRealResult);
 	Logger::Debug << "Normalized PSF by factor of " << normFactor << ".\n";
 		
 	DeconvolutionAlgorithm::RemoveNaNsInPSF(result.imageRealResult.data(), _settings.trimmedImageWidth, _settings.trimmedImageHeight);
@@ -174,11 +175,11 @@ void WSClean::imageMainCallback(ImagingTableEntry& entry, GriddingResult& result
 {
 	size_t joinedChannelIndex = entry.outputChannelIndex;
 	
-	multiplyImage(_infoPerChannel[joinedChannelIndex].psfNormalizationFactor, result.imageRealResult);
+	multiplyImage(_infoPerChannel[joinedChannelIndex].psfNormalizationFactor * entry.siCorrection, result.imageRealResult);
 	storeAndCombineXYandYX(_residualImages, entry.polarization, joinedChannelIndex, false, result.imageRealResult.data());
 	if(Polarization::IsComplex(entry.polarization))
 	{
-		multiplyImage(_infoPerChannel[joinedChannelIndex].psfNormalizationFactor, result.imageImaginaryResult);
+		multiplyImage(_infoPerChannel[joinedChannelIndex].psfNormalizationFactor * entry.siCorrection, result.imageImaginaryResult);
 		storeAndCombineXYandYX(_residualImages, entry.polarization, joinedChannelIndex, true, result.imageImaginaryResult.data());
 	}
 	entry.imageWeight = result.imageWeight;
@@ -1304,7 +1305,60 @@ void WSClean::makeImagingTableEntry(const std::vector<ChannelInfo>& channels, si
 		startCh = 0;
 		width = channels.size();
 	}
+	std::vector<ChannelInfo> groupChannels(channels.begin()+startCh, channels.begin()+width);
 	
+	if(_settings.divideChannelFrequencies.empty())
+	{
+		makeImagingTableEntryChannelSettings(groupChannels, outIntervalIndex, outChannelIndex, _settings.channelsOut, entry);
+	}
+	else {
+		// We need to separately divide the channels into groups as specified and call the
+		// freq division for the group corresponding with the outChannelIndex.
+		const size_t nSplits = _settings.divideChannelFrequencies.size();
+		for(size_t i=0; i!=nSplits+1; ++i)
+		{
+			size_t
+				outChannelStart = _settings.channelsOut*i/(nSplits+1),
+				outChannelEnd = _settings.channelsOut*(i+1)/(nSplits+1);
+			if(outChannelIndex >= outChannelStart && outChannelIndex < outChannelEnd)
+			{
+				double splitFreqLow = (i==0) ? 0.0 : _settings.divideChannelFrequencies[i-1];
+				double splitFreqHigh = (i==nSplits) ? std::numeric_limits<double>::max() : _settings.divideChannelFrequencies[i];
+				std::vector<ChannelInfo> splittedChannels;
+				for(const ChannelInfo& info : groupChannels)
+				{
+					if(info.Frequency() >= splitFreqLow && info.Frequency() < splitFreqHigh)
+						splittedChannels.emplace_back(info);
+				}
+				size_t nOutChannels = outChannelEnd - outChannelStart;
+				makeImagingTableEntryChannelSettings(splittedChannels, outIntervalIndex, outChannelIndex-outChannelStart, nOutChannels, entry);
+			}
+		}
+	}
+	
+	if(_settings.spectralCorrection.empty())
+		entry.siCorrection = 1.0;
+	else {
+		double bandwidthCentre = 0.5*(channels.front().Frequency() + channels.back().Frequency());
+		double chCentralFrequency = 0.5*(entry.lowestFrequency + entry.highestFrequency);
+		double chFlux = NonLinearPowerLawFitter::Evaluate(chCentralFrequency, _settings.spectralCorrection, _settings.spectralCorrectionFrequency);
+		double midFlux = NonLinearPowerLawFitter::Evaluate(bandwidthCentre, _settings.spectralCorrection, _settings.spectralCorrectionFrequency);
+		entry.siCorrection = midFlux / chFlux;
+		if(outChannelIndex==0)
+			Logger::Debug << "SI correction for first channel: " << entry.siCorrection << '\n';
+		if(outChannelIndex+1 == _settings.channelsOut)
+			Logger::Debug << "SI correction for last channel: " << entry.siCorrection << '\n';
+	}
+	
+	entry.msData.resize(_settings.filenames.size());
+	for(size_t msIndex=0; msIndex!=_settings.filenames.size(); ++msIndex)
+	{
+		entry.msData[msIndex].bands.resize(_msBands[msIndex].DataDescCount());
+	}
+}
+
+void WSClean::makeImagingTableEntryChannelSettings(const std::vector<ChannelInfo>& channels, size_t outIntervalIndex, size_t outChannelIndex, size_t nOutChannels, ImagingTableEntry& entry)
+{
 	size_t chLowIndex, chHighIndex;
 	if(_settings.divideChannelsByGaps)
 	{
@@ -1317,7 +1371,7 @@ void WSClean::makeImagingTableEntry(const std::vector<ChannelInfo>& channels, si
 		}
 		std::vector<size_t> orderedGaps;
 		auto iter = gaps.rbegin();
-		for(size_t i=0; i!=_settings.channelsOut-1; ++i)
+		for(size_t i=0; i!=nOutChannels-1; ++i)
 		{
 			orderedGaps.push_back(iter->second);
 			++iter;
@@ -1327,14 +1381,14 @@ void WSClean::makeImagingTableEntry(const std::vector<ChannelInfo>& channels, si
 			chLowIndex = 0;
 		else
 			chLowIndex = orderedGaps[outChannelIndex-1];
-		if(outChannelIndex+1 == _settings.channelsOut)
-			chHighIndex = width-1;
+		if(outChannelIndex+1 == nOutChannels)
+			chHighIndex = channels.size()-1;
 		else
 			chHighIndex = orderedGaps[outChannelIndex]-1;
 	}
 	else {
-		chLowIndex = startCh + outChannelIndex*width/_settings.channelsOut;
-		chHighIndex = startCh + (outChannelIndex+1)*width/_settings.channelsOut - 1;
+		chLowIndex = outChannelIndex*channels.size()/nOutChannels;
+		chHighIndex = (outChannelIndex+1)*channels.size()/nOutChannels - 1;
 	}
 	if(channels[chLowIndex].Frequency() > channels[chHighIndex].Frequency())
 		std::swap(chLowIndex, chHighIndex);
@@ -1344,18 +1398,11 @@ void WSClean::makeImagingTableEntry(const std::vector<ChannelInfo>& channels, si
 	entry.bandStartFrequency = entry.lowestFrequency - channels[chLowIndex].Width()*0.5;
 	entry.bandEndFrequency = entry.highestFrequency + channels[chHighIndex].Width()*0.5;
 	entry.outputIntervalIndex = outIntervalIndex;
-	
-	entry.msData.resize(_settings.filenames.size());
-	for(size_t msIndex=0; msIndex!=_settings.filenames.size(); ++msIndex)
-	{
-		entry.msData[msIndex].bands.resize(_msBands[msIndex].DataDescCount());
-	}
 }
 
 void WSClean::addPolarizationsToImagingTable(size_t& joinedGroupIndex, size_t& squaredGroupIndex, size_t outChannelIndex, const ImagingTableEntry& templateEntry)
 {
-	for(std::set<PolarizationEnum>::const_iterator p=_settings.polarizations.begin();
-			p!=_settings.polarizations.end(); ++p)
+	for(PolarizationEnum p : _settings.polarizations)
 	{
 		ImagingTableEntry& entry = _imagingTable.AddEntry();
 		entry = templateEntry;
@@ -1363,10 +1410,10 @@ void WSClean::addPolarizationsToImagingTable(size_t& joinedGroupIndex, size_t& s
 		entry.outputChannelIndex = outChannelIndex;
 		entry.joinedGroupIndex = joinedGroupIndex;
 		entry.squaredDeconvolutionIndex = squaredGroupIndex;
-		entry.polarization = *p;
-		if(*p == Polarization::XY)
+		entry.polarization = p;
+		if(p == Polarization::XY)
 			entry.imageCount = 2;
-		else if(*p == Polarization::YX)
+		else if(p == Polarization::YX)
 			entry.imageCount = 0;
 		else
 			entry.imageCount = 1;

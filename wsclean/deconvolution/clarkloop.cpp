@@ -101,13 +101,11 @@ void ClarkModel::MakeSets(const ImageSet& residualSet)
 {
 	_residual.reset(new ImageSet(
 			&residualSet.Table(), residualSet.Allocator(),
-			residualSet.ChannelsInDeconvolution(), residualSet.SquareJoinedChannels(),
-			residualSet.LinkedPolarizations(),
+			residualSet.Settings(),
 			size(), 1));
 	_model.reset(new ImageSet(
 		&residualSet.Table(), residualSet.Allocator(),
-		residualSet.ChannelsInDeconvolution(), residualSet.SquareJoinedChannels(),
-		residualSet.LinkedPolarizations(),
+		residualSet.Settings(),
 		size(), 1));
 	for(size_t imgIndex=0; imgIndex!=_model->size(); ++imgIndex)
 	{

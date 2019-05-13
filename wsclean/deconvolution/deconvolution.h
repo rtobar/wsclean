@@ -53,8 +53,6 @@ public:
 	}
 
 private:
-	void calculateDeconvolutionFrequencies(const ImagingTable& groupTable, ao::uvector<double>& frequencies, ao::uvector<double>& weights);
-	
 	void correctChannelForPB(class ComponentList& list, const class ImagingTableEntry& entry) const;
 	
 	void readMask(const ImagingTable& groupTable);
@@ -67,6 +65,7 @@ private:
 	
 	bool _autoMaskIsFinished;
 	size_t _summedCount, _squaredCount;
+	ao::uvector<double> _channelFrequencies, _channelWeights;
 	std::set<PolarizationEnum> _polarizations;
 	PolarizationEnum _psfPolarization;
 	size_t _imgWidth, _imgHeight;

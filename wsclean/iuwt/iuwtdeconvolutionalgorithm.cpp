@@ -959,8 +959,7 @@ double IUWTDeconvolutionAlgorithm::PerformMajorIteration(size_t& iterCounter, si
 	
 	ImageSet structureModel(
 		&modelSet.Table(), dirtySet.Allocator(),
-		modelSet.ChannelsInDeconvolution(), modelSet.SquareJoinedChannels(),
-		modelSet.LinkedPolarizations(),
+		modelSet.Settings(),
 		_width, _height);
 	
 	std::unique_ptr<IUWTDecomposition> iuwt(new IUWTDecomposition(curEndScale, _width, _height));

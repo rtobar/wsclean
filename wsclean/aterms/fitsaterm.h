@@ -6,6 +6,7 @@
 #include "../fitsreader.h"
 
 #include "../uvector.h"
+#include "../windowfunction.h"
 
 #include <complex>
 #include <map>
@@ -26,7 +27,16 @@ public:
 	
 	virtual bool Calculate(std::complex<float>* buffer, double time, double frequency);
 	
-	void SetTukeyWindow(double padding) { _tukeyWindow = true; _padding = padding; }
+	void SetTukeyWindow(double padding)
+	{
+		_window = WindowFunction::Tukey;
+		_padding = padding;
+	}
+	
+	void SetWindow(WindowFunction::Type window)
+	{
+		_window = window;
+	}
 	
 private:
 	void initializeFromFile();
@@ -46,7 +56,7 @@ private:
 	size_t _nAntenna, _nFrequencies, _width, _height;
 	double _ra, _dec, _dl, _dm, _phaseCentreDL, _phaseCentreDM;
 	size_t _atermWidth, _atermHeight;
-	bool _tukeyWindow;
+	WindowFunction::Type _window;
 	double _padding;
 	struct Timestep {
 		double time;

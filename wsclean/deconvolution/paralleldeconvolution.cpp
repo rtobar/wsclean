@@ -278,8 +278,7 @@ void ParallelDeconvolution::SaveSourceList(CachedImageSet& modelImages, const Im
 		const size_t
 			w = _settings.trimmedImageWidth,
 			h = _settings.trimmedImageHeight;
-		ImageSet modelSet(&table, *_allocator, _settings.deconvolutionChannelCount,
-			_settings.squaredJoins, _settings.linkedPolarizations, w, h);
+		ImageSet modelSet(&table, *_allocator, _settings, w, h);
 		modelSet.LoadAndAverage(modelImages);
 		ComponentList componentList(w, h, modelSet);
 		componentList.WriteSingleScale(filename, *_algorithms.front(), _settings.pixelScaleX, _settings.pixelScaleY, phaseCentreRA, phaseCentreDec);
@@ -312,7 +311,7 @@ void ParallelDeconvolution::SavePBSourceList(CachedImageSet& modelImages, const 
 	}
 	else {
 		_allocator->FreeUnused();
-		ImageSet modelSet(&table, *_allocator, _settings.deconvolutionChannelCount, _settings.squaredJoins, _settings.linkedPolarizations, w, h);
+		ImageSet modelSet(&table, *_allocator, _settings, w, h);
 		modelSet.LoadAndAverage(modelImages);
 		list.reset(new ComponentList(w, h, modelSet));
 	}
