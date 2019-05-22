@@ -158,6 +158,9 @@ void CommandLine::printHelp()
 		"   number of channels.\n"
 		"-nwlayers <nwlayers>\n"
 		"   Number of w-layers to use. Default: minimum suggested #w-layers for first MS.\n"
+		"-nwlayers-factor <factor>\n"
+		"   Use automatic calculation of the number of w-layers, but multiple that number by\n"
+		"   the given factor. This can e.g. be useful for increasing w-accuracy.\n"
 		"-nwlayers-for-size <width> <height>\n"
 		"   Use the minimum suggested w-layers for an image of the given size. Can e.g. be used to increase\n"
 		"   accuracy when predicting small part of full image. \n"
@@ -839,14 +842,15 @@ bool CommandLine::Parse(WSClean& wsclean, int argc, char* argv[])
 		}
 		else if(param == "mf-weighting" || param == "mfs-weighting" || param == "mfsweighting")
 		{
-			// mfs was renamed to mf in wsclean 2.7
 			mfWeighting = true;
+			// mfs was renamed to mf in wsclean 2.7
 			if(param != "mf-weighting")
 				deprecated(param, "mf-weighting");
 		}
 		else if(param == "no-mf-weighting" || param == "no-mfs-weighting" || param == "nomfsweighting")
 		{
 			noMFWeighting = true;
+			// mfs was renamed to mf in wsclean 2.7
 			if(param != "no-mf-weighting")
 				deprecated(param, "no-mf-weighting");
 		}

@@ -69,6 +69,11 @@ public:
 				bool useTukey = reader.GetBoolOr(atermName + ".tukeywindow", false);
 				if(useTukey)
 					f->SetTukeyWindow(double(_settings.paddedImageWidth) / _settings.trimmedImageWidth);
+				else {
+					std::string windowStr = reader.GetStringOr(atermName + ".window", "rectangular");
+					WindowFunction::Type window = WindowFunction::GetType(windowStr);
+					f->SetWindow(window);
+				}
 				_aterms.emplace_back(std::move(f));
 			}
 			else if(atermType == "beam")

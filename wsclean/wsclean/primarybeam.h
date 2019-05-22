@@ -52,7 +52,7 @@ public:
 		_msProviders.push_back(std::make_pair(msProvider, selection));
 	}
 	
-	void MakeBeamImages(const ImageFilename& imageName, const ImagingTableEntry& entry, const class ImageWeightCache* imageWeightCache, ImageBufferAllocator& allocator);
+	void MakeBeamImages(const ImageFilename& imageName, const ImagingTableEntry& entry, std::shared_ptr<class ImageWeights> imageWeights, ImageBufferAllocator& allocator);
 	
 	void CorrectImages(class FitsWriter& writer, const ImageFilename& imageName, const std::string& filenameKind, ImageBufferAllocator& allocator);
 	
@@ -63,7 +63,7 @@ private:
 	
 	static void load(PrimaryBeamImageSet& beamImages, const ImageFilename& imageName, const WSCleanSettings& settings);
 	
-	void makeLOFARImage(PrimaryBeamImageSet& beamImages, const ImagingTableEntry& entry, const class ImageWeightCache* imageWeightCache, ImageBufferAllocator& allocator);
+	void makeLOFARImage(PrimaryBeamImageSet& beamImages, const ImagingTableEntry& entry, std::shared_ptr<class ImageWeights> imageWeights, ImageBufferAllocator& allocator);
 	
 	void makeMWAImage(PrimaryBeamImageSet& beamImages, const ImagingTableEntry& entry, ImageBufferAllocator& allocator);
 	

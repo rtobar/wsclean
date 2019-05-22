@@ -31,9 +31,9 @@ public:
 		_msProviders.push_back(MSProviderInfo(msProvider, selection, msIndex));
 	}
 	
-	void SetImageWeight(const class ImageWeightCache* imageWeightCache)
+	void SetImageWeight(std::shared_ptr<class ImageWeights> imageWeights)
 	{
-		_imageWeightCache = imageWeightCache;
+		_imageWeights = imageWeights;
 	}
 	
 	void SetImageDetails(size_t width, size_t height, double pixelSizeX, double pixelSizeY, double phaseCentreRA, double phaseCentreDec, double phaseCentreDL, double phaseCentreDM)
@@ -107,7 +107,7 @@ private:
 	const ImagingTableEntry* _tableEntry;
 	std::vector<MSProviderInfo> _msProviders;
 	
-	const class ImageWeightCache* _imageWeightCache;
+	std::shared_ptr<class ImageWeights> _imageWeights;
 	class ImageBufferAllocator* _allocator;
 	
 	size_t _width, _height, _sampledWidth, _sampledHeight;

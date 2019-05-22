@@ -186,7 +186,7 @@ void FFTResampler::makeWindow(ao::uvector<double>& data, size_t width) const
 	else {
 		data.resize(width);
 		for(size_t x=0; x!=width; ++x)
-			data[x] = WindowFunction::Evaluate(_windowFunction, width, x);
+			data[x] = WindowFunction::Evaluate(_windowFunction, width, x) + 1e-5;
 	}
 }
 
@@ -226,8 +226,6 @@ void FFTResampler::applyWindow(double* data) const
 		if(_correctWindow)
 		{
 			ao::uvector<double> windowImgIn(_inputWidth * _inputHeight);
-			_windowOut.resize(_outputWidth * _outputHeight);
-			Task task;
 			double *inPtr = windowImgIn.data();
 			for(size_t y=0; y!=_inputHeight; ++y)
 			{
@@ -238,6 +236,8 @@ void FFTResampler::applyWindow(double* data) const
 				}
 			}
 			
+			_windowOut.resize(_outputWidth * _outputHeight);
+			Task task;
 			task.input = windowImgIn.data();
 			task.output = _windowOut.data();
 			runSingle(task, true);
@@ -260,4 +260,15 @@ void FFTResampler::unapplyWindow(double* data) const
 	{
 		data[i] /= _windowOut[i];
 	}
+	
+	/*
+	for(size_t i=0; i!=n; ++i)
+		data[i] = 0;
+	for(size_t y=0; y!=_inputHeight; ++y)
+	{
+		for(size_t x=0; x!=_inputWidth; ++x)
+		{
+			data[y*_outputWidth + x] = _windowRowIn[x] * _windowColIn[y];
+		}
+	}*/
 }

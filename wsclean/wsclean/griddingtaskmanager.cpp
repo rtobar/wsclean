@@ -109,7 +109,7 @@ GriddingResult GriddingTaskManager::runDirect(GriddingTask& task, MSGridderBase&
 	gridder.SetIsComplex(task.polarization == Polarization::XY || task.polarization == Polarization::YX);
 	gridder.SetVerbose(task.verbose);
 	gridder.SetMetaDataCache(task.cache);
-	gridder.SetPrecalculatedWeightInfo(task.precalculatedWeightInfo);
+	gridder.SetPrecalculatedWeightInfo(task.precalculatedWeightInfo.get());
 	if(task.operation == GriddingTask::Invert)
 	{
 		gridder.SetDoImagePSF(task.imagePSF);

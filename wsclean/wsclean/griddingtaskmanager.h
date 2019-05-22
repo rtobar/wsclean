@@ -45,7 +45,7 @@ public:
 	MSGridderBase::MetaDataCache* cache;
 	bool storeImagingWeights;
 	
-	ImageWeights* precalculatedWeightInfo;
+	std::shared_ptr<ImageWeights> precalculatedWeightInfo;
 	std::vector<std::pair<std::unique_ptr<MSProvider>, MSSelection>> msList;
 	
 	// For prediction

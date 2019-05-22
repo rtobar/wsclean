@@ -17,7 +17,8 @@ FitsATerm::FitsATerm(size_t nAntenna, size_t width, size_t height, double ra, do
 	_atermWidth(atermSize),
 	_atermHeight(atermSize),
 	_window(WindowFunction::Rectangular),
-	_padding(1.0)
+	_padding(1.0),
+	_cache(nAntenna * 4 * width * height)
 { }
 
 void FitsATerm::OpenTECFiles(const std::vector<std::string>& filenames)
@@ -73,15 +74,16 @@ void FitsATerm::initializeFromFile()
 			_timesteps.emplace_back(Timestep{time0 + i*reader.TimeDimensionIncr(), readerIndex, i});
 	}
 	_curTimeindex = std::numeric_limits<size_t>::max();
+	_curFrequency = std::numeric_limits<double>::max();
 }
 
 bool FitsATerm::Calculate(std::complex<float>* buffer, double time, double frequency)
 {
-	bool newImage = false;
+	bool requiresRead = false;
 	if(_curTimeindex == std::numeric_limits<size_t>::max())
 	{
-		newImage = true;
-		_bufferCache.clear();
+		requiresRead = true;
+		_cache.Reset();
 		_curTimeindex = 0;
 	}
 	
@@ -95,29 +97,40 @@ bool FitsATerm::Calculate(std::complex<float>* buffer, double time, double frequ
 		if(std::fabs(nextTime - time) < std::fabs(curTime - time))
 		{
 			++_curTimeindex;
-			newImage = true;
-			_bufferCache.clear();
+			requiresRead = true;
+			_cache.Reset();
 			finishedSearch = false;
 		}
 		else {
 			finishedSearch = true;
 		}
 	}
-	//std::cout << "Selected time index = " << _curTimeindex << '\n';
-	// Do we have this frequency in the cache?
-	if(!newImage)
+	
+	if(!requiresRead)
 	{
-		if(_bufferCache.find(frequency) == _bufferCache.end())
-			newImage = true;
+		// If we are here, it means that the timestep didn't
+		// change. So if the frequency also didn't change, we're done...
+		if(_curFrequency == frequency)
+			return false;
+		// If it did change: do we have this frequency in the cache?
+		size_t cacheIndex = _cache.Find(frequency);
+		if(cacheIndex == Cache::NOT_FOUND)
+			requiresRead = true;
+		else {
+			_cache.Get(cacheIndex, buffer);
+			_curFrequency = frequency;
+			return true;
+		}
 	}
 	
-	if(newImage)
+	if(requiresRead)
 	{
 		readImages(buffer, _curTimeindex, frequency);
-		std::vector<std::complex<float>>& cacheEntry = _bufferCache[frequency];
-		cacheEntry.assign(buffer, buffer + _nAntenna * 4 * _width * _height);
+		_curFrequency = frequency;
+		_cache.Store(frequency, buffer);
 		return true;
 	}
+	
 	return false;
 }
 
@@ -125,7 +138,9 @@ void FitsATerm::readImages(std::complex<float>* buffer, size_t timeIndex, double
 {
 	_scratchA.resize(_atermWidth * _atermHeight);
 	_scratchB.resize(_width * _height);
-	const size_t imgIndex = _timesteps[timeIndex].imgIndex;
+	const size_t freqIndex = round((frequency - _readers.front().FrequencyDimensionStart())
+		/ _readers.front().FrequencyDimensionIncr());
+	const size_t imgIndex = _timesteps[timeIndex].imgIndex * _nFrequencies + freqIndex;
 	FitsReader& reader = _readers[_timesteps[timeIndex].readerIndex];
 	ao::uvector<double> image(reader.ImageWidth() * reader.ImageHeight());
 	FFTResampler resampler(_atermWidth, _atermHeight, _width, _height, 1, false);
@@ -143,9 +158,7 @@ void FitsATerm::readImages(std::complex<float>* buffer, size_t timeIndex, double
 				// TODO When we are in the same timestep but at a different frequency, it would
 				// be possible to skip reading and resampling, and immediately call evaluateTEC()
 				// with the "scratch" data still there.
-				
 				reader.ReadIndex(image.data(), antennaIndex + imgIndex*_nAntenna);
-				
 				resample(reader, _scratchA.data(), image.data());
 				resampler.Resample(_scratchA.data(), _scratchB.data());
 				evaluateTEC(antennaBuffer, _scratchB.data(), frequency);
@@ -177,7 +190,8 @@ void FitsATerm::resample(const FitsReader& reader, double* dest, const double* s
 	double inPixelSizeX = reader.PixelSizeX(), inPixelSizeY = reader.PixelSizeY();
 	double inPhaseCentreDL = reader.PhaseCentreDL(), inPhaseCentreDM = reader.PhaseCentreDM();
 	double inPhaseCentreRA = reader.PhaseCentreRA(), inPhaseCentreDec = reader.PhaseCentreDec();
-	
+	double atermDL = _dl * _width / _atermWidth;
+	double atermDM = _dm * _height / _atermHeight;
 	/**
 	 * If phase centra of input and output are the same, i.e. they have the same
 	 * tangential plane, a few calculations can be saved.
@@ -190,7 +204,7 @@ void FitsATerm::resample(const FitsReader& reader, double* dest, const double* s
 		for(size_t x=0; x!=_atermWidth; ++x)
 		{
 			double l, m;
-			ImageCoordinates::XYToLM(x, y, _dl, _dm, _atermWidth, _atermHeight, l, m);
+			ImageCoordinates::XYToLM(x, y, atermDL, atermDM, _atermWidth, _atermHeight, l, m);
 			l += _phaseCentreDL;
 			m += _phaseCentreDM;
 			if(!samePlane)

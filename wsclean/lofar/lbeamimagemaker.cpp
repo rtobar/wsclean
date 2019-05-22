@@ -192,7 +192,7 @@ void LBeamImageMaker::makeBeamForMS(PrimaryBeamImageSet& beamImages, MSProvider&
 		double intervalWeight = 0.0;
 		ao::uvector<double> stationWeights(stations.size(), 0.0);
 		WeightMatrix baselineWeights(stations.size());
-		calculateStationWeights(_imageWeightCache->Weights(), intervalWeight, stationWeights, baselineWeights, msProvider, selection, lastTime);
+		calculateStationWeights(*_imageWeights, intervalWeight, stationWeights, baselineWeights, msProvider, selection, lastTime);
 		
 		if(refIntervalWeight == 0.0)
 			refIntervalWeight = intervalWeight;

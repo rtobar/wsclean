@@ -79,7 +79,7 @@ void WSClean::imagePSF(ImagingTableEntry& entry)
 	task.cache = &_msGridderMetaCache[entry.index];
 	task.storeImagingWeights = _settings.writeImagingWeightSpectrumColumn;
 	initializeCurMSProviders(entry, task);
-	task.precalculatedWeightInfo = &initializeImageWeights(entry, task.msList);
+	task.precalculatedWeightInfo = initializeImageWeights(entry, task.msList);
 	
 	_griddingTaskManager->Run(task, std::bind(&WSClean::imagePSFCallback, this, std::ref(entry), std::placeholders::_1));
 }
@@ -164,7 +164,7 @@ void WSClean::imageMain(ImagingTableEntry& entry, bool isFirst, bool updateBeamI
 	task.cache = &_msGridderMetaCache[entry.index];
 	task.storeImagingWeights = !isFirst && _settings.writeImagingWeightSpectrumColumn;
 	initializeCurMSProviders(entry, task);
-	task.precalculatedWeightInfo = &initializeImageWeights(entry, task.msList);
+	task.precalculatedWeightInfo = initializeImageWeights(entry, task.msList);
 	
 	_griddingTaskManager->Run(task, std::bind(&WSClean::imageMainCallback, this, std::ref(entry), std::placeholders::_1, updateBeamInfo, isInitialInversion));
 	
@@ -309,7 +309,7 @@ void WSClean::predict(const ImagingTableEntry& entry)
 	task.modelImageReal = std::move(modelImageReal);
 	task.modelImageImaginary = std::move(modelImageImaginary);
 	initializeCurMSProviders(entry, task);
-	task.precalculatedWeightInfo = &initializeImageWeights(entry, task.msList);
+	task.precalculatedWeightInfo = initializeImageWeights(entry, task.msList);
 	_griddingTaskManager->Run(task, std::bind(&WSClean::predictCallback, this, std::ref(entry), std::placeholders::_1));
 	_predictingWatch.Pause();
 }
@@ -317,21 +317,24 @@ void WSClean::predict(const ImagingTableEntry& entry)
 void WSClean::predictCallback(const ImagingTableEntry&, GriddingResult&)
 { }
 
-ImageWeights& WSClean::initializeImageWeights(const ImagingTableEntry& entry, std::vector<std::pair<std::unique_ptr<MSProvider>, MSSelection>>& msList)
+std::shared_ptr<ImageWeights> WSClean::initializeImageWeights(const ImagingTableEntry& entry, std::vector<std::pair<std::unique_ptr<MSProvider>, MSSelection>>& msList)
 {
-	if(!_settings.mfWeighting)
+	if(_settings.mfWeighting)
 	{
-		_imageWeightCache->Update(msList, entry.outputChannelIndex, entry.outputIntervalIndex);
-		if(_settings.isWeightImageSaved)
-			_imageWeightCache->Weights().Save(_settings.prefixName+"-weights.fits");
+		return _imageWeightCache->GetMFWeights(); // task.precalculatedWeightInfo =
 	}
-	return _imageWeightCache->Weights(); // task.precalculatedWeightInfo =
+	else {
+		std::shared_ptr<ImageWeights> weights = _imageWeightCache->Get(msList, entry.outputChannelIndex, entry.outputIntervalIndex);
+		if(_settings.isWeightImageSaved)
+			weights->Save(_settings.prefixName+"-weights.fits");
+		return weights;
+	}
 }
 
 void WSClean::initializeMFSImageWeights()
 {
 	Logger::Info << "Precalculating MF weights for " << _settings.weightMode.ToString() << " weighting...\n";
-	_imageWeightCache->ResetWeights();
+	std::unique_ptr<ImageWeights> weights = _imageWeightCache->MakeEmptyWeights();
 	if(_doReorder)
 	{
 		for(size_t sg=0; sg!=_imagingTable.SquaredGroupCount(); ++sg)
@@ -350,7 +353,7 @@ void WSClean::initializeMFSImageWeights()
 					{
 						PolarizationEnum pol = _settings.useIDG ? Polarization::Instrumental : entry.polarization;
 						PartitionedMS msProvider(_partitionedMSHandles[msIndex], ms.bands[dataDescId].partIndex, pol, dataDescId);
-						_imageWeightCache->Weights().Grid(msProvider, partSelection);
+						weights->Grid(msProvider, partSelection);
 					}
 				}
 			}
@@ -363,16 +366,16 @@ void WSClean::initializeMFSImageWeights()
 			{
 				PolarizationEnum pol = _settings.useIDG ? Polarization::Instrumental : *_settings.polarizations.begin();
 				ContiguousMS msProvider(_settings.filenames[i], _settings.dataColumnName, _globalSelection, pol, d);
-				_imageWeightCache->Weights().Grid(msProvider,  _globalSelection);
+				weights->Grid(msProvider,  _globalSelection);
 				Logger::Info << '.';
 				Logger::Info.Flush();
 			}
 		}
 	}
-	_imageWeightCache->Weights().FinishGridding();
-	_imageWeightCache->InitializeWeightTapers();
+	weights->FinishGridding();
+	_imageWeightCache->SetMFWeights(std::move(weights));
 	if(_settings.isWeightImageSaved)
-		_imageWeightCache->Weights().Save(_settings.prefixName+"-weights.fits");
+		_imageWeightCache->GetMFWeights()->Save(_settings.prefixName+"-weights.fits");
 }
 
 void WSClean::performReordering(bool isPredictMode)
@@ -1117,12 +1120,12 @@ void WSClean::runFirstInversion(ImagingTableEntry& entry, std::unique_ptr<class 
 			primaryBeam.reset(new PrimaryBeam(_settings));
 			std::vector<std::pair<std::unique_ptr<MSProvider>, MSSelection>> pbmsList;
 			initializeMSProvidersForPB(entry, pbmsList, *primaryBeam);
-			initializeImageWeights(entry, pbmsList);
+			std::shared_ptr<ImageWeights> weights = initializeImageWeights(entry, pbmsList);
 			double ra, dec, dl, dm;
 			casacore::MeasurementSet ms(pbmsList.front().first->MS());
 			MSGridderBase::GetPhaseCentreInfo(ms, _settings.fieldId, ra, dec, dl, dm);
 			primaryBeam->SetPhaseCentre(ra, dec, dl, dm);
-			primaryBeam->MakeBeamImages(imageName, entry, _imageWeightCache.get(), _imageAllocator);
+			primaryBeam->MakeBeamImages(imageName, entry, std::move(weights), _imageAllocator);
 		}
 	}
 	

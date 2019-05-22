@@ -8,6 +8,7 @@
 #include "../weightmode.h"
 
 #include <limits>
+#include <mutex>
 
 class ImageWeightCache
 {
@@ -41,74 +42,91 @@ public:
 		_edgeTukeyTaperInLambda = edgeTukeyTaperInLambda;
 	}
 	
-	void Update(const std::vector<std::pair<std::unique_ptr<MSProvider>, MSSelection>>& msList, size_t outChannelIndex, size_t outIntervalIndex)
+	std::shared_ptr<ImageWeights> Get(const std::vector<std::pair<std::unique_ptr<MSProvider>, MSSelection>>& msList, size_t outChannelIndex, size_t outIntervalIndex)
 	{
+		std::unique_lock<std::mutex> lock(_mutex);
 		if(outChannelIndex != _currentWeightChannel || outIntervalIndex != _currentWeightInterval)
 		{
+			lock.unlock();
+			std::unique_ptr<ImageWeights> weights = recalculateWeights(msList);
+			lock.lock();
 			_currentWeightChannel = outChannelIndex;
 			_currentWeightInterval = outIntervalIndex;
-			
-			recalculateWeights(msList);
+			_cachedWeights = std::move(weights);
 		}
+		return _cachedWeights;
 	}
 	
-	void ResetWeights()
+	std::shared_ptr<ImageWeights> Get(casacore::MeasurementSet& ms, MSSelection& selection)
 	{
-		_imageWeights.reset(new ImageWeights(_weightMode, _imageWidth, _imageHeight, _pixelScaleX, _pixelScaleY, _weightsAsTaper, _weightMode.SuperWeight()));
+		std::unique_ptr<ImageWeights> weights = MakeEmptyWeights();
+		weights->Grid(ms, selection);
+		initializeWeightTapers(*weights);
+		return std::move(weights);
+	}
+	
+	std::unique_ptr<ImageWeights> MakeEmptyWeights() const
+	{
+		return std::unique_ptr<ImageWeights>(new ImageWeights(_weightMode, _imageWidth, _imageHeight, _pixelScaleX, _pixelScaleY, _weightsAsTaper, _weightMode.SuperWeight()));
 	};
 	
-	ImageWeights& Weights()
+	std::shared_ptr<ImageWeights> GetMFWeights() const
 	{
-		return *_imageWeights;
+		return _cachedWeights;
 	}
 	
-	const ImageWeights& Weights() const
+	void SetMFWeights(std::unique_ptr<ImageWeights> weights)
 	{
-		return *_imageWeights;
+		initializeWeightTapers(*weights);
+		std::unique_lock<std::mutex> lock(_mutex);
+		_cachedWeights = std::move(weights);
+		_currentWeightChannel = std::numeric_limits<size_t>::max();
+		_currentWeightInterval = std::numeric_limits<size_t>::max();
 	}
 	
-	void InitializeWeightTapers()
-	{
-		if(_rankFilterLevel >= 1.0)
-			_imageWeights->RankFilter(_rankFilterLevel, _rankFilterSize);
-		
-		if(_gaussianTaperBeamSize != 0.0)
-			_imageWeights->SetGaussianTaper(_gaussianTaperBeamSize);
-		
-		if(_tukeyInnerTaperInLambda != 0.0)
-			_imageWeights->SetTukeyInnerTaper(_tukeyInnerTaperInLambda, _minUVInLambda);
-		else if(_minUVInLambda!=0.0)
-			_imageWeights->SetMinUVRange(_minUVInLambda);
-		
-		if(_tukeyTaperInLambda != 0.0)
-			_imageWeights->SetTukeyTaper(_tukeyTaperInLambda, _maxUVInLambda);
-		else if(_maxUVInLambda!=0.0)
-			_imageWeights->SetMaxUVRange(_maxUVInLambda);
-		
-		if(_edgeTukeyTaperInLambda != 0.0)
-			_imageWeights->SetEdgeTukeyTaper(_edgeTukeyTaperInLambda, _edgeTaperInLambda);
-		else if(_edgeTaperInLambda != 0.0)
-			_imageWeights->SetEdgeTaper(_edgeTaperInLambda);
-	}
-
 private:
-	void recalculateWeights(const std::vector<std::pair<std::unique_ptr<MSProvider>, MSSelection>>& msList)
+	std::unique_ptr<ImageWeights> recalculateWeights(const std::vector<std::pair<std::unique_ptr<MSProvider>, MSSelection>>& msList)
 	{
 		Logger::Info << "Precalculating weights for " << _weightMode.ToString() << " weighting... ";
 		Logger::Info.Flush();
-		ResetWeights();
+		std::unique_ptr<ImageWeights> weights = MakeEmptyWeights();
 		for(size_t i=0; i!=msList.size(); ++i)
 		{
-			_imageWeights->Grid(*msList[i].first, msList[i].second);
+			weights->Grid(*msList[i].first, msList[i].second);
 			if(msList.size() > 1)
 				(Logger::Info << i << ' ').Flush();
 		}
-		_imageWeights->FinishGridding();
-		InitializeWeightTapers();
+		weights->FinishGridding();
+		initializeWeightTapers(*weights);
 		Logger::Info << "DONE\n";
+		return weights;
 	}
 	
-	std::unique_ptr<ImageWeights> _imageWeights;
+	void initializeWeightTapers(ImageWeights& weights)
+	{
+		if(_rankFilterLevel >= 1.0)
+			weights.RankFilter(_rankFilterLevel, _rankFilterSize);
+		
+		if(_gaussianTaperBeamSize != 0.0)
+			weights.SetGaussianTaper(_gaussianTaperBeamSize);
+		
+		if(_tukeyInnerTaperInLambda != 0.0)
+			weights.SetTukeyInnerTaper(_tukeyInnerTaperInLambda, _minUVInLambda);
+		else if(_minUVInLambda!=0.0)
+			weights.SetMinUVRange(_minUVInLambda);
+		
+		if(_tukeyTaperInLambda != 0.0)
+			weights.SetTukeyTaper(_tukeyTaperInLambda, _maxUVInLambda);
+		else if(_maxUVInLambda!=0.0)
+			weights.SetMaxUVRange(_maxUVInLambda);
+		
+		if(_edgeTukeyTaperInLambda != 0.0)
+			weights.SetEdgeTukeyTaper(_edgeTukeyTaperInLambda, _edgeTaperInLambda);
+		else if(_edgeTaperInLambda != 0.0)
+			weights.SetEdgeTaper(_edgeTaperInLambda);
+	}
+
+	std::shared_ptr<ImageWeights> _cachedWeights;
 	const WeightMode _weightMode;
 	size_t _imageWidth, _imageHeight;
 	double _pixelScaleX, _pixelScaleY;
@@ -120,6 +138,7 @@ private:
 	double _edgeTaperInLambda;
 	double _edgeTukeyTaperInLambda;
 	bool _weightsAsTaper;
+	std::mutex _mutex;
 	
 	size_t _currentWeightChannel, _currentWeightInterval;
 };

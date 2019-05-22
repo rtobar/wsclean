@@ -44,7 +44,7 @@ private:
 	
 	void performReordering(bool isPredictMode);
 	
-	ImageWeights& initializeImageWeights(const ImagingTableEntry& entry, std::vector<std::pair<std::unique_ptr<MSProvider>, MSSelection>>& msList);
+	std::shared_ptr<ImageWeights> initializeImageWeights(const ImagingTableEntry& entry, std::vector<std::pair<std::unique_ptr<MSProvider>, MSSelection>>& msList);
 	void initializeMFSImageWeights();
 	std::unique_ptr<MSProvider> initializeMSProvider(const ImagingTableEntry& entry, const MSSelection& selection, size_t filenameIndex, size_t dataDescId);
 	void initializeCurMSProviders(const ImagingTableEntry& entry, class GriddingTask& task);

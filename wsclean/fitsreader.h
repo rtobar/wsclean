@@ -90,6 +90,9 @@ class FitsReader : public FitsIOChecker
 		double TimeDimensionStart() const { return _meta.timeDimensionStart; }
 		double TimeDimensionIncr() const { return _meta.timeDimensionIncr; }
 		
+		double FrequencyDimensionStart() const { return _meta.frequency; }
+		double FrequencyDimensionIncr() const { return _meta.bandwidth; }
+		
 	private:
 		double readDoubleKey(const char* key);
 		std::string readStringKey(const char* key);

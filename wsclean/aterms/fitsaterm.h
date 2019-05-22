@@ -2,6 +2,7 @@
 #define FITS_ATERM_H
 
 #include "atermbase.h"
+#include "cache.h"
 
 #include "../fitsreader.h"
 
@@ -15,7 +16,7 @@
 
 /**
  * Class that reads in FITS images and resamples them onto aterm grids.
- * The fits file is supposed to have a TIME and FREQ axis. 
+ * The fits file is supposed to have a TIME, FREQ and ANTENNA axis. 
  */
 class FitsATerm : public ATermBase
 {
@@ -64,9 +65,10 @@ private:
 		size_t imgIndex;
 	};
 	std::vector<Timestep> _timesteps;
-	std::map<double, std::vector<std::complex<float>>> _bufferCache;
+	Cache _cache;
 	ao::uvector<double> _scratchA, _scratchB;
 	size_t _curTimeindex;
+	double _curFrequency;
 	std::vector<FitsReader> _readers;
 };
 
