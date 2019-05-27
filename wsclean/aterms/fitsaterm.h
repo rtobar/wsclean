@@ -22,6 +22,7 @@ class FitsATerm : public ATermBase
 {
 public:
 	FitsATerm(size_t nAntenna, size_t width, size_t height, double ra, double dec, double dl, double dm, double phaseCentreDL, double phaseCentreDM, size_t atermSize);
+	~FitsATerm();
 	
 	void OpenTECFiles(const std::vector<std::string>& filenames);
 	void OpenDiagGainFiles(const std::vector<std::string>& filenames);
@@ -70,6 +71,7 @@ private:
 	size_t _curTimeindex;
 	double _curFrequency;
 	std::vector<FitsReader> _readers;
+	std::unique_ptr<class FFTResampler> _resampler;
 };
 
 #endif

@@ -39,8 +39,7 @@ MSGridderBase::MSGridderBase() :
 	_griddedVisibilityCount(0),
 	_totalWeight(0.0),
 	_maxGriddedWeight(0.0),
-	_visibilityWeightSum(0.0),
-	_casacoreMutex(nullptr)
+	_visibilityWeightSum(0.0)
 { }
 
 MSGridderBase::~MSGridderBase()
@@ -217,22 +216,18 @@ void MSGridderBase::initializeMetaData(casacore::MeasurementSet& ms, size_t fiel
 
 void MSGridderBase::initializeMeasurementSet(MSGridderBase::MSData& msData, MetaDataCache::Entry& cacheEntry, bool isCacheInitialized)
 {
-	std::unique_lock<std::mutex> lock;
-	if(_casacoreMutex)
-		lock = std::unique_lock<std::mutex>(*_casacoreMutex);
-	
 	MSProvider& msProvider = MeasurementSet(msData.msIndex);
 	msData.msProvider = &msProvider;
-	casacore::MeasurementSet ms(msProvider.MS());
-	if(ms.nrow() == 0) throw std::runtime_error("Table has no rows (no data)");
+	SynchronizedMS ms(msProvider.MS());
+	if(ms->nrow() == 0) throw std::runtime_error("Table has no rows (no data)");
 	
-	initializeBandData(ms, msData);
+	initializeBandData(*ms, msData);
 	
 	calculateMSLimits(msData.SelectedBand(), msProvider.StartTime());
 	
-	initializePhaseCentre(ms, Selection(msData.msIndex).FieldId());
+	initializePhaseCentre(*ms, Selection(msData.msIndex).FieldId());
 	
-	initializeMetaData(ms, Selection(msData.msIndex).FieldId());
+	initializeMetaData(*ms, Selection(msData.msIndex).FieldId());
 	
 	if(isCacheInitialized)
 	{

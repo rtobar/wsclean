@@ -129,8 +129,7 @@ GriddingResult GriddingTaskManager::runDirect(GriddingTask& task, MSGridderBase&
 	result.imageRealResult = gridder.ImageRealResult();
 	if(gridder.IsComplex())
 		result.imageImaginaryResult = gridder.ImageImaginaryResult();
-	result.phaseCentreRA = gridder.PhaseCentreRA();
-	result.phaseCentreDec = gridder.PhaseCentreDec();
+	result.observationInfo = gridder.ObservationInfo();
 	result.beamSize = gridder.BeamSize();
 	result.imageWeight = gridder.ImageWeight();
 	result.normalizationFactor = gridder.NormalizationFactor();
@@ -148,7 +147,6 @@ void GriddingTaskManager::processQueue()
 {
 	std::unique_ptr<MSGridderBase> gridder(createGridder());
 	prepareGridder(*gridder);
-	gridder->SetCasacoreMutex(_casacoreMutex);
 	
 	std::pair<GriddingTask, std::function<void (GriddingResult &)>> taskPair;
 	while(_taskList.read(taskPair))

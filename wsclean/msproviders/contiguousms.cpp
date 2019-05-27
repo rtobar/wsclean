@@ -12,36 +12,36 @@ ContiguousMS::ContiguousMS(const string& msPath, const std::string& dataColumnNa
 	_polOut(polOut),
 	_msPath(msPath),
 	_ms(msPath),
-	_antenna1Column(_ms, casacore::MS::columnName(casacore::MSMainEnums::ANTENNA1)),
-	_antenna2Column(_ms, casacore::MS::columnName(casacore::MSMainEnums::ANTENNA2)),
-	_fieldIdColumn(_ms, casacore::MS::columnName(casacore::MSMainEnums::FIELD_ID)),
-	_dataDescIdColumn(_ms, casacore::MS::columnName(casacore::MSMainEnums::DATA_DESC_ID)),
-	_timeColumn(_ms, casacore::MS::columnName(casacore::MSMainEnums::TIME)),
-	_uvwColumn(_ms, casacore::MS::columnName(casacore::MSMainEnums::UVW)),
+	_antenna1Column(*_ms, casacore::MS::columnName(casacore::MSMainEnums::ANTENNA1)),
+	_antenna2Column(*_ms, casacore::MS::columnName(casacore::MSMainEnums::ANTENNA2)),
+	_fieldIdColumn(*_ms, casacore::MS::columnName(casacore::MSMainEnums::FIELD_ID)),
+	_dataDescIdColumn(*_ms, casacore::MS::columnName(casacore::MSMainEnums::DATA_DESC_ID)),
+	_timeColumn(*_ms, casacore::MS::columnName(casacore::MSMainEnums::TIME)),
+	_uvwColumn(*_ms, casacore::MS::columnName(casacore::MSMainEnums::UVW)),
 	_dataColumnName(dataColumnName),
-	_dataColumn(_ms, dataColumnName),
-	_flagColumn(_ms, casacore::MS::columnName(casacore::MSMainEnums::FLAG))
+	_dataColumn(*_ms, dataColumnName),
+	_flagColumn(*_ms, casacore::MS::columnName(casacore::MSMainEnums::FLAG))
 {
 	Logger::Info << "Opening " << msPath << ", spw " << _dataDescId << " with contiguous MS reader.\n";
 	
-	_inputPolarizations = GetMSPolarizations(_ms);
+	_inputPolarizations = GetMSPolarizations(*_ms);
  
 	const casacore::IPosition shape(_dataColumn.shape(0));
 	_dataArray = casacore::Array<std::complex<float>>(shape);
 	_weightSpectrumArray = casacore::Array<float>(shape);
 	_imagingWeightSpectrumArray = casacore::Array<float>(shape);
 	_flagArray = casacore::Array<bool>(shape);
-	_bandData = MultiBandData(_ms.spectralWindow(), _ms.dataDescription());
+	_bandData = MultiBandData(_ms->spectralWindow(), _ms->dataDescription());
 	
-	_msHasWeightSpectrum = openWeightSpectrumColumn(_ms, _weightSpectrumColumn, shape);
+	_msHasWeightSpectrum = openWeightSpectrumColumn(*_ms, _weightSpectrumColumn, shape);
 	if(!_msHasWeightSpectrum)
 	{
 		casacore::IPosition scalarShape(1, shape[0]);
 		_weightScalarArray = casacore::Array<float>(scalarShape);
-		_weightScalarColumn.reset(new casacore::ROArrayColumn<float>(_ms, casacore::MS::columnName(casacore::MSMainEnums::WEIGHT)));
+		_weightScalarColumn.reset(new casacore::ROArrayColumn<float>(*_ms, casacore::MS::columnName(casacore::MSMainEnums::WEIGHT)));
 	}
 	
-	getRowRangeAndIDMap(_ms, selection, _startRow, _endRow, std::set<size_t>{dataDescId}, _idToMSRow);
+	getRowRangeAndIDMap(*_ms, selection, _startRow, _endRow, std::set<size_t>{dataDescId}, _idToMSRow);
 	Reset();
 }
 
@@ -123,7 +123,7 @@ void ContiguousMS::NextRow()
 
 double ContiguousMS::StartTime()
 {
-	return casacore::MEpoch::ROScalarColumn(_ms, casacore::MS::columnName(casacore::MS::TIME))(_startRow).getValue().get();
+	return casacore::MEpoch::ScalarColumn(*_ms, casacore::MS::columnName(casacore::MS::TIME))(_startRow).getValue().get();
 }
 
 void ContiguousMS::ReadMeta(double& u, double& v, double& w, size_t& dataDescId)
@@ -171,9 +171,9 @@ void ContiguousMS::ReadData(std::complex<float>* buffer)
 
 void ContiguousMS::prepareModelColumn()
 {
-	initializeModelColumn(_ms);
+	initializeModelColumn(*_ms);
 	
-	_modelColumn.reset(new casacore::ArrayColumn<casacore::Complex>(_ms, casacore::MS::columnName(casacore::MSMainEnums::MODEL_DATA)));
+	_modelColumn.reset(new casacore::ArrayColumn<casacore::Complex>(*_ms, casacore::MS::columnName(casacore::MSMainEnums::MODEL_DATA)));
 	const casacore::IPosition shape(_modelColumn->shape(0));
 	_modelArray = casacore::Array<std::complex<float>>(shape);
 	_isModelColumnPrepared = true;
@@ -263,7 +263,7 @@ void ContiguousMS::WriteImagingWeights(size_t rowId, const float* buffer)
 {
 	if(_imagingWeightsColumn == nullptr)
 	{
-		_imagingWeightsColumn.reset(new casacore::ArrayColumn<float>(initializeImagingWeightColumn(_ms)));
+		_imagingWeightsColumn.reset(new casacore::ArrayColumn<float>(initializeImagingWeightColumn(*_ms)));
 	}
 	size_t msRowId = _idToMSRow[rowId];
 	size_t dataDescId = _dataDescIdColumn(msRowId);

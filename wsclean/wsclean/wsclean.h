@@ -15,6 +15,7 @@
 #include "imagebufferallocator.h"
 #include "imagingtable.h"
 #include "msgridderbase.h"
+#include "observationinfo.h"
 #include "outputchannelinfo.h"
 #include "wscfitswriter.h"
 #include "wscleansettings.h"
@@ -122,7 +123,7 @@ private:
 	std::vector<MultiBandData> _msBands;
 	Deconvolution _deconvolution;
 	ImagingTable _imagingTable;
-	double _phaseCentreRA, _phaseCentreDec;
+	ObservationInfo _observationInfo;
 };
 
 #endif

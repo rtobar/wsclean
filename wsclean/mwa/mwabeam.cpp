@@ -52,8 +52,8 @@ void MWABeam::Make(PrimaryBeamImageSet& beamImages)
 	{
 		const ImagingTableEntry::MSInfo& msInfo = _tableEntry->msData[msProviderInfo.msIndex];
 		const MSSelection& selection = *msProviderInfo.selection;
-		casacore::MeasurementSet ms = msProviderInfo.provider->MS();
-		MultiBandData band(ms.spectralWindow(), ms.dataDescription());
+		SynchronizedMS ms = msProviderInfo.provider->MS();
+		MultiBandData band(ms->spectralWindow(), ms->dataDescription());
 		double centralFrequency = 0.0;
 		for(size_t dataDescId=0; dataDescId!=band.DataDescCount(); ++dataDescId)
 		{
@@ -90,14 +90,14 @@ void MWABeam::makeBeamForMS(PrimaryBeamImageSet& beamImages, MSProvider& msProvi
 	/**
 		* Read meta data from the measurement set
 		*/
-	casacore::MeasurementSet ms = msProvider.MS();
-	casacore::MSAntenna aTable = ms.antenna();
+	SynchronizedMS ms = msProvider.MS();
+	casacore::MSAntenna aTable = ms->antenna();
 	if(aTable.nrow() == 0) throw std::runtime_error("No antennae in set");
 	
 	casacore::MPosition::ROScalarColumn antPosColumn(aTable, aTable.columnName(casacore::MSAntennaEnums::POSITION));
 	casacore::MPosition arrayPos = antPosColumn(0);
 		
-	casacore::Table mwaTilePointing = ms.keywordSet().asTable("MWA_TILE_POINTING");
+	casacore::Table mwaTilePointing = ms->keywordSet().asTable("MWA_TILE_POINTING");
 	casacore::ROArrayColumn<int> delaysCol(mwaTilePointing, "DELAYS");
 	casacore::Array<int> delaysArr = delaysCol(0);
 	casacore::Array<int>::contiter delaysArrPtr = delaysArr.cbegin();
@@ -143,7 +143,7 @@ void MWABeam::makeBeamForMS(PrimaryBeamImageSet& beamImages, MSProvider& msProvi
 		intervalCount = timestepCount;
 	Logger::Debug << "MS spans " << totalSeconds << " seconds, dividing in " << intervalCount << " intervals.\n";
 	
-	casacore::MEpoch::ROScalarColumn timeColumn(ms, ms.columnName(casacore::MSMainEnums::TIME));
+	casacore::MEpoch::ScalarColumn timeColumn(*ms, ms->columnName(casacore::MSMainEnums::TIME));
 	casacore::MEpoch midTime(casacore::MVEpoch((0.5/86400.0) * (startTime + endTime)), timeColumn(0).getRef());
 	Logger::Debug << "Mid time for full selection: " << midTime << '\n';
 	casacore::MeasFrame midFrame(arrayPos, midTime);

@@ -137,7 +137,8 @@ void ImageWeights::Grid(MSProvider& msProvider, const MSSelection& selection)
 	size_t polarizationCount = (msProvider.Polarization() == Polarization::Instrumental) ? 4 : 1;
 	if(_weightMode.RequiresGridding())
 	{
-		const MultiBandData bandData(msProvider.MS().spectralWindow(), msProvider.MS().dataDescription());
+		SynchronizedMS ms(msProvider.MS());
+		const MultiBandData bandData(ms->spectralWindow(), ms->dataDescription());
 		MultiBandData selectedBand;
 		if(selection.HasChannelRange())
 			selectedBand = MultiBandData(bandData, selection.ChannelRangeStart(), selection.ChannelRangeEnd());

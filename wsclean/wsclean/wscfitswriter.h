@@ -3,6 +3,7 @@
 
 #include "imagefilename.h"
 #include "imagingtable.h"
+#include "observationinfo.h"
 #include "outputchannelinfo.h"
 #include "wscleansettings.h"
 
@@ -14,9 +15,30 @@
 class WSCFitsWriter
 {
 public:
-	WSCFitsWriter(const ImagingTableEntry& entry, bool isImaginary, const WSCleanSettings& settings, const class Deconvolution& deconvolution, size_t majorIterationNr, const class MSGridderBase& gridder, const std::string& commandLine, const OutputChannelInfo& channelInfo,  bool isModel);
+	WSCFitsWriter(
+		const ImagingTableEntry& entry,
+		bool isImaginary,
+		const WSCleanSettings& settings,
+		const class Deconvolution& deconvolution,
+		const ObservationInfo& observationInfo,
+		size_t majorIterationNr,
+		const std::string& commandLine,
+		const OutputChannelInfo& channelInfo,
+		bool isModel
+	);
 	
-	WSCFitsWriter(const ImagingTableEntry& entry, PolarizationEnum polarization, bool isImaginary, const WSCleanSettings& settings, const class Deconvolution& deconvolution, size_t majorIterationNr, const class MSGridderBase& gridder, const std::string& commandLine, const OutputChannelInfo& channelInfo, bool isModel);
+	WSCFitsWriter(
+		const ImagingTableEntry& entry,
+		PolarizationEnum polarization,
+		bool isImaginary,
+		const WSCleanSettings& settings,
+		const class Deconvolution& deconvolution,
+		const ObservationInfo& observationInfo,
+		size_t majorIterationNr,
+		const std::string& commandLine,
+		const OutputChannelInfo& channelInfo,
+		bool isModel
+	);
 	
 	explicit WSCFitsWriter(FitsReader& templateReader);
 	
@@ -37,9 +59,7 @@ private:
 	
 	void setSettingsKeywords(const WSCleanSettings& settings, const std::string& commandLine);
 	
-	void setGridderConfiguration(const WSCleanSettings& settings, const class MSGridderBase& gridder);
-	
-	void setGridderKeywords(const class MSGridderBase& gridder);
+	void setGridderConfiguration(const WSCleanSettings& settings, const ObservationInfo& observationInfo);
 	
 	void setDeconvolutionKeywords(const WSCleanSettings& settings);
 	

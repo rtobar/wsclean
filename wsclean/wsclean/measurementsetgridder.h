@@ -3,6 +3,7 @@
 
 #include "gridmodeenum.h"
 #include "imagebufferallocator.h"
+#include "observationinfo.h"
 
 #include "../polarization.h"
 #include "../msselection.h"

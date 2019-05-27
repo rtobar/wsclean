@@ -10,6 +10,7 @@
 #include "msgridderbase.h"
 #include "measurementsetgridder.h"
 #include "imagebufferallocator.h"
+#include "observationinfo.h"
 
 #include "../lane.h"
 #include "../imageweights.h"
@@ -22,7 +23,7 @@ struct GriddingResult
 {
 	ImageBufferAllocator::Ptr imageRealResult;
 	ImageBufferAllocator::Ptr imageImaginaryResult;
-	double phaseCentreRA, phaseCentreDec;
+	ObservationInfo observationInfo;
 	double beamSize;
 	double imageWeight;
 	double normalizationFactor;
@@ -73,7 +74,7 @@ private:
 	void prepareGridder (MSGridderBase& gridder);
 	void processQueue();
 	
-	std::mutex _mutex, _casacoreMutex;
+	std::mutex _mutex;
 	std::vector<std::thread> _threadList;
 	ao::lane<std::pair<GriddingTask, std::function<void(GriddingResult&)>>> _taskList;
 	std::vector<std::pair<GriddingResult, std::function<void(GriddingResult&)>>> _readyList;

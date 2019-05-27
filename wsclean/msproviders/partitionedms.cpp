@@ -708,8 +708,8 @@ void PartitionedMS::MakeIdToMSRowMapping(std::vector<size_t>& idToMSRow)
 	for(std::map<size_t, size_t>::const_iterator i=dataDescIds.begin(); i!=dataDescIds.end(); ++i)
 		dataDescIdSet.insert(i->first);
 	size_t startRow, endRow;
-	casacore::MeasurementSet ms = MS();
-	getRowRangeAndIDMap(ms, selection, startRow, endRow, dataDescIdSet, idToMSRow);
+	SynchronizedMS ms = MS();
+	getRowRangeAndIDMap(*ms, selection, startRow, endRow, dataDescIdSet, idToMSRow);
 }
 
 void PartitionedMS::getDataDescIdMap(std::map<size_t, size_t>& dataDescIds, const std::vector<PartitionedMS::ChannelRange>& channels)

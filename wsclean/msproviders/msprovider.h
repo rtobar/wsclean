@@ -3,6 +3,8 @@
 
 #include "../polarization.h"
 
+#include "synchronizedms.h"
+
 #include <casacore/casa/Arrays/Array.h>
 
 #include <casacore/tables/Tables/ArrayColumn.h>
@@ -38,7 +40,7 @@ public:
 
 	virtual ~MSProvider() { }
 	
-	virtual casacore::MeasurementSet MS() = 0;
+	virtual SynchronizedMS MS() = 0;
 	
 	virtual const std::string& DataColumnName() = 0;
 	
@@ -75,6 +77,7 @@ public:
 	virtual PolarizationEnum Polarization() = 0;
 	
 	static std::vector<PolarizationEnum> GetMSPolarizations(casacore::MeasurementSet& ms);
+	
 protected:
 	static void copyData(std::complex<float>* dest, size_t startChannel, size_t endChannel, const std::vector<PolarizationEnum>& polsIn, const casacore::Array<std::complex<float>>& data, PolarizationEnum polOut);
 	

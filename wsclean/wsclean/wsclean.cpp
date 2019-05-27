@@ -103,8 +103,7 @@ void WSClean::imagePSFCallback(ImagingTableEntry& entry, GriddingResult& result)
 	_psfImages.Store(result.imageRealResult.data(), *_settings.polarizations.begin(), channelIndex, false);
 	_inversionWatch.Pause();
 	
-	_phaseCentreRA = result.phaseCentreRA;
-	_phaseCentreDec = result.phaseCentreDec;
+	_observationInfo = result.observationInfo;
 	
 	double bMaj, bMin, bPA;
 	ImageOperations::DetermineBeamSize(_settings, bMaj, bMin, bPA, result.imageRealResult.data(), result.beamSize);
@@ -829,10 +828,10 @@ void WSClean::runIndependentGroup(ImagingTable& groupTable, std::unique_ptr<Prim
 		
 		if(_settings.saveSourceList)
     {
-			_deconvolution.SaveSourceList(groupTable, _phaseCentreRA, _phaseCentreDec);
+			_deconvolution.SaveSourceList(groupTable, _observationInfo.phaseCentreRA, _observationInfo.phaseCentreDec);
 			if(_settings.applyPrimaryBeam)
 			{
-				_deconvolution.SavePBSourceList(groupTable, _phaseCentreRA, _phaseCentreDec);
+				_deconvolution.SavePBSourceList(groupTable, _observationInfo.phaseCentreRA, _observationInfo.phaseCentreDec);
 			}
     }
 	}
@@ -1122,8 +1121,8 @@ void WSClean::runFirstInversion(ImagingTableEntry& entry, std::unique_ptr<class 
 			initializeMSProvidersForPB(entry, pbmsList, *primaryBeam);
 			std::shared_ptr<ImageWeights> weights = initializeImageWeights(entry, pbmsList);
 			double ra, dec, dl, dm;
-			casacore::MeasurementSet ms(pbmsList.front().first->MS());
-			MSGridderBase::GetPhaseCentreInfo(ms, _settings.fieldId, ra, dec, dl, dm);
+			SynchronizedMS ms(pbmsList.front().first->MS());
+			MSGridderBase::GetPhaseCentreInfo(*ms, _settings.fieldId, ra, dec, dl, dm);
 			primaryBeam->SetPhaseCentre(ra, dec, dl, dm);
 			primaryBeam->MakeBeamImages(imageName, entry, std::move(weights), _imageAllocator);
 		}
@@ -1437,10 +1436,10 @@ void WSClean::addPolarizationsToImagingTable(size_t& joinedGroupIndex, size_t& s
 
 WSCFitsWriter WSClean::createWSCFitsWriter(const ImagingTableEntry& entry, bool isImaginary, bool isModel) const
 {
-	return WSCFitsWriter(entry, isImaginary, _settings, _deconvolution, _majorIterationNr, *_griddingTaskManager->Gridder(), _commandLine, _infoPerChannel[entry.outputChannelIndex], isModel);
+	return WSCFitsWriter(entry, isImaginary, _settings, _deconvolution, _observationInfo, _majorIterationNr, _commandLine, _infoPerChannel[entry.outputChannelIndex], isModel);
 }
 
 WSCFitsWriter WSClean::createWSCFitsWriter(const ImagingTableEntry& entry, PolarizationEnum polarization, bool isImaginary, bool isModel) const
 {
-	return WSCFitsWriter(entry, polarization, isImaginary, _settings, _deconvolution, _majorIterationNr, *_griddingTaskManager->Gridder(), _commandLine, _infoPerChannel[entry.outputChannelIndex], isModel);
+	return WSCFitsWriter(entry, polarization, isImaginary, _settings, _deconvolution, _observationInfo, _majorIterationNr, _commandLine, _infoPerChannel[entry.outputChannelIndex], isModel);
 }

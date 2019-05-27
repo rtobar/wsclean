@@ -21,6 +21,9 @@ FitsATerm::FitsATerm(size_t nAntenna, size_t width, size_t height, double ra, do
 	_cache(nAntenna * 4 * width * height)
 { }
 
+FitsATerm::~FitsATerm()
+{ }
+
 void FitsATerm::OpenTECFiles(const std::vector<std::string>& filenames)
 {
 	_mode = TECMode;
@@ -143,11 +146,16 @@ void FitsATerm::readImages(std::complex<float>* buffer, size_t timeIndex, double
 	const size_t imgIndex = _timesteps[timeIndex].imgIndex * _nFrequencies + freqIndex;
 	FitsReader& reader = _readers[_timesteps[timeIndex].readerIndex];
 	ao::uvector<double> image(reader.ImageWidth() * reader.ImageHeight());
-	FFTResampler resampler(_atermWidth, _atermHeight, _width, _height, 1, false);
-	if(_window == WindowFunction::Tukey)
-		resampler.SetTukeyWindow(double(_atermWidth) / _padding, false);
-	else
-		resampler.SetWindowFunction(_window, true);
+	if(!_resampler)
+	{
+		_resampler.reset(new FFTResampler(_atermWidth, _atermHeight, _width, _height, 1, false));
+		if(_window == WindowFunction::Tukey)
+			_resampler->SetTukeyWindow(double(_atermWidth) / _padding, false);
+		else
+			_resampler->SetWindowFunction(_window, true);
+	}
+	// TODO do this in parallel. Needs to fix Resampler too, as currently it can't run in
+	// parallel when a window is used.
 	for(size_t antennaIndex = 0; antennaIndex != _nAntenna; ++antennaIndex)
 	{
 		std::complex<float>* antennaBuffer = buffer + antennaIndex * _width*_height*4;
@@ -160,7 +168,7 @@ void FitsATerm::readImages(std::complex<float>* buffer, size_t timeIndex, double
 				// with the "scratch" data still there.
 				reader.ReadIndex(image.data(), antennaIndex + imgIndex*_nAntenna);
 				resample(reader, _scratchA.data(), image.data());
-				resampler.Resample(_scratchA.data(), _scratchB.data());
+				_resampler->Resample(_scratchA.data(), _scratchB.data());
 				evaluateTEC(antennaBuffer, _scratchB.data(), frequency);
 			} break;
 			
@@ -169,12 +177,12 @@ void FitsATerm::readImages(std::complex<float>* buffer, size_t timeIndex, double
 				{
 					reader.ReadIndex(image.data(), (antennaIndex + imgIndex*_nAntenna) * 4 + p*2);
 					resample(reader, _scratchA.data(), image.data());
-					resampler.Resample(_scratchA.data(), _scratchB.data());
+					_resampler->Resample(_scratchA.data(), _scratchB.data());
 					copyToRealPolarization(antennaBuffer, _scratchB.data(), p*3);
 					
 					reader.ReadIndex(image.data(), (antennaIndex + imgIndex*_nAntenna) * 4 + p*2 + 1);
 					resample(reader, _scratchA.data(), image.data());
-					resampler.Resample(_scratchA.data(), _scratchB.data());
+					_resampler->Resample(_scratchA.data(), _scratchB.data());
 					copyToImaginaryPolarization(antennaBuffer, _scratchB.data(), p*3);
 				}
 				setPolarization(antennaBuffer, 1, std::complex<float>(0.0, 0.0));

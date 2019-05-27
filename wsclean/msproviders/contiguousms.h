@@ -22,7 +22,7 @@ public:
 	
 	ContiguousMS& operator=(const ContiguousMS&) = delete;
 	
-	casacore::MeasurementSet MS() final override { return _ms; }
+	SynchronizedMS MS() final override { return _ms; }
 	
 	const std::string& DataColumnName() final override { return _dataColumnName; }
 	
@@ -52,7 +52,7 @@ public:
 	
 	void ReopenRW() final override 
 	{
-		_ms.reopenRW();
+		_ms->reopenRW();
 	}
 	
 	double StartTime() final override;
@@ -73,7 +73,7 @@ private:
 	MSSelection _selection;
 	PolarizationEnum _polOut;
 	std::string _msPath;
-	casacore::MeasurementSet _ms;
+	SynchronizedMS _ms;
 	MultiBandData _bandData;
 	bool _msHasWeightSpectrum;
 

@@ -24,6 +24,20 @@ public:
 	virtual double NormalizationFactor() const final override { return _totalWeight; }
 	virtual double BeamSize() const final override { return _theoreticalBeamSize; }
 	
+	struct ObservationInfo ObservationInfo() const {
+		struct ObservationInfo info;
+		info.phaseCentreRA = PhaseCentreRA();
+		info.phaseCentreDec = PhaseCentreDec();
+		info.startTime = StartTime();
+		info.hasDenormalPhaseCentre = HasDenormalPhaseCentre();
+		info.phaseCentreDL = PhaseCentreDL();
+		info.phaseCentreDM = PhaseCentreDM();
+		info.telescopeName = TelescopeName();
+		info.fieldName = FieldName();
+		info.observer = Observer();
+		return info;
+	}
+	
 	/**
 	 * This is the sum of the weights as given by the measurement set, before the
 	 * image weighting is applied.
@@ -70,8 +84,6 @@ public:
 	};
 	
 	void SetMetaDataCache(MetaDataCache* cache) { _metaDataCache = cache; }
-	
-	void SetCasacoreMutex(std::mutex& mutex) { _casacoreMutex = &mutex; }
 	
 protected:
 	struct MSData
@@ -198,7 +210,6 @@ private:
 	double _totalWeight;
 	double _maxGriddedWeight;
 	double _visibilityWeightSum;
-	std::mutex* _casacoreMutex;
 	
 	ao::uvector<float> _scratchWeights;
 };

@@ -41,9 +41,9 @@ public:
 	PartitionedMS(const PartitionedMS&) = delete;
 	PartitionedMS& operator=(const PartitionedMS&) = delete;
 	
-	casacore::MeasurementSet MS() final override
+	SynchronizedMS MS() final override
 	{
-		return casacore::MeasurementSet(_msPath.data());
+		return SynchronizedMS(_msPath.data());
 	}
 	
 	const std::string& DataColumnName() final override { return _handle._data->_dataColumnName; }
