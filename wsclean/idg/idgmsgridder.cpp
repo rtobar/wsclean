@@ -159,7 +159,7 @@ void IdgMsGridder::Invert()
 
 std::unique_ptr<class ATermBase> IdgMsGridder::getATermMaker(MSGridderBase::MSData& msData)
 {
-	casacore::MeasurementSet ms = msData.msProvider->MS();
+	casacore::MeasurementSet ms = *(msData.msProvider->MS());
 	size_t nr_stations = ms.antenna().nrow();
 	std::unique_ptr<ATermBase> aTermMaker;
 	ao::uvector<std::complex<float>> aTermBuffer;
@@ -216,7 +216,7 @@ void IdgMsGridder::gridMeasurementSet(MSGridderBase::MSData& msData)
 
 	// TODO for now we map the ms antennas directly to the gridder's antenna,
 	// including non-selected antennas. Later this can be made more efficient.
-	size_t nr_stations = msData.msProvider->MS().antenna().nrow();
+	size_t nr_stations = msData.msProvider->MS()->antenna().nrow();
 	
 	std::vector<std::vector<double>> bands;
 	for(size_t i=0; i!=_selectedBands.BandCount(); ++i)
@@ -371,7 +371,7 @@ void IdgMsGridder::predictMeasurementSet(MSGridderBase::MSData& msData)
 	_selectedBands = msData.SelectedBand();
 	_outputProvider = msData.msProvider;
 	
-	size_t nr_stations = msData.msProvider->MS().antenna().nrow();
+	size_t nr_stations = msData.msProvider->MS()->antenna().nrow();
 
 	std::vector<std::vector<double>> bands;
 	for(size_t i=0; i!=_selectedBands.BandCount(); ++i)
